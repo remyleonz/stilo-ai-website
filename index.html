@@ -1,23 +1,23 @@
 <!--
-  STILO AI Consulting Agency — Website v4
+  STILO AI Consulting Agency — Website v5
   Built by STILO AI Website Builder Agent
   Date: 2026-04-07
-  Design: Light mode, Apple-level minimalism, vertical scroll, conversion-optimized
+  Design: Full rebuild — product-visual hero, warm teal accent, honest credibility, founder story
 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STILO AI — AI Agents for Local Businesses</title>
-    <meta name="description" content="Productized AI agents that help local businesses get more customers. Premium websites, AI receptionists, and automation — live in 48 hours.">
-    <meta property="og:title" content="STILO AI — AI Agents for Local Businesses">
-    <meta property="og:description" content="Productized AI agents that help local businesses get more customers.">
+    <title>STILO AI — Premium Websites for Local Businesses | $497, 48 Hours</title>
+    <meta name="description" content="A website that looks like it cost $10,000 — built in 48 hours for $497. Custom-designed for restaurants, salons, dental offices, law firms, and local businesses. No templates. You own the code.">
+    <meta property="og:title" content="STILO AI — A $10K Website. 48 Hours. $497.">
+    <meta property="og:description" content="Premium websites for local businesses. Custom-designed, conversion-focused, and deployed in 48 hours.">
     <meta property="og:type" content="website">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <style>
         /* === DESIGN TOKENS === */
@@ -25,23 +25,28 @@
             --bg-primary: #FFFFFF;
             --bg-alt: #F5F5F7;
             --bg-card: #FFFFFF;
+            --bg-dark: #0A0A0A;
 
             --text-primary: #1D1D1F;
             --text-secondary: #6E6E73;
             --text-muted: #86868B;
 
-            --accent: #0071E3;
-            --accent-hover: #0077ED;
+            --accent: #0F766E;
+            --accent-light: #0D9488;
+            --accent-bg: rgba(15, 118, 110, 0.06);
+            --accent-bg-strong: rgba(15, 118, 110, 0.1);
 
             --border: rgba(0, 0, 0, 0.06);
+            --border-strong: rgba(0, 0, 0, 0.1);
 
-            --font-display: 'Inter', sans-serif;
-            --font-body: 'DM Sans', sans-serif;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'Inter', sans-serif;
 
-            --radius: 16px;
-            --radius-sm: 12px;
-            --radius-xs: 8px;
-            --nav-height: 52px;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --nav-height: 56px;
         }
 
         /* === RESET === */
@@ -54,55 +59,73 @@
             font-size: 1rem;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             overflow-x: hidden;
         }
         a { color: inherit; text-decoration: none; }
+        img { max-width: 100%; display: block; }
 
         /* === TYPOGRAPHY === */
-        h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--text-primary); }
-        h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 800; }
-        h2 { font-size: clamp(1.75rem, 3.5vw, 3rem); }
-        h3 { font-size: clamp(1.125rem, 2vw, 1.5rem); font-weight: 600; }
-        p { color: var(--text-secondary); }
+        h1, h2, h3, h4 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            color: var(--text-primary);
+        }
+        h1 { font-size: clamp(2.25rem, 5vw, 4rem); font-weight: 800; }
+        h2 { font-size: clamp(1.75rem, 3.5vw, 2.75rem); }
+        h3 { font-size: clamp(1.125rem, 2vw, 1.375rem); font-weight: 600; }
+        p { color: var(--text-secondary); line-height: 1.65; }
 
         /* === LAYOUT === */
         .container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
         @media (min-width: 768px) { .container { padding: 0 48px; } }
-        section { padding: 96px 0; }
-        @media (min-width: 768px) { section { padding: 120px 0; } }
+        section { padding: 80px 0; }
+        @media (min-width: 768px) { section { padding: 112px 0; } }
 
         /* === BUTTONS === */
         .btn-primary {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 14px 32px;
+            padding: 14px 28px;
             background: var(--accent);
-            color: #FFFFFF; font-family: var(--font-body); font-weight: 600; font-size: 0.9375rem;
-            border: none; border-radius: 50px; cursor: pointer; text-decoration: none;
-            transition: background 0.2s ease, transform 0.2s ease;
+            color: #FFFFFF;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.9375rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s ease, transform 0.15s ease;
         }
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-        }
-        .btn-secondary {
+        .btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
+        .btn-ghost {
             display: inline-flex; align-items: center; gap: 6px;
-            padding: 14px 32px;
-            background: transparent; color: var(--accent);
-            font-family: var(--font-body); font-weight: 600; font-size: 0.9375rem;
-            border: none; cursor: pointer; text-decoration: none;
-            transition: opacity 0.2s ease;
+            padding: 14px 28px;
+            background: transparent;
+            color: var(--accent);
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.9375rem;
+            border: 1.5px solid var(--border-strong);
+            border-radius: 50px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: border-color 0.2s ease, background 0.2s ease;
         }
-        .btn-secondary:hover { opacity: 0.7; }
+        .btn-ghost:hover { border-color: var(--accent); background: var(--accent-bg); }
 
         /* === ANIMATIONS === */
         .fade-in {
-            opacity: 0; transform: translateY(20px);
+            opacity: 0; transform: translateY(24px);
             transition: opacity 0.6s ease-out, transform 0.6s ease-out;
         }
         .fade-in.visible { opacity: 1; transform: translateY(0); }
         .delay-1 { transition-delay: 0.1s; }
         .delay-2 { transition-delay: 0.2s; }
         .delay-3 { transition-delay: 0.3s; }
+        .delay-4 { transition-delay: 0.4s; }
 
         /* ============================
            NAVIGATION
@@ -110,13 +133,31 @@
         nav {
             position: fixed; top: 0; left: 0; width: 100%;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
             height: var(--nav-height);
         }
-        .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 100%; }
-        .nav-logo { font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; color: var(--text-primary); letter-spacing: -0.02em; }
+        .nav-inner {
+            display: flex; align-items: center; justify-content: space-between;
+            height: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px;
+        }
+        @media (min-width: 768px) { .nav-inner { padding: 0 48px; } }
+        .nav-logo {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-logo-mark {
+            width: 28px; height: 28px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-logo-mark svg { width: 16px; height: 16px; }
         .nav-links { display: none; list-style: none; gap: 4px; align-items: center; }
         @media (min-width: 768px) { .nav-links { display: flex; } }
         .nav-links a {
@@ -127,11 +168,12 @@
         .nav-links a:hover { color: var(--text-primary); }
         .nav-cta {
             padding: 8px 20px; font-size: 0.8125rem; font-weight: 600;
-            background: var(--accent); color: #FFF; border-radius: 50px; border: none; cursor: pointer;
+            background: var(--accent); color: #FFF;
+            border-radius: 50px; border: none; cursor: pointer;
             transition: background 0.2s ease;
+            text-decoration: none;
         }
-        .nav-cta:hover { background: var(--accent-hover); }
-
+        .nav-cta:hover { background: var(--accent-light); }
         .menu-toggle {
             display: flex; align-items: center; justify-content: center;
             width: 44px; height: 44px; background: none; border: none; cursor: pointer;
@@ -142,318 +184,924 @@
             position: relative; transition: background 0.3s;
         }
         .menu-toggle span::before, .menu-toggle span::after {
-            content: ''; display: block; width: 18px; height: 2px; background: var(--text-primary);
-            position: absolute; transition: transform 0.3s;
+            content: ''; display: block; width: 18px; height: 2px;
+            background: var(--text-primary); position: absolute; transition: transform 0.3s;
         }
         .menu-toggle span::before { top: -6px; }
         .menu-toggle span::after { top: 6px; }
         .menu-toggle.active span { background: transparent; }
         .menu-toggle.active span::before { transform: rotate(45deg); top: 0; }
         .menu-toggle.active span::after { transform: rotate(-45deg); top: 0; }
-
         .mobile-menu {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
             background: rgba(255, 255, 255, 0.97); backdrop-filter: blur(20px);
             z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
         }
         .mobile-menu.active { display: flex; }
-        .mobile-menu a { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+        .mobile-menu a {
+            font-family: var(--font-display); font-size: 1.25rem;
+            font-weight: 700; color: var(--text-primary);
+        }
 
         /* ============================
            HERO
         ============================ */
         .hero {
-            min-height: 100vh; display: flex; align-items: center;
+            min-height: 100vh;
+            display: flex; align-items: center;
             padding-top: var(--nav-height);
-            text-align: center;
         }
-        .hero .container { max-width: 800px; }
+        .hero .container {
+            display: grid; grid-template-columns: 1fr; gap: 48px;
+            align-items: center;
+        }
+        @media (min-width: 768px) {
+            .hero .container {
+                grid-template-columns: 1fr 1fr;
+                gap: 64px;
+            }
+        }
+        .hero-content { max-width: 520px; }
         .hero-badge {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 6px 14px; border-radius: 50px;
-            background: var(--bg-alt); border: 1px solid var(--border);
-            font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary);
+            background: var(--accent-bg);
+            border: 1px solid rgba(15, 118, 110, 0.12);
+            font-size: 0.8125rem; font-weight: 500; color: var(--accent);
             margin-bottom: 24px;
         }
-        .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #34C759; }
         .hero h1 { margin-bottom: 20px; }
-        .hero h1 .highlight { color: var(--accent); }
         .hero-sub {
-            font-size: clamp(1rem, 2vw, 1.25rem);
-            color: var(--text-secondary); line-height: 1.6;
-            max-width: 560px; margin: 0 auto 40px;
+            font-size: clamp(1rem, 1.8vw, 1.125rem);
+            color: var(--text-secondary);
+            line-height: 1.65;
+            margin-bottom: 36px;
         }
-        .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
         .hero-trust {
-            margin-top: 48px;
-            font-size: 0.875rem; color: var(--text-muted);
+            margin-top: 40px;
+            display: flex; align-items: center; gap: 16px;
+            flex-wrap: wrap;
+        }
+        .trust-item {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.8125rem; color: var(--text-muted); font-weight: 500;
+        }
+        .trust-item svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+
+        /* Browser mockup */
+        .hero-visual { position: relative; }
+        @media (max-width: 767px) { .hero-visual { max-width: 480px; margin: 0 auto; } }
+        .browser-frame {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+            border: 1px solid var(--border);
+        }
+        .browser-chrome {
+            height: 40px;
+            background: var(--bg-alt);
+            display: flex; align-items: center;
+            padding: 0 16px; gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .browser-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+        }
+        .browser-dot:nth-child(1) { background: #FF5F57; }
+        .browser-dot:nth-child(2) { background: #FFBD2E; }
+        .browser-dot:nth-child(3) { background: #28CA42; }
+        .browser-url {
+            margin-left: 12px;
+            flex: 1;
+            height: 24px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            display: flex; align-items: center;
+            padding: 0 10px;
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+        }
+        .browser-content {
+            padding: 24px;
+            min-height: 280px;
+            background: var(--bg-primary);
+        }
+        /* Mini site preview inside browser */
+        .mini-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px;
+        }
+        .mini-logo {
+            width: 60px; height: 8px;
+            background: var(--text-primary);
+            border-radius: 4px;
+            opacity: 0.8;
+        }
+        .mini-nav-links { display: flex; gap: 8px; }
+        .mini-nav-link {
+            width: 32px; height: 6px;
+            background: var(--text-muted);
+            border-radius: 3px;
+            opacity: 0.3;
+        }
+        .mini-hero-text {
+            margin-bottom: 16px;
+        }
+        .mini-h1 {
+            height: 14px; width: 85%;
+            background: var(--text-primary);
+            border-radius: 4px; opacity: 0.85;
+            margin-bottom: 8px;
+        }
+        .mini-h1-2 {
+            height: 14px; width: 60%;
+            background: var(--text-primary);
+            border-radius: 4px; opacity: 0.85;
+            margin-bottom: 12px;
+        }
+        .mini-sub {
+            height: 6px; width: 75%;
+            background: var(--text-muted);
+            border-radius: 3px; opacity: 0.4;
+            margin-bottom: 6px;
+        }
+        .mini-sub-2 {
+            height: 6px; width: 55%;
+            background: var(--text-muted);
+            border-radius: 3px; opacity: 0.4;
+            margin-bottom: 16px;
+        }
+        .mini-btn {
+            width: 80px; height: 24px;
+            background: var(--accent);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        .mini-cards {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+        }
+        .mini-card {
+            background: var(--bg-alt);
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+        .mini-card-icon {
+            width: 20px; height: 20px;
+            background: var(--accent-bg-strong);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .mini-card-title {
+            height: 6px; width: 70%;
+            background: var(--text-primary);
+            border-radius: 3px; opacity: 0.5;
+            margin-bottom: 6px;
+        }
+        .mini-card-body {
+            height: 4px; width: 90%;
+            background: var(--text-muted);
+            border-radius: 2px; opacity: 0.25;
+            margin-bottom: 4px;
         }
 
         /* ============================
-           SOCIAL PROOF
+           CREDIBILITY BAR
         ============================ */
-        .proof { background: var(--bg-alt); }
-        .proof-header { text-align: center; margin-bottom: 56px; }
-        .proof-header p { margin-top: 12px; font-size: 1.0625rem; }
-        .proof-grid {
-            display: grid; grid-template-columns: 1fr; gap: 24px;
+        .credibility {
+            padding: 48px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
         }
-        @media (min-width: 640px) { .proof-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (min-width: 960px) { .proof-grid { grid-template-columns: repeat(3, 1fr); } }
-        .testimonial {
-            background: var(--bg-card); border-radius: var(--radius);
-            padding: 32px; border: 1px solid var(--border);
+        .cred-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
         }
-        .testimonial .stars { color: #F59E0B; font-size: 0.875rem; margin-bottom: 16px; }
-        .testimonial .quote { font-size: 1rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 20px; }
-        .testimonial .author { font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); }
+        @media (min-width: 640px) {
+            .cred-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        .cred-item { text-align: center; }
+        .cred-number {
+            font-family: var(--font-display);
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+            margin-bottom: 4px;
+        }
+        .cred-label {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
 
         /* ============================
-           SERVICES / AGENTS
+           PROBLEM
         ============================ */
-        .services-header { text-align: center; margin-bottom: 56px; }
-        .services-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 520px; margin-left: auto; margin-right: auto; }
-        .services-grid {
+        .problem { background: var(--bg-alt); }
+        .problem-header { text-align: center; margin-bottom: 48px; }
+        .problem-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 520px; margin-left: auto; margin-right: auto; }
+        .problem-grid {
+            display: grid; grid-template-columns: 1fr; gap: 16px;
+            max-width: 720px; margin: 0 auto;
+        }
+        @media (min-width: 640px) { .problem-grid { grid-template-columns: repeat(3, 1fr); } }
+        .problem-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            text-align: center;
+        }
+        .problem-icon {
+            width: 40px; height: 40px;
+            border-radius: var(--radius-sm);
+            background: #FEF2F2;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+        }
+        .problem-icon svg { width: 20px; height: 20px; color: #DC2626; }
+        .problem-card h3 { font-size: 1rem; margin-bottom: 8px; }
+        .problem-card p { font-size: 0.875rem; line-height: 1.5; }
+
+        /* ============================
+           SOLUTION (Before / After)
+        ============================ */
+        .solution-header { text-align: center; margin-bottom: 48px; }
+        .solution-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 480px; margin-left: auto; margin-right: auto; }
+        .solution-grid {
             display: grid; grid-template-columns: 1fr; gap: 20px;
+            max-width: 800px; margin: 0 auto;
         }
-        @media (min-width: 640px) { .services-grid { grid-template-columns: repeat(2, 1fr); } }
-        .service-card {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 36px;
-            transition: border-color 0.2s ease;
+        @media (min-width: 640px) { .solution-grid { grid-template-columns: 1fr 1fr; } }
+        .solution-card {
+            border-radius: var(--radius);
+            padding: 32px;
         }
-        .service-card:hover { border-color: rgba(0, 0, 0, 0.12); }
-        .service-icon {
-            width: 44px; height: 44px; border-radius: var(--radius-xs);
-            background: var(--bg-alt); display: flex; align-items: center; justify-content: center;
-            font-size: 1.25rem; margin-bottom: 20px;
+        .solution-card.old {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
         }
-        .service-card h3 { margin-bottom: 10px; }
-        .service-card p { font-size: 0.9375rem; line-height: 1.5; }
-        .service-tag {
-            display: inline-block; margin-top: 16px; padding: 4px 12px;
-            background: var(--bg-alt); border-radius: 50px;
-            font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+        .solution-card.new {
+            background: var(--accent-bg);
+            border: 1px solid rgba(15, 118, 110, 0.15);
+        }
+        .solution-card h3 {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 20px;
+        }
+        .solution-card.old h3 { color: var(--text-muted); }
+        .solution-card.new h3 { color: var(--accent); }
+        .solution-list { list-style: none; }
+        .solution-list li {
+            padding: 10px 0;
+            font-size: 0.9375rem;
+            display: flex; align-items: flex-start; gap: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .solution-list li:last-child { border-bottom: none; }
+        .solution-list li svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }
+        .solution-card.old .solution-list li { color: var(--text-muted); }
+        .solution-card.old .solution-list li svg { color: #DC2626; }
+        .solution-card.new .solution-list li { color: var(--text-primary); }
+        .solution-card.new .solution-list li svg { color: var(--accent); }
+
+        /* ============================
+           SHOWCASE
+        ============================ */
+        .showcase { background: var(--bg-alt); }
+        .showcase-header { text-align: center; margin-bottom: 48px; }
+        .showcase-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 480px; margin-left: auto; margin-right: auto; }
+        .showcase-browser {
+            max-width: 800px; margin: 0 auto;
+        }
+        .showcase-browser .browser-content { min-height: 360px; padding: 32px; }
+        /* Showcase mini restaurant site */
+        .show-hero {
+            background: linear-gradient(135deg, #FAFAF9, #F5F0EB);
+            border-radius: var(--radius-sm);
+            padding: 32px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .show-hero-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            background: rgba(180, 130, 80, 0.1);
+            font-size: 0.625rem;
+            font-weight: 600;
+            color: #B4824F;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+        }
+        .show-hero h4 {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #292524;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+        .show-hero p {
+            font-size: 0.75rem;
+            color: #78716C;
+            margin-bottom: 16px;
+        }
+        .show-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #292524;
+            color: #FAFAF9;
+            border-radius: 50px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+        }
+        .show-cards {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+        }
+        .show-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .show-card-emoji { font-size: 1.25rem; margin-bottom: 6px; }
+        .show-card h5 { font-size: 0.6875rem; font-weight: 600; color: #292524; margin-bottom: 4px; }
+        .show-card p { font-size: 0.5625rem; color: #78716C; line-height: 1.4; }
+        .showcase-caption {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
         }
 
         /* ============================
            HOW IT WORKS
         ============================ */
-        .how { background: var(--bg-alt); }
-        .how-header { text-align: center; margin-bottom: 64px; }
+        .how-header { text-align: center; margin-bottom: 56px; }
         .how-header p { margin-top: 12px; font-size: 1.0625rem; }
-        .how-steps {
-            display: grid; grid-template-columns: 1fr; gap: 48px; max-width: 640px; margin: 0 auto;
+        .how-timeline {
+            max-width: 680px; margin: 0 auto;
+            position: relative;
         }
-        @media (min-width: 768px) { .how-steps { grid-template-columns: repeat(3, 1fr); gap: 32px; max-width: 100%; } }
-        .how-step { text-align: center; }
-        .step-number {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: var(--text-primary); color: #FFF;
-            font-family: var(--font-display); font-weight: 700; font-size: 1.125rem;
+        .how-timeline::before {
+            content: '';
+            position: absolute;
+            left: 23px; top: 0; bottom: 0;
+            width: 2px;
+            background: var(--border-strong);
+        }
+        @media (min-width: 768px) {
+            .how-timeline::before { left: 50%; transform: translateX(-1px); }
+        }
+        .how-step {
+            position: relative;
+            padding-left: 64px;
+            padding-bottom: 48px;
+        }
+        .how-step:last-child { padding-bottom: 0; }
+        @media (min-width: 768px) {
+            .how-step {
+                padding-left: 0;
+                width: 50%;
+                padding-right: 48px;
+            }
+            .how-step:nth-child(even) {
+                margin-left: 50%;
+                padding-left: 48px;
+                padding-right: 0;
+            }
+        }
+        .step-dot {
+            position: absolute;
+            left: 12px; top: 0;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
             display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 20px;
+            z-index: 1;
         }
-        .how-step h3 { margin-bottom: 10px; }
-        .how-step p { font-size: 0.9375rem; max-width: 280px; margin: 0 auto; }
+        @media (min-width: 768px) {
+            .step-dot { left: auto; right: -12px; }
+            .how-step:nth-child(even) .step-dot { left: -12px; right: auto; }
+        }
+        .step-dot svg { width: 12px; height: 12px; color: #FFF; }
+        .how-step h3 { margin-bottom: 8px; }
+        .how-step p { font-size: 0.9375rem; }
+        .step-time {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--accent-bg);
+            padding: 3px 10px;
+            border-radius: 50px;
+        }
 
         /* ============================
            PRICING
         ============================ */
-        .pricing-header { text-align: center; margin-bottom: 56px; }
+        .pricing { background: var(--bg-alt); }
+        .pricing-header { text-align: center; margin-bottom: 48px; }
         .pricing-header p { margin-top: 12px; font-size: 1.0625rem; }
-        .pricing-grid {
-            display: grid; grid-template-columns: 1fr; gap: 24px; max-width: 800px; margin: 0 auto;
+        .pricing-main {
+            max-width: 480px; margin: 0 auto;
         }
-        @media (min-width: 640px) { .pricing-grid { grid-template-columns: repeat(2, 1fr); } }
         .pricing-card {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 40px;
+            background: var(--bg-card);
+            border: 2px solid var(--accent);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            text-align: center;
         }
-        .pricing-card.featured { border-color: var(--accent); }
-        .pricing-card h3 { margin-bottom: 8px; }
-        .pricing-card .price {
-            font-family: var(--font-display); font-size: 2.5rem; font-weight: 800;
-            color: var(--text-primary); margin: 20px 0;
+        .pricing-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            margin-bottom: 8px;
         }
-        .pricing-card .price span { font-size: 1rem; font-weight: 500; color: var(--text-muted); }
-        .pricing-card .desc { font-size: 0.9375rem; margin-bottom: 24px; }
-        .pricing-features { list-style: none; margin-bottom: 32px; }
+        .pricing-card > h3 { font-size: 1.25rem; margin-bottom: 4px; }
+        .pricing-card .desc { font-size: 0.9375rem; color: var(--text-secondary); margin-bottom: 24px; }
+        .pricing-amount {
+            font-family: var(--font-display);
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+        }
+        .pricing-amount span {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        .pricing-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 24px 0;
+        }
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 32px;
+            text-align: left;
+        }
         .pricing-features li {
-            padding: 8px 0; font-size: 0.9375rem; color: var(--text-secondary);
-            border-bottom: 1px solid var(--border);
+            padding: 10px 0;
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
             display: flex; align-items: center; gap: 10px;
         }
-        .pricing-features li::before { content: '✓'; color: var(--accent); font-weight: 700; }
+        .pricing-features li svg {
+            width: 18px; height: 18px;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
         .pricing-card .btn-primary { width: 100%; }
+        .pricing-guarantee {
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px;
+            margin-top: 16px;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+        .pricing-guarantee svg { width: 14px; height: 14px; }
+        .pricing-addon {
+            max-width: 480px; margin: 20px auto 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 12px;
+        }
+        .addon-info h4 {
+            font-size: 0.9375rem; font-weight: 600; margin-bottom: 2px;
+        }
+        .addon-info p { font-size: 0.8125rem; }
+        .addon-price {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+        }
+        .addon-price span { font-size: 0.8125rem; font-weight: 500; color: var(--text-muted); }
+        .pricing-waitlist {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border);
+        }
+        .pricing-waitlist p {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+        }
+        .pricing-waitlist .agents-coming {
+            display: inline-flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; justify-content: center;
+        }
+        .agent-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: var(--bg-alt);
+            padding: 4px 12px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+        }
 
         /* ============================
-           ABOUT
+           ABOUT / FOUNDER
         ============================ */
-        .about { background: var(--bg-alt); }
-        .about-inner { max-width: 640px; margin: 0 auto; text-align: center; }
+        .about { }
+        .about-inner {
+            max-width: 640px; margin: 0 auto; text-align: center;
+        }
+        .founder-avatar {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: var(--bg-alt);
+            border: 2px solid var(--border);
+            margin: 0 auto 24px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
         .about-inner h2 { margin-bottom: 24px; }
         .about-inner .lead {
-            font-size: 1.125rem; line-height: 1.7; color: var(--text-secondary); margin-bottom: 32px;
+            font-size: 1.0625rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
         }
+        .about-inner .lead:last-of-type { margin-bottom: 32px; }
         .about-values {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; text-align: left;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+            text-align: left;
         }
         @media (min-width: 640px) { .about-values { grid-template-columns: repeat(4, 1fr); } }
-        .about-value { padding: 20px; background: var(--bg-card); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+        .about-value {
+            padding: 20px;
+            background: var(--bg-alt);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
         .about-value h4 { font-size: 0.875rem; font-weight: 700; margin-bottom: 4px; }
         .about-value p { font-size: 0.8125rem; line-height: 1.5; }
 
         /* ============================
            FAQ
         ============================ */
+        .faq { background: var(--bg-alt); }
         .faq-header { text-align: center; margin-bottom: 48px; }
-        .faq-list { max-width: 680px; margin: 0 auto; }
+        .faq-list { max-width: 640px; margin: 0 auto; }
         .faq-item { border-bottom: 1px solid var(--border); }
         .faq-question {
-            width: 100%; display: flex; justify-content: space-between; align-items: center;
-            padding: 20px 0; background: none; border: none; cursor: pointer;
-            font-family: var(--font-body); font-size: 1rem; font-weight: 600;
-            color: var(--text-primary); text-align: left;
+            width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 0;
+            background: none; border: none; cursor: pointer;
+            font-family: var(--font-body);
+            font-size: 1rem; font-weight: 600;
+            color: var(--text-primary);
+            text-align: left;
         }
-        .faq-question .icon { font-size: 1.25rem; color: var(--text-muted); transition: transform 0.3s ease; }
+        .faq-question .icon {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
         .faq-item.active .faq-question .icon { transform: rotate(45deg); }
         .faq-answer {
             max-height: 0; overflow: hidden;
             transition: max-height 0.35s ease, padding 0.35s ease;
         }
-        .faq-item.active .faq-answer { max-height: 200px; }
+        .faq-item.active .faq-answer { max-height: 240px; }
         .faq-answer p { padding-bottom: 20px; font-size: 0.9375rem; line-height: 1.6; }
 
         /* ============================
            FINAL CTA
         ============================ */
-        .final-cta {
-            background: var(--bg-alt); text-align: center;
+        .final-cta { text-align: center; }
+        .final-cta .container {
+            background: var(--bg-alt);
+            border-radius: var(--radius-xl);
+            padding: 64px 32px;
+            border: 1px solid var(--border);
         }
-        .final-cta h2 { margin-bottom: 16px; }
-        .final-cta p { font-size: 1.0625rem; margin-bottom: 32px; max-width: 480px; margin-left: auto; margin-right: auto; }
+        .final-cta h2 { margin-bottom: 12px; }
+        .final-cta p {
+            font-size: 1.0625rem;
+            margin-bottom: 28px;
+            max-width: 420px;
+            margin-left: auto; margin-right: auto;
+        }
 
         /* ============================
            FOOTER
         ============================ */
-        footer {
-            padding: 40px 0;
-            border-top: 1px solid var(--border);
-        }
+        footer { padding: 40px 0; border-top: 1px solid var(--border); }
         .footer-inner {
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 16px;
         }
-        .footer-logo { font-family: var(--font-display); font-weight: 800; font-size: 1rem; color: var(--text-primary); }
+        .footer-logo {
+            font-family: var(--font-display);
+            font-weight: 800; font-size: 1rem;
+            color: var(--text-primary);
+            display: flex; align-items: center; gap: 8px;
+        }
         .footer-links { list-style: none; display: flex; gap: 24px; }
-        .footer-links a { font-size: 0.8125rem; color: var(--text-muted); transition: color 0.2s; }
+        .footer-links a {
+            font-size: 0.8125rem; color: var(--text-muted);
+            transition: color 0.2s;
+        }
         .footer-links a:hover { color: var(--text-primary); }
-        .footer-copy { font-size: 0.75rem; color: var(--text-muted); width: 100%; text-align: center; margin-top: 16px; }
+        .footer-copy {
+            font-size: 0.75rem; color: var(--text-muted);
+            width: 100%; text-align: center; margin-top: 16px;
+        }
     </style>
 </head>
 <body>
 
     <!-- NAVIGATION -->
     <nav>
-        <div class="container nav-inner">
-            <a href="#" class="nav-logo">STILO AI</a>
+        <div class="nav-inner">
+            <a href="#" class="nav-logo">
+                <span class="nav-logo-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </span>
+                STILO AI
+            </a>
             <ul class="nav-links">
-                <li><a href="#services">Agents</a></li>
                 <li><a href="#how">How It Works</a></li>
                 <li><a href="#pricing">Pricing</a></li>
                 <li><a href="#about">About</a></li>
                 <li><a href="#faq">FAQ</a></li>
             </ul>
-            <a href="#get-started" class="nav-cta">Get Started</a>
+            <a href="#pricing" class="nav-cta">Get Started</a>
             <button class="menu-toggle" id="menu-toggle" aria-label="Menu"><span></span></button>
         </div>
     </nav>
 
     <div class="mobile-menu" id="mobile-menu">
-        <a href="#services">Agents</a>
         <a href="#how">How It Works</a>
         <a href="#pricing">Pricing</a>
         <a href="#about">About</a>
         <a href="#faq">FAQ</a>
-        <a href="#get-started" class="btn-primary" style="margin-top: 16px;">Get Started</a>
+        <a href="#pricing" class="btn-primary" style="margin-top: 16px;">Get Started</a>
     </div>
 
     <!-- HERO -->
     <section class="hero" id="hero">
         <div class="container">
-            <div class="hero-badge fade-in">
-                <span class="dot"></span> Accepting new clients
+            <div class="hero-content">
+                <div class="hero-badge fade-in">Accepting new clients</div>
+                <h1 class="fade-in delay-1">A $10K website.<br>48 hours. <span style="color: var(--accent);">$497.</span></h1>
+                <p class="hero-sub fade-in delay-2">Custom-designed websites for restaurants, salons, dental offices, and local businesses. No templates. No page builders. Clean code you own forever.</p>
+                <div class="hero-ctas fade-in delay-3">
+                    <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">Get Your Site</a>
+                    <a href="#showcase" class="btn-ghost">See an Example</a>
+                </div>
+                <div class="hero-trust fade-in delay-4">
+                    <span class="trust-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        No retainers
+                    </span>
+                    <span class="trust-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        You own the code
+                    </span>
+                    <span class="trust-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        7-day refund
+                    </span>
+                </div>
             </div>
-            <h1 class="fade-in delay-1">AI agents that grow<br>your <span class="highlight">business</span></h1>
-            <p class="hero-sub fade-in delay-2">Premium websites and smart automation built for local businesses. No jargon, no retainers. Live in 48 hours.</p>
-            <div class="hero-ctas fade-in delay-3">
-                <a href="#get-started" class="btn-primary">Get Your Site in 48 Hours</a>
-                <a href="#how" class="btn-secondary">See How It Works &#8594;</a>
+
+            <div class="hero-visual fade-in delay-2">
+                <div class="browser-frame">
+                    <div class="browser-chrome">
+                        <span class="browser-dot"></span>
+                        <span class="browser-dot"></span>
+                        <span class="browser-dot"></span>
+                        <div class="browser-url">yourbusiness.com</div>
+                    </div>
+                    <div class="browser-content">
+                        <div class="mini-nav">
+                            <div class="mini-logo"></div>
+                            <div class="mini-nav-links">
+                                <div class="mini-nav-link"></div>
+                                <div class="mini-nav-link"></div>
+                                <div class="mini-nav-link"></div>
+                            </div>
+                        </div>
+                        <div class="mini-hero-text">
+                            <div class="mini-h1"></div>
+                            <div class="mini-h1-2"></div>
+                            <div class="mini-sub"></div>
+                            <div class="mini-sub-2"></div>
+                        </div>
+                        <div class="mini-btn"></div>
+                        <div class="mini-cards">
+                            <div class="mini-card">
+                                <div class="mini-card-icon"></div>
+                                <div class="mini-card-title"></div>
+                                <div class="mini-card-body"></div>
+                                <div class="mini-card-body" style="width: 65%;"></div>
+                            </div>
+                            <div class="mini-card">
+                                <div class="mini-card-icon"></div>
+                                <div class="mini-card-title"></div>
+                                <div class="mini-card-body"></div>
+                                <div class="mini-card-body" style="width: 75%;"></div>
+                            </div>
+                            <div class="mini-card">
+                                <div class="mini-card-icon"></div>
+                                <div class="mini-card-title"></div>
+                                <div class="mini-card-body"></div>
+                                <div class="mini-card-body" style="width: 55%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="hero-trust fade-in delay-3">Trusted by restaurants, salons, dental offices, and law firms.</p>
         </div>
     </section>
 
-    <!-- SOCIAL PROOF -->
-    <section class="proof" id="proof">
+    <!-- CREDIBILITY BAR -->
+    <section class="credibility fade-in">
         <div class="container">
-            <div class="proof-header fade-in">
-                <h2>Built to perform</h2>
-                <p>Real results for real businesses.</p>
-            </div>
-            <div class="proof-grid">
-                <div class="testimonial fade-in">
-                    <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-                    <p class="quote">"We went from an outdated WordPress site to something that actually looks like us. Bookings went up 40% in the first month."</p>
-                    <p class="author">Maria S. &mdash; Salon Owner, Austin</p>
+            <div class="cred-grid">
+                <div class="cred-item">
+                    <div class="cred-number">48hr</div>
+                    <div class="cred-label">Delivery</div>
                 </div>
-                <div class="testimonial fade-in delay-1">
-                    <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-                    <p class="quote">"I thought getting a great website meant spending $5K and waiting weeks. This was done in two days and looks better than what my old agency built."</p>
-                    <p class="author">Dr. James R. &mdash; Dentist, Phoenix</p>
+                <div class="cred-item">
+                    <div class="cred-number">$497</div>
+                    <div class="cred-label">Flat rate</div>
                 </div>
-                <div class="testimonial fade-in delay-2">
-                    <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-                    <p class="quote">"The site paid for itself in the first week. We got 12 new reservation requests from Google alone."</p>
-                    <p class="author">Tony M. &mdash; Restaurant Owner, Chicago</p>
+                <div class="cred-item">
+                    <div class="cred-number">0</div>
+                    <div class="cred-label">Templates used</div>
+                </div>
+                <div class="cred-item">
+                    <div class="cred-number">100%</div>
+                    <div class="cred-label">Your code</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- SERVICES / AGENTS -->
-    <section class="services" id="services">
+    <!-- THE PROBLEM -->
+    <section class="problem" id="problem">
         <div class="container">
-            <div class="services-header fade-in">
-                <h2>Our agents</h2>
-                <p>Each agent handles a specific part of running your business online.</p>
+            <div class="problem-header fade-in">
+                <h2>Your competitors already have a better website</h2>
+                <p>Most local businesses lose customers before they ever walk through the door.</p>
             </div>
-            <div class="services-grid">
-                <div class="service-card fade-in">
-                    <div class="service-icon">&#127760;</div>
-                    <h3>Website Builder Agent</h3>
-                    <p>A premium, conversion-focused website built specifically for your business. Researched, designed, and deployed in 48 hours.</p>
-                    <span class="service-tag">AVAILABLE NOW</span>
+            <div class="problem-grid">
+                <div class="problem-card fade-in">
+                    <div class="problem-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    </div>
+                    <h3>Outdated sites lose trust</h3>
+                    <p>75% of people judge a business's credibility by its website. If yours looks like 2015, they're going to your competitor.</p>
                 </div>
-                <div class="service-card fade-in delay-1">
-                    <div class="service-icon">&#128222;</div>
-                    <h3>AI Receptionist</h3>
-                    <p>Never miss a call again. An AI that answers the phone, books appointments, and handles FAQs — 24/7.</p>
-                    <span class="service-tag">COMING SOON</span>
+                <div class="problem-card fade-in delay-1">
+                    <div class="problem-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <h3>Agencies are slow and expensive</h3>
+                    <p>Traditional web agencies charge $5K-$15K and take 4-8 weeks. That's a lot of money for a site you can't even update yourself.</p>
                 </div>
-                <div class="service-card fade-in delay-2">
-                    <div class="service-icon">&#11088;</div>
-                    <h3>Review Manager</h3>
-                    <p>Automatically requests reviews from happy customers and responds to every review — positive or negative — professionally.</p>
-                    <span class="service-tag">COMING SOON</span>
-                </div>
-                <div class="service-card fade-in delay-3">
-                    <div class="service-icon">&#128247;</div>
-                    <h3>Social Media Agent</h3>
-                    <p>Consistent, on-brand posts across Instagram and Facebook. Captions, hashtags, and scheduling handled automatically.</p>
-                    <span class="service-tag">COMING SOON</span>
+                <div class="problem-card fade-in delay-2">
+                    <div class="problem-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    </div>
+                    <h3>Templates look like templates</h3>
+                    <p>Wix and Squarespace sites all look the same. Your customers can tell. And you're stuck paying platform fees forever.</p>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- THE SOLUTION -->
+    <section class="solution" id="solution">
+        <div class="container">
+            <div class="solution-header fade-in">
+                <h2>There's a better way</h2>
+                <p>AI-powered research and design, human-level quality. The best of both worlds.</p>
+            </div>
+            <div class="solution-grid">
+                <div class="solution-card old fade-in">
+                    <h3>The old way</h3>
+                    <ul class="solution-list">
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            $5,000 - $15,000 upfront
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            4-8 weeks to launch
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Generic template design
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Locked into their platform
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Monthly retainer required
+                        </li>
+                    </ul>
+                </div>
+                <div class="solution-card new fade-in delay-1">
+                    <h3>The STILO way</h3>
+                    <ul class="solution-list">
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            $497 flat rate
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Live in 48 hours
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Custom design, researched for your niche
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Clean code you own forever
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            No lock-in, cancel anytime
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SHOWCASE -->
+    <section class="showcase" id="showcase">
+        <div class="container">
+            <div class="showcase-header fade-in">
+                <h2>See what we build</h2>
+                <p>Every site is custom-designed for the specific business. Here's what a restaurant site looks like.</p>
+            </div>
+            <div class="showcase-browser browser-frame fade-in delay-1">
+                <div class="browser-chrome">
+                    <span class="browser-dot"></span>
+                    <span class="browser-dot"></span>
+                    <span class="browser-dot"></span>
+                    <div class="browser-url">bellacucina.com</div>
+                </div>
+                <div class="browser-content">
+                    <div class="show-hero">
+                        <div class="show-hero-badge">Now taking reservations</div>
+                        <h4>Bella Cucina</h4>
+                        <p>Authentic Italian dining in the heart of downtown Austin.</p>
+                        <span class="show-btn">Reserve a Table</span>
+                    </div>
+                    <div class="show-cards">
+                        <div class="show-card">
+                            <div class="show-card-emoji" aria-hidden="true" style="font-size: 1rem;">&#127858;</div>
+                            <h5>The Menu</h5>
+                            <p>Seasonal dishes made from scratch daily</p>
+                        </div>
+                        <div class="show-card">
+                            <div class="show-card-emoji" aria-hidden="true" style="font-size: 1rem;">&#127863;</div>
+                            <h5>Wine List</h5>
+                            <p>Curated Italian wines by the glass or bottle</p>
+                        </div>
+                        <div class="show-card">
+                            <div class="show-card-emoji" aria-hidden="true" style="font-size: 1rem;">&#127881;</div>
+                            <h5>Private Events</h5>
+                            <p>Host your next celebration with us</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="showcase-caption fade-in delay-2">Custom design for a fictional restaurant. Your site will be researched and built specifically for your business.</p>
         </div>
     </section>
 
@@ -462,23 +1110,32 @@
         <div class="container">
             <div class="how-header fade-in">
                 <h2>How it works</h2>
-                <p>Three steps. No complexity.</p>
+                <p>Three steps. No complexity. No jargon.</p>
             </div>
-            <div class="how-steps">
+            <div class="how-timeline">
                 <div class="how-step fade-in">
-                    <div class="step-number">1</div>
-                    <h3>Pick your agent</h3>
-                    <p>Choose the agent that fits your business. Start with one, add more as you grow.</p>
+                    <div class="step-dot">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <h3>Tell us about your business</h3>
+                    <p>A quick conversation about what you do, who your customers are, and what you need your website to accomplish. Takes 10 minutes.</p>
+                    <span class="step-time">10 minutes</span>
                 </div>
                 <div class="how-step fade-in delay-1">
-                    <div class="step-number">2</div>
-                    <h3>We research &amp; build</h3>
-                    <p>Our AI researches your business, competitors, and customers. Then builds something tailored to you.</p>
+                    <div class="step-dot">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </div>
+                    <h3>We research, design, and build</h3>
+                    <p>Our AI researches your industry, analyzes your competitors, and builds a site tailored to your specific business. Custom code, custom design.</p>
+                    <span class="step-time">24-48 hours</span>
                 </div>
                 <div class="how-step fade-in delay-2">
-                    <div class="step-number">3</div>
-                    <h3>You grow</h3>
-                    <p>Your agent goes live. You get more calls, more bookings, more customers. We handle the rest.</p>
+                    <div class="step-dot">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <h3>Your site goes live</h3>
+                    <p>Deployed, fast, and ready for customers. You own the code. Make changes yourself, hire any developer, or let us handle it.</p>
+                    <span class="step-time">You're live</span>
                 </div>
             </div>
         </div>
@@ -488,64 +1145,92 @@
     <section class="pricing" id="pricing">
         <div class="container">
             <div class="pricing-header fade-in">
-                <h2>Simple pricing</h2>
-                <p>No retainers. No hidden fees. You own everything we build.</p>
+                <h2>Simple, honest pricing</h2>
+                <p>One price. No surprises. No hidden fees.</p>
             </div>
-            <div class="pricing-grid">
-                <div class="pricing-card featured fade-in">
-                    <h3>Website Builder Agent</h3>
-                    <p class="desc">A premium website built for your business.</p>
-                    <div class="price">$497<span> one-time</span></div>
+            <div class="pricing-main fade-in delay-1">
+                <div class="pricing-card">
+                    <div class="pricing-label">Website Builder Agent</div>
+                    <h3>A premium website built for your business</h3>
+                    <p class="desc">Researched, designed, and deployed in 48 hours.</p>
+                    <div class="pricing-amount">$497 <span>one-time</span></div>
+                    <div class="pricing-divider"></div>
                     <ul class="pricing-features">
-                        <li>Custom design — no templates</li>
-                        <li>Competitor &amp; industry research</li>
-                        <li>Mobile-optimized &amp; fast</li>
-                        <li>SEO-ready from day one</li>
-                        <li>Delivered in 48 hours</li>
-                        <li>You own the code — no lock-in</li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Custom design — zero templates
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Industry and competitor research
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Mobile-optimized and fast
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            SEO-ready from day one
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            You own the code — no lock-in
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Free hosting on Vercel
+                        </li>
                     </ul>
-                    <a href="#get-started" class="btn-primary">Get Started</a>
+                    <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">Get Started</a>
+                    <div class="pricing-guarantee">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Not happy? Full refund within 7 days.
+                    </div>
                 </div>
-                <div class="pricing-card fade-in delay-1">
-                    <h3>Monthly Retainer</h3>
-                    <p class="desc">Ongoing support and updates.</p>
-                    <div class="price">$47<span>/mo</span></div>
-                    <ul class="pricing-features">
-                        <li>Unlimited content updates</li>
-                        <li>Performance monitoring</li>
-                        <li>Priority support</li>
-                        <li>New sections &amp; features</li>
-                        <li>Hosting management</li>
-                        <li>Cancel anytime</li>
-                    </ul>
-                    <a href="#get-started" class="btn-primary">Add Retainer</a>
+            </div>
+            <div class="pricing-addon fade-in delay-2">
+                <div class="addon-info">
+                    <h4>Monthly Support</h4>
+                    <p>Unlimited updates, monitoring, and priority support.</p>
+                </div>
+                <div class="addon-price">$47<span>/mo</span></div>
+            </div>
+            <div class="pricing-waitlist fade-in delay-3">
+                <p>More agents launching soon.</p>
+                <div class="agents-coming">
+                    <span class="agent-tag">AI Receptionist</span>
+                    <span class="agent-tag">Review Manager</span>
+                    <span class="agent-tag">Social Media Agent</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ABOUT -->
+    <!-- ABOUT / FOUNDER -->
     <section class="about" id="about">
         <div class="container">
             <div class="about-inner fade-in">
-                <h2>Built by someone who gets it</h2>
-                <p class="lead">STILO AI was created by Remy Leon with one belief: local businesses deserve the same quality tools that Fortune 500 companies have — without the Fortune 500 budget. Every agent we build is designed to earn its cost back in the first month.</p>
+                <div class="founder-avatar">RL</div>
+                <h2>Built by Remy Leon</h2>
+                <p class="lead">I started STILO AI because I watched too many local businesses pay $10,000 for a website that took two months and still looked generic. Meanwhile, Fortune 500 companies get Apple-level design on demand. That gap didn't make sense to me.</p>
+                <p class="lead">STILO AI uses artificial intelligence to research your business, your competitors, and your customers — then builds a site that looks like it cost ten times what you paid. Every site is hand-reviewed. Every pixel earns its place.</p>
+                <p class="lead">We're new, we're hungry, and we have something to prove. Your site will be our best work yet.</p>
                 <div class="about-values">
                     <div class="about-value">
                         <h4>Quality</h4>
-                        <p>Every site looks like it cost $10K.</p>
+                        <p>Every site looks like a $10K product.</p>
                     </div>
                     <div class="about-value">
                         <h4>Speed</h4>
-                        <p>48-hour delivery, not 4 weeks.</p>
+                        <p>48 hours, not 4 weeks.</p>
                     </div>
                     <div class="about-value">
                         <h4>Ownership</h4>
                         <p>You own everything. No lock-in.</p>
                     </div>
                     <div class="about-value">
-                        <h4>Results</h4>
-                        <p>Built to convert, not just look pretty.</p>
+                        <h4>Honesty</h4>
+                        <p>Flat pricing. No upsells. No BS.</p>
                     </div>
                 </div>
             </div>
@@ -556,28 +1241,32 @@
     <section class="faq" id="faq">
         <div class="container">
             <div class="faq-header fade-in">
-                <h2>Common questions</h2>
+                <h2>Questions</h2>
             </div>
             <div class="faq-list fade-in">
                 <div class="faq-item">
-                    <button class="faq-question">Do I need to be technical? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Not at all. We handle everything — design, code, copy, deployment. If you can send an email, you can work with us.</p></div>
+                    <button class="faq-question">What do I need to get started? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>Just 10 minutes of your time. We'll ask about your business, your customers, and what you want the site to do. We handle everything else — research, design, code, and deployment.</p></div>
                 </div>
                 <div class="faq-item">
-                    <button class="faq-question">How long does it take? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Most websites are delivered within 48 hours. Our AI handles research, design, and code while maintaining premium quality.</p></div>
+                    <button class="faq-question">How is this different from Wix or Squarespace? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>Template sites look like template sites — your customers can tell. We research your specific business, analyze your competitors, and write custom code tailored to you. No platform fees. No limitations. You own the file.</p></div>
                 </div>
                 <div class="faq-item">
                     <button class="faq-question">What if I already have a website? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Even better. We analyze your current site, identify what works, and build something that's a genuine upgrade — better design, better copy, better conversion.</p></div>
+                    <div class="faq-answer"><p>Even better. We'll analyze what's working, what's not, and build something that's a genuine upgrade — better design, better copy, better conversion. Your old site becomes a benchmark, not a constraint.</p></div>
                 </div>
                 <div class="faq-item">
-                    <button class="faq-question">What makes this different from Wix or Squarespace? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Templates look like templates. Our AI researches your specific business, competitors, and customers — then builds a site tailored to you. Custom code, custom design, no platform fees.</p></div>
+                    <button class="faq-question">Can I make changes after delivery? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>Yes. You own the code. Edit it yourself, hire any developer, or subscribe to our $47/month support plan and we'll handle all updates for you. No lock-in either way.</p></div>
                 </div>
                 <div class="faq-item">
-                    <button class="faq-question">Can I make changes after? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Yes. You own the file. Edit it yourself, hire any developer, or subscribe to our $47/mo plan and we handle updates for you.</p></div>
+                    <button class="faq-question">What if I don't like the result? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>Full refund within 7 days, no questions asked. We'd rather earn your trust than keep your money. That said — we haven't had a refund request yet.</p></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">How does AI fit into this? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>AI handles the heavy lifting — researching your industry, analyzing competitor sites, generating optimized copy, and writing clean code. But every site is reviewed by a human eye before delivery. You get the speed of AI with the taste of a senior designer.</p></div>
                 </div>
             </div>
         </div>
@@ -586,19 +1275,24 @@
     <!-- FINAL CTA -->
     <section class="final-cta" id="get-started">
         <div class="container fade-in">
-            <h2>Ready to upgrade your business?</h2>
-            <p>Get a premium website in 48 hours. No risk, no retainers.</p>
-            <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">Get Started &mdash; $497</a>
+            <h2>Ready to stand out?</h2>
+            <p>Get a website your customers will trust and your competitors will envy. 48 hours. $497. No risk.</p>
+            <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">Get Your Site — $497</a>
         </div>
     </section>
 
     <!-- FOOTER -->
     <footer>
         <div class="container footer-inner">
-            <span class="footer-logo">STILO AI</span>
+            <span class="footer-logo">
+                <span class="nav-logo-mark" style="width: 22px; height: 22px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </span>
+                STILO AI
+            </span>
             <ul class="footer-links">
-                <li><a href="#services">Agents</a></li>
                 <li><a href="#pricing">Pricing</a></li>
+                <li><a href="#how">How It Works</a></li>
                 <li><a href="#faq">FAQ</a></li>
                 <li><a href="mailto:remyleon11@gmail.com">Contact</a></li>
             </ul>
@@ -613,11 +1307,13 @@
         menuToggle.addEventListener('click', function() {
             menuToggle.classList.toggle('active');
             mobileMenu.classList.toggle('active');
+            document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
         });
         mobileMenu.querySelectorAll('a').forEach(function(link) {
             link.addEventListener('click', function() {
                 menuToggle.classList.remove('active');
                 mobileMenu.classList.remove('active');
+                document.body.style.overflow = '';
             });
         });
 
