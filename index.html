@@ -9,10 +9,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STILO AI — Premium AI-Powered Websites for Local Businesses</title>
-    <meta name="description" content="Premium websites that look like they cost $10,000 — built in 48 hours for $497. Custom-designed for restaurants, salons, dental offices, law firms, and local businesses.">
-    <meta property="og:title" content="STILO AI — A $10K Website. 48 Hours. $497.">
-    <meta property="og:description" content="Premium AI-powered websites for local businesses. Custom-designed, conversion-focused, deployed in 48 hours.">
+    <title>STILO AI — AI Consulting Agency</title>
+    <meta name="description" content="AI agents, automations, and custom implementations for modern businesses. From premium websites to full AI systems — built and deployed in days, not months.">
+    <meta property="og:title" content="STILO AI — AI Consulting Agency">
+    <meta property="og:description" content="AI agents, automations, and custom implementations for modern businesses. Built and deployed in days, not months.">
     <meta property="og:type" content="website">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,6 +86,12 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            background-size: 200% auto;
+            animation: shimmer 5s linear infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
         }
 
         /* === LAYOUT === */
@@ -121,17 +127,72 @@
         }
         .btn-ghost:hover { border-color: var(--accent); background: var(--accent-glow); }
 
+        /* === SCROLL PROGRESS === */
+        .scroll-progress {
+            position: fixed; top: 0; left: 0; height: 2px; width: 0%;
+            background: var(--accent-gradient); z-index: 9999;
+            transition: width 0.05s linear; pointer-events: none;
+        }
+
         /* === ANIMATIONS === */
         .fade-in {
             opacity: 0; transform: translateY(28px);
-            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+            transition: opacity 0.75s cubic-bezier(0.16,1,0.3,1), transform 0.75s cubic-bezier(0.16,1,0.3,1);
         }
         .fade-in.visible { opacity: 1; transform: translateY(0); }
-        .delay-1 { transition-delay: 0.1s; }
-        .delay-2 { transition-delay: 0.2s; }
-        .delay-3 { transition-delay: 0.3s; }
-        .delay-4 { transition-delay: 0.4s; }
-        .delay-5 { transition-delay: 0.5s; }
+        .delay-1 { transition-delay: 0.12s; }
+        .delay-2 { transition-delay: 0.24s; }
+        .delay-3 { transition-delay: 0.36s; }
+        .delay-4 { transition-delay: 0.48s; }
+        .delay-5 { transition-delay: 0.60s; }
+
+        /* === FLOATING ORBS === */
+        @keyframes float {
+            0%, 100% { transform: translateX(-50%) translateY(0px); }
+            50% { transform: translateX(-50%) translateY(-28px); }
+        }
+        @keyframes float2 {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-18px); }
+        }
+        .hero-glow-1 { animation: float 10s ease-in-out infinite; }
+        .hero-glow-2 { animation: float2 8s ease-in-out infinite 1.5s; }
+
+        /* === BUTTON RIPPLE === */
+        .btn-primary { position: relative; overflow: hidden; }
+        .ripple {
+            position: absolute; border-radius: 50%;
+            width: 4px; height: 4px;
+            background: rgba(255,255,255,0.25);
+            transform: scale(0);
+            animation: ripple-anim 0.65s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes ripple-anim { to { transform: scale(80); opacity: 0; } }
+
+        /* === CARD STATUS BADGES === */
+        .card-status {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 50px;
+            font-size: 0.6875rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            position: absolute; top: 20px; right: 20px;
+        }
+        .card-status.live {
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            color: #34D399;
+        }
+        .card-status.live::before {
+            content: ''; width: 5px; height: 5px; border-radius: 50%;
+            background: #34D399; box-shadow: 0 0 6px #34D399;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .card-status.soon {
+            background: rgba(161,161,170,0.07);
+            border: 1px solid rgba(161,161,170,0.15);
+            color: var(--text-muted);
+        }
 
         /* === GRID BACKGROUND PATTERN === */
         .grid-bg {
@@ -741,6 +802,8 @@
 </head>
 <body>
 
+    <div class="scroll-progress" id="scroll-progress"></div>
+
     <!-- NAVIGATION -->
     <nav>
         <div class="nav-inner">
@@ -751,24 +814,24 @@
                 STILO AI
             </a>
             <ul class="nav-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#showcase">Showcase</a></li>
+                <li><a href="#features">Services</a></li>
+                <li><a href="#showcase">Work</a></li>
                 <li><a href="#how">Process</a></li>
                 <li><a href="#pricing">Pricing</a></li>
                 <li><a href="#about">About</a></li>
             </ul>
-            <a href="#pricing" class="nav-cta">Get Started</a>
+            <a href="mailto:remyleon11@gmail.com?subject=Let%27s%20work%20together%20-%20STILO%20AI" class="nav-cta">Start a Project</a>
             <button class="menu-toggle" id="menu-toggle" aria-label="Menu"><span></span></button>
         </div>
     </nav>
 
     <div class="mobile-menu" id="mobile-menu">
-        <a href="#features">Features</a>
-        <a href="#showcase">Showcase</a>
+        <a href="#features">Services</a>
+        <a href="#showcase">Work</a>
         <a href="#how">Process</a>
         <a href="#pricing">Pricing</a>
         <a href="#about">About</a>
-        <a href="#pricing" class="btn-primary" style="margin-top: 16px;">Get Started</a>
+        <a href="mailto:remyleon11@gmail.com?subject=Let%27s%20work%20together%20-%20STILO%20AI" class="btn-primary" style="margin-top: 16px;">Start a Project</a>
     </div>
 
     <!-- HERO -->
@@ -777,35 +840,26 @@
         <div class="glow-orb glow-purple hero-glow-1"></div>
         <div class="glow-orb glow-blue hero-glow-2"></div>
         <div class="container">
-            <div class="hero-eyebrow fade-in">
-                <span class="pulse"></span>
-                Now building for local businesses
-            </div>
-            <h1 class="fade-in delay-1">Websites that look like they cost <span class="gradient-text">$10,000</span></h1>
-            <p class="hero-sub fade-in delay-2">AI-powered websites for restaurants, salons, dental offices, and local businesses. Custom-designed. Conversion-focused. Deployed in 48 hours. You own the code.</p>
-            <div class="hero-ctas fade-in delay-3">
-                <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">
-                    Get Your Site — $497
+            <h1 class="fade-in">We build <span class="gradient-text">AI systems</span><br>that run your business</h1>
+            <div class="hero-ctas fade-in delay-1">
+                <a href="mailto:remyleon11@gmail.com?subject=Let%27s%20work%20together%20-%20STILO%20AI" class="btn-primary">
+                    Start a Project
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-                <a href="#showcase" class="btn-ghost">See Our Work</a>
+                <a href="#features" class="btn-ghost">Explore Services</a>
             </div>
-            <div class="hero-stats fade-in delay-4">
+            <div class="hero-stats fade-in delay-2">
+                <div class="hero-stat">
+                    <div class="number">5+</div>
+                    <div class="label">AI Products</div>
+                </div>
                 <div class="hero-stat">
                     <div class="number">48hr</div>
-                    <div class="label">Delivery</div>
+                    <div class="label">Deployment</div>
                 </div>
-                <div class="hero-stat">
-                    <div class="number">$497</div>
-                    <div class="label">Flat rate</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="number">0</div>
-                    <div class="label">Templates</div>
-                </div>
-                <div class="hero-stat">
+<div class="hero-stat">
                     <div class="number">100%</div>
-                    <div class="label">Your code</div>
+                    <div class="label">Custom</div>
                 </div>
             </div>
         </div>
@@ -814,32 +868,33 @@
     <!-- LOGO STRIP -->
     <section class="logo-strip fade-in">
         <div class="container">
-            <div class="logo-strip-label">Built for businesses like</div>
+            <div class="logo-strip-label">Serving businesses across</div>
             <div class="logo-row">
                 <span class="logo-item">Restaurants</span>
-                <span class="logo-item">Dental Offices</span>
+                <span class="logo-item">Dental & Med Spa</span>
                 <span class="logo-item">Salons</span>
                 <span class="logo-item">Law Firms</span>
-                <span class="logo-item">Contractors</span>
-                <span class="logo-item">Gyms</span>
+                <span class="logo-item">Real Estate</span>
+                <span class="logo-item">E-Commerce</span>
             </div>
         </div>
     </section>
 
-    <!-- BENTO GRID — WHAT WE BUILD -->
+    <!-- SERVICES — WHAT WE BUILD -->
     <section id="features">
         <div class="container">
             <div class="bento-header fade-in">
-                <h2>Everything your business needs <span class="gradient-text">online</span></h2>
-                <p>Not just a website — a system designed to turn visitors into customers.</p>
+                <h2>Not just a website.<br><span class="gradient-text">A complete AI system.</span></h2>
+                <p>We build agents, automations, and custom implementations. The website is just the beginning.</p>
             </div>
             <div class="bento-grid">
                 <div class="bento-card wide fade-in">
+                    <span class="card-status live">Live</span>
                     <div class="bento-card-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     </div>
-                    <h3>Custom Website Design</h3>
-                    <p>No templates. We research your business, your competitors, and your customers — then build a site tailored specifically to you.</p>
+                    <h3>Website Builder Agent</h3>
+                    <p>A custom-designed website built by AI and reviewed by a human. Researched, coded, and deployed in 48 hours. No templates. You own the code.</p>
                     <div class="bento-preview">
                         <div class="bento-preview-bar">
                             <span class="bp-dot"></span><span class="bp-dot"></span><span class="bp-dot"></span>
@@ -857,39 +912,43 @@
                     </div>
                 </div>
                 <div class="bento-card fade-in delay-1">
+                    <span class="card-status soon">Coming Soon</span>
                     <div class="bento-card-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.44 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l1.41-1.41a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
-                    <h3>SEO Built In</h3>
-                    <p>Semantic HTML, meta tags, structured data, and fast load times. Your site shows up when customers search.</p>
+                    <h3>AI Receptionist</h3>
+                    <p>An AI agent that answers calls, captures leads, books appointments, and qualifies prospects — 24/7, without missing a beat.</p>
                 </div>
                 <div class="bento-card fade-in delay-2">
+                    <span class="card-status soon">Coming Soon</span>
                     <div class="bento-card-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     </div>
-                    <h3>Mobile-First</h3>
-                    <p>70% of local searches happen on phones. Every site is designed mobile-first, then scaled up for desktop.</p>
+                    <h3>Review Manager</h3>
+                    <p>Automatically request, monitor, and respond to customer reviews. Build a 5-star reputation on autopilot.</p>
                 </div>
                 <div class="bento-card fade-in delay-1">
+                    <span class="card-status soon">Coming Soon</span>
                     <div class="bento-card-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
                     </div>
-                    <h3>Lightning Fast</h3>
-                    <p>No heavy frameworks. Clean, hand-written code that loads in under a second. Fast sites convert better.</p>
+                    <h3>Social Media Agent</h3>
+                    <p>Consistent, on-brand content generated and posted automatically. Stay visible without lifting a finger.</p>
                 </div>
                 <div class="bento-card wide fade-in delay-2">
+                    <span class="card-status live">Available</span>
                     <div class="bento-card-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     </div>
-                    <h3>Clean Code You Own</h3>
-                    <p>No platform lock-in. No monthly fees to keep your site alive. You get the source code — edit it yourself, hire any developer, or let us handle it.</p>
+                    <h3>Custom AI Implementations</h3>
+                    <p>Got a specific workflow to automate? A unique problem AI could solve? We build bespoke AI systems tailored to your exact needs — from lead pipelines to internal operations.</p>
                     <div class="bento-code">
-                        <span class="comment">&lt;!-- Your website. Your code. Forever. --&gt;</span><br>
-                        <span class="keyword">&lt;section</span> class=<span class="string">"hero"</span><span class="keyword">&gt;</span><br>
-                        &nbsp;&nbsp;<span class="keyword">&lt;h1&gt;</span>Welcome to <span class="string">Your Business</span><span class="keyword">&lt;/h1&gt;</span><br>
-                        &nbsp;&nbsp;<span class="keyword">&lt;p&gt;</span>Trusted by 500+ families since 2010<span class="keyword">&lt;/p&gt;</span><br>
-                        &nbsp;&nbsp;<span class="keyword">&lt;a</span> class=<span class="string">"cta"</span><span class="keyword">&gt;</span>Book Now<span class="keyword">&lt;/a&gt;</span><br>
-                        <span class="keyword">&lt;/section&gt;</span>
+                        <span class="comment">// Your workflow. Automated.</span><br>
+                        <span class="keyword">const</span> agent = <span class="string">new AIAgent</span>({<br>
+                        &nbsp;&nbsp;trigger: <span class="string">"new lead arrives"</span>,<br>
+                        &nbsp;&nbsp;actions: [<span class="string">"qualify"</span>, <span class="string">"reply"</span>, <span class="string">"book"</span>],<br>
+                        &nbsp;&nbsp;notify: <span class="keyword">true</span><br>
+                        });
                     </div>
                 </div>
             </div>
@@ -901,8 +960,8 @@
         <div class="glow-orb glow-purple" style="width:500px;height:500px;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
         <div class="container" style="position:relative;z-index:1;">
             <div class="showcase-header fade-in">
-                <h2>See what a <span class="gradient-text">STILO site</span> looks like</h2>
-                <p>Every site is custom. Here's an example for a restaurant.</p>
+                <h2>Our <span class="gradient-text">Website Builder</span> in action</h2>
+                <p>Every site is researched and built from scratch. Here's what the output looks like.</p>
             </div>
             <div class="showcase-frame fade-in delay-1">
                 <div class="sf-chrome">
@@ -946,26 +1005,26 @@
         <div class="container">
             <div class="process-header fade-in">
                 <h2>Three steps. <span class="gradient-text">Zero complexity.</span></h2>
-                <p>From conversation to live website in 48 hours.</p>
+                <p>From first conversation to deployed AI system in days, not months.</p>
             </div>
             <div class="process-steps">
                 <div class="process-step fade-in">
                     <div class="step-number">1</div>
-                    <h3>Tell us about your business</h3>
-                    <p>A quick conversation about what you do, who your customers are, and what you want the site to do.</p>
-                    <span class="step-time">10 minutes</span>
+                    <h3>Discovery</h3>
+                    <p>Tell us your goals, your customers, and your biggest pain points. We identify exactly where AI can make the biggest impact.</p>
+                    <span class="step-time">30 minutes</span>
                 </div>
                 <div class="process-step fade-in delay-1">
                     <div class="step-number">2</div>
-                    <h3>We research and build</h3>
-                    <p>AI researches your industry, analyzes competitors, and builds a site tailored to your business.</p>
-                    <span class="step-time">24-48 hours</span>
+                    <h3>Build & Deploy</h3>
+                    <p>Our AI researches, designs, and builds your solution. Every output is reviewed by a human before you see it.</p>
+                    <span class="step-time">24–48 hours</span>
                 </div>
                 <div class="process-step fade-in delay-2">
                     <div class="step-number">3</div>
-                    <h3>Your site goes live</h3>
-                    <p>Deployed, fast, and ready for customers. You own everything — the code, the design, the domain.</p>
-                    <span class="step-time">You're live</span>
+                    <h3>Iterate & Scale</h3>
+                    <p>We monitor, optimize, and keep building. As your business grows, your AI stack grows with it.</p>
+                    <span class="step-time">Ongoing</span>
                 </div>
             </div>
         </div>
@@ -981,14 +1040,14 @@
             <div class="pricing-main fade-in delay-1">
                 <div class="pricing-card">
                     <div class="pricing-badge">Website Builder Agent</div>
-                    <h3>A premium website for your business</h3>
-                    <p class="desc">Researched, designed, and deployed in 48 hours.</p>
+                    <h3>A premium AI-built website</h3>
+                    <p class="desc">Researched, designed, and deployed in 48 hours. Our flagship product.</p>
                     <div class="pricing-amount gradient-text">$497 <span>one-time</span></div>
                     <div class="pricing-divider"></div>
                     <ul class="pricing-features">
                         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Custom design — zero templates</li>
                         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Industry and competitor research</li>
-                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mobile-optimized and fast</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mobile-optimized and blazing fast</li>
                         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> SEO-ready from day one</li>
                         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> You own the code — no lock-in</li>
                         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Free hosting on Vercel</li>
@@ -1008,11 +1067,12 @@
                 <div class="addon-price">$47<span>/mo</span></div>
             </div>
             <div class="pricing-agents fade-in delay-3">
-                <p>More agents launching soon.</p>
+                <p>More AI products launching soon — plus custom implementations available now.</p>
                 <div class="agent-tags">
                     <span class="agent-tag">AI Receptionist</span>
                     <span class="agent-tag">Review Manager</span>
                     <span class="agent-tag">Social Media Agent</span>
+                    <span class="agent-tag">Custom AI — Contact Us</span>
                 </div>
             </div>
         </div>
@@ -1024,12 +1084,12 @@
             <div class="about-inner fade-in">
                 <div class="founder-avatar">RL</div>
                 <h2>Built by <span class="gradient-text">Remy Leon</span></h2>
-                <p class="lead">I started STILO AI because local businesses deserve the same quality tools that Fortune 500 companies have — without the Fortune 500 budget.</p>
-                <p class="lead">Our AI researches your business, your competitors, and your customers. Then builds a site that looks like it cost ten times what you paid. Every site is hand-reviewed. Every pixel earns its place.</p>
-                <p class="lead">We're new, we're hungry, and we have something to prove. Your site will be our best work yet.</p>
+                <p class="lead">I started STILO AI because businesses of every size deserve access to real AI — not just a chatbot bolted onto their homepage, but systems that actually do work.</p>
+                <p class="lead">We build websites, AI agents, and custom automations. Every product is designed to save you time, capture more leads, and make your business run smoother — without a team of engineers or a Fortune 500 budget.</p>
+                <p class="lead">Everything we ship is reviewed by a human. Every system earns its place. We're building this agency one great product at a time.</p>
                 <div class="about-values">
-                    <div class="about-value"><h4>Quality</h4><p>Looks like a $10K product.</p></div>
-                    <div class="about-value"><h4>Speed</h4><p>48 hours, not 4 weeks.</p></div>
+                    <div class="about-value"><h4>Quality</h4><p>Premium output, every time.</p></div>
+                    <div class="about-value"><h4>Speed</h4><p>Days to deploy, not months.</p></div>
                     <div class="about-value"><h4>Ownership</h4><p>Your code. No lock-in.</p></div>
                     <div class="about-value"><h4>Honesty</h4><p>Flat pricing. No BS.</p></div>
                 </div>
@@ -1043,28 +1103,28 @@
             <div class="faq-header fade-in"><h2>Questions</h2></div>
             <div class="faq-list fade-in">
                 <div class="faq-item">
-                    <button class="faq-question">What do I need to get started? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Just 10 minutes of your time. We handle everything — research, design, code, and deployment.</p></div>
+                    <button class="faq-question">What does STILO AI actually do? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>We build AI products for businesses — custom websites, AI agents (receptionists, review managers, social media agents), and bespoke automations. Think of us as the AI team your business never had.</p></div>
                 </div>
                 <div class="faq-item">
-                    <button class="faq-question">How is this different from Wix or Squarespace? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Template sites look like template sites. We write custom code tailored to your business. No platform fees. No limitations. You own the file.</p></div>
+                    <button class="faq-question">How is the website different from Wix or Squarespace? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>Template sites look like template sites. We write custom code researched and tailored to your specific business. No platform fees, no limitations, no monthly hostage payments. You own the file.</p></div>
                 </div>
                 <div class="faq-item">
-                    <button class="faq-question">What if I already have a website? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>We'll analyze what's working and build something that's a genuine upgrade — better design, better copy, better conversion.</p></div>
+                    <button class="faq-question">What's included in a custom AI implementation? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>It depends on your needs. We start with a discovery call to understand your workflows, then design and build an AI system specifically for your use case. Pricing is scoped per project — reach out and we'll give you a straight answer.</p></div>
                 </div>
                 <div class="faq-item">
-                    <button class="faq-question">Can I make changes after delivery? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Yes. You own the code. Edit it yourself, hire any developer, or subscribe to our $47/month plan and we'll handle updates.</p></div>
+                    <button class="faq-question">How fast can you actually deploy? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>The Website Builder Agent delivers in 48 hours. Custom implementations vary by complexity but we move fast — most projects are scoped, built, and live within 1–2 weeks.</p></div>
                 </div>
                 <div class="faq-item">
                     <button class="faq-question">What if I don't like the result? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Full refund within 7 days, no questions asked. We'd rather earn your trust than keep your money.</p></div>
+                    <div class="faq-answer"><p>Full refund within 7 days on the Website Builder Agent, no questions asked. We'd rather earn your trust than keep your money.</p></div>
                 </div>
                 <div class="faq-item">
-                    <button class="faq-question">How does AI fit into this? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>AI handles research, competitor analysis, copy generation, and code. Every site is reviewed by a human before delivery. Speed of AI, taste of a senior designer.</p></div>
+                    <button class="faq-question">How does AI fit into the process? <span class="icon">+</span></button>
+                    <div class="faq-answer"><p>AI handles research, competitor analysis, copy, code, and automation logic. Every output is reviewed by a human before you see it. Speed of AI, judgment of an experienced builder.</p></div>
                 </div>
             </div>
         </div>
@@ -1074,10 +1134,10 @@
     <section class="final-cta">
         <div class="container">
             <div class="cta-box fade-in">
-                <h2>Ready to <span class="gradient-text">stand out</span>?</h2>
-                <p>Get a website your customers will trust and your competitors will envy. 48 hours. $497. No risk.</p>
-                <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">
-                    Get Your Site — $497
+                <h2>Ready to add <span class="gradient-text">AI</span> to your business?</h2>
+                <p>From premium websites to AI agents and custom automations — let's figure out exactly where AI makes the biggest impact for you.</p>
+                <a href="mailto:remyleon11@gmail.com?subject=Let%27s%20work%20together%20-%20STILO%20AI" class="btn-primary">
+                    Start a Project
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
             </div>
@@ -1138,10 +1198,15 @@
             });
         });
 
-        // Active nav
+        // Active nav + scroll progress
         var sections = document.querySelectorAll('section[id]');
+        var progressBar = document.getElementById('scroll-progress');
         window.addEventListener('scroll', function() {
             var scrollY = window.scrollY + 100;
+            // Scroll progress
+            var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            progressBar.style.width = (window.scrollY / docHeight * 100) + '%';
+            // Active nav highlight
             sections.forEach(function(section) {
                 var top = section.offsetTop, height = section.offsetHeight;
                 var id = section.getAttribute('id');
@@ -1152,6 +1217,32 @@
                         link.style.color = 'var(--accent-light)';
                     }
                 }
+            });
+        });
+
+        // Button ripple effect
+        document.querySelectorAll('.btn-primary').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                var ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                var rect = btn.getBoundingClientRect();
+                ripple.style.left = (e.clientX - rect.left - 2) + 'px';
+                ripple.style.top = (e.clientY - rect.top - 2) + 'px';
+                btn.appendChild(ripple);
+                setTimeout(function() { ripple.remove(); }, 700);
+            });
+        });
+
+        // Card hover tilt
+        document.querySelectorAll('.bento-card, .process-step').forEach(function(card) {
+            card.addEventListener('mousemove', function(e) {
+                var rect = card.getBoundingClientRect();
+                var x = (e.clientX - rect.left) / rect.width - 0.5;
+                var y = (e.clientY - rect.top) / rect.height - 0.5;
+                card.style.transform = 'translateY(-2px) perspective(600px) rotateX(' + (-y * 4) + 'deg) rotateY(' + (x * 4) + 'deg)';
+            });
+            card.addEventListener('mouseleave', function() {
+                card.style.transform = '';
             });
         });
     </script>
