@@ -1,18 +1,18 @@
 <!--
-  STILO AI Consulting Agency — Website v5
+  STILO AI Consulting Agency — Website v6
   Built by STILO AI Website Builder Agent
   Date: 2026-04-07
-  Design: Full rebuild — product-visual hero, warm teal accent, honest credibility, founder story
+  Design: Dark cinematic theme, purple accents, rich visuals, premium agency feel
 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STILO AI — Premium Websites for Local Businesses | $497, 48 Hours</title>
-    <meta name="description" content="A website that looks like it cost $10,000 — built in 48 hours for $497. Custom-designed for restaurants, salons, dental offices, law firms, and local businesses. No templates. You own the code.">
+    <title>STILO AI — Premium AI-Powered Websites for Local Businesses</title>
+    <meta name="description" content="Premium websites that look like they cost $10,000 — built in 48 hours for $497. Custom-designed for restaurants, salons, dental offices, law firms, and local businesses.">
     <meta property="og:title" content="STILO AI — A $10K Website. 48 Hours. $497.">
-    <meta property="og:description" content="Premium websites for local businesses. Custom-designed, conversion-focused, and deployed in 48 hours.">
+    <meta property="og:description" content="Premium AI-powered websites for local businesses. Custom-designed, conversion-focused, deployed in 48 hours.">
     <meta property="og:type" content="website">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,22 +22,27 @@
     <style>
         /* === DESIGN TOKENS === */
         :root {
-            --bg-primary: #FFFFFF;
-            --bg-alt: #F5F5F7;
-            --bg-card: #FFFFFF;
-            --bg-dark: #0A0A0A;
+            --bg-primary: #09090B;
+            --bg-secondary: #0F0F13;
+            --bg-card: #141419;
+            --bg-card-hover: #1A1A22;
+            --bg-elevated: #1E1E28;
 
-            --text-primary: #1D1D1F;
-            --text-secondary: #6E6E73;
-            --text-muted: #86868B;
+            --text-primary: #F4F4F5;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
 
-            --accent: #0F766E;
-            --accent-light: #0D9488;
-            --accent-bg: rgba(15, 118, 110, 0.06);
-            --accent-bg-strong: rgba(15, 118, 110, 0.1);
+            --accent: #8B5CF6;
+            --accent-light: #A78BFA;
+            --accent-dark: #7C3AED;
+            --accent-glow: rgba(139, 92, 246, 0.15);
+            --accent-glow-strong: rgba(139, 92, 246, 0.25);
+            --accent-gradient: linear-gradient(135deg, #8B5CF6, #A78BFA, #C4B5FD);
+            --accent-gradient-2: linear-gradient(135deg, #7C3AED, #8B5CF6);
 
-            --border: rgba(0, 0, 0, 0.06);
-            --border-strong: rgba(0, 0, 0, 0.1);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-strong: rgba(255, 255, 255, 0.1);
+            --border-accent: rgba(139, 92, 246, 0.2);
 
             --font-display: 'Plus Jakarta Sans', sans-serif;
             --font-body: 'Inter', sans-serif;
@@ -45,8 +50,8 @@
             --radius: 12px;
             --radius-sm: 8px;
             --radius-lg: 16px;
-            --radius-xl: 20px;
-            --nav-height: 56px;
+            --radius-xl: 24px;
+            --nav-height: 64px;
         }
 
         /* === RESET === */
@@ -63,7 +68,6 @@
             overflow-x: hidden;
         }
         a { color: inherit; text-decoration: none; }
-        img { max-width: 100%; display: block; }
 
         /* === TYPOGRAPHY === */
         h1, h2, h3, h4 {
@@ -73,59 +77,84 @@
             line-height: 1.1;
             color: var(--text-primary);
         }
-        h1 { font-size: clamp(2.25rem, 5vw, 4rem); font-weight: 800; }
-        h2 { font-size: clamp(1.75rem, 3.5vw, 2.75rem); }
+        h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; }
+        h2 { font-size: clamp(1.75rem, 4vw, 3rem); }
         h3 { font-size: clamp(1.125rem, 2vw, 1.375rem); font-weight: 600; }
         p { color: var(--text-secondary); line-height: 1.65; }
+        .gradient-text {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
         /* === LAYOUT === */
-        .container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+        .container { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
         @media (min-width: 768px) { .container { padding: 0 48px; } }
-        section { padding: 80px 0; }
-        @media (min-width: 768px) { section { padding: 112px 0; } }
+        section { padding: 96px 0; position: relative; }
+        @media (min-width: 768px) { section { padding: 128px 0; } }
 
         /* === BUTTONS === */
         .btn-primary {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 14px 28px;
-            background: var(--accent);
+            padding: 14px 32px;
+            background: var(--accent-gradient-2);
             color: #FFFFFF;
-            font-family: var(--font-body);
-            font-weight: 600;
-            font-size: 0.9375rem;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background 0.2s ease, transform 0.15s ease;
+            font-family: var(--font-body); font-weight: 600; font-size: 0.9375rem;
+            border: none; border-radius: 50px; cursor: pointer; text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 0 20px var(--accent-glow);
         }
-        .btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px var(--accent-glow-strong);
+        }
         .btn-ghost {
             display: inline-flex; align-items: center; gap: 6px;
-            padding: 14px 28px;
-            background: transparent;
-            color: var(--accent);
-            font-family: var(--font-body);
-            font-weight: 600;
-            font-size: 0.9375rem;
-            border: 1.5px solid var(--border-strong);
-            border-radius: 50px;
-            cursor: pointer;
-            text-decoration: none;
+            padding: 14px 32px;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-primary);
+            font-family: var(--font-body); font-weight: 600; font-size: 0.9375rem;
+            border: 1px solid var(--border-strong);
+            border-radius: 50px; cursor: pointer; text-decoration: none;
             transition: border-color 0.2s ease, background 0.2s ease;
         }
-        .btn-ghost:hover { border-color: var(--accent); background: var(--accent-bg); }
+        .btn-ghost:hover { border-color: var(--accent); background: var(--accent-glow); }
 
         /* === ANIMATIONS === */
         .fade-in {
-            opacity: 0; transform: translateY(24px);
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+            opacity: 0; transform: translateY(28px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
         }
         .fade-in.visible { opacity: 1; transform: translateY(0); }
         .delay-1 { transition-delay: 0.1s; }
         .delay-2 { transition-delay: 0.2s; }
         .delay-3 { transition-delay: 0.3s; }
         .delay-4 { transition-delay: 0.4s; }
+        .delay-5 { transition-delay: 0.5s; }
+
+        /* === GRID BACKGROUND PATTERN === */
+        .grid-bg {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 64px 64px;
+            mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%);
+            -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%);
+            pointer-events: none;
+        }
+
+        /* === GLOW ORBS === */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glow-purple { background: rgba(139, 92, 246, 0.15); }
+        .glow-blue { background: rgba(59, 130, 246, 0.1); }
 
         /* ============================
            NAVIGATION
@@ -133,58 +162,59 @@
         nav {
             position: fixed; top: 0; left: 0; width: 100%;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.88);
+            background: rgba(9, 9, 11, 0.8);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
             height: var(--nav-height);
         }
         .nav-inner {
             display: flex; align-items: center; justify-content: space-between;
-            height: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px;
+            height: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px;
         }
         @media (min-width: 768px) { .nav-inner { padding: 0 48px; } }
         .nav-logo {
             font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 1.125rem;
+            font-weight: 800; font-size: 1.25rem;
             color: var(--text-primary);
             letter-spacing: -0.02em;
-            display: flex; align-items: center; gap: 8px;
+            display: flex; align-items: center; gap: 10px;
         }
         .nav-logo-mark {
-            width: 28px; height: 28px;
-            background: var(--accent);
-            border-radius: 8px;
+            width: 32px; height: 32px;
+            background: var(--accent-gradient-2);
+            border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 16px var(--accent-glow);
         }
-        .nav-logo-mark svg { width: 16px; height: 16px; }
-        .nav-links { display: none; list-style: none; gap: 4px; align-items: center; }
+        .nav-logo-mark svg { width: 18px; height: 18px; }
+        .nav-links { display: none; list-style: none; gap: 8px; align-items: center; }
         @media (min-width: 768px) { .nav-links { display: flex; } }
         .nav-links a {
-            font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary);
-            padding: 6px 14px; border-radius: 8px;
-            transition: color 0.2s ease;
+            font-size: 0.875rem; font-weight: 500; color: var(--text-muted);
+            padding: 8px 16px; border-radius: 8px;
+            transition: color 0.2s ease, background 0.2s ease;
         }
-        .nav-links a:hover { color: var(--text-primary); }
+        .nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
         .nav-cta {
-            padding: 8px 20px; font-size: 0.8125rem; font-weight: 600;
-            background: var(--accent); color: #FFF;
+            padding: 9px 22px; font-size: 0.8125rem; font-weight: 600;
+            background: var(--accent-gradient-2); color: #FFF;
             border-radius: 50px; border: none; cursor: pointer;
-            transition: background 0.2s ease;
             text-decoration: none;
+            box-shadow: 0 0 12px var(--accent-glow);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
-        .nav-cta:hover { background: var(--accent-light); }
+        .nav-cta:hover { box-shadow: 0 0 24px var(--accent-glow-strong); transform: translateY(-1px); }
         .menu-toggle {
             display: flex; align-items: center; justify-content: center;
             width: 44px; height: 44px; background: none; border: none; cursor: pointer;
         }
         @media (min-width: 768px) { .menu-toggle { display: none; } }
         .menu-toggle span {
-            display: block; width: 18px; height: 2px; background: var(--text-primary);
+            display: block; width: 20px; height: 2px; background: var(--text-primary);
             position: relative; transition: background 0.3s;
         }
         .menu-toggle span::before, .menu-toggle span::after {
-            content: ''; display: block; width: 18px; height: 2px;
+            content: ''; display: block; width: 20px; height: 2px;
             background: var(--text-primary); position: absolute; transition: transform 0.3s;
         }
         .menu-toggle span::before { top: -6px; }
@@ -194,12 +224,12 @@
         .menu-toggle.active span::after { transform: rotate(-45deg); top: 0; }
         .mobile-menu {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
-            background: rgba(255, 255, 255, 0.97); backdrop-filter: blur(20px);
+            background: rgba(9, 9, 11, 0.97); backdrop-filter: blur(20px);
             z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
         }
         .mobile-menu.active { display: flex; }
         .mobile-menu a {
-            font-family: var(--font-display); font-size: 1.25rem;
+            font-family: var(--font-display); font-size: 1.5rem;
             font-weight: 700; color: var(--text-primary);
         }
 
@@ -210,604 +240,482 @@
             min-height: 100vh;
             display: flex; align-items: center;
             padding-top: var(--nav-height);
+            text-align: center;
+            overflow: hidden;
         }
-        .hero .container {
-            display: grid; grid-template-columns: 1fr; gap: 48px;
-            align-items: center;
+        .hero .container { position: relative; z-index: 1; max-width: 880px; }
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 18px; border-radius: 50px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            font-size: 0.8125rem; font-weight: 600; color: var(--accent-light);
+            margin-bottom: 32px;
         }
-        @media (min-width: 768px) {
-            .hero .container {
-                grid-template-columns: 1fr 1fr;
-                gap: 64px;
-            }
+        .hero-eyebrow .pulse {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            animation: pulse 2s ease-in-out infinite;
         }
-        .hero-content { max-width: 520px; }
-        .hero-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 6px 14px; border-radius: 50px;
-            background: var(--accent-bg);
-            border: 1px solid rgba(15, 118, 110, 0.12);
-            font-size: 0.8125rem; font-weight: 500; color: var(--accent);
-            margin-bottom: 24px;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
         }
-        .hero h1 { margin-bottom: 20px; }
+        .hero h1 { margin-bottom: 24px; line-height: 1.05; }
         .hero-sub {
-            font-size: clamp(1rem, 1.8vw, 1.125rem);
+            font-size: clamp(1.0625rem, 2vw, 1.25rem);
             color: var(--text-secondary);
             line-height: 1.65;
-            margin-bottom: 36px;
+            max-width: 600px; margin: 0 auto 40px;
         }
-        .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
-        .hero-trust {
-            margin-top: 40px;
-            display: flex; align-items: center; gap: 16px;
-            flex-wrap: wrap;
+        .hero-ctas { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .hero-stats {
+            margin-top: 64px;
+            display: flex; justify-content: center; gap: 48px; flex-wrap: wrap;
         }
-        .trust-item {
-            display: flex; align-items: center; gap: 6px;
-            font-size: 0.8125rem; color: var(--text-muted); font-weight: 500;
+        .hero-stat {
+            text-align: center;
         }
-        .trust-item svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
-
-        /* Browser mockup */
-        .hero-visual { position: relative; }
-        @media (max-width: 767px) { .hero-visual { max-width: 480px; margin: 0 auto; } }
-        .browser-frame {
-            background: var(--bg-primary);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
-            border: 1px solid var(--border);
+        .hero-stat .number {
+            font-family: var(--font-display);
+            font-size: 1.75rem; font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
         }
-        .browser-chrome {
-            height: 40px;
-            background: var(--bg-alt);
-            display: flex; align-items: center;
-            padding: 0 16px; gap: 8px;
-            border-bottom: 1px solid var(--border);
-        }
-        .browser-dot {
-            width: 10px; height: 10px; border-radius: 50%;
-        }
-        .browser-dot:nth-child(1) { background: #FF5F57; }
-        .browser-dot:nth-child(2) { background: #FFBD2E; }
-        .browser-dot:nth-child(3) { background: #28CA42; }
-        .browser-url {
-            margin-left: 12px;
-            flex: 1;
-            height: 24px;
-            background: var(--bg-primary);
-            border-radius: 6px;
-            display: flex; align-items: center;
-            padding: 0 10px;
-            font-size: 0.6875rem;
+        .hero-stat .label {
+            font-size: 0.8125rem;
             color: var(--text-muted);
-            font-family: var(--font-body);
+            margin-top: 2px;
         }
-        .browser-content {
-            padding: 24px;
-            min-height: 280px;
-            background: var(--bg-primary);
+        /* Hero background effects */
+        .hero-glow-1 {
+            width: 600px; height: 600px;
+            top: -100px; left: 50%; transform: translateX(-50%);
         }
-        /* Mini site preview inside browser */
-        .mini-nav {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 24px;
-        }
-        .mini-logo {
-            width: 60px; height: 8px;
-            background: var(--text-primary);
-            border-radius: 4px;
-            opacity: 0.8;
-        }
-        .mini-nav-links { display: flex; gap: 8px; }
-        .mini-nav-link {
-            width: 32px; height: 6px;
-            background: var(--text-muted);
-            border-radius: 3px;
-            opacity: 0.3;
-        }
-        .mini-hero-text {
-            margin-bottom: 16px;
-        }
-        .mini-h1 {
-            height: 14px; width: 85%;
-            background: var(--text-primary);
-            border-radius: 4px; opacity: 0.85;
-            margin-bottom: 8px;
-        }
-        .mini-h1-2 {
-            height: 14px; width: 60%;
-            background: var(--text-primary);
-            border-radius: 4px; opacity: 0.85;
-            margin-bottom: 12px;
-        }
-        .mini-sub {
-            height: 6px; width: 75%;
-            background: var(--text-muted);
-            border-radius: 3px; opacity: 0.4;
-            margin-bottom: 6px;
-        }
-        .mini-sub-2 {
-            height: 6px; width: 55%;
-            background: var(--text-muted);
-            border-radius: 3px; opacity: 0.4;
-            margin-bottom: 16px;
-        }
-        .mini-btn {
-            width: 80px; height: 24px;
-            background: var(--accent);
-            border-radius: 12px;
-            margin-bottom: 24px;
-        }
-        .mini-cards {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-        }
-        .mini-card {
-            background: var(--bg-alt);
-            border-radius: 6px;
-            padding: 12px;
-            border: 1px solid var(--border);
-        }
-        .mini-card-icon {
-            width: 20px; height: 20px;
-            background: var(--accent-bg-strong);
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-        .mini-card-title {
-            height: 6px; width: 70%;
-            background: var(--text-primary);
-            border-radius: 3px; opacity: 0.5;
-            margin-bottom: 6px;
-        }
-        .mini-card-body {
-            height: 4px; width: 90%;
-            background: var(--text-muted);
-            border-radius: 2px; opacity: 0.25;
-            margin-bottom: 4px;
+        .hero-glow-2 {
+            width: 400px; height: 400px;
+            bottom: 10%; right: -100px;
         }
 
         /* ============================
-           CREDIBILITY BAR
+           LOGO STRIP
         ============================ */
-        .credibility {
+        .logo-strip {
             padding: 48px 0;
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
         }
-        .cred-grid {
+        .logo-strip-label {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        .logo-row {
+            display: flex; justify-content: center; align-items: center;
+            gap: 40px; flex-wrap: wrap; opacity: 0.4;
+        }
+        .logo-item {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+        @media (min-width: 768px) { .logo-row { gap: 64px; } .logo-item { font-size: 1.25rem; } }
+
+        /* ============================
+           BENTO GRID — WHAT WE BUILD
+        ============================ */
+        .bento-header { text-align: center; margin-bottom: 56px; }
+        .bento-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 520px; margin-left: auto; margin-right: auto; }
+        .bento-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 24px;
+            grid-template-columns: 1fr;
+            gap: 16px;
         }
         @media (min-width: 640px) {
-            .cred-grid { grid-template-columns: repeat(4, 1fr); }
+            .bento-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
-        .cred-item { text-align: center; }
-        .cred-number {
-            font-family: var(--font-display);
-            font-size: clamp(1.5rem, 3vw, 2rem);
-            font-weight: 800;
-            color: var(--text-primary);
-            letter-spacing: -0.03em;
-            margin-bottom: 4px;
+        @media (min-width: 960px) {
+            .bento-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .bento-card.wide { grid-column: span 2; }
         }
-        .cred-label {
-            font-size: 0.8125rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        /* ============================
-           PROBLEM
-        ============================ */
-        .problem { background: var(--bg-alt); }
-        .problem-header { text-align: center; margin-bottom: 48px; }
-        .problem-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 520px; margin-left: auto; margin-right: auto; }
-        .problem-grid {
-            display: grid; grid-template-columns: 1fr; gap: 16px;
-            max-width: 720px; margin: 0 auto;
-        }
-        @media (min-width: 640px) { .problem-grid { grid-template-columns: repeat(3, 1fr); } }
-        .problem-card {
+        .bento-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 28px;
-            text-align: center;
-        }
-        .problem-icon {
-            width: 40px; height: 40px;
-            border-radius: var(--radius-sm);
-            background: #FEF2F2;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 16px;
-        }
-        .problem-icon svg { width: 20px; height: 20px; color: #DC2626; }
-        .problem-card h3 { font-size: 1rem; margin-bottom: 8px; }
-        .problem-card p { font-size: 0.875rem; line-height: 1.5; }
-
-        /* ============================
-           SOLUTION (Before / After)
-        ============================ */
-        .solution-header { text-align: center; margin-bottom: 48px; }
-        .solution-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 480px; margin-left: auto; margin-right: auto; }
-        .solution-grid {
-            display: grid; grid-template-columns: 1fr; gap: 20px;
-            max-width: 800px; margin: 0 auto;
-        }
-        @media (min-width: 640px) { .solution-grid { grid-template-columns: 1fr 1fr; } }
-        .solution-card {
-            border-radius: var(--radius);
+            border-radius: var(--radius-lg);
             padding: 32px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s ease, transform 0.2s ease;
         }
-        .solution-card.old {
-            background: var(--bg-alt);
-            border: 1px solid var(--border);
+        .bento-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
         }
-        .solution-card.new {
-            background: var(--accent-bg);
-            border: 1px solid rgba(15, 118, 110, 0.15);
-        }
-        .solution-card h3 {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
+        .bento-card-icon {
+            width: 48px; height: 48px;
+            border-radius: var(--radius);
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            display: flex; align-items: center; justify-content: center;
             margin-bottom: 20px;
         }
-        .solution-card.old h3 { color: var(--text-muted); }
-        .solution-card.new h3 { color: var(--accent); }
-        .solution-list { list-style: none; }
-        .solution-list li {
-            padding: 10px 0;
-            font-size: 0.9375rem;
-            display: flex; align-items: flex-start; gap: 10px;
-            border-bottom: 1px solid var(--border);
-        }
-        .solution-list li:last-child { border-bottom: none; }
-        .solution-list li svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }
-        .solution-card.old .solution-list li { color: var(--text-muted); }
-        .solution-card.old .solution-list li svg { color: #DC2626; }
-        .solution-card.new .solution-list li { color: var(--text-primary); }
-        .solution-card.new .solution-list li svg { color: var(--accent); }
-
-        /* ============================
-           SHOWCASE
-        ============================ */
-        .showcase { background: var(--bg-alt); }
-        .showcase-header { text-align: center; margin-bottom: 48px; }
-        .showcase-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 480px; margin-left: auto; margin-right: auto; }
-        .showcase-browser {
-            max-width: 800px; margin: 0 auto;
-        }
-        .showcase-browser .browser-content { min-height: 360px; padding: 32px; }
-        /* Showcase mini restaurant site */
-        .show-hero {
-            background: linear-gradient(135deg, #FAFAF9, #F5F0EB);
+        .bento-card-icon svg { width: 22px; height: 22px; color: var(--accent-light); }
+        .bento-card h3 { margin-bottom: 8px; }
+        .bento-card p { font-size: 0.9375rem; }
+        /* Visual flair inside bento cards */
+        .bento-visual {
+            margin-top: 20px;
             border-radius: var(--radius-sm);
-            padding: 32px;
-            margin-bottom: 16px;
-            text-align: center;
+            overflow: hidden;
         }
-        .show-hero-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 50px;
-            background: rgba(180, 130, 80, 0.1);
-            font-size: 0.625rem;
-            font-weight: 600;
-            color: #B4824F;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 12px;
-        }
-        .show-hero h4 {
-            font-family: var(--font-display);
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #292524;
-            letter-spacing: -0.02em;
-            margin-bottom: 8px;
-        }
-        .show-hero p {
-            font-size: 0.75rem;
-            color: #78716C;
-            margin-bottom: 16px;
-        }
-        .show-btn {
-            display: inline-block;
-            padding: 8px 20px;
-            background: #292524;
-            color: #FAFAF9;
-            border-radius: 50px;
-            font-size: 0.6875rem;
-            font-weight: 600;
-        }
-        .show-cards {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-        }
-        .show-card {
+        .bento-code {
             background: var(--bg-primary);
+            border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             padding: 16px;
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-        .show-card-emoji { font-size: 1.25rem; margin-bottom: 6px; }
-        .show-card h5 { font-size: 0.6875rem; font-weight: 600; color: #292524; margin-bottom: 4px; }
-        .show-card p { font-size: 0.5625rem; color: #78716C; line-height: 1.4; }
-        .showcase-caption {
-            text-align: center;
-            margin-top: 24px;
-            font-size: 0.875rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            line-height: 1.8;
             color: var(--text-muted);
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        .bento-code .keyword { color: var(--accent-light); }
+        .bento-code .string { color: #34D399; }
+        .bento-code .comment { color: #4B5563; }
+        /* Mini site preview card */
+        .bento-preview {
+            margin-top: 20px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .bento-preview-bar {
+            height: 28px;
+            background: var(--bg-secondary);
+            display: flex; align-items: center; padding: 0 10px; gap: 5px;
+            border-bottom: 1px solid var(--border);
+        }
+        .bp-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .bento-preview-body { padding: 16px; }
+        .bp-line { height: 8px; border-radius: 4px; margin-bottom: 6px; }
+        .bp-line.title { width: 70%; background: rgba(255,255,255,0.12); height: 10px; }
+        .bp-line.sub { width: 50%; background: rgba(255,255,255,0.06); }
+        .bp-line.accent { width: 30%; background: var(--accent); height: 6px; margin-top: 10px; border-radius: 3px; opacity: 0.7; }
+        .bp-cards { display: flex; gap: 6px; margin-top: 12px; }
+        .bp-card-item {
+            flex: 1;
+            height: 48px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 6px;
         }
 
         /* ============================
-           HOW IT WORKS
+           SHOWCASE — BROWSER FRAME
         ============================ */
-        .how-header { text-align: center; margin-bottom: 56px; }
-        .how-header p { margin-top: 12px; font-size: 1.0625rem; }
-        .how-timeline {
-            max-width: 680px; margin: 0 auto;
-            position: relative;
+        .showcase { overflow: hidden; }
+        .showcase-header { text-align: center; margin-bottom: 56px; }
+        .showcase-header p { margin-top: 12px; font-size: 1.0625rem; max-width: 520px; margin-left: auto; margin-right: auto; }
+        .showcase-frame {
+            max-width: 900px; margin: 0 auto;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: 0 32px 100px rgba(0,0,0,0.5), 0 0 60px var(--accent-glow);
         }
-        .how-timeline::before {
+        .sf-chrome {
+            height: 44px;
+            background: var(--bg-secondary);
+            display: flex; align-items: center;
+            padding: 0 16px; gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sf-dot { width: 11px; height: 11px; border-radius: 50%; }
+        .sf-dot:nth-child(1) { background: #FF5F57; }
+        .sf-dot:nth-child(2) { background: #FFBD2E; }
+        .sf-dot:nth-child(3) { background: #28CA42; }
+        .sf-url {
+            margin-left: 16px; flex: 1;
+            height: 28px; background: var(--bg-primary);
+            border-radius: 6px; display: flex; align-items: center;
+            padding: 0 12px; font-size: 0.75rem; color: var(--text-muted);
+            font-family: var(--font-body);
+        }
+        .sf-body { padding: 32px; min-height: 380px; }
+        /* Sample restaurant site inside frame */
+        .sample-site { }
+        .ss-hero {
+            background: linear-gradient(135deg, #1C1917, #292524);
+            border-radius: var(--radius);
+            padding: 40px 32px;
+            text-align: center;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .ss-hero::before {
             content: '';
-            position: absolute;
-            left: 23px; top: 0; bottom: 0;
-            width: 2px;
-            background: var(--border-strong);
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(180, 130, 80, 0.15), transparent 60%);
         }
-        @media (min-width: 768px) {
-            .how-timeline::before { left: 50%; transform: translateX(-1px); }
+        .ss-badge {
+            display: inline-block; padding: 5px 14px;
+            border-radius: 50px; background: rgba(180, 130, 80, 0.15);
+            border: 1px solid rgba(180, 130, 80, 0.2);
+            font-size: 0.625rem; font-weight: 700; color: #D4A574;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 16px; position: relative;
         }
-        .how-step {
+        .ss-hero h4 {
+            font-family: var(--font-display); font-size: 1.5rem;
+            font-weight: 800; color: #FAFAF9;
+            letter-spacing: -0.02em; margin-bottom: 8px;
             position: relative;
-            padding-left: 64px;
-            padding-bottom: 48px;
         }
-        .how-step:last-child { padding-bottom: 0; }
+        .ss-hero p { font-size: 0.8125rem; color: #A8A29E; position: relative; margin-bottom: 20px; }
+        .ss-btn {
+            display: inline-block; padding: 10px 24px;
+            background: #B4824F; color: #FAFAF9;
+            border-radius: 50px; font-size: 0.75rem;
+            font-weight: 700; position: relative;
+        }
+        .ss-features {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+        }
+        .ss-feature {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px; text-align: center;
+        }
+        .ss-feature-icon { font-size: 1.5rem; margin-bottom: 8px; }
+        .ss-feature h5 { font-size: 0.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .ss-feature p { font-size: 0.625rem; color: var(--text-muted); line-height: 1.4; }
+        .showcase-caption {
+            text-align: center; margin-top: 24px;
+            font-size: 0.875rem; color: var(--text-muted);
+        }
+
+        /* ============================
+           PROCESS / HOW IT WORKS
+        ============================ */
+        .process-header { text-align: center; margin-bottom: 56px; }
+        .process-header p { margin-top: 12px; font-size: 1.0625rem; }
+        .process-steps {
+            display: grid; grid-template-columns: 1fr; gap: 20px;
+            max-width: 900px; margin: 0 auto;
+        }
         @media (min-width: 768px) {
-            .how-step {
-                padding-left: 0;
-                width: 50%;
-                padding-right: 48px;
-            }
-            .how-step:nth-child(even) {
-                margin-left: 50%;
-                padding-left: 48px;
-                padding-right: 0;
-            }
+            .process-steps { grid-template-columns: repeat(3, 1fr); }
         }
-        .step-dot {
-            position: absolute;
-            left: 12px; top: 0;
-            width: 24px; height: 24px;
+        .process-step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            position: relative;
+            text-align: center;
+            transition: border-color 0.3s ease;
+        }
+        .process-step:hover { border-color: var(--border-accent); }
+        .step-number {
+            width: 48px; height: 48px;
             border-radius: 50%;
-            background: var(--accent);
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
             display: flex; align-items: center; justify-content: center;
-            z-index: 1;
+            margin: 0 auto 20px;
+            font-family: var(--font-display);
+            font-weight: 800; font-size: 1.125rem;
+            color: var(--accent-light);
         }
-        @media (min-width: 768px) {
-            .step-dot { left: auto; right: -12px; }
-            .how-step:nth-child(even) .step-dot { left: -12px; right: auto; }
-        }
-        .step-dot svg { width: 12px; height: 12px; color: #FFF; }
-        .how-step h3 { margin-bottom: 8px; }
-        .how-step p { font-size: 0.9375rem; }
+        .process-step h3 { margin-bottom: 8px; }
+        .process-step p { font-size: 0.9375rem; }
         .step-time {
-            display: inline-block;
-            margin-top: 8px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--accent);
-            background: var(--accent-bg);
-            padding: 3px 10px;
-            border-radius: 50px;
+            display: inline-block; margin-top: 12px;
+            padding: 4px 12px; border-radius: 50px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            font-size: 0.75rem; font-weight: 600;
+            color: var(--accent-light);
         }
 
         /* ============================
            PRICING
         ============================ */
-        .pricing { background: var(--bg-alt); }
-        .pricing-header { text-align: center; margin-bottom: 48px; }
+        .pricing-header { text-align: center; margin-bottom: 56px; }
         .pricing-header p { margin-top: 12px; font-size: 1.0625rem; }
-        .pricing-main {
-            max-width: 480px; margin: 0 auto;
-        }
+        .pricing-main { max-width: 480px; margin: 0 auto; }
         .pricing-card {
             background: var(--bg-card);
-            border: 2px solid var(--accent);
-            border-radius: var(--radius-lg);
-            padding: 40px;
+            border: 1px solid var(--border-accent);
+            border-radius: var(--radius-xl);
+            padding: 44px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        .pricing-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--accent);
-            margin-bottom: 8px;
+        .pricing-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 1px;
+            background: var(--accent-gradient);
+        }
+        .pricing-badge {
+            display: inline-block;
+            padding: 4px 14px; border-radius: 50px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            font-size: 0.6875rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--accent-light);
+            margin-bottom: 16px;
         }
         .pricing-card > h3 { font-size: 1.25rem; margin-bottom: 4px; }
         .pricing-card .desc { font-size: 0.9375rem; color: var(--text-secondary); margin-bottom: 24px; }
         .pricing-amount {
             font-family: var(--font-display);
-            font-size: 3.5rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            letter-spacing: -0.03em;
+            font-size: 4rem; font-weight: 800;
+            letter-spacing: -0.04em;
         }
-        .pricing-amount span {
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
-        .pricing-divider {
-            height: 1px;
-            background: var(--border);
-            margin: 24px 0;
-        }
-        .pricing-features {
-            list-style: none;
-            margin-bottom: 32px;
-            text-align: left;
-        }
+        .pricing-amount span { font-size: 1rem; font-weight: 500; color: var(--text-muted); }
+        .pricing-divider { height: 1px; background: var(--border); margin: 28px 0; }
+        .pricing-features { list-style: none; margin-bottom: 32px; text-align: left; }
         .pricing-features li {
-            padding: 10px 0;
-            font-size: 0.9375rem;
-            color: var(--text-secondary);
-            display: flex; align-items: center; gap: 10px;
+            padding: 10px 0; font-size: 0.9375rem; color: var(--text-secondary);
+            display: flex; align-items: center; gap: 12px;
         }
         .pricing-features li svg {
-            width: 18px; height: 18px;
-            color: var(--accent);
-            flex-shrink: 0;
+            width: 18px; height: 18px; color: var(--accent-light); flex-shrink: 0;
         }
         .pricing-card .btn-primary { width: 100%; }
         .pricing-guarantee {
             display: flex; align-items: center; justify-content: center;
-            gap: 6px;
-            margin-top: 16px;
-            font-size: 0.8125rem;
-            color: var(--text-muted);
+            gap: 6px; margin-top: 16px;
+            font-size: 0.8125rem; color: var(--text-muted);
         }
-        .pricing-guarantee svg { width: 14px; height: 14px; }
+        .pricing-guarantee svg { width: 14px; height: 14px; color: var(--accent-light); }
         .pricing-addon {
             max-width: 480px; margin: 20px auto 0;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 24px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px;
             display: flex; justify-content: space-between; align-items: center;
             flex-wrap: wrap; gap: 12px;
         }
-        .addon-info h4 {
-            font-size: 0.9375rem; font-weight: 600; margin-bottom: 2px;
-        }
+        .addon-info h4 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 2px; }
         .addon-info p { font-size: 0.8125rem; }
         .addon-price {
             font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 1.25rem;
+            font-weight: 800; font-size: 1.25rem;
             color: var(--text-primary);
         }
         .addon-price span { font-size: 0.8125rem; font-weight: 500; color: var(--text-muted); }
-        .pricing-waitlist {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 40px;
-            border-top: 1px solid var(--border);
+        .pricing-agents {
+            text-align: center; margin-top: 48px;
         }
-        .pricing-waitlist p {
-            font-size: 0.9375rem;
-            color: var(--text-secondary);
-        }
-        .pricing-waitlist .agents-coming {
-            display: inline-flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; justify-content: center;
-        }
+        .pricing-agents p { font-size: 0.9375rem; margin-bottom: 16px; }
+        .agent-tags { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         .agent-tag {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            background: var(--bg-alt);
-            padding: 4px 12px;
-            border-radius: 50px;
-            border: 1px solid var(--border);
+            padding: 6px 16px; border-radius: 50px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+            transition: border-color 0.2s;
         }
+        .agent-tag:hover { border-color: var(--border-accent); color: var(--accent-light); }
 
         /* ============================
            ABOUT / FOUNDER
         ============================ */
-        .about { }
-        .about-inner {
-            max-width: 640px; margin: 0 auto; text-align: center;
-        }
+        .about-inner { max-width: 680px; margin: 0 auto; text-align: center; }
         .founder-avatar {
-            width: 80px; height: 80px;
-            border-radius: 50%;
-            background: var(--bg-alt);
-            border: 2px solid var(--border);
-            margin: 0 auto 24px;
+            width: 88px; height: 88px; border-radius: 50%;
+            background: var(--accent-glow);
+            border: 2px solid var(--border-accent);
+            margin: 0 auto 28px;
             display: flex; align-items: center; justify-content: center;
             font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 1.5rem;
-            color: var(--accent);
+            font-weight: 800; font-size: 1.75rem;
+            color: var(--accent-light);
         }
         .about-inner h2 { margin-bottom: 24px; }
         .about-inner .lead {
-            font-size: 1.0625rem;
-            line-height: 1.7;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
+            font-size: 1.0625rem; line-height: 1.7;
+            color: var(--text-secondary); margin-bottom: 16px;
         }
-        .about-inner .lead:last-of-type { margin-bottom: 32px; }
+        .about-inner .lead:last-of-type { margin-bottom: 36px; }
         .about-values {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
-            text-align: left;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; text-align: left;
         }
         @media (min-width: 640px) { .about-values { grid-template-columns: repeat(4, 1fr); } }
         .about-value {
-            padding: 20px;
-            background: var(--bg-alt);
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
+            padding: 20px; background: var(--bg-card);
+            border-radius: var(--radius-sm); border: 1px solid var(--border);
+            transition: border-color 0.2s;
         }
+        .about-value:hover { border-color: var(--border-accent); }
         .about-value h4 { font-size: 0.875rem; font-weight: 700; margin-bottom: 4px; }
-        .about-value p { font-size: 0.8125rem; line-height: 1.5; }
+        .about-value p { font-size: 0.8125rem; }
 
         /* ============================
            FAQ
         ============================ */
-        .faq { background: var(--bg-alt); }
         .faq-header { text-align: center; margin-bottom: 48px; }
         .faq-list { max-width: 640px; margin: 0 auto; }
         .faq-item { border-bottom: 1px solid var(--border); }
         .faq-question {
-            width: 100%;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 20px 0;
-            background: none; border: none; cursor: pointer;
-            font-family: var(--font-body);
-            font-size: 1rem; font-weight: 600;
-            color: var(--text-primary);
-            text-align: left;
+            width: 100%; display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 0; background: none; border: none; cursor: pointer;
+            font-family: var(--font-body); font-size: 1rem; font-weight: 600;
+            color: var(--text-primary); text-align: left;
         }
         .faq-question .icon {
-            font-size: 1.25rem;
-            color: var(--text-muted);
-            transition: transform 0.3s ease;
+            font-size: 1.25rem; color: var(--text-muted);
+            transition: transform 0.3s ease, color 0.3s ease;
         }
-        .faq-item.active .faq-question .icon { transform: rotate(45deg); }
-        .faq-answer {
-            max-height: 0; overflow: hidden;
-            transition: max-height 0.35s ease, padding 0.35s ease;
-        }
+        .faq-item.active .faq-question .icon { transform: rotate(45deg); color: var(--accent-light); }
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
         .faq-item.active .faq-answer { max-height: 240px; }
         .faq-answer p { padding-bottom: 20px; font-size: 0.9375rem; line-height: 1.6; }
 
         /* ============================
            FINAL CTA
         ============================ */
-        .final-cta { text-align: center; }
-        .final-cta .container {
-            background: var(--bg-alt);
+        .final-cta { text-align: center; overflow: hidden; }
+        .cta-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-accent);
             border-radius: var(--radius-xl);
-            padding: 64px 32px;
-            border: 1px solid var(--border);
+            padding: 72px 32px;
+            position: relative; overflow: hidden;
         }
-        .final-cta h2 { margin-bottom: 12px; }
-        .final-cta p {
-            font-size: 1.0625rem;
-            margin-bottom: 28px;
-            max-width: 420px;
-            margin-left: auto; margin-right: auto;
+        .cta-box::before {
+            content: '';
+            position: absolute; top: -50%; left: 50%; transform: translateX(-50%);
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, var(--accent-glow-strong), transparent 70%);
+            pointer-events: none;
         }
+        .cta-box h2 { position: relative; margin-bottom: 12px; }
+        .cta-box p {
+            position: relative;
+            font-size: 1.0625rem; margin-bottom: 32px;
+            max-width: 440px; margin-left: auto; margin-right: auto;
+        }
+        .cta-box .btn-primary { position: relative; }
 
         /* ============================
            FOOTER
@@ -818,17 +726,13 @@
             flex-wrap: wrap; gap: 16px;
         }
         .footer-logo {
-            font-family: var(--font-display);
-            font-weight: 800; font-size: 1rem;
-            color: var(--text-primary);
+            font-family: var(--font-display); font-weight: 800;
+            font-size: 1rem; color: var(--text-primary);
             display: flex; align-items: center; gap: 8px;
         }
         .footer-links { list-style: none; display: flex; gap: 24px; }
-        .footer-links a {
-            font-size: 0.8125rem; color: var(--text-muted);
-            transition: color 0.2s;
-        }
-        .footer-links a:hover { color: var(--text-primary); }
+        .footer-links a { font-size: 0.8125rem; color: var(--text-muted); transition: color 0.2s; }
+        .footer-links a:hover { color: var(--accent-light); }
         .footer-copy {
             font-size: 0.75rem; color: var(--text-muted);
             width: 100%; text-align: center; margin-top: 16px;
@@ -847,10 +751,11 @@
                 STILO AI
             </a>
             <ul class="nav-links">
-                <li><a href="#how">How It Works</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#showcase">Showcase</a></li>
+                <li><a href="#how">Process</a></li>
                 <li><a href="#pricing">Pricing</a></li>
                 <li><a href="#about">About</a></li>
-                <li><a href="#faq">FAQ</a></li>
             </ul>
             <a href="#pricing" class="nav-cta">Get Started</a>
             <button class="menu-toggle" id="menu-toggle" aria-label="Menu"><span></span></button>
@@ -858,204 +763,134 @@
     </nav>
 
     <div class="mobile-menu" id="mobile-menu">
-        <a href="#how">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="#showcase">Showcase</a>
+        <a href="#how">Process</a>
         <a href="#pricing">Pricing</a>
         <a href="#about">About</a>
-        <a href="#faq">FAQ</a>
         <a href="#pricing" class="btn-primary" style="margin-top: 16px;">Get Started</a>
     </div>
 
     <!-- HERO -->
     <section class="hero" id="hero">
+        <div class="grid-bg"></div>
+        <div class="glow-orb glow-purple hero-glow-1"></div>
+        <div class="glow-orb glow-blue hero-glow-2"></div>
         <div class="container">
-            <div class="hero-content">
-                <div class="hero-badge fade-in">Accepting new clients</div>
-                <h1 class="fade-in delay-1">A $10K website.<br>48 hours. <span style="color: var(--accent);">$497.</span></h1>
-                <p class="hero-sub fade-in delay-2">Custom-designed websites for restaurants, salons, dental offices, and local businesses. No templates. No page builders. Clean code you own forever.</p>
-                <div class="hero-ctas fade-in delay-3">
-                    <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">Get Your Site</a>
-                    <a href="#showcase" class="btn-ghost">See an Example</a>
-                </div>
-                <div class="hero-trust fade-in delay-4">
-                    <span class="trust-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        No retainers
-                    </span>
-                    <span class="trust-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        You own the code
-                    </span>
-                    <span class="trust-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        7-day refund
-                    </span>
-                </div>
+            <div class="hero-eyebrow fade-in">
+                <span class="pulse"></span>
+                Now building for local businesses
             </div>
-
-            <div class="hero-visual fade-in delay-2">
-                <div class="browser-frame">
-                    <div class="browser-chrome">
-                        <span class="browser-dot"></span>
-                        <span class="browser-dot"></span>
-                        <span class="browser-dot"></span>
-                        <div class="browser-url">yourbusiness.com</div>
-                    </div>
-                    <div class="browser-content">
-                        <div class="mini-nav">
-                            <div class="mini-logo"></div>
-                            <div class="mini-nav-links">
-                                <div class="mini-nav-link"></div>
-                                <div class="mini-nav-link"></div>
-                                <div class="mini-nav-link"></div>
-                            </div>
-                        </div>
-                        <div class="mini-hero-text">
-                            <div class="mini-h1"></div>
-                            <div class="mini-h1-2"></div>
-                            <div class="mini-sub"></div>
-                            <div class="mini-sub-2"></div>
-                        </div>
-                        <div class="mini-btn"></div>
-                        <div class="mini-cards">
-                            <div class="mini-card">
-                                <div class="mini-card-icon"></div>
-                                <div class="mini-card-title"></div>
-                                <div class="mini-card-body"></div>
-                                <div class="mini-card-body" style="width: 65%;"></div>
-                            </div>
-                            <div class="mini-card">
-                                <div class="mini-card-icon"></div>
-                                <div class="mini-card-title"></div>
-                                <div class="mini-card-body"></div>
-                                <div class="mini-card-body" style="width: 75%;"></div>
-                            </div>
-                            <div class="mini-card">
-                                <div class="mini-card-icon"></div>
-                                <div class="mini-card-title"></div>
-                                <div class="mini-card-body"></div>
-                                <div class="mini-card-body" style="width: 55%;"></div>
-                            </div>
-                        </div>
-                    </div>
+            <h1 class="fade-in delay-1">Websites that look like they cost <span class="gradient-text">$10,000</span></h1>
+            <p class="hero-sub fade-in delay-2">AI-powered websites for restaurants, salons, dental offices, and local businesses. Custom-designed. Conversion-focused. Deployed in 48 hours. You own the code.</p>
+            <div class="hero-ctas fade-in delay-3">
+                <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">
+                    Get Your Site — $497
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+                <a href="#showcase" class="btn-ghost">See Our Work</a>
+            </div>
+            <div class="hero-stats fade-in delay-4">
+                <div class="hero-stat">
+                    <div class="number">48hr</div>
+                    <div class="label">Delivery</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">$497</div>
+                    <div class="label">Flat rate</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">0</div>
+                    <div class="label">Templates</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">100%</div>
+                    <div class="label">Your code</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- CREDIBILITY BAR -->
-    <section class="credibility fade-in">
+    <!-- LOGO STRIP -->
+    <section class="logo-strip fade-in">
         <div class="container">
-            <div class="cred-grid">
-                <div class="cred-item">
-                    <div class="cred-number">48hr</div>
-                    <div class="cred-label">Delivery</div>
-                </div>
-                <div class="cred-item">
-                    <div class="cred-number">$497</div>
-                    <div class="cred-label">Flat rate</div>
-                </div>
-                <div class="cred-item">
-                    <div class="cred-number">0</div>
-                    <div class="cred-label">Templates used</div>
-                </div>
-                <div class="cred-item">
-                    <div class="cred-number">100%</div>
-                    <div class="cred-label">Your code</div>
-                </div>
+            <div class="logo-strip-label">Built for businesses like</div>
+            <div class="logo-row">
+                <span class="logo-item">Restaurants</span>
+                <span class="logo-item">Dental Offices</span>
+                <span class="logo-item">Salons</span>
+                <span class="logo-item">Law Firms</span>
+                <span class="logo-item">Contractors</span>
+                <span class="logo-item">Gyms</span>
             </div>
         </div>
     </section>
 
-    <!-- THE PROBLEM -->
-    <section class="problem" id="problem">
+    <!-- BENTO GRID — WHAT WE BUILD -->
+    <section id="features">
         <div class="container">
-            <div class="problem-header fade-in">
-                <h2>Your competitors already have a better website</h2>
-                <p>Most local businesses lose customers before they ever walk through the door.</p>
+            <div class="bento-header fade-in">
+                <h2>Everything your business needs <span class="gradient-text">online</span></h2>
+                <p>Not just a website — a system designed to turn visitors into customers.</p>
             </div>
-            <div class="problem-grid">
-                <div class="problem-card fade-in">
-                    <div class="problem-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <div class="bento-grid">
+                <div class="bento-card wide fade-in">
+                    <div class="bento-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     </div>
-                    <h3>Outdated sites lose trust</h3>
-                    <p>75% of people judge a business's credibility by its website. If yours looks like 2015, they're going to your competitor.</p>
-                </div>
-                <div class="problem-card fade-in delay-1">
-                    <div class="problem-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <h3>Custom Website Design</h3>
+                    <p>No templates. We research your business, your competitors, and your customers — then build a site tailored specifically to you.</p>
+                    <div class="bento-preview">
+                        <div class="bento-preview-bar">
+                            <span class="bp-dot"></span><span class="bp-dot"></span><span class="bp-dot"></span>
+                        </div>
+                        <div class="bento-preview-body">
+                            <div class="bp-line title"></div>
+                            <div class="bp-line sub"></div>
+                            <div class="bp-line accent"></div>
+                            <div class="bp-cards">
+                                <div class="bp-card-item"></div>
+                                <div class="bp-card-item"></div>
+                                <div class="bp-card-item"></div>
+                            </div>
+                        </div>
                     </div>
-                    <h3>Agencies are slow and expensive</h3>
-                    <p>Traditional web agencies charge $5K-$15K and take 4-8 weeks. That's a lot of money for a site you can't even update yourself.</p>
                 </div>
-                <div class="problem-card fade-in delay-2">
-                    <div class="problem-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                <div class="bento-card fade-in delay-1">
+                    <div class="bento-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </div>
-                    <h3>Templates look like templates</h3>
-                    <p>Wix and Squarespace sites all look the same. Your customers can tell. And you're stuck paying platform fees forever.</p>
+                    <h3>SEO Built In</h3>
+                    <p>Semantic HTML, meta tags, structured data, and fast load times. Your site shows up when customers search.</p>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- THE SOLUTION -->
-    <section class="solution" id="solution">
-        <div class="container">
-            <div class="solution-header fade-in">
-                <h2>There's a better way</h2>
-                <p>AI-powered research and design, human-level quality. The best of both worlds.</p>
-            </div>
-            <div class="solution-grid">
-                <div class="solution-card old fade-in">
-                    <h3>The old way</h3>
-                    <ul class="solution-list">
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            $5,000 - $15,000 upfront
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            4-8 weeks to launch
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            Generic template design
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            Locked into their platform
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            Monthly retainer required
-                        </li>
-                    </ul>
+                <div class="bento-card fade-in delay-2">
+                    <div class="bento-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    </div>
+                    <h3>Mobile-First</h3>
+                    <p>70% of local searches happen on phones. Every site is designed mobile-first, then scaled up for desktop.</p>
                 </div>
-                <div class="solution-card new fade-in delay-1">
-                    <h3>The STILO way</h3>
-                    <ul class="solution-list">
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            $497 flat rate
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Live in 48 hours
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Custom design, researched for your niche
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Clean code you own forever
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            No lock-in, cancel anytime
-                        </li>
-                    </ul>
+                <div class="bento-card fade-in delay-1">
+                    <div class="bento-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    </div>
+                    <h3>Lightning Fast</h3>
+                    <p>No heavy frameworks. Clean, hand-written code that loads in under a second. Fast sites convert better.</p>
+                </div>
+                <div class="bento-card wide fade-in delay-2">
+                    <div class="bento-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    </div>
+                    <h3>Clean Code You Own</h3>
+                    <p>No platform lock-in. No monthly fees to keep your site alive. You get the source code — edit it yourself, hire any developer, or let us handle it.</p>
+                    <div class="bento-code">
+                        <span class="comment">&lt;!-- Your website. Your code. Forever. --&gt;</span><br>
+                        <span class="keyword">&lt;section</span> class=<span class="string">"hero"</span><span class="keyword">&gt;</span><br>
+                        &nbsp;&nbsp;<span class="keyword">&lt;h1&gt;</span>Welcome to <span class="string">Your Business</span><span class="keyword">&lt;/h1&gt;</span><br>
+                        &nbsp;&nbsp;<span class="keyword">&lt;p&gt;</span>Trusted by 500+ families since 2010<span class="keyword">&lt;/p&gt;</span><br>
+                        &nbsp;&nbsp;<span class="keyword">&lt;a</span> class=<span class="string">"cta"</span><span class="keyword">&gt;</span>Book Now<span class="keyword">&lt;/a&gt;</span><br>
+                        <span class="keyword">&lt;/section&gt;</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1063,78 +898,73 @@
 
     <!-- SHOWCASE -->
     <section class="showcase" id="showcase">
-        <div class="container">
+        <div class="glow-orb glow-purple" style="width:500px;height:500px;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+        <div class="container" style="position:relative;z-index:1;">
             <div class="showcase-header fade-in">
-                <h2>See what we build</h2>
-                <p>Every site is custom-designed for the specific business. Here's what a restaurant site looks like.</p>
+                <h2>See what a <span class="gradient-text">STILO site</span> looks like</h2>
+                <p>Every site is custom. Here's an example for a restaurant.</p>
             </div>
-            <div class="showcase-browser browser-frame fade-in delay-1">
-                <div class="browser-chrome">
-                    <span class="browser-dot"></span>
-                    <span class="browser-dot"></span>
-                    <span class="browser-dot"></span>
-                    <div class="browser-url">bellacucina.com</div>
+            <div class="showcase-frame fade-in delay-1">
+                <div class="sf-chrome">
+                    <span class="sf-dot"></span><span class="sf-dot"></span><span class="sf-dot"></span>
+                    <div class="sf-url">bellacucina.com</div>
                 </div>
-                <div class="browser-content">
-                    <div class="show-hero">
-                        <div class="show-hero-badge">Now taking reservations</div>
-                        <h4>Bella Cucina</h4>
-                        <p>Authentic Italian dining in the heart of downtown Austin.</p>
-                        <span class="show-btn">Reserve a Table</span>
-                    </div>
-                    <div class="show-cards">
-                        <div class="show-card">
-                            <div class="show-card-emoji" aria-hidden="true" style="font-size: 1rem;">&#127858;</div>
-                            <h5>The Menu</h5>
-                            <p>Seasonal dishes made from scratch daily</p>
+                <div class="sf-body">
+                    <div class="sample-site">
+                        <div class="ss-hero">
+                            <div class="ss-badge">Now taking reservations</div>
+                            <h4>Bella Cucina</h4>
+                            <p>Authentic Italian dining in the heart of downtown Austin.</p>
+                            <span class="ss-btn">Reserve a Table</span>
                         </div>
-                        <div class="show-card">
-                            <div class="show-card-emoji" aria-hidden="true" style="font-size: 1rem;">&#127863;</div>
-                            <h5>Wine List</h5>
-                            <p>Curated Italian wines by the glass or bottle</p>
-                        </div>
-                        <div class="show-card">
-                            <div class="show-card-emoji" aria-hidden="true" style="font-size: 1rem;">&#127881;</div>
-                            <h5>Private Events</h5>
-                            <p>Host your next celebration with us</p>
+                        <div class="ss-features">
+                            <div class="ss-feature">
+                                <div class="ss-feature-icon">&#127858;</div>
+                                <h5>The Menu</h5>
+                                <p>Seasonal dishes made fresh daily</p>
+                            </div>
+                            <div class="ss-feature">
+                                <div class="ss-feature-icon">&#127863;</div>
+                                <h5>Wine List</h5>
+                                <p>Curated Italian wines</p>
+                            </div>
+                            <div class="ss-feature">
+                                <div class="ss-feature-icon">&#127881;</div>
+                                <h5>Private Events</h5>
+                                <p>Host your celebration with us</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <p class="showcase-caption fade-in delay-2">Custom design for a fictional restaurant. Your site will be researched and built specifically for your business.</p>
+            <p class="showcase-caption fade-in delay-2">Custom design for a sample restaurant. Your site is researched and built specifically for your business.</p>
         </div>
     </section>
 
     <!-- HOW IT WORKS -->
-    <section class="how" id="how">
+    <section id="how">
         <div class="container">
-            <div class="how-header fade-in">
-                <h2>How it works</h2>
-                <p>Three steps. No complexity. No jargon.</p>
+            <div class="process-header fade-in">
+                <h2>Three steps. <span class="gradient-text">Zero complexity.</span></h2>
+                <p>From conversation to live website in 48 hours.</p>
             </div>
-            <div class="how-timeline">
-                <div class="how-step fade-in">
-                    <div class="step-dot">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    </div>
+            <div class="process-steps">
+                <div class="process-step fade-in">
+                    <div class="step-number">1</div>
                     <h3>Tell us about your business</h3>
-                    <p>A quick conversation about what you do, who your customers are, and what you need your website to accomplish. Takes 10 minutes.</p>
+                    <p>A quick conversation about what you do, who your customers are, and what you want the site to do.</p>
                     <span class="step-time">10 minutes</span>
                 </div>
-                <div class="how-step fade-in delay-1">
-                    <div class="step-dot">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                    </div>
-                    <h3>We research, design, and build</h3>
-                    <p>Our AI researches your industry, analyzes your competitors, and builds a site tailored to your specific business. Custom code, custom design.</p>
+                <div class="process-step fade-in delay-1">
+                    <div class="step-number">2</div>
+                    <h3>We research and build</h3>
+                    <p>AI researches your industry, analyzes competitors, and builds a site tailored to your business.</p>
                     <span class="step-time">24-48 hours</span>
                 </div>
-                <div class="how-step fade-in delay-2">
-                    <div class="step-dot">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    </div>
+                <div class="process-step fade-in delay-2">
+                    <div class="step-number">3</div>
                     <h3>Your site goes live</h3>
-                    <p>Deployed, fast, and ready for customers. You own the code. Make changes yourself, hire any developer, or let us handle it.</p>
+                    <p>Deployed, fast, and ready for customers. You own everything — the code, the design, the domain.</p>
                     <span class="step-time">You're live</span>
                 </div>
             </div>
@@ -1142,49 +972,31 @@
     </section>
 
     <!-- PRICING -->
-    <section class="pricing" id="pricing">
+    <section id="pricing">
         <div class="container">
             <div class="pricing-header fade-in">
-                <h2>Simple, honest pricing</h2>
-                <p>One price. No surprises. No hidden fees.</p>
+                <h2>Simple, <span class="gradient-text">honest</span> pricing</h2>
+                <p>One price. No hidden fees. No surprises.</p>
             </div>
             <div class="pricing-main fade-in delay-1">
                 <div class="pricing-card">
-                    <div class="pricing-label">Website Builder Agent</div>
-                    <h3>A premium website built for your business</h3>
+                    <div class="pricing-badge">Website Builder Agent</div>
+                    <h3>A premium website for your business</h3>
                     <p class="desc">Researched, designed, and deployed in 48 hours.</p>
-                    <div class="pricing-amount">$497 <span>one-time</span></div>
+                    <div class="pricing-amount gradient-text">$497 <span>one-time</span></div>
                     <div class="pricing-divider"></div>
                     <ul class="pricing-features">
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Custom design — zero templates
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Industry and competitor research
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Mobile-optimized and fast
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            SEO-ready from day one
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            You own the code — no lock-in
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Free hosting on Vercel
-                        </li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Custom design — zero templates</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Industry and competitor research</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mobile-optimized and fast</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> SEO-ready from day one</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> You own the code — no lock-in</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Free hosting on Vercel</li>
                     </ul>
                     <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">Get Started</a>
                     <div class="pricing-guarantee">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        Not happy? Full refund within 7 days.
+                        Full refund within 7 days. No questions.
                     </div>
                 </div>
             </div>
@@ -1195,9 +1007,9 @@
                 </div>
                 <div class="addon-price">$47<span>/mo</span></div>
             </div>
-            <div class="pricing-waitlist fade-in delay-3">
+            <div class="pricing-agents fade-in delay-3">
                 <p>More agents launching soon.</p>
-                <div class="agents-coming">
+                <div class="agent-tags">
                     <span class="agent-tag">AI Receptionist</span>
                     <span class="agent-tag">Review Manager</span>
                     <span class="agent-tag">Social Media Agent</span>
@@ -1206,78 +1018,69 @@
         </div>
     </section>
 
-    <!-- ABOUT / FOUNDER -->
-    <section class="about" id="about">
+    <!-- ABOUT -->
+    <section id="about">
         <div class="container">
             <div class="about-inner fade-in">
                 <div class="founder-avatar">RL</div>
-                <h2>Built by Remy Leon</h2>
-                <p class="lead">I started STILO AI because I watched too many local businesses pay $10,000 for a website that took two months and still looked generic. Meanwhile, Fortune 500 companies get Apple-level design on demand. That gap didn't make sense to me.</p>
-                <p class="lead">STILO AI uses artificial intelligence to research your business, your competitors, and your customers — then builds a site that looks like it cost ten times what you paid. Every site is hand-reviewed. Every pixel earns its place.</p>
+                <h2>Built by <span class="gradient-text">Remy Leon</span></h2>
+                <p class="lead">I started STILO AI because local businesses deserve the same quality tools that Fortune 500 companies have — without the Fortune 500 budget.</p>
+                <p class="lead">Our AI researches your business, your competitors, and your customers. Then builds a site that looks like it cost ten times what you paid. Every site is hand-reviewed. Every pixel earns its place.</p>
                 <p class="lead">We're new, we're hungry, and we have something to prove. Your site will be our best work yet.</p>
                 <div class="about-values">
-                    <div class="about-value">
-                        <h4>Quality</h4>
-                        <p>Every site looks like a $10K product.</p>
-                    </div>
-                    <div class="about-value">
-                        <h4>Speed</h4>
-                        <p>48 hours, not 4 weeks.</p>
-                    </div>
-                    <div class="about-value">
-                        <h4>Ownership</h4>
-                        <p>You own everything. No lock-in.</p>
-                    </div>
-                    <div class="about-value">
-                        <h4>Honesty</h4>
-                        <p>Flat pricing. No upsells. No BS.</p>
-                    </div>
+                    <div class="about-value"><h4>Quality</h4><p>Looks like a $10K product.</p></div>
+                    <div class="about-value"><h4>Speed</h4><p>48 hours, not 4 weeks.</p></div>
+                    <div class="about-value"><h4>Ownership</h4><p>Your code. No lock-in.</p></div>
+                    <div class="about-value"><h4>Honesty</h4><p>Flat pricing. No BS.</p></div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- FAQ -->
-    <section class="faq" id="faq">
+    <section id="faq">
         <div class="container">
-            <div class="faq-header fade-in">
-                <h2>Questions</h2>
-            </div>
+            <div class="faq-header fade-in"><h2>Questions</h2></div>
             <div class="faq-list fade-in">
                 <div class="faq-item">
                     <button class="faq-question">What do I need to get started? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Just 10 minutes of your time. We'll ask about your business, your customers, and what you want the site to do. We handle everything else — research, design, code, and deployment.</p></div>
+                    <div class="faq-answer"><p>Just 10 minutes of your time. We handle everything — research, design, code, and deployment.</p></div>
                 </div>
                 <div class="faq-item">
                     <button class="faq-question">How is this different from Wix or Squarespace? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Template sites look like template sites — your customers can tell. We research your specific business, analyze your competitors, and write custom code tailored to you. No platform fees. No limitations. You own the file.</p></div>
+                    <div class="faq-answer"><p>Template sites look like template sites. We write custom code tailored to your business. No platform fees. No limitations. You own the file.</p></div>
                 </div>
                 <div class="faq-item">
                     <button class="faq-question">What if I already have a website? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Even better. We'll analyze what's working, what's not, and build something that's a genuine upgrade — better design, better copy, better conversion. Your old site becomes a benchmark, not a constraint.</p></div>
+                    <div class="faq-answer"><p>We'll analyze what's working and build something that's a genuine upgrade — better design, better copy, better conversion.</p></div>
                 </div>
                 <div class="faq-item">
                     <button class="faq-question">Can I make changes after delivery? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Yes. You own the code. Edit it yourself, hire any developer, or subscribe to our $47/month support plan and we'll handle all updates for you. No lock-in either way.</p></div>
+                    <div class="faq-answer"><p>Yes. You own the code. Edit it yourself, hire any developer, or subscribe to our $47/month plan and we'll handle updates.</p></div>
                 </div>
                 <div class="faq-item">
                     <button class="faq-question">What if I don't like the result? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>Full refund within 7 days, no questions asked. We'd rather earn your trust than keep your money. That said — we haven't had a refund request yet.</p></div>
+                    <div class="faq-answer"><p>Full refund within 7 days, no questions asked. We'd rather earn your trust than keep your money.</p></div>
                 </div>
                 <div class="faq-item">
                     <button class="faq-question">How does AI fit into this? <span class="icon">+</span></button>
-                    <div class="faq-answer"><p>AI handles the heavy lifting — researching your industry, analyzing competitor sites, generating optimized copy, and writing clean code. But every site is reviewed by a human eye before delivery. You get the speed of AI with the taste of a senior designer.</p></div>
+                    <div class="faq-answer"><p>AI handles research, competitor analysis, copy generation, and code. Every site is reviewed by a human before delivery. Speed of AI, taste of a senior designer.</p></div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- FINAL CTA -->
-    <section class="final-cta" id="get-started">
-        <div class="container fade-in">
-            <h2>Ready to stand out?</h2>
-            <p>Get a website your customers will trust and your competitors will envy. 48 hours. $497. No risk.</p>
-            <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">Get Your Site — $497</a>
+    <section class="final-cta">
+        <div class="container">
+            <div class="cta-box fade-in">
+                <h2>Ready to <span class="gradient-text">stand out</span>?</h2>
+                <p>Get a website your customers will trust and your competitors will envy. 48 hours. $497. No risk.</p>
+                <a href="mailto:remyleon11@gmail.com?subject=I%20want%20a%20website%20from%20STILO%20AI" class="btn-primary">
+                    Get Your Site — $497
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+            </div>
         </div>
     </section>
 
@@ -1285,14 +1088,14 @@
     <footer>
         <div class="container footer-inner">
             <span class="footer-logo">
-                <span class="nav-logo-mark" style="width: 22px; height: 22px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                <span class="nav-logo-mark" style="width:24px;height:24px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 </span>
                 STILO AI
             </span>
             <ul class="footer-links">
                 <li><a href="#pricing">Pricing</a></li>
-                <li><a href="#how">How It Works</a></li>
+                <li><a href="#how">Process</a></li>
                 <li><a href="#faq">FAQ</a></li>
                 <li><a href="mailto:remyleon11@gmail.com">Contact</a></li>
             </ul>
@@ -1301,7 +1104,7 @@
     </footer>
 
     <script>
-        // Mobile menu toggle
+        // Mobile menu
         var menuToggle = document.getElementById('menu-toggle');
         var mobileMenu = document.getElementById('mobile-menu');
         menuToggle.addEventListener('click', function() {
@@ -1317,18 +1120,13 @@
             });
         });
 
-        // Scroll-triggered fade-in animations
+        // Scroll fade-in
         var observer = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
+                if (entry.isIntersecting) entry.target.classList.add('visible');
             });
-        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-
-        document.querySelectorAll('.fade-in').forEach(function(el) {
-            observer.observe(el);
-        });
+        }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+        document.querySelectorAll('.fade-in').forEach(function(el) { observer.observe(el); });
 
         // FAQ accordion
         document.querySelectorAll('.faq-question').forEach(function(btn) {
@@ -1340,19 +1138,18 @@
             });
         });
 
-        // Active nav link on scroll
+        // Active nav
         var sections = document.querySelectorAll('section[id]');
         window.addEventListener('scroll', function() {
             var scrollY = window.scrollY + 100;
             sections.forEach(function(section) {
-                var top = section.offsetTop;
-                var height = section.offsetHeight;
+                var top = section.offsetTop, height = section.offsetHeight;
                 var id = section.getAttribute('id');
                 var link = document.querySelector('.nav-links a[href="#' + id + '"]');
                 if (link) {
                     if (scrollY >= top && scrollY < top + height) {
                         document.querySelectorAll('.nav-links a').forEach(function(a) { a.style.color = ''; });
-                        link.style.color = 'var(--text-primary)';
+                        link.style.color = 'var(--accent-light)';
                     }
                 }
             });
