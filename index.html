@@ -1105,6 +1105,133 @@
             .pain-section::before, .services-section::before, .pricing-section::before { animation: none; }
             .hero-canvas { display: none; }
         }
+
+        /* === HERO SUB === */
+        .hero-sub {
+            font-size: 1.125rem; color: var(--text-secondary);
+            margin-top: 16px; margin-bottom: 0;
+            max-width: 520px; margin-left: auto; margin-right: auto;
+            text-align: center;
+        }
+
+        /* === QUIZ STYLES === */
+        .quiz-step { width: 100%; }
+        .quiz-step-label {
+            font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--accent-light);
+            margin-bottom: 8px;
+        }
+        .quiz-step-title {
+            font-size: clamp(1.25rem, 2vw + 0.5rem, 1.625rem);
+            font-family: var(--font-display); font-weight: 700;
+            color: var(--text-primary); margin-bottom: 24px; line-height: 1.2;
+        }
+        .quiz-question { animation: fadeSlideIn 0.3s ease; }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .q-label {
+            font-size: 1rem; font-weight: 600; color: var(--text-primary);
+            margin-bottom: 16px; line-height: 1.4;
+        }
+        .q-options {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 10px; margin-bottom: 8px;
+        }
+        @media (max-width: 480px) { .q-options { grid-template-columns: 1fr; } }
+        .q-option {
+            background: var(--bg-card); border: 1px solid var(--border-strong);
+            color: var(--text-primary); font-family: var(--font-body);
+            font-size: 0.875rem; font-weight: 500;
+            padding: 14px 16px; border-radius: var(--radius);
+            cursor: pointer; text-align: left; line-height: 1.4;
+            transition: all 0.18s ease;
+        }
+        .q-option:hover {
+            border-color: var(--accent-light); background: var(--bg-card-hover);
+            transform: translateY(-1px);
+        }
+        .q-option.selected {
+            border-color: var(--accent); background: var(--accent-muted);
+            color: var(--accent-light);
+        }
+        .quiz-progress {
+            width: 100%; height: 3px; background: var(--border);
+            border-radius: 2px; margin-top: 20px; overflow: hidden;
+        }
+        .quiz-progress-bar {
+            height: 100%; background: var(--accent-gradient);
+            border-radius: 2px; transition: width 0.4s ease;
+        }
+        .tier-badge {
+            display: inline-block; padding: 6px 16px;
+            background: var(--accent-muted); border: 1px solid var(--accent);
+            color: var(--accent-light); border-radius: 999px;
+            font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.05em;
+            text-transform: uppercase; margin-bottom: 20px;
+        }
+        .agent-rec-grid {
+            display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px;
+        }
+        .agent-rec-card {
+            background: var(--bg-card); border: 1px solid var(--border-strong);
+            border-radius: var(--radius); padding: 16px 20px;
+            display: flex; align-items: flex-start; gap: 14px;
+            transition: all 0.2s ease; position: relative;
+        }
+        .agent-rec-card.included { border-color: var(--accent); }
+        .agent-rec-card-icon {
+            width: 36px; height: 36px; background: var(--accent-muted);
+            border-radius: 8px; display: flex; align-items: center;
+            justify-content: center; flex-shrink: 0; font-size: 1rem;
+        }
+        .agent-rec-card-body { flex: 1; }
+        .agent-rec-card-body h4 {
+            font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);
+            margin-bottom: 3px; font-family: var(--font-body); letter-spacing: 0;
+        }
+        .agent-rec-card-body p {
+            font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.45; margin: 0;
+        }
+        .agent-rec-card-price {
+            font-size: 0.75rem; font-weight: 600; color: var(--accent-light);
+            margin-top: 4px; display: block;
+        }
+        .agent-toggle-btn {
+            flex-shrink: 0; width: 28px; height: 28px;
+            border-radius: 50%; border: 1px solid var(--border-strong);
+            background: transparent; color: var(--text-secondary);
+            cursor: pointer; font-size: 1rem; line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease; align-self: center;
+        }
+        .agent-rec-card.included .agent-toggle-btn {
+            background: var(--accent); border-color: var(--accent); color: white;
+        }
+        .tier-switch-row {
+            display: flex; gap: 8px; margin-bottom: 20px;
+        }
+        .tier-switch-btn {
+            flex: 1; padding: 10px; background: var(--bg-card);
+            border: 1px solid var(--border-strong); color: var(--text-secondary);
+            border-radius: var(--radius); font-family: var(--font-body);
+            font-size: 0.875rem; font-weight: 600; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tier-switch-btn.active, .tier-switch-btn:hover {
+            border-color: var(--accent); color: var(--accent-light);
+            background: var(--accent-muted);
+        }
+        .rec-total-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; background: var(--bg-card);
+            border: 1px solid var(--border-strong); border-radius: var(--radius);
+            margin-bottom: 4px;
+        }
+        .rec-total-label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+        .rec-total-price { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+        .rec-intro { color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9375rem; }
     </style>
 </head>
 <body>
@@ -1174,11 +1301,11 @@
     <canvas class="hero-canvas" id="heroCanvas"></canvas>
     <div class="container">
         <div class="fade-in">
-            <h1>Stop Losing Customers.<br><span class="gradient-text">Start Using AI.</span></h1>
+            <h1>Your Business,<br><span class="gradient-text">Run by AI.</span></h1>
+            <p class="hero-sub">8 specialized agents. More calls answered. More leads closed. More customers back.</p>
         </div>
         <div class="hero-ctas fade-in delay-1">
-            <a href="#contact" class="btn-primary">Get Your Free AI Audit</a>
-            <a href="#pricing" class="btn-ghost">See Pricing</a>
+            <a href="#contact" class="btn-primary">Start</a>
         </div>
     </div>
 </section>
@@ -1193,15 +1320,15 @@
 <section class="pain-section" id="problem">
     <div class="container">
         <div class="pain-hero fade-in">
-            <div class="big-stat">62%</div>
-            <p class="stat-label">of small business calls go unanswered</p>
-            <p class="stat-sub">That's $126,000/year walking out the door.</p>
+            <div class="big-stat">78%</div>
+            <p class="stat-label">of leads go with the first business to respond</p>
+            <p class="stat-sub">Our Lead Response Agent replies in 5 seconds. Your competitors average 48 hours.</p>
         </div>
         <div class="pain-grid">
             <div class="card pain-card fade-in">
                 <div class="pain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.05 5A5 5 0 0119 8.95M15.05 1A9 9 0 0123 8.94M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></div>
                 <h3>You're missing calls while running your business</h3>
-                <p>62% of calls go to voicemail. Every missed call is a customer your competitor gets instead.</p>
+                <p>More than half of small business calls go unanswered. Every missed call is a customer your competitor gets instead.</p>
             </div>
             <div class="card pain-card fade-in delay-1">
                 <div class="pain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
@@ -1220,7 +1347,7 @@
             </div>
         </div>
         <div class="section-cta fade-in">
-            <a href="#contact" class="btn-primary">Get Your Free AI Audit</a>
+            <a href="#contact" class="btn-primary">Start</a>
         </div>
     </div>
 </section>
@@ -1343,7 +1470,7 @@
         <div class="mid-cta fade-in">
             <h3>Not sure which agent you need?</h3>
             <p>Get a free 30-minute audit. We'll map your biggest revenue leaks and recommend the right AI agents.</p>
-            <a href="#contact" class="btn-primary">Book Your Free AI Audit</a>
+            <a href="#contact" class="btn-primary">Start</a>
         </div>
 
         <div class="section-header fade-in" style="margin-top: 72px;">
@@ -1382,7 +1509,7 @@
             </div>
         </div>
         <div class="section-cta fade-in">
-            <a href="#contact" class="btn-primary">Get Your Free AI Audit</a>
+            <a href="#contact" class="btn-primary">Start</a>
         </div>
     </div>
 </section>
@@ -1455,7 +1582,7 @@
             </div>
         </div>
         <div class="section-cta fade-in" style="margin-top:48px;">
-            <a href="#contact" class="btn-primary">Get Your Free AI Audit</a>
+            <a href="#contact" class="btn-primary">Start</a>
         </div>
     </div>
 </section>
@@ -1483,7 +1610,7 @@
                     <li>You own everything</li>
                     <li>Full onboarding included</li>
                 </ul>
-                <a href="#contact" class="btn-ghost">Book Free AI Audit</a>
+                <a href="#contact" class="btn-ghost">Start</a>
             </div>
             <!-- Growth Bundle (Most Popular) -->
             <div class="card pricing-card popular fade-in delay-1">
@@ -1498,7 +1625,7 @@
                     <li>Performance reporting</li>
                     <li>Dedicated Slack channel</li>
                 </ul>
-                <a href="#contact" class="btn-primary">Book Free AI Audit</a>
+                <a href="#contact" class="btn-primary">Start</a>
             </div>
             <!-- Growth Partner -->
             <div class="card pricing-card fade-in delay-2">
@@ -1546,7 +1673,7 @@
         </p>
 
         <div class="section-cta fade-in">
-            <a href="#contact" class="btn-primary">Get Your Free AI Audit</a>
+            <a href="#contact" class="btn-primary">Start</a>
         </div>
     </div>
 </section>
@@ -1796,36 +1923,167 @@
 <section class="contact-section" id="contact">
     <div class="container">
         <div class="section-header fade-in">
-            <h2>Ready to <span class="gradient-text">Stop Losing Customers?</span></h2>
-            <p>Get your free AI audit. We'll show you exactly how AI can grow your business.</p>
+            <h2>Let's Build Your <span class="gradient-text">AI Growth Team</span></h2>
+            <p>Tell us about your business. We'll show you exactly which AI agents will grow your revenue.</p>
         </div>
-        <div class="contact-inner fade-in">
-            <form class="contact-form" id="contactForm" action="https://formspree.io/f/xyzdefgh" method="POST">
-                <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
-                    <input type="text" name="_gotcha" tabindex="-1" autocomplete="off">
-                </div>
-                <input type="text" name="name" placeholder="Your Name" required>
-                <input type="text" name="business" placeholder="Business Name" required>
-                <input type="text" name="website" placeholder="yourwebsite.com (if you have one)">
-                <select name="challenge" required>
-                    <option value="" disabled selected>Biggest Challenge</option>
-                    <option value="Missing calls & losing leads">Missing calls & losing leads</option>
-                    <option value="Leads go cold before we respond">Leads go cold before we respond</option>
-                    <option value="Need a new or better website">Need a new or better website</option>
-                    <option value="Past customers never came back">Past customers never came back</option>
-                    <option value="Not showing up in AI search results">Not showing up in AI search results</option>
-                    <option value="Need help finding new customers">Need help finding new customers</option>
-                    <option value="Want data-driven growth strategy">Want data-driven growth strategy</option>
-                    <option value="Not sure, just want to learn more">Not sure, just want to learn more</option>
-                </select>
-                <input type="tel" name="phone" placeholder="(305) 555-1234" required>
-                <button type="submit" class="btn-primary">Get My Free AI Audit</button>
+        <div class="contact-inner fade-in" id="quizContainer">
+
+          <!-- STEP 1: Personal Info -->
+          <div id="quizStep1" class="quiz-step">
+            <div class="quiz-step-label">Step 1 of 3 &middot; Your Info</div>
+            <h3 class="quiz-step-title">Let's get to know you</h3>
+            <form id="infoForm" class="contact-form" novalidate>
+              <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+                <input type="text" name="_gotcha" tabindex="-1" autocomplete="off">
+              </div>
+              <input type="text" id="f_name" name="name" placeholder="Your Name" required>
+              <input type="text" id="f_business" name="business" placeholder="Business Name" required>
+              <input type="email" id="f_email" name="email" placeholder="Email Address" required>
+              <input type="tel" id="f_phone" name="phone" placeholder="(305) 555-1234" required>
+              <input type="text" id="f_website" name="website" placeholder="yourwebsite.com (optional)">
+              <button type="submit" class="btn-primary" style="width:100%; margin-top:8px;">
+                Start &rarr;
+              </button>
             </form>
-            <p class="form-privacy">&#x1F512; Your info stays private. We'll reach out within 24 hours. No spam, ever.</p>
-            <div class="form-success" id="formSuccess" style="display:none;">
-                <h3>Thank you!</h3>
-                <p>We received your info and will reach out within 24 hours to schedule your free AI audit.</p>
+            <p class="form-privacy">&#x1F512; Your info stays private. No spam, ever.</p>
+          </div>
+
+          <!-- STEP 2: Business Onboarding Quiz -->
+          <div id="quizStep2" class="quiz-step" style="display:none;">
+            <div class="quiz-step-label">Step 2 of 3 &middot; Your Business</div>
+            <h3 class="quiz-step-title" id="quizGreeting">Tell us about your business</h3>
+            <div id="quizQuestions">
+
+              <div class="quiz-question" data-q="1">
+                <p class="q-label">What type of business do you run?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="restaurant">&#x1F37D;&#xFE0F; Restaurant / Food</button>
+                  <button class="q-option" data-value="salon">&#x2702;&#xFE0F; Salon / Barbershop</button>
+                  <button class="q-option" data-value="contractor">&#x1F527; Contractor / Home Services</button>
+                  <button class="q-option" data-value="medical">&#x1F3E5; Medical / Dental / Vet</button>
+                  <button class="q-option" data-value="realestate">&#x1F3E0; Real Estate</button>
+                  <button class="q-option" data-value="fitness">&#x1F4AA; Gym / Fitness</button>
+                  <button class="q-option" data-value="retail">&#x1F6CD;&#xFE0F; Retail / E-commerce</button>
+                  <button class="q-option" data-value="other">&#x1F4BC; Other / Professional Services</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="2" style="display:none;">
+                <p class="q-label">How many inbound calls does your business get per week?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="few">Under 10 calls</button>
+                  <button class="q-option" data-value="moderate">10&ndash;30 calls</button>
+                  <button class="q-option" data-value="high">30&ndash;75 calls</button>
+                  <button class="q-option" data-value="very-high">75+ calls</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="3" style="display:none;">
+                <p class="q-label">What typically happens when you miss a call?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="voicemail">It goes to voicemail &mdash; most don't leave one</button>
+                  <button class="q-option" data-value="forward">It forwards to someone else on my team</button>
+                  <button class="q-option" data-value="callback">I try to call back when I can</button>
+                  <button class="q-option" data-value="lost">Honestly, most are just lost</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="4" style="display:none;">
+                <p class="q-label">How fast do you respond to new leads right now?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="instant">Within minutes &mdash; we're on it</button>
+                  <button class="q-option" data-value="same-day">Same day, a few hours</button>
+                  <button class="q-option" data-value="next-day">Next day or two</button>
+                  <button class="q-option" data-value="slow">Honestly, sometimes days</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="5" style="display:none;">
+                <p class="q-label">Do you have a database of past customers you haven't contacted in 6+ months?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="yes-large">Yes &mdash; 500+ contacts</button>
+                  <button class="q-option" data-value="yes-small">Yes &mdash; under 500 contacts</button>
+                  <button class="q-option" data-value="no">No database / just getting started</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="6" style="display:none;">
+                <p class="q-label">What's your approximate monthly revenue?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="under30k">Under $30k / month</button>
+                  <button class="q-option" data-value="30-75k">$30k &ndash; $75k / month</button>
+                  <button class="q-option" data-value="75-150k">$75k &ndash; $150k / month</button>
+                  <button class="q-option" data-value="150k+">$150k+ / month</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="7" style="display:none;">
+                <p class="q-label">Are you currently running paid ads (Google, Meta, etc.)?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="yes-heavy">Yes &mdash; spending $3k+/month</button>
+                  <button class="q-option" data-value="yes-light">Yes &mdash; spending under $3k/month</button>
+                  <button class="q-option" data-value="no-plan">Not yet, but planning to</button>
+                  <button class="q-option" data-value="no">No paid ads</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="8" style="display:none;">
+                <p class="q-label">How do you feel about your current website?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="no-site">I don't have one</button>
+                  <button class="q-option" data-value="needs-work">I have one but it needs work</button>
+                  <button class="q-option" data-value="ok">It's decent, does the job</button>
+                  <button class="q-option" data-value="great">It's great, I'm happy with it</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="9" style="display:none;">
+                <p class="q-label">If someone asks ChatGPT or Google AI to recommend a business like yours in Miami, what happens?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="shows-up">We show up &mdash; I've tested it</button>
+                  <button class="q-option" data-value="not-sure">Honestly not sure</button>
+                  <button class="q-option" data-value="no">We don't show up</button>
+                </div>
+              </div>
+
+              <div class="quiz-question" data-q="10" style="display:none;">
+                <p class="q-label">What does a win look like for you in the next 6 months?</p>
+                <div class="q-options">
+                  <button class="q-option" data-value="more-calls">More calls and bookings coming in</button>
+                  <button class="q-option" data-value="better-leads">Better quality leads, less wasted time</button>
+                  <button class="q-option" data-value="reactivate">Reactivate old customers and boost repeat revenue</button>
+                  <button class="q-option" data-value="scale">Scale the whole operation &mdash; I want to grow aggressively</button>
+                </div>
+              </div>
+
             </div>
+            <div class="quiz-progress">
+              <div class="quiz-progress-bar" id="quizProgressBar" style="width:10%"></div>
+            </div>
+          </div>
+
+          <!-- STEP 3: Recommendation -->
+          <div id="quizStep3" class="quiz-step" style="display:none;">
+            <div class="quiz-step-label">Step 3 of 3 &middot; Your AI Team</div>
+            <h3 class="quiz-step-title" id="recTitle">Here's your recommended AI team</h3>
+            <p class="rec-intro" id="recIntro">Based on your answers, here's what we'd build for you.</p>
+            <div id="tierBadge" class="tier-badge"></div>
+            <div id="agentCards" class="agent-rec-grid"></div>
+            <div class="tier-switch-row">
+              <button class="tier-switch-btn" onclick="switchTier('starter')">Starter</button>
+              <button class="tier-switch-btn" onclick="switchTier('growth')">Growth</button>
+              <button class="tier-switch-btn" onclick="switchTier('partner')">Partner</button>
+            </div>
+            <div class="rec-total-row">
+              <span class="rec-total-label">Estimated Investment</span>
+              <span class="rec-total-price" id="recTotalPrice">$4,985 setup + $892/mo</span>
+            </div>
+            <a href="https://calendly.com/stiloai" target="_blank" rel="noopener noreferrer" class="btn-primary" style="width:100%; text-align:center; margin-top:24px; display:flex; justify-content:center;">
+              Book Your Free Strategy Call &rarr;
+            </a>
+            <p class="form-privacy" style="margin-top:12px;">30 minutes. Free. We'll walk through your custom agent plan together.</p>
+          </div>
+
         </div>
     </div>
 </section>
@@ -1885,7 +2143,7 @@
      STICKY CTA BAR
 ========================= -->
 <div class="sticky-cta" id="stickyCta">
-    <a href="#contact" class="btn-primary">Get Your Free AI Audit</a>
+    <a href="#contact" class="btn-primary">Start</a>
     <button class="sticky-cta-close" id="stickyCtaClose" aria-label="Dismiss">&times;</button>
 </div>
 
@@ -2165,47 +2423,9 @@
     track.addEventListener('mouseup', function() { isDragging = false; track.style.cursor = 'grab'; });
     track.addEventListener('mouseleave', function() { isDragging = false; track.style.cursor = 'grab'; });
 
-    // --- Form Submission ---
-    const contactForm = document.getElementById('contactForm');
-    const formSuccess = document.getElementById('formSuccess');
-    var lastSubmitTime = 0;
+    // --- Quiz Logic ---
+    // (see quiz script block below)
 
-    contactForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        // Rate limiting
-        var now = Date.now();
-        if (now - lastSubmitTime < 3000) return;
-        lastSubmitTime = now;
-
-        // Phone validation
-        var phone = contactForm.querySelector('input[name="phone"]').value.trim();
-        if (!/^[\d\s\-\(\)\+\.]{7,20}$/.test(phone)) {
-            contactForm.querySelector('input[name="phone"]').style.borderColor = '#EF4444';
-            return;
-        }
-
-        // Disable button
-        var submitBtn = contactForm.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Sending...';
-
-        const formData = new FormData(contactForm);
-
-        fetch(contactForm.action, {
-            method: 'POST',
-            body: formData,
-            headers: { 'Accept': 'application/json' }
-        }).then(function() {
-            contactForm.style.display = 'none';
-            contactForm.nextElementSibling.style.display = 'none';
-            formSuccess.style.display = 'block';
-        }).catch(function() {
-            contactForm.style.display = 'none';
-            contactForm.nextElementSibling.style.display = 'none';
-            formSuccess.style.display = 'block';
-        });
-    });
 
     // --- Scroll Listeners ---
     window.addEventListener('scroll', function() {
@@ -2219,5 +2439,165 @@
 })();
 </script>
 
+<script>
+// =====================
+// QUIZ LOGIC
+// =====================
+(function() {
+  var quizAnswers = {};
+  var currentQ = 1;
+  var totalQ = 10;
+
+  var agentCatalog = [
+    { id: 'receptionist', name: 'AI Receptionist', icon: '📞', price: '$497 setup + $99/mo', desc: '24/7 voice agent that answers, books, and captures every call.', tiers: ['starter','growth','partner'] },
+    { id: 'lead-response', name: 'Lead Response Agent', icon: '⚡', price: '$997 setup + $297/mo', desc: 'Responds to every inbound lead in seconds — email, text, and call.', tiers: ['growth','partner'] },
+    { id: 'reactivation', name: 'Customer Reactivation', icon: '🔁', price: 'Custom', desc: 'Re-engage your dormant customer list and turn it back into revenue.', tiers: ['growth','partner'] },
+    { id: 'lead-gen', name: 'Lead Generator', icon: '🎯', price: 'From $997', desc: 'AI-powered prospecting that finds and contacts your ideal customers at scale.', tiers: ['partner'] },
+    { id: 'website', name: 'AI Website', icon: '🌐', price: 'From $497', desc: 'Conversion-optimized site researched and built for your exact business.', tiers: ['starter','growth','partner'] },
+    { id: 'seo', name: 'AI SEO (GEO)', icon: '🔍', price: '$297/mo', desc: 'Get recommended by ChatGPT, Google AI, and every AI assistant in your area.', tiers: ['growth','partner'] },
+    { id: 'growth-intel', name: 'Growth Intelligence', icon: '📊', price: 'From $500', desc: 'Weekly data-driven strategy — what\'s working, what\'s not, and what to do next.', tiers: ['partner'] },
+    { id: 'custom', name: 'Custom Automation', icon: '⚙️', price: 'From $497', desc: 'Got a specific problem? We\'ll build the AI solution for it.', tiers: ['partner'] }
+  ];
+
+  var tierData = {
+    starter: { label: 'Starter Package', agents: ['receptionist','website'], price: '$994 setup + $99/mo' },
+    growth: { label: 'Growth Package', agents: ['receptionist','lead-response','reactivation','website','seo'], price: '$2,991 setup + $495/mo' },
+    partner: { label: 'Growth Partner Package', agents: ['receptionist','lead-response','reactivation','lead-gen','website','seo','growth-intel'], price: '$4,985 setup + $892/mo' }
+  };
+
+  var currentTier = 'partner';
+  var selectedAgents = {};
+
+  // Step 1 → Step 2
+  var infoForm = document.getElementById('infoForm');
+  if (infoForm) {
+    infoForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var name = document.getElementById('f_name').value.trim();
+      var email = document.getElementById('f_email').value.trim();
+      var phone = document.getElementById('f_phone').value.trim();
+      var business = document.getElementById('f_business').value.trim();
+      if (!name || !email || !phone || !business) return;
+      var greeting = document.getElementById('quizGreeting');
+      if (greeting) greeting.textContent = 'Tell us about ' + business;
+      document.getElementById('quizStep1').style.display = 'none';
+      document.getElementById('quizStep2').style.display = 'block';
+      updateProgress();
+    });
+  }
+
+  // Option selection
+  document.querySelectorAll('.q-option').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var qDiv = this.closest('.quiz-question');
+      qDiv.querySelectorAll('.q-option').forEach(function(b) { b.classList.remove('selected'); });
+      this.classList.add('selected');
+      quizAnswers['q' + qDiv.dataset.q] = this.dataset.value;
+      var qNum = parseInt(qDiv.dataset.q);
+      setTimeout(function() { advanceQuestion(qNum); }, 320);
+    });
+  });
+
+  function advanceQuestion(q) {
+    var current = document.querySelector('.quiz-question[data-q="' + q + '"]');
+    if (current) current.style.display = 'none';
+    var next = document.querySelector('.quiz-question[data-q="' + (q + 1) + '"]');
+    if (next) {
+      next.style.display = 'block';
+      currentQ = q + 1;
+      updateProgress();
+    } else {
+      showRecommendation();
+    }
+  }
+
+  function updateProgress() {
+    var bar = document.getElementById('quizProgressBar');
+    if (bar) bar.style.width = Math.round((currentQ / totalQ) * 100) + '%';
+  }
+
+  function showRecommendation() {
+    var rev = quizAnswers.q6;
+    if (rev === '150k+' || quizAnswers.q10 === 'scale') {
+      currentTier = 'partner';
+    } else if (rev === '75-150k' || rev === '30-75k') {
+      currentTier = 'growth';
+    } else {
+      currentTier = 'starter';
+    }
+    document.getElementById('quizStep2').style.display = 'none';
+    document.getElementById('quizStep3').style.display = 'block';
+    var nameEl = document.getElementById('f_name');
+    var firstName = nameEl ? nameEl.value.trim().split(' ')[0] : '';
+    var recTitle = document.getElementById('recTitle');
+    if (recTitle && firstName) recTitle.textContent = 'Here\'s your AI team, ' + firstName;
+    renderTier(currentTier);
+  }
+
+  function renderTier(tier) {
+    currentTier = tier;
+    var data = tierData[tier];
+    selectedAgents = {};
+    data.agents.forEach(function(id) { selectedAgents[id] = true; });
+
+    var badge = document.getElementById('tierBadge');
+    if (badge) badge.textContent = data.label;
+    var priceEl = document.getElementById('recTotalPrice');
+    if (priceEl) priceEl.textContent = data.price;
+
+    // Update tier buttons
+    document.querySelectorAll('.tier-switch-btn').forEach(function(btn) {
+      var onclick = btn.getAttribute('onclick') || '';
+      btn.classList.toggle('active', onclick.indexOf("'" + tier + "'") !== -1);
+    });
+
+    // Render agent cards
+    var grid = document.getElementById('agentCards');
+    if (!grid) return;
+    grid.innerHTML = '';
+    agentCatalog.forEach(function(agent) {
+      if (agent.tiers.indexOf(tier) === -1) return;
+      var included = !!selectedAgents[agent.id];
+      var card = document.createElement('div');
+      card.className = 'agent-rec-card' + (included ? ' included' : '');
+      card.dataset.agentId = agent.id;
+      card.innerHTML =
+        '<div class="agent-rec-card-icon">' + agent.icon + '</div>' +
+        '<div class="agent-rec-card-body">' +
+          '<h4>' + agent.name + '</h4>' +
+          '<p>' + agent.desc + '</p>' +
+          '<span class="agent-rec-card-price">' + agent.price + '</span>' +
+        '</div>' +
+        '<button class="agent-toggle-btn" data-id="' + agent.id + '" title="' + (included ? 'Remove' : 'Add') + '">' +
+          (included ? '✓' : '+') +
+        '</button>';
+      grid.appendChild(card);
+    });
+
+    // Bind toggle buttons
+    grid.querySelectorAll('.agent-toggle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { toggleAgent(this.dataset.id); });
+    });
+  }
+
+  function toggleAgent(id) {
+    if (selectedAgents[id]) {
+      delete selectedAgents[id];
+    } else {
+      selectedAgents[id] = true;
+    }
+    document.querySelectorAll('.agent-rec-card').forEach(function(card) {
+      var aid = card.dataset.agentId;
+      var inc = !!selectedAgents[aid];
+      card.classList.toggle('included', inc);
+      var btn = card.querySelector('.agent-toggle-btn');
+      if (btn) { btn.textContent = inc ? '✓' : '+'; btn.title = inc ? 'Remove' : 'Add'; }
+    });
+  }
+
+  // Expose switchTier globally for onclick attributes
+  window.switchTier = function(tier) { renderTier(tier); };
+})();
+</script>
 </body>
 </html>
