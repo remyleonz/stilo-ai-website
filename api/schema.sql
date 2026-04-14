@@ -1,0 +1,186 @@
+-- ============================================
+-- STILO AI Partners - Supabase Schema
+-- ============================================
+-- Run this in Supabase SQL Editor to set up the database.
+-- Go to: https://supabase.com/dashboard > Your Project > SQL Editor
+--
+-- Agent codenames:
+--   echo = AI Receptionist
+--   ignite = Lead Response
+--   revive = Customer Reactivation
+--   scout = Lead Generator
+--   forge = AI Website
+--   signal = AI SEO (GEO)
+--   oracle = Growth Intelligence
+--   flux = Custom Automations
+
+-- Users table (extends Supabase auth.users)
+create table public.clients (
+  id uuid references auth.users primary key,
+  business_name text not null,
+  contact_name text not null,
+  email text not null,
+  phone text,
+  business_type text,
+  created_at timestamptz default now(),
+  status text default 'active' -- active, paused, cancelled
+);
+
+-- Row Level Security: clients can only see their own data
+alter table public.clients enable row level security;
+create policy "Users can view own client record" on public.clients
+  for select using (auth.uid() = id);
+create policy "Users can update own client record" on public.clients
+  for update using (auth.uid() = id);
+
+-- Purchased agents
+create table public.client_agents (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid references public.clients(id) on delete cascade,
+  agent_type text not null, -- echo, ignite, revive, scout, forge, signal, oracle, flux
+  status text default 'onboarding', -- onboarding, active, paused, cancelled
+  stripe_subscription_id text,
+  onboarding_progress jsonb default '{}',
+  config jsonb default '{}',
+  created_at timestamptz default now(),
+  activated_at timestamptz
+);
+
+alter table public.client_agents enable row level security;
+create policy "Users can view own agents" on public.client_agents
+  for select using (client_id = auth.uid());
+create policy "Users can update own agents" on public.client_agents
+  for update using (client_id = auth.uid());
+
+-- Onboarding steps tracking
+create table public.onboarding_steps (
+  id uuid primary key default gen_random_uuid(),
+  client_agent_id uuid references public.client_agents(id) on delete cascade,
+  step_number int not null,
+  step_name text not null,
+  status text default 'pending', -- pending, in_progress, completed
+  data jsonb default '{}',
+  completed_at timestamptz
+);
+
+alter table public.onboarding_steps enable row level security;
+create policy "Users can view own onboarding steps" on public.onboarding_steps
+  for select using (
+    client_agent_id in (
+      select id from public.client_agents where client_id = auth.uid()
+    )
+  );
+create policy "Users can update own onboarding steps" on public.onboarding_steps
+  for update using (
+    client_agent_id in (
+      select id from public.client_agents where client_id = auth.uid()
+    )
+  );
+
+-- Agent metrics (for dashboard stats)
+create table public.agent_metrics (
+  id uuid primary key default gen_random_uuid(),
+  client_agent_id uuid references public.client_agents(id) on delete cascade,
+  metric_date date not null,
+  metrics jsonb not null, -- flexible: {calls_handled: 45, leads_captured: 12, etc.}
+  created_at timestamptz default now()
+);
+
+alter table public.agent_metrics enable row level security;
+create policy "Users can view own metrics" on public.agent_metrics
+  for select using (
+    client_agent_id in (
+      select id from public.client_agents where client_id = auth.uid()
+    )
+  );
+
+-- Contracts
+create table public.contracts (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid references public.clients(id) on delete cascade,
+  contract_pdf_url text,
+  signed_at timestamptz,
+  status text default 'pending' -- pending, signed, cancelled
+);
+
+alter table public.contracts enable row level security;
+create policy "Users can view own contracts" on public.contracts
+  for select using (client_id = auth.uid());
+
+-- ============================================
+-- Admin role (for admin dashboard)
+-- ============================================
+-- Admin users can read all data. Set is_admin = true in the clients table
+-- for Remy and any team members who need admin access.
+
+alter table public.clients add column if not exists is_admin boolean default false;
+
+-- Admin policies: admins can read all rows in every table
+create policy "Admins can view all clients" on public.clients
+  for select using (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
+create policy "Admins can view all agents" on public.client_agents
+  for select using (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
+create policy "Admins can view all onboarding" on public.onboarding_steps
+  for select using (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
+create policy "Admins can view all metrics" on public.agent_metrics
+  for select using (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
+create policy "Admins can view all contracts" on public.contracts
+  for select using (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
+-- Admins can also update any client_agents (pause, activate, configure)
+create policy "Admins can update all agents" on public.client_agents
+  for update using (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
+-- Admins can insert new client_agents (deploy agents for clients)
+create policy "Admins can insert agents" on public.client_agents
+  for insert with check (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
+-- ============================================
+-- Indexes for performance
+-- ============================================
+create index idx_client_agents_client_id on public.client_agents(client_id);
+create index idx_onboarding_steps_agent_id on public.onboarding_steps(client_agent_id);
+create index idx_agent_metrics_agent_date on public.agent_metrics(client_agent_id, metric_date);
+create index idx_contracts_client_id on public.contracts(client_id);
+
+-- ============================================
+-- Helper function: create client on signup
+-- ============================================
+-- This trigger auto-creates a client record when a new user signs up.
+-- The user's metadata (from the signup form) populates the fields.
+
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.clients (id, business_name, contact_name, email)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'business_name', ''),
+    coalesce(new.raw_user_meta_data->>'contact_name', ''),
+    new.email
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();

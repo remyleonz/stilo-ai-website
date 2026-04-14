@@ -1,0 +1,36 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "app.stiloaipartners.com" }],
+      "destination": "/app/$1"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "admin.stiloaipartners.com" }],
+      "destination": "/admin/$1"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/dashboard",
+      "destination": "/app",
+      "permanent": true
+    },
+    {
+      "source": "/dashboard.html",
+      "destination": "/app",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
+  ]
+}

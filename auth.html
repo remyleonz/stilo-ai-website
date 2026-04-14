@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STILO AI Partners | Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-input: #16162a;
+            --border: rgba(168, 85, 247, 0.15);
+            --border-focus: rgba(168, 85, 247, 0.5);
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --text-muted: #555570;
+            --purple: #a855f7;
+            --purple-dark: #7c3aed;
+            --purple-light: #c084fc;
+            --purple-glow: rgba(168, 85, 247, 0.15);
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 30% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(124, 58, 237, 0.04) 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        .auth-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            padding: 0 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo a {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
+            text-decoration: none;
+            background: linear-gradient(135deg, var(--purple-light), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px;
+            backdrop-filter: blur(20px);
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px 0;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .auth-tab.active {
+            color: var(--purple-light);
+        }
+
+        .auth-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--purple);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--purple-glow);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 13px 24px;
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(168, 85, 247, 0.25);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .btn-magic-link {
+            width: 100%;
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .btn-magic-link:hover {
+            border-color: var(--purple);
+            color: var(--purple-light);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--red);
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .success-message {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--green);
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .footer-text a {
+            color: var(--purple-light);
+            text-decoration: none;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card { padding: 24px; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="logo">
+            <a href="index.html">STILO AI Partners</a>
+            <p>Client Portal</p>
+        </div>
+
+        <div class="auth-card">
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchTab('signin')">Sign In</button>
+                <button class="auth-tab" onclick="switchTab('signup')">Create Account</button>
+            </div>
+
+            <div id="error-msg" class="error-message"></div>
+            <div id="success-msg" class="success-message"></div>
+
+            <!-- Sign In Form -->
+            <form id="signin-form" class="auth-form active" onsubmit="handleSignIn(event)">
+                <div class="form-group">
+                    <label for="signin-email">Email</label>
+                    <input type="email" id="signin-email" placeholder="you@business.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signin-password">Password</label>
+                    <input type="password" id="signin-password" placeholder="Your password" required>
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
+
+                <div class="divider">or</div>
+
+                <button type="button" class="btn-magic-link" onclick="handleMagicLink()">
+                    Sign in with Magic Link
+                </button>
+            </form>
+
+            <!-- Sign Up Form -->
+            <form id="signup-form" class="auth-form" onsubmit="handleSignUp(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="signup-name">Your Name</label>
+                        <input type="text" id="signup-name" placeholder="Remy Leon" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-phone">Phone</label>
+                        <input type="tel" id="signup-phone" placeholder="(786) 555-0100">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="signup-business">Business Name</label>
+                    <input type="text" id="signup-business" placeholder="Your Business" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-type">Business Type</label>
+                    <input type="text" id="signup-type" placeholder="Salon, gym, dental, restaurant...">
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="you@business.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="At least 8 characters" minlength="8" required>
+                </div>
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
+        </div>
+
+        <p class="footer-text">
+            <a href="/">Back to stiloaipartners.com</a>
+        </p>
+    </div>
+
+    <!--
+    ============================================
+    SUPABASE INTEGRATION
+    ============================================
+    To connect this to Supabase:
+    1. Create a Supabase project at https://supabase.com
+    2. Replace SUPABASE_URL and SUPABASE_ANON_KEY below
+    3. Run the SQL schema from STILO_IMPLEMENTATION_PROMPT.md in Supabase SQL editor
+    4. Enable Email auth in Supabase Dashboard > Authentication > Providers
+
+    Uncomment the Supabase script tag and the real auth functions below.
+    -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const SUPABASE_URL = 'https://zsrskphpvgautfgklgxf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcnNrcGhwdmdhdXRmZ2tsZ3hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNDk5NzksImV4cCI6MjA5MTcyNTk3OX0._A3Jhp_C3z2vVIaPq97vFpNehPDrjpieBeGTzQ9K-i0';
+
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // TAB SWITCHING
+        // ============================================
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            hideMessages();
+
+            if (tab === 'signin') {
+                document.querySelectorAll('.auth-tab')[0].classList.add('active');
+                document.getElementById('signin-form').classList.add('active');
+            } else {
+                document.querySelectorAll('.auth-tab')[1].classList.add('active');
+                document.getElementById('signup-form').classList.add('active');
+            }
+        }
+
+        function showError(msg) {
+            var el = document.getElementById('error-msg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            document.getElementById('success-msg').style.display = 'none';
+        }
+
+        function showSuccess(msg) {
+            var el = document.getElementById('success-msg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('error-msg').style.display = 'none';
+            document.getElementById('success-msg').style.display = 'none';
+        }
+
+        // ============================================
+        // AUTH HANDLERS (demo mode, swap for Supabase)
+        // ============================================
+
+        async function handleSignIn(e) {
+            e.preventDefault();
+            var email = document.getElementById('signin-email').value;
+            var password = document.getElementById('signin-password').value;
+
+            try {
+                const { data, error } = await sb.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                if (error) { showError(error.message); return; }
+
+                // Check if admin, route accordingly
+                const { data: client } = await sb.from('clients')
+                    .select('is_admin')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (client && client.is_admin) {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/app';
+                }
+            } catch (err) {
+                showError('Something went wrong. Please try again.');
+            }
+        }
+
+        async function handleSignUp(e) {
+            e.preventDefault();
+            var name = document.getElementById('signup-name').value;
+            var phone = document.getElementById('signup-phone').value;
+            var business = document.getElementById('signup-business').value;
+            var businessType = document.getElementById('signup-type').value;
+            var email = document.getElementById('signup-email').value;
+            var password = document.getElementById('signup-password').value;
+
+            try {
+                const { data: authData, error: authError } = await sb.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: { contact_name: name, business_name: business, phone: phone, business_type: businessType }
+                    }
+                });
+                if (authError) { showError(authError.message); return; }
+
+                showSuccess('Account created. Check your email to confirm, then sign in.');
+            } catch (err) {
+                showError('Something went wrong. Please try again.');
+            }
+        }
+
+        async function handleMagicLink() {
+            var email = document.getElementById('signin-email').value;
+            if (!email) { showError('Enter your email first.'); return; }
+
+            try {
+                const { error } = await sb.auth.signInWithOtp({ email: email });
+                if (error) { showError(error.message); return; }
+                showSuccess('Magic link sent. Check your inbox.');
+            } catch (err) {
+                showError('Something went wrong. Please try again.');
+            }
+        }
+
+        // ============================================
+        // CHECK AUTH STATE ON LOAD
+        // ============================================
+        (async function() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) {
+                const { data: client } = await sb.from('clients')
+                    .select('is_admin')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (client && client.is_admin) {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/app';
+                }
+            }
+        })();
+
+        // Pre-fill from URL params (quiz data passthrough)
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('name')) {
+            var nameField = document.getElementById('signup-name');
+            if (nameField) nameField.value = params.get('name');
+        }
+        if (params.get('email')) {
+            var emailField = document.getElementById('signup-email') || document.getElementById('signin-email');
+            if (emailField) emailField.value = params.get('email');
+        }
+        if (params.get('business')) {
+            var bizField = document.getElementById('signup-business');
+            if (bizField) bizField.value = params.get('business');
+        }
+        if (params.get('type')) {
+            var typeField = document.getElementById('signup-type');
+            if (typeField) typeField.value = params.get('type');
+        }
+        if (params.get('tab') === 'signup') {
+            switchTab('signup');
+        }
+    </script>
+</body>
+</html>

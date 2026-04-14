@@ -1,0 +1,105 @@
+/**
+ * Create Stripe Checkout Session
+ *
+ * Called when a user clicks "Get Started Now" on the website.
+ * Creates a Stripe Checkout session and returns the URL.
+ *
+ * Deploy as a serverless function (Vercel API route or standalone Express).
+ *
+ * Setup:
+ * 1. npm install stripe
+ * 2. Set environment variables: STRIPE_SECRET_KEY
+ * 3. Create Stripe Price IDs for each agent (see PRICE_IDS below)
+ */
+
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+// Replace these with actual Stripe Price IDs after creating products in Stripe Dashboard
+const PRICE_IDS = {
+  receptionist: {
+    installation: 'price_receptionist_install', // $1,500 one-time
+    monthly: 'price_receptionist_monthly'       // $450/mo recurring
+  },
+  lead_reply: {
+    installation: 'price_lead_reply_install',   // $2,000 one-time
+    monthly: 'price_lead_reply_monthly'         // $650/mo recurring
+  },
+  website: {
+    installation: 'price_website_install',      // $1,250 one-time
+    monthly: 'price_website_monthly'            // $200/mo recurring
+  },
+  seo: {
+    installation: 'price_seo_install'           // $1,000 one-time (no monthly)
+  },
+  ontology: {
+    installation: 'price_ontology_install',     // $3,000 one-time
+    monthly: 'price_ontology_monthly'           // $1,000/mo recurring
+  },
+  lcr: {
+    installation: 'price_lcr_install',          // $2,500 one-time
+    monthly: 'price_lcr_monthly'                // $800/mo recurring
+  },
+  lead_gen: {
+    installation: 'price_lead_gen_install',     // $2,500 one-time
+    monthly: 'price_lead_gen_monthly'           // $1,000/mo recurring
+  }
+};
+
+async function createCheckoutSession(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  var agentId = req.body.agent_id;
+  var clientId = req.body.client_id;
+  var clientEmail = req.body.email;
+
+  if (!agentId || !PRICE_IDS[agentId]) {
+    return res.status(400).json({ error: 'Invalid agent type' });
+  }
+
+  var prices = PRICE_IDS[agentId];
+  var lineItems = [];
+
+  // Add installation fee (one-time)
+  lineItems.push({
+    price: prices.installation,
+    quantity: 1
+  });
+
+  // Add monthly retainer (recurring) if applicable
+  if (prices.monthly) {
+    lineItems.push({
+      price: prices.monthly,
+      quantity: 1
+    });
+  }
+
+  try {
+    var session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: prices.monthly ? 'subscription' : 'payment',
+      success_url: process.env.SITE_URL + '/dashboard.html?welcome=true&agent=' + agentId,
+      cancel_url: process.env.SITE_URL + '/index.html#pricing',
+      customer_email: clientEmail || undefined,
+      metadata: {
+        client_id: clientId || '',
+        agent_type: agentId
+      },
+      subscription_data: prices.monthly ? {
+        metadata: {
+          client_id: clientId || '',
+          agent_type: agentId
+        }
+      } : undefined
+    });
+
+    res.status(200).json({ checkout_url: session.url });
+  } catch (err) {
+    console.error('Stripe session error:', err);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+}
+
+module.exports = createCheckoutSession;

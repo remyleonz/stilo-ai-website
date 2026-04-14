@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STILO AI Partners | My Agents</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================================
+           CSS Custom Properties
+           ============================================================ */
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-card: #16161f;
+            --bg-card-hover: #1c1c28;
+            --bg-elevated: #1e1e2a;
+            --bg-input: #12121a;
+            --border-subtle: rgba(255,255,255,0.06);
+            --border-medium: rgba(255,255,255,0.1);
+            --border-focus: rgba(168,85,247,0.5);
+            --text-primary: #f0f0f5;
+            --text-secondary: #9898a8;
+            --text-tertiary: #65657a;
+            --text-muted: #4a4a5c;
+            --purple-primary: #a855f7;
+            --purple-dark: #7c3aed;
+            --purple-light: #c084fc;
+            --purple-glow: rgba(168,85,247,0.15);
+            --purple-subtle: rgba(168,85,247,0.08);
+            --green: #22c55e;
+            --green-bg: rgba(34,197,94,0.1);
+            --yellow: #eab308;
+            --yellow-bg: rgba(234,179,8,0.1);
+            --red: #ef4444;
+            --red-bg: rgba(239,68,68,0.1);
+            --blue: #3b82f6;
+            --blue-bg: rgba(59,130,246,0.1);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --radius-xl: 18px;
+            --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px var(--border-subtle);
+            --shadow-elevated: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--border-subtle);
+            --shadow-modal: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px var(--border-medium);
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-med: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ============================================================
+           Reset & Base
+           ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        button {
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: inherit;
+        }
+
+        input, select, textarea {
+            font-family: inherit;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-input);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-sm);
+            padding: 0.625rem 0.875rem;
+            outline: none;
+            transition: border-color var(--transition-fast);
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--purple-glow);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239898a8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            padding-right: 2rem;
+        }
+
+        a { color: var(--purple-primary); text-decoration: none; }
+
+        /* ============================================================
+           Top Bar
+           ============================================================ */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            height: 60px;
+            background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(20px) saturate(1.2);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .logo {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .logo span { color: var(--purple-primary); }
+
+        .topbar-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border-medium);
+        }
+
+        .client-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .topbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+        }
+
+        .topbar-btn:hover {
+            background: var(--purple-subtle);
+            color: var(--text-primary);
+        }
+
+        .profile-trigger {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.65rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+
+        .profile-trigger:hover { background: var(--purple-subtle); }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--purple-primary), var(--purple-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .profile-name {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .chevron-down {
+            width: 14px;
+            height: 14px;
+            color: var(--text-tertiary);
+            transition: transform var(--transition-fast);
+        }
+
+        .profile-trigger.open .chevron-down { transform: rotate(180deg); }
+
+        .profile-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            min-width: 200px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-elevated);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: all var(--transition-fast);
+            overflow: hidden;
+        }
+
+        .profile-trigger.open .profile-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            font-size: 0.8125rem;
+            font-weight: 450;
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+            text-align: left;
+        }
+
+        .dropdown-item:hover {
+            background: var(--purple-subtle);
+            color: var(--text-primary);
+        }
+
+        .dropdown-item svg {
+            width: 15px;
+            height: 15px;
+            opacity: 0.6;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-subtle);
+            margin: 0.25rem 0;
+        }
+
+        .dropdown-item.danger { color: var(--red); }
+        .dropdown-item.danger:hover { background: var(--red-bg); }
+
+        /* ============================================================
+           Main Content
+           ============================================================ */
+        .main {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.65rem;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.025em;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* ============================================================
+           Summary Strip
+           ============================================================ */
+        .summary-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.35rem;
+            transition: all var(--transition-med);
+        }
+
+        .summary-card:hover {
+            border-color: var(--border-medium);
+            background: var(--bg-card-hover);
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-value {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.65rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .summary-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.35rem;
+            padding: 0.15rem 0.45rem;
+            border-radius: 100px;
+        }
+
+        .summary-change.up {
+            color: var(--green);
+            background: var(--green-bg);
+        }
+
+        .summary-change.down {
+            color: var(--red);
+            background: var(--red-bg);
+        }
+
+        /* ============================================================
+           Agent Cards
+           ============================================================ */
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.875rem;
+        }
+
+        .agent-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .agent-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            transition: all var(--transition-med);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--purple-primary), transparent);
+            opacity: 0;
+            transition: opacity var(--transition-med);
+        }
+
+        .agent-card:hover {
+            border-color: var(--border-medium);
+            background: var(--bg-card-hover);
+        }
+
+        .agent-card:hover::before { opacity: 0.5; }
+
+        .agent-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+
+        .agent-title-block { flex: 1; }
+
+        .agent-name {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.01em;
+        }
+
+        .agent-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-active .status-dot {
+            background: var(--green);
+            box-shadow: 0 0 6px rgba(34,197,94,0.5);
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-active { color: var(--green); }
+
+        .status-setup .status-dot {
+            background: var(--yellow);
+            box-shadow: 0 0 6px rgba(234,179,8,0.4);
+        }
+
+        .status-setup { color: var(--yellow); }
+
+        .status-paused .status-dot { background: var(--text-tertiary); }
+        .status-paused { color: var(--text-tertiary); }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .agent-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--purple-subtle);
+            color: var(--purple-light);
+            flex-shrink: 0;
+        }
+
+        .agent-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .agent-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .stat-item {
+            background: rgba(255,255,255,0.02);
+            border-radius: var(--radius-sm);
+            padding: 0.65rem 0.75rem;
+        }
+
+        .stat-value {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.1rem;
+        }
+
+        .stat-label {
+            font-size: 0.6875rem;
+            color: var(--text-tertiary);
+            font-weight: 450;
+        }
+
+        /* Progress bar for setup agents */
+        .setup-progress {
+            margin-bottom: 1.25rem;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-text {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .progress-count {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--purple-light);
+        }
+
+        .progress-track {
+            height: 5px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--purple-dark), var(--purple-primary));
+            border-radius: 100px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .agent-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.8125rem;
+            font-weight: 550;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+
+        .btn svg { width: 14px; height: 14px; }
+
+        .btn-primary {
+            background: var(--purple-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--purple-light);
+            box-shadow: 0 0 20px rgba(168,85,247,0.3);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-medium);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--purple-primary);
+            color: var(--text-primary);
+            background: var(--purple-subtle);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--red);
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+
+        .btn-danger:hover {
+            background: var(--red-bg);
+            border-color: var(--red);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-full { width: 100%; }
+
+        /* ============================================================
+           Onboarding Panel (expandable)
+           ============================================================ */
+        .onboarding-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .onboarding-panel.open {
+            max-height: 2000px;
+        }
+
+        .onboarding-inner {
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 1.25rem;
+        }
+
+        .onboarding-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            transition: background var(--transition-fast);
+            cursor: pointer;
+        }
+
+        .step:hover { background: rgba(255,255,255,0.02); }
+
+        .step-indicator {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            margin-top: 1px;
+            transition: all var(--transition-fast);
+        }
+
+        .step.completed .step-indicator {
+            background: var(--green);
+            color: white;
+        }
+
+        .step.current .step-indicator {
+            background: var(--purple-primary);
+            color: white;
+            box-shadow: 0 0 10px rgba(168,85,247,0.4);
+        }
+
+        .step.pending .step-indicator {
+            background: transparent;
+            border: 1.5px solid var(--text-tertiary);
+            color: var(--text-tertiary);
+        }
+
+        .step-content { flex: 1; min-width: 0; }
+
+        .step-name {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            margin-bottom: 0.15rem;
+        }
+
+        .step.completed .step-name { color: var(--text-secondary); }
+        .step.current .step-name { color: var(--text-primary); }
+        .step.pending .step-name { color: var(--text-tertiary); }
+
+        .step-desc {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        /* Step form fields (for current step) */
+        .step-form {
+            margin-top: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all var(--transition-med);
+        }
+
+        .step.current .step-form,
+        .step.expanded .step-form {
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 0.625rem;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .form-label {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.85rem;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-sm);
+            font-size: 0.8125rem;
+            font-weight: 450;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .radio-option:hover {
+            border-color: var(--purple-primary);
+            color: var(--text-primary);
+        }
+
+        .radio-option.selected {
+            border-color: var(--purple-primary);
+            background: var(--purple-subtle);
+            color: var(--purple-light);
+        }
+
+        .radio-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid var(--text-tertiary);
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+
+        .radio-option.selected .radio-dot {
+            border-color: var(--purple-primary);
+        }
+
+        .radio-option.selected .radio-dot::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            background: var(--purple-primary);
+            border-radius: 50%;
+        }
+
+        /* File upload zone */
+        .upload-zone {
+            border: 2px dashed var(--border-medium);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--purple-primary);
+            background: var(--purple-subtle);
+        }
+
+        .upload-zone svg {
+            width: 28px;
+            height: 28px;
+            color: var(--text-tertiary);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .upload-zone .upload-hint {
+            font-size: 0.6875rem;
+            color: var(--text-tertiary);
+            margin-top: 0.25rem;
+        }
+
+        /* Column mapping */
+        .column-map {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 0.5rem 0.75rem;
+            align-items: center;
+        }
+
+        .map-arrow {
+            color: var(--text-tertiary);
+            font-size: 0.8125rem;
+        }
+
+        /* ============================================================
+           Account Settings Modal
+           ============================================================ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-med);
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            width: 95%;
+            max-width: 560px;
+            max-height: 85vh;
+            overflow-y: auto;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-modal);
+            transform: scale(0.96) translateY(8px);
+            transition: transform var(--transition-med);
+        }
+
+        .modal-overlay.open .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .modal-header h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            width: 30px;
+            height: 30px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-tertiary);
+            transition: all var(--transition-fast);
+        }
+
+        .modal-close:hover {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .settings-section h3 {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            margin-bottom: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .plan-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .plan-info { flex: 1; }
+
+        .plan-name {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.15rem;
+        }
+
+        .plan-price {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        .plan-badge {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            padding: 0.25rem 0.65rem;
+            border-radius: 100px;
+            background: var(--green-bg);
+            color: var(--green);
+        }
+
+        .invoice-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        .invoice-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.625rem 0.75rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.8125rem;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .invoice-row:hover { background: rgba(255,255,255,0.04); }
+
+        .invoice-date {
+            color: var(--text-secondary);
+            font-weight: 450;
+        }
+
+        .invoice-amount {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .invoice-dl {
+            font-size: 0.75rem;
+            color: var(--purple-primary);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .invoice-dl:hover { color: var(--purple-light); }
+
+        .cancel-zone {
+            border-top: 1px solid var(--border-subtle);
+            padding-top: 1.25rem;
+        }
+
+        .cancel-zone p {
+            font-size: 0.8125rem;
+            color: var(--text-tertiary);
+            margin-bottom: 0.75rem;
+        }
+
+        /* Confirmation dialog */
+        .confirm-dialog {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-fast);
+        }
+
+        .confirm-dialog.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .confirm-box {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: var(--shadow-modal);
+            text-align: center;
+        }
+
+        .confirm-box h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-box p {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        /* ============================================================
+           Responsive
+           ============================================================ */
+        @media (max-width: 768px) {
+            .summary-strip {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .agent-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                padding: 0 1rem;
+            }
+
+            .main {
+                padding: 1.5rem 1rem 3rem;
+            }
+
+            .client-name { display: none; }
+            .topbar-divider { display: none; }
+
+            .agent-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .column-map {
+                grid-template-columns: 1fr;
+            }
+
+            .map-arrow { display: none; }
+
+            .profile-name { display: none; }
+        }
+
+        @media (max-width: 480px) {
+            .summary-strip {
+                grid-template-columns: 1fr;
+            }
+
+            .page-header h1 {
+                font-size: 1.35rem;
+            }
+
+            .agent-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .confirm-actions {
+                flex-direction: column;
+            }
+        }
+
+        /* ============================================================
+           Scrollbar
+           ============================================================ */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-medium);
+            border-radius: 100px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+
+        /* ============================================================
+           Utility animations
+           ============================================================ */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+        }
+
+        .delay-1 { animation-delay: 0.05s; }
+        .delay-2 { animation-delay: 0.1s; }
+        .delay-3 { animation-delay: 0.15s; }
+        .delay-4 { animation-delay: 0.2s; }
+        .delay-5 { animation-delay: 0.25s; }
+        .delay-6 { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+
+    <!-- =========================================================
+         TOP BAR
+         ========================================================= -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="logo">STILO AI <span>Partners</span></div>
+            <div class="topbar-divider"></div>
+            <div class="client-name">Demo Business</div>
+        </div>
+        <div class="topbar-right">
+            <button class="topbar-btn" onclick="openSettings()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Settings
+            </button>
+            <div class="profile-trigger" id="profileTrigger" onclick="toggleProfile()">
+                <div class="avatar">DB</div>
+                <span class="profile-name">Demo Business</span>
+                <svg class="chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <button class="dropdown-item" onclick="openSettings()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Account Settings
+                    </button>
+                    <button class="dropdown-item" onclick="openSettings()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                        Billing
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item danger" onclick="signOut()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- =========================================================
+         MAIN CONTENT
+         ========================================================= -->
+    <main class="main">
+
+        <!-- Page Header -->
+        <div class="page-header animate-in">
+            <h1>Your Agents</h1>
+            <p>Overview of all active and pending agents for Demo Business.</p>
+        </div>
+
+        <!-- Summary Strip -->
+        <div class="summary-strip">
+            <div class="summary-card animate-in delay-1">
+                <div class="summary-label">Total Calls Handled</div>
+                <div class="summary-value">127</div>
+                <div class="summary-change up">+18% vs last week</div>
+            </div>
+            <div class="summary-card animate-in delay-2">
+                <div class="summary-label">Leads Captured</div>
+                <div class="summary-value">113</div>
+                <div class="summary-change up">+24% vs last week</div>
+            </div>
+            <div class="summary-card animate-in delay-3">
+                <div class="summary-label">Appointments Booked</div>
+                <div class="summary-value">46</div>
+                <div class="summary-change up">+9% vs last week</div>
+            </div>
+            <div class="summary-card animate-in delay-4">
+                <div class="summary-label">Active Agents</div>
+                <div class="summary-value">3<span style="font-size:0.875rem;font-weight:500;color:var(--text-tertiary);"> / 4</span></div>
+                <div class="summary-change" style="background:var(--yellow-bg);color:var(--yellow);">1 setting up</div>
+            </div>
+        </div>
+
+        <!-- Agent Cards -->
+        <div class="section-label">Your Agents</div>
+        <div class="agent-grid">
+
+            <!-- ECHO (AI Receptionist) -->
+            <div class="agent-card animate-in delay-2" id="card-receptionist">
+                <div class="agent-header">
+                    <div class="agent-title-block">
+                        <div class="agent-name">ECHO <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">AI Receptionist</span></div>
+                        <div class="agent-status status-active">
+                            <span class="status-dot"></span>
+                            Active
+                        </div>
+                    </div>
+                    <div class="agent-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                </div>
+                <div class="agent-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">127</div>
+                        <div class="stat-label">Calls handled</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">34</div>
+                        <div class="stat-label">Appts booked</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">98%</div>
+                        <div class="stat-label">Answer rate</div>
+                    </div>
+                </div>
+                <div class="agent-actions">
+                    <button class="btn btn-primary btn-sm" onclick="togglePanel('receptionist')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>
+                        Configure
+                    </button>
+                    <button class="btn btn-ghost btn-sm">View Logs</button>
+                </div>
+
+                <!-- Onboarding Panel: AI Receptionist -->
+                <div class="onboarding-panel" id="panel-receptionist">
+                    <div class="onboarding-inner">
+                        <div class="onboarding-title">Configuration</div>
+                        <div class="step-list">
+                            <div class="step completed">
+                                <div class="step-indicator">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                                <div class="step-content">
+                                    <div class="step-name">Business Info</div>
+                                    <div class="step-desc">Name, address, industry (auto-filled)</div>
+                                </div>
+                            </div>
+                            <div class="step completed">
+                                <div class="step-indicator">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                                <div class="step-content">
+                                    <div class="step-name">Services and Pricing</div>
+                                    <div class="step-desc">Service list, pricing, packages</div>
+                                </div>
+                            </div>
+                            <div class="step completed">
+                                <div class="step-indicator">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                                <div class="step-content">
+                                    <div class="step-name">Business Hours</div>
+                                    <div class="step-desc">Operating hours, holidays, after-hours handling</div>
+                                </div>
+                            </div>
+                            <div class="step current expanded">
+                                <div class="step-indicator">4</div>
+                                <div class="step-content">
+                                    <div class="step-name">Booking System Connection</div>
+                                    <div class="step-desc">Connect your calendar or booking tool</div>
+                                    <div class="step-form">
+                                        <div class="form-group">
+                                            <label class="form-label">Booking Platform</label>
+                                            <select>
+                                                <option value="">Select your platform</option>
+                                                <option>Google Calendar</option>
+                                                <option>Calendly</option>
+                                                <option>Acuity Scheduling</option>
+                                                <option>Square Appointments</option>
+                                                <option>Jane App</option>
+                                                <option>Custom / Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Booking URL or Calendar Link</label>
+                                            <input type="url" placeholder="https://calendly.com/your-business">
+                                        </div>
+                                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;margin-top:0.25rem;">Save and Continue</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="step pending">
+                                <div class="step-indicator">5</div>
+                                <div class="step-content">
+                                    <div class="step-name">Phone Setup</div>
+                                    <div class="step-desc">New number, call forwarding, or port your number</div>
+                                    <div class="step-form">
+                                        <div class="form-group">
+                                            <label class="form-label">Phone Setup Method</label>
+                                            <div class="radio-group">
+                                                <div class="radio-option" onclick="selectRadio(this)">
+                                                    <div class="radio-dot"></div>
+                                                    New Number
+                                                </div>
+                                                <div class="radio-option" onclick="selectRadio(this)">
+                                                    <div class="radio-dot"></div>
+                                                    Call Forwarding
+                                                </div>
+                                                <div class="radio-option" onclick="selectRadio(this)">
+                                                    <div class="radio-dot"></div>
+                                                    Port Existing
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="step pending">
+                                <div class="step-indicator">6</div>
+                                <div class="step-content">
+                                    <div class="step-name">Voice Personality</div>
+                                    <div class="step-desc">Tone, style, and language for the AI voice</div>
+                                    <div class="step-form">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="form-label">Voice Tone</label>
+                                                <select>
+                                                    <option value="">Select tone</option>
+                                                    <option>Professional</option>
+                                                    <option>Friendly</option>
+                                                    <option>Casual</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Language</label>
+                                                <select>
+                                                    <option>English</option>
+                                                    <option>Spanish</option>
+                                                    <option>English + Spanish</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="step pending">
+                                <div class="step-indicator">7</div>
+                                <div class="step-content">
+                                    <div class="step-name">Review and Activate</div>
+                                    <div class="step-desc">Confirm everything looks good, then go live</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IGNITE (Lead Response) -->
+            <div class="agent-card animate-in delay-3" id="card-leadresponse">
+                <div class="agent-header">
+                    <div class="agent-title-block">
+                        <div class="agent-name">IGNITE <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">Lead Response</span></div>
+                        <div class="agent-status status-active">
+                            <span class="status-dot"></span>
+                            Active
+                        </div>
+                    </div>
+                    <div class="agent-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                </div>
+                <div class="agent-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">45</div>
+                        <div class="stat-label">Leads responded</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">Appts booked</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">3.2m</div>
+                        <div class="stat-label">Avg response</div>
+                    </div>
+                </div>
+                <div class="agent-actions">
+                    <button class="btn btn-primary btn-sm" onclick="togglePanel('leadresponse')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
+                        Configure
+                    </button>
+                    <button class="btn btn-ghost btn-sm">View Logs</button>
+                </div>
+                <div class="onboarding-panel" id="panel-leadresponse">
+                    <div class="onboarding-inner">
+                        <div class="onboarding-title">Configuration</div>
+                        <p style="font-size:0.8125rem;color:var(--text-secondary);">All setup steps complete. This agent is fully active and responding to leads automatically.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REVIVE (Customer Reactivation) -->
+            <div class="agent-card animate-in delay-4" id="card-lcr">
+                <div class="agent-header">
+                    <div class="agent-title-block">
+                        <div class="agent-name">REVIVE <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">Customer Reactivation</span></div>
+                        <div class="agent-status status-setup">
+                            <span class="status-dot"></span>
+                            Setting Up
+                        </div>
+                    </div>
+                    <div class="agent-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                </div>
+                <div class="setup-progress">
+                    <div class="progress-header">
+                        <span class="progress-text">Onboarding progress</span>
+                        <span class="progress-count">3 / 6 steps</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div class="agent-actions">
+                    <button class="btn btn-primary btn-sm" onclick="togglePanel('lcr')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
+                        Continue Setup
+                    </button>
+                </div>
+
+                <!-- Onboarding Panel: LCR -->
+                <div class="onboarding-panel" id="panel-lcr">
+                    <div class="onboarding-inner">
+                        <div class="onboarding-title">Setup Wizard</div>
+                        <div class="step-list">
+                            <div class="step completed">
+                                <div class="step-indicator">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                                <div class="step-content">
+                                    <div class="step-name">Upload Customer Database</div>
+                                    <div class="step-desc">customers_export.csv (2,341 records)</div>
+                                </div>
+                            </div>
+                            <div class="step completed">
+                                <div class="step-indicator">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                                <div class="step-content">
+                                    <div class="step-name">Map Columns</div>
+                                    <div class="step-desc">Name, email, phone, last visit, total spend mapped</div>
+                                </div>
+                            </div>
+                            <div class="step completed">
+                                <div class="step-indicator">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                                <div class="step-content">
+                                    <div class="step-name">Set Win-Back Offers</div>
+                                    <div class="step-desc">3 tiers configured with discount codes</div>
+                                </div>
+                            </div>
+                            <div class="step current expanded">
+                                <div class="step-indicator">4</div>
+                                <div class="step-content">
+                                    <div class="step-name">Email Sender Config</div>
+                                    <div class="step-desc">Connect your email account to send campaigns</div>
+                                    <div class="step-form">
+                                        <div class="form-group">
+                                            <label class="form-label">Email Provider</label>
+                                            <div class="radio-group">
+                                                <div class="radio-option selected" onclick="selectRadio(this)">
+                                                    <div class="radio-dot"></div>
+                                                    Gmail
+                                                </div>
+                                                <div class="radio-option" onclick="selectRadio(this)">
+                                                    <div class="radio-dot"></div>
+                                                    Outlook
+                                                </div>
+                                                <div class="radio-option" onclick="selectRadio(this)">
+                                                    <div class="radio-dot"></div>
+                                                    Custom SMTP
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                                            Connect Gmail Account
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="step pending">
+                                <div class="step-indicator">5</div>
+                                <div class="step-content">
+                                    <div class="step-name">Review Segments and Approve</div>
+                                    <div class="step-desc">Preview customer segments and email templates</div>
+                                </div>
+                            </div>
+                            <div class="step pending">
+                                <div class="step-indicator">6</div>
+                                <div class="step-content">
+                                    <div class="step-name">Launch Campaign</div>
+                                    <div class="step-desc">Confirm and start sending to lapsed customers</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FORGE (AI Website) -->
+            <div class="agent-card animate-in delay-5" id="card-website">
+                <div class="agent-header">
+                    <div class="agent-title-block">
+                        <div class="agent-name">FORGE <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">AI Website</span></div>
+                        <div class="agent-status status-active">
+                            <span class="status-dot"></span>
+                            Active
+                        </div>
+                    </div>
+                    <div class="agent-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                </div>
+                <div class="agent-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">2,341</div>
+                        <div class="stat-label">Visits</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">67</div>
+                        <div class="stat-label">Leads captured</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">2.8%</div>
+                        <div class="stat-label">Conversion rate</div>
+                    </div>
+                </div>
+                <div class="agent-actions">
+                    <button class="btn btn-primary btn-sm" onclick="togglePanel('website')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
+                        Configure
+                    </button>
+                    <button class="btn btn-ghost btn-sm">View Site</button>
+                </div>
+                <div class="onboarding-panel" id="panel-website">
+                    <div class="onboarding-inner">
+                        <div class="onboarding-title">Configuration</div>
+                        <p style="font-size:0.8125rem;color:var(--text-secondary);">Your website is live and collecting leads. All setup steps are complete.</p>
+                        <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Live URL</label>
+                                <input type="text" value="https://demo-business.stiloai.com" readonly style="color:var(--purple-light);">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Custom Domain</label>
+                                <input type="text" placeholder="www.yourdomain.com">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- =========================================================
+         ACCOUNT SETTINGS MODAL
+         ========================================================= -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Account Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Business Info -->
+                <div class="settings-section">
+                    <h3>Business Information</h3>
+                    <div class="settings-group">
+                        <div class="settings-row">
+                            <div class="form-group">
+                                <label class="form-label">Business Name</label>
+                                <input type="text" value="Demo Business">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Industry</label>
+                                <select>
+                                    <option>Medical Spa</option>
+                                    <option>Dental Practice</option>
+                                    <option>Law Firm</option>
+                                    <option>Real Estate</option>
+                                    <option>Home Services</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="form-group">
+                                <label class="form-label">Contact Email</label>
+                                <input type="email" value="owner@demobusiness.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" value="(305) 555-0142">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Address</label>
+                            <input type="text" value="1234 Brickell Ave, Miami, FL 33131">
+                        </div>
+                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;">Save Changes</button>
+                    </div>
+                </div>
+
+                <!-- Plan / Billing -->
+                <div class="settings-section">
+                    <h3>Plan and Billing</h3>
+                    <div class="plan-card">
+                        <div class="plan-info">
+                            <div class="plan-name">Growth Plan (4 Agents)</div>
+                            <div class="plan-price">$1,950/mo, billed monthly</div>
+                        </div>
+                        <div class="plan-badge">Active</div>
+                    </div>
+                </div>
+
+                <!-- Invoice History -->
+                <div class="settings-section">
+                    <h3>Invoice History</h3>
+                    <div class="invoice-list">
+                        <div class="invoice-row">
+                            <span class="invoice-date">Apr 1, 2026</span>
+                            <span class="invoice-amount">$1,950.00</span>
+                            <span class="invoice-dl">Download</span>
+                        </div>
+                        <div class="invoice-row">
+                            <span class="invoice-date">Mar 1, 2026</span>
+                            <span class="invoice-amount">$1,950.00</span>
+                            <span class="invoice-dl">Download</span>
+                        </div>
+                        <div class="invoice-row">
+                            <span class="invoice-date">Feb 1, 2026</span>
+                            <span class="invoice-amount">$1,950.00</span>
+                            <span class="invoice-dl">Download</span>
+                        </div>
+                        <div class="invoice-row">
+                            <span class="invoice-date">Jan 1, 2026</span>
+                            <span class="invoice-amount">$1,500.00</span>
+                            <span class="invoice-dl">Download</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cancel -->
+                <div class="cancel-zone">
+                    <p>Need to cancel your service? Your agents will remain active until the end of your current billing period.</p>
+                    <button class="btn btn-danger btn-sm" onclick="showCancelConfirm()">Cancel Service</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         CANCEL CONFIRMATION DIALOG
+         ========================================================= -->
+    <div class="confirm-dialog" id="cancelConfirm">
+        <div class="confirm-box">
+            <h3>Cancel your service?</h3>
+            <p>Your 4 active agents will stop working at the end of your current billing period (April 30, 2026). This can't be undone.</p>
+            <div class="confirm-actions">
+                <button class="btn btn-ghost btn-sm" onclick="hideCancelConfirm()">Keep My Agents</button>
+                <button class="btn btn-danger btn-sm" onclick="hideCancelConfirm()">Yes, Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         JAVASCRIPT
+         ========================================================= -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        /* ===========================================================
+           Supabase Auth Integration
+           ===========================================================
+           SETUP: Set these env vars in Vercel dashboard:
+             NEXT_PUBLIC_SUPABASE_URL
+             NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+           For local dev, the values are injected via the config
+           object below. Replace the placeholders with your
+           Supabase project URL and anon key.
+           --------------------------------------------------------- */
+
+        const SUPABASE_URL = 'https://zsrskphpvgautfgklgxf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcnNrcGhwdmdhdXRmZ2tsZ3hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNDk5NzksImV4cCI6MjA5MTcyNTk3OX0._A3Jhp_C3z2vVIaPq97vFpNehPDrjpieBeGTzQ9K-i0';
+
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- Auth gate: redirect to login if no session ---
+        (async function checkAuth() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) {
+                window.location.href = '/auth.html';
+                return;
+            }
+            const user = session.user;
+            const meta = user.user_metadata || {};
+            document.querySelector('.client-name').textContent = meta.business_name || 'My Business';
+            document.querySelector('.profile-name').textContent = meta.business_name || 'My Business';
+            document.querySelector('.avatar').textContent = (meta.business_name || 'U').charAt(0).toUpperCase();
+            document.querySelector('.page-header p').textContent =
+                'Overview of all active and pending agents for ' + (meta.business_name || 'your business') + '.';
+            document.querySelector('.page-header h1').textContent = 'Your Agents';
+            // TODO: loadAgentData(user.id) once real agents are deployed
+        })();
+
+        // --- Load agent data from Supabase ---
+        async function loadAgentData(clientId) {
+            const { data: agents } = await sb.from('client_agents')
+                .select('*')
+                .eq('client_id', clientId);
+            // TODO: populate agent cards dynamically from agents array
+            // Each agent has: agent_type (echo/ignite/revive/etc), status, config
+        }
+
+        // --- Load metrics ---
+        async function loadMetrics(clientAgentId) {
+            const { data: metrics } = await sb.from('agent_metrics')
+                .select('*')
+                .eq('client_agent_id', clientAgentId)
+                .gte('metric_date', new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0])
+                .order('metric_date', { ascending: false });
+            // TODO: populate summary strip and agent stat items from metrics
+            return metrics;
+        }
+
+        // --- Sign out (called from supabaseSignOut below) ---
+        async function supabaseSignOut() {
+            await sb.auth.signOut();
+            window.location.href = '/auth.html';
+        }
+
+        // --- Auth state listener ---
+        sb.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') window.location.href = '/auth.html';
+        });
+
+
+        /* ===========================================================
+           Profile Dropdown
+           =========================================================== */
+        function toggleProfile() {
+            const trigger = document.getElementById('profileTrigger');
+            trigger.classList.toggle('open');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const trigger = document.getElementById('profileTrigger');
+            if (!trigger.contains(e.target)) {
+                trigger.classList.remove('open');
+            }
+        });
+
+
+        /* ===========================================================
+           Onboarding Panel Toggle
+           =========================================================== */
+        function togglePanel(agentId) {
+            const panel = document.getElementById('panel-' + agentId);
+            if (panel) {
+                panel.classList.toggle('open');
+            }
+        }
+
+
+        /* ===========================================================
+           Radio Button Selection
+           =========================================================== */
+        function selectRadio(el) {
+            const group = el.closest('.radio-group');
+            group.querySelectorAll('.radio-option').forEach(function(opt) {
+                opt.classList.remove('selected');
+            });
+            el.classList.add('selected');
+        }
+
+
+        /* ===========================================================
+           Settings Modal
+           =========================================================== */
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            // Close profile dropdown if open
+            document.getElementById('profileTrigger').classList.remove('open');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal when clicking overlay (not the modal itself)
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSettings();
+        });
+
+
+        /* ===========================================================
+           Cancel Confirmation
+           =========================================================== */
+        function showCancelConfirm() {
+            document.getElementById('cancelConfirm').classList.add('open');
+        }
+
+        function hideCancelConfirm() {
+            document.getElementById('cancelConfirm').classList.remove('open');
+        }
+
+
+        /* ===========================================================
+           Sign Out (placeholder, replace with Supabase call)
+           =========================================================== */
+        function signOut() {
+            supabaseSignOut();
+        }
+
+
+        /* ===========================================================
+           Keyboard shortcuts
+           =========================================================== */
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeSettings();
+                hideCancelConfirm();
+                document.getElementById('profileTrigger').classList.remove('open');
+            }
+        });
+    </script>
+</body>
+</html>
