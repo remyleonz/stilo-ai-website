@@ -1162,7 +1162,7 @@
          ========================================================= -->
     <header class="topbar">
         <div class="topbar-left">
-            <div class="logo">STILO AI <span>Partners</span></div>
+            <div class="logo">STILO AI Partners</div>
             <div class="topbar-divider"></div>
             <div class="client-name">Demo Business</div>
         </div>
@@ -1266,7 +1266,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>
                         Configure
                     </button>
-                    <button class="btn btn-ghost btn-sm">View Logs</button>
+                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=echo">View Agent →</a>
                 </div>
 
                 <!-- Onboarding Panel: AI Receptionist -->
@@ -1426,7 +1426,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
                         Configure
                     </button>
-                    <button class="btn btn-ghost btn-sm">View Logs</button>
+                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=ignite">View Agent →</a>
                 </div>
                 <div class="onboarding-panel" id="panel-leadresponse">
                     <div class="onboarding-inner">
@@ -1464,6 +1464,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
                         Continue Setup
                     </button>
+                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=revive">View Agent →</a>
                 </div>
 
                 <!-- Onboarding Panel: LCR -->
@@ -1580,7 +1581,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
                         Configure
                     </button>
-                    <button class="btn btn-ghost btn-sm">View Site</button>
+                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=forge">View Agent →</a>
                 </div>
                 <div class="onboarding-panel" id="panel-website">
                     <div class="onboarding-inner">
@@ -1745,6 +1746,13 @@
             const { data: { session } } = await sb.auth.getSession();
             if (!session) {
                 window.location.href = '/auth.html';
+                return;
+            }
+            // If admin, bounce to admin dashboard
+            const { data: clientRow } = await sb.from('clients')
+                .select('is_admin').eq('id', session.user.id).single();
+            if (clientRow && clientRow.is_admin) {
+                window.location.href = '/admin';
                 return;
             }
             const user = session.user;

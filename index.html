@@ -145,7 +145,7 @@
                         "name": "What's included in the free AI audit?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Our free audit is a 30-minute analysis of your business, competitors, and online presence. We identify exactly where you're losing customers and recommend which AI agents will fix it, with projected ROI for each. You also get an AI search readiness score. No obligation."
+                            "text": "Our free audit is a 15-minute analysis of your business, competitors, and online presence. We identify exactly where you're losing customers and recommend which AI agents will fix it, with projected ROI for each. You also get an AI search readiness score. No obligation."
                         }
                     },
                     {
@@ -176,7 +176,7 @@
                         "@type": "HowToStep",
                         "position": 1,
                         "name": "Audit",
-                        "text": "STILO AI Partners analyzes your business, competitors, and customers in a free 30-minute audit."
+                        "text": "STILO AI Partners analyzes your business, competitors, and customers in a free 15-minute audit."
                     },
                     {
                         "@type": "HowToStep",
@@ -365,18 +365,14 @@
         @media (min-width: 768px) { .nav-inner { padding: 0 48px; } }
         .nav-logo {
             font-family: var(--font-display);
-            font-weight: 800; font-size: 1.25rem;
+            font-weight: 700; font-size: 1.15rem;
             color: var(--text-primary);
-            letter-spacing: -0.02em;
-            display: flex; align-items: center; gap: 10px;
+            letter-spacing: -0.03em;
+            display: inline-flex; align-items: center;
+            text-decoration: none;
         }
-        .nav-logo-mark {
-            width: 32px; height: 32px;
-            background: var(--accent);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .nav-logo-mark svg { width: 18px; height: 18px; }
+        .hero-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px; }
+        .delay-3 { transition-delay: 0.3s; }
         .nav-links { display: none; list-style: none; gap: 8px; align-items: center; }
         @media (min-width: 768px) { .nav-links { display: flex; } }
         .nav-links a {
@@ -495,22 +491,22 @@
         .process-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 24px;
+            gap: 16px;
         }
         @media (min-width: 768px) { .process-grid { grid-template-columns: repeat(3, 1fr); } }
-        .process-card { text-align: center; padding: 24px 20px; }
+        .process-card { text-align: center; padding: 20px 22px; border-radius: 14px; }
         .process-card .step-number {
-            width: 40px; height: 40px;
+            width: 36px; height: 36px;
             background: var(--accent-muted);
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             font-family: var(--font-display);
-            font-weight: 800; font-size: 1.25rem;
+            font-weight: 800; font-size: 1.05rem;
             color: var(--accent);
-            margin: 0 auto 20px;
+            margin: 0 auto 14px;
         }
-        .process-card h3 { margin-bottom: 12px; }
-        .process-card p { font-size: 0.9375rem; }
+        .process-card h3 { margin-bottom: 8px; font-size: 1.0625rem; }
+        .process-card p { font-size: 0.875rem; }
         .process-card .badge {
             display: inline-block;
             margin-top: 16px;
@@ -557,23 +553,30 @@
             color: var(--accent-light);
         }
         .service-card {
-            padding: 20px 24px;
+            padding: 18px 22px;
             cursor: pointer;
             position: relative;
+            border-radius: 14px;
+            transition: box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .service-card.expanded {
+            box-shadow: 0 0 0 1.5px var(--accent);
+            border-color: var(--accent);
         }
         .service-card .agent-profile {
             display: flex; align-items: center; gap: 14px;
             margin-bottom: 10px;
         }
         .service-card .agent-avatar {
-            width: 42px; height: 42px;
-            background: var(--accent-gradient);
+            width: 48px; height: 48px;
+            background: radial-gradient(circle at 30% 30%, rgba(168,85,247,0.35), rgba(30,20,60,0.95));
+            border: 1px solid rgba(168,85,247,0.35);
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-family: var(--font-display);
-            font-weight: 800; font-size: 0.875rem;
-            color: #fff; flex-shrink: 0;
+            flex-shrink: 0;
+            overflow: hidden;
         }
+        .service-card .agent-avatar svg { width: 32px; height: 32px; display: block; }
         .service-card .agent-name-block { flex: 1; }
         .service-card .agent-codename {
             font-family: var(--font-display);
@@ -894,25 +897,25 @@
            WHY US
         ============================ */
         .why-us-grid {
-            display: grid; grid-template-columns: 1fr; gap: 24px;
+            display: grid; grid-template-columns: 1fr; gap: 16px;
         }
         @media (min-width: 768px) { .why-us-grid { grid-template-columns: repeat(2, 1fr); } }
         .why-card {
-            position: relative; padding: 36px 32px; overflow: hidden;
+            position: relative; padding: 22px 24px; overflow: hidden; border-radius: 14px;
         }
         .why-card::before {
             content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
             background: var(--accent-gradient); border-radius: 3px;
         }
         .why-card .why-icon {
-            width: 48px; height: 48px; border-radius: 12px;
+            width: 44px; height: 44px; border-radius: 10px;
             background: var(--accent-muted);
             display: flex; align-items: center; justify-content: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
-        .why-card .why-icon svg { width: 24px; height: 24px; color: var(--accent-light); }
-        .why-card h3 { margin-bottom: 8px; }
-        .why-card p { font-size: 0.9375rem; }
+        .why-card .why-icon svg { width: 22px; height: 22px; color: var(--accent-light); }
+        .why-card h3 { margin-bottom: 6px; font-size: 1.0625rem; }
+        .why-card p { font-size: 0.875rem; }
 
         /* === ALT BG utility === */
         .bg-alt { background: var(--bg-secondary); }
@@ -1093,18 +1096,7 @@
 <!-- Navigation -->
 <nav>
     <div class="nav-inner">
-        <a href="#" class="nav-logo">
-            <div class="nav-logo-mark">
-                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 3L26 9V23L16 29L6 23V9L16 3Z" stroke="white" stroke-width="1.5" fill="none"/>
-                    <path d="M16 3L26 9L16 15L6 9L16 3Z" fill="rgba(255,255,255,0.15)"/>
-                    <path d="M16 15V29" stroke="white" stroke-width="1.5"/>
-                    <path d="M6 9L16 15L26 9" stroke="white" stroke-width="1.5"/>
-                    <circle cx="16" cy="15" r="2.5" fill="white"/>
-                </svg>
-            </div>
-            STILO AI Partners
-        </a>
+        <a href="#" class="nav-logo">STILO AI Partners</a>
         <ul class="nav-links">
             <li>
                 <a href="#services">Agents</a>
@@ -1122,8 +1114,12 @@
                 <a href="#faq">FAQ</a>
                 <div class="nav-popup"><div class="popup-title">FAQ</div><p>Answers to common questions about speed and AI quality.</p></div>
             </li>
+            <li>
+                <a href="/auth.html">Account</a>
+                <div class="nav-popup"><div class="popup-title">Account</div><p>Sign in to your client portal or create an account.</p></div>
+            </li>
         </ul>
-        <a href="https://calendly.com/stiloaiconsulting/30min" target="_blank" rel="noopener noreferrer" class="nav-cta">Free AI Audit</a>
+        <a href="#contact" class="nav-cta">Free AI Audit</a>
         <button class="menu-toggle" aria-label="Toggle menu">
             <span></span>
         </button>
@@ -1136,6 +1132,7 @@
     <a href="#process">How It Works</a>
     <a href="#why-us">Why Us</a>
     <a href="#faq">FAQ</a>
+    <a href="/auth.html">Account</a>
     <a href="#contact" class="btn-primary" style="margin-top:16px;">Free AI Audit</a>
 </div>
 
@@ -1150,13 +1147,14 @@
         </video>
         <div class="hero-video-overlay"></div>
     </div>
-    <div class="container">
-        <div class="fade-in">
-            <h1>We Build the AI.<br><span class="gradient-text">You Build the Business.</span></h1>
-            <p class="hero-sub">Custom AI systems that generate revenue and give you your time back. Built by experts, not templates.</p>
-        </div>
-        <div class="hero-ctas fade-in delay-1">
-            <a href="#contact" class="btn-primary">Get Your Free Audit</a>
+    <div class="container" data-hero-media>
+        <!-- AGENT_INSERT: hero-media -->
+        <div class="hero-inner">
+            <h1 class="fade-in">We Build the AI.<br><span class="gradient-text">You Build the Business.</span></h1>
+            <div class="hero-ctas fade-in delay-1">
+                <a href="#contact" class="btn-primary">Get Your Free Audit</a>
+            </div>
+            <p class="hero-sub fade-in delay-2">Custom AI systems that generate revenue and give you your time back. Built by experts, not templates.</p>
         </div>
     </div>
 </section>
@@ -1174,7 +1172,7 @@
         <div class="services-grid">
             <div class="card service-card fade-in" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">E</div>
+                    <div class="agent-avatar" data-agent="echo"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">ECHO</div>
                         <div class="agent-function">AI Receptionist</div>
@@ -1186,7 +1184,7 @@
             </div>
             <div class="card service-card fade-in delay-1" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">I</div>
+                    <div class="agent-avatar" data-agent="ignite"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">IGNITE</div>
                         <div class="agent-function">Lead Response Agent</div>
@@ -1198,7 +1196,7 @@
             </div>
             <div class="card service-card fade-in delay-2" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">R</div>
+                    <div class="agent-avatar" data-agent="revive"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">REVIVE</div>
                         <div class="agent-function">Customer Reactivation</div>
@@ -1210,7 +1208,7 @@
             </div>
             <div class="card service-card fade-in delay-3" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">S</div>
+                    <div class="agent-avatar" data-agent="scout"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">SCOUT</div>
                         <div class="agent-function">Lead Generator</div>
@@ -1222,7 +1220,7 @@
             </div>
             <div class="card service-card fade-in" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">F</div>
+                    <div class="agent-avatar" data-agent="forge"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">FORGE</div>
                         <div class="agent-function">AI Websites</div>
@@ -1234,7 +1232,7 @@
             </div>
             <div class="card service-card fade-in delay-1" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">S</div>
+                    <div class="agent-avatar" data-agent="signal"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">SIGNAL</div>
                         <div class="agent-function">AI SEO (GEO)</div>
@@ -1246,7 +1244,7 @@
             </div>
             <div class="card service-card fade-in delay-2" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">O</div>
+                    <div class="agent-avatar" data-agent="oracle"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">ORACLE</div>
                         <div class="agent-function">Growth Intelligence</div>
@@ -1258,7 +1256,7 @@
             </div>
             <div class="card service-card fade-in delay-3" onclick="this.classList.toggle('expanded')">
                 <div class="agent-profile">
-                    <div class="agent-avatar">F</div>
+                    <div class="agent-avatar" data-agent="flux"></div>
                     <div class="agent-name-block">
                         <div class="agent-codename">FLUX</div>
                         <div class="agent-function">Custom Automations</div>
@@ -1273,7 +1271,7 @@
         <!-- Mid-page CTA -->
         <div class="mid-cta fade-in">
             <h3>Not sure which agent you need?</h3>
-            <p>Get a free 30-minute audit. We'll map your biggest revenue leaks and recommend the right AI agents.</p>
+            <p>Get a free 15-minute audit. We'll map your biggest revenue leaks and recommend the right AI agents.</p>
             <a href="#contact" class="btn-primary">Start</a>
         </div>
 
@@ -1332,7 +1330,7 @@
                 <div class="step-number">1</div>
                 <h3>Audit</h3>
                 <p>We analyze your business, competitors, and customers. Free, no obligation.</p>
-                <span class="badge">30 minutes</span>
+                <span class="badge">15 minutes</span>
             </div>
             <div class="card process-card fade-in delay-1">
                 <div class="step-number">2</div>
@@ -1597,7 +1595,7 @@
                     <span class="faq-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
                 </button>
                 <div class="faq-answer">
-                    <div class="faq-answer-inner">Our free audit is a 30-minute analysis of your business, competitors, and online presence. We identify exactly where you're losing customers (missed calls, slow lead response, weak online visibility) and recommend which AI agents will fix it, with projected ROI for each. You also get an AI search readiness score showing how visible your business is to AI engines. No obligation, no sales pressure.</div>
+                    <div class="faq-answer-inner">Our free audit is a 15-minute analysis of your business, competitors, and online presence. We identify exactly where you're losing customers (missed calls, slow lead response, weak online visibility) and recommend which AI agents will fix it, with projected ROI for each. You also get an AI search readiness score showing how visible your business is to AI engines. No obligation, no sales pressure.</div>
                 </div>
             </div>
             <div class="faq-item">
@@ -1792,7 +1790,7 @@
                 Book a Free Audit
               </a>
             </div>
-            <p class="form-privacy" style="margin-top:12px;">Get started instantly, or book a 30-minute strategy call with Remy.</p>
+            <p class="form-privacy" style="margin-top:12px;">Get started instantly, or book a 15-minute strategy call with Remy.</p>
           </div>
 
         </div>
@@ -2219,14 +2217,14 @@
 function openCalendlyPopup() {
   if (typeof Calendly !== 'undefined') {
     Calendly.initPopupWidget({
-      url: 'https://calendly.com/stiloaiconsulting/30min',
+      url: 'https://calendly.com/stiloaiconsulting/15min',
       prefill: {
         name: document.getElementById('signup-name') ? document.getElementById('signup-name').value : '',
         email: document.getElementById('signup-email') ? document.getElementById('signup-email').value : ''
       }
     });
   } else {
-    window.open('https://calendly.com/stiloaiconsulting/30min', '_blank');
+    window.open('https://calendly.com/stiloaiconsulting/15min', '_blank');
   }
   return false;
 }
@@ -2299,6 +2297,14 @@ function initiateStripeCheckout(agentId) {
   // For now, redirect to signup with agent pre-selected
   window.location.href = 'auth.html?tab=signup&agent=' + agentId;
 }
+</script>
+
+<script type="module">
+  import { ROBOTS } from '/assets/agents/robots.js';
+  document.querySelectorAll('[data-agent]').forEach(el => {
+    const bot = ROBOTS[el.dataset.agent];
+    if (bot) el.innerHTML = bot.svg;
+  });
 </script>
 
 </body>
