@@ -1,4 +1,4 @@
-/* STILO AI Partners - Agent Robot Mascots
+/* STILO AI PARTNERS - Agent Robot Mascots
  * Shared base body (head + eyes + antenna), role-specific prop per agent.
  * Brand stays purple-first; accent color used only on the role prop.
  * Usage: import { ROBOTS } from './robots.js'; el.innerHTML = ROBOTS.echo.svg;

@@ -1,5 +1,5 @@
 -- ============================================
--- STILO AI Partners - Supabase Schema
+-- STILO AI PARTNERS - Supabase Schema
 -- ============================================
 -- Run this in Supabase SQL Editor to set up the database.
 -- Go to: https://supabase.com/dashboard > Your Project > SQL Editor
