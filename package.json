@@ -1,0 +1,17 @@
+{
+  "name": "stilo-ai-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "STILO AI Partners marketing site + client/admin dashboards + Stripe + Supabase glue. Plain HTML + Vercel serverless functions.",
+  "scripts": {
+    "dev": "node serve.js",
+    "stripe:listen": "stripe listen --forward-to localhost:8081/api/stripe-webhook"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "stripe": "^16.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
