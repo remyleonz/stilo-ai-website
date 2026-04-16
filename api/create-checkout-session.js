@@ -120,9 +120,14 @@ module.exports = async function createCheckoutSession(req, res) {
           line_items: lineItems,
           customer_email: body.email || undefined,
           allow_promotion_codes: true,
-          success_url:
-            (origin || '') +
-            '/dashboard.html?welcome=true&session_id={CHECKOUT_SESSION_ID}',
+          success_url: (function() {
+            var base = (origin || '') + '/auth.html?welcome=1&session_id={CHECKOUT_SESSION_ID}';
+            if (body.email) base += '&email=' + encodeURIComponent(body.email);
+            if (body.name) base += '&name=' + encodeURIComponent(body.name);
+            if (body.business_name) base += '&business=' + encodeURIComponent(body.business_name);
+            if (body.phone) base += '&phone=' + encodeURIComponent(body.phone);
+            return base;
+          })(),
           cancel_url: (origin || '') + '/index.html#contact',
           metadata: metadata,
         },
