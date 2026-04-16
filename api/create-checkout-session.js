@@ -108,6 +108,8 @@ module.exports = async function createCheckoutSession(req, res) {
     selected_agents: normalized.join(','),
     client_id: body.client_id || '',
     business_name: body.business_name || '',
+    contact_name: body.name || '',
+    phone: body.phone || '',
     source: 'stilo-ai-site',
   };
 

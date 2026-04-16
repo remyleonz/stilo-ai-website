@@ -1167,7 +1167,7 @@
         <div class="topbar-left">
             <div class="logo">STILO <span>AI</span></div>
             <div class="topbar-divider"></div>
-            <div class="client-name">Demo Business</div>
+            <div class="client-name" id="clientNameTop">—</div>
         </div>
         <div class="topbar-right">
             <button class="topbar-btn" onclick="openSettings()">
@@ -1175,8 +1175,8 @@
                 Settings
             </button>
             <div class="profile-trigger" id="profileTrigger" onclick="toggleProfile()">
-                <div class="avatar">DB</div>
-                <span class="profile-name">Demo Business</span>
+                <div class="avatar" id="clientAvatar">—</div>
+                <span class="profile-name" id="profileName">—</span>
                 <svg class="chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 <div class="profile-dropdown" id="profileDropdown">
                     <button class="dropdown-item" onclick="openSettings()">
@@ -1205,36 +1205,36 @@
         <!-- Page Header -->
         <div class="page-header animate-in">
             <h1>Your Agents</h1>
-            <p>Overview of all active and pending agents for Demo Business.</p>
+            <p id="pageSubtitle">Overview of all active and pending agents for your business.</p>
         </div>
 
         <!-- Summary Strip -->
         <div class="summary-strip">
             <div class="summary-card animate-in delay-1">
                 <div class="summary-label">Total Calls Handled</div>
-                <div class="summary-value">127</div>
-                <div class="summary-change up">+18% vs last week</div>
+                <div class="summary-value" id="statCalls">—</div>
+                <div class="summary-change">Updated daily</div>
             </div>
             <div class="summary-card animate-in delay-2">
                 <div class="summary-label">Leads Captured</div>
-                <div class="summary-value">113</div>
-                <div class="summary-change up">+24% vs last week</div>
+                <div class="summary-value" id="statLeads">—</div>
+                <div class="summary-change">Updated daily</div>
             </div>
             <div class="summary-card animate-in delay-3">
                 <div class="summary-label">Appointments Booked</div>
-                <div class="summary-value">46</div>
-                <div class="summary-change up">+9% vs last week</div>
+                <div class="summary-value" id="statAppts">—</div>
+                <div class="summary-change">Updated daily</div>
             </div>
             <div class="summary-card animate-in delay-4">
                 <div class="summary-label">Active Agents</div>
-                <div class="summary-value">3<span style="font-size:0.875rem;font-weight:500;color:var(--text-tertiary);"> / 4</span></div>
-                <div class="summary-change" style="background:var(--yellow-bg);color:var(--yellow);">1 setting up</div>
+                <div class="summary-value" id="statActiveAgents">—</div>
+                <div class="summary-change" id="statSetupCount" style="background:var(--yellow-bg);color:var(--yellow);">Loading</div>
             </div>
         </div>
 
         <!-- Agent Cards -->
         <div class="section-label">Your Agents</div>
-        <div class="agent-grid">
+        <div class="agent-grid" id="agentGrid">
 
             <!-- AI Receptionist -->
             <div class="agent-card animate-in delay-2" id="card-receptionist">
@@ -1626,7 +1626,7 @@
                         <div class="settings-row">
                             <div class="form-group">
                                 <label class="form-label">Business Name</label>
-                                <input type="text" value="Demo Business">
+                                <input type="text" id="settingsBusinessName" value="Demo Business">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Industry</label>
@@ -1643,7 +1643,7 @@
                         <div class="settings-row">
                             <div class="form-group">
                                 <label class="form-label">Contact Email</label>
-                                <input type="email" value="owner@demobusiness.com">
+                                <input type="email" id="settingsEmail" value="">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Phone</label>
@@ -1721,56 +1721,131 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <!-- =========================================================
          JAVASCRIPT
          ========================================================= -->
     <script>
         /* ===========================================================
-           Supabase Auth Integration
-           ===========================================================
-           To enable authentication, follow these steps:
+           Supabase Auth + Dynamic Dashboard
+           =========================================================== */
+        const SUPABASE_URL = 'https://zsrskphpvgautfgklgxf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcnNrcGhwdmdhdXRmZ2tsZ3hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNDk5NzksImV4cCI6MjA5MTcyNTk3OX0._A3Jhp_C3z2vVIaPq97vFpNehPDrjpieBeGTzQ9K-i0';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-           1. Add the Supabase JS client before this script tag:
-              <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>
+        const AGENT_META = {
+            echo:   { name: 'ECHO — AI Receptionist',        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' },
+            ignite: { name: 'IGNITE — Lead Response',         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+            revive: { name: 'REVIVE — Customer Reactivation', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+            scout:  { name: 'SCOUT — Lead Generator',         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' },
+            forge:  { name: 'FORGE — AI Website',             icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' },
+            signal: { name: 'SIGNAL — AI SEO',                icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>' },
+            oracle: { name: 'ORACLE — Growth Intelligence',   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+            flux:   { name: 'FLUX — Custom Automations',      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' },
+        };
 
-           2. Replace the placeholder values below with your
-              Supabase project URL and anon key (found in your
-              Supabase dashboard under Settings > API).
+        (async function init() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) {
+                window.location.href = '/auth.html';
+                return;
+            }
 
-           3. Uncomment the auth code block below.
+            const user = session.user;
+            const umeta = user.user_metadata || {};
 
-           4. Create an auth.html page for login/signup, or redirect
-              to your existing auth flow.
+            // Load client record
+            const { data: client } = await sb.from('clients').select('*').eq('id', user.id).maybeSingle();
+            const bizName = (client && client.business_name) || umeta.business_name || 'Your Business';
+            const initials = bizName.replace(/[^A-Za-z0-9]/g, '').substring(0, 2).toUpperCase() || '??';
 
-           --------------------------------------------------------- */
+            // Populate topbar + header
+            var el;
+            el = document.getElementById('clientNameTop'); if (el) el.textContent = bizName;
+            el = document.getElementById('clientAvatar');  if (el) el.textContent = initials;
+            el = document.getElementById('profileName');   if (el) el.textContent = bizName;
+            el = document.getElementById('pageSubtitle');  if (el) el.textContent = 'Overview of all active and pending agents for ' + bizName + '.';
 
-        // const SUPABASE_URL = 'https://your-project-id.supabase.co';
-        // const SUPABASE_ANON_KEY = 'your-anon-key-here';
-        // const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            // Populate settings modal
+            el = document.getElementById('settingsBusinessName'); if (el) el.value = bizName;
+            el = document.getElementById('settingsEmail'); if (el) el.value = user.email || '';
 
-        // --- Auth state check on page load ---
-        // (async function checkAuth() {
-        //     const { data: { session } } = await supabase.auth.getSession();
-        //     if (!session) {
-        //         window.location.href = 'auth.html';
-        //         return;
-        //     }
-        //     // You can use session.user to populate the dashboard
-        //     // For example: document.querySelector('.client-name').textContent = session.user.user_metadata.business_name;
-        // })();
+            // Load agents
+            var grid = document.getElementById('agentGrid');
+            const { data: agents, error } = await sb
+                .from('client_agents')
+                .select('*')
+                .eq('client_id', user.id)
+                .order('created_at', { ascending: true });
 
-        // --- Sign out ---
-        // async function supabaseSignOut() {
-        //     await supabase.auth.signOut();
-        //     window.location.href = 'auth.html';
-        // }
+            if (error || !agents || agents.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;color:var(--text-secondary);">'
+                    + 'No agents found. Contact Remy at <a href="mailto:remyleon11@gmail.com" style="color:var(--purple-primary);">remyleon11@gmail.com</a> if you think this is wrong.'
+                    + '</div>';
+                updateSummaryStrip(0, 0, 0);
+                return;
+            }
 
-        // --- Listen for auth state changes ---
-        // supabase.auth.onAuthStateChange((event, session) => {
-        //     if (event === 'SIGNED_OUT') {
-        //         window.location.href = 'auth.html';
-        //     }
-        // });
+            grid.innerHTML = agents.map(function(a, i) { return renderAgentCard(a, i); }).join('');
+
+            var activeCount = agents.filter(function(a) { return a.status === 'active'; }).length;
+            var onboardingCount = agents.filter(function(a) { return a.status !== 'active' && a.status !== 'cancelled'; }).length;
+            updateSummaryStrip(activeCount, onboardingCount, agents.length);
+        })();
+
+        function updateSummaryStrip(activeCount, onboardingCount, total) {
+            var el;
+            el = document.getElementById('statActiveAgents');
+            if (el) el.innerHTML = activeCount + '<span style="font-size:0.875rem;font-weight:500;color:var(--text-tertiary);"> / ' + total + '</span>';
+            el = document.getElementById('statSetupCount');
+            if (el) {
+                el.textContent = onboardingCount > 0 ? onboardingCount + ' setting up' : 'All active';
+                el.style.background = onboardingCount > 0 ? 'var(--yellow-bg)' : 'var(--green-bg)';
+                el.style.color = onboardingCount > 0 ? 'var(--yellow)' : 'var(--green)';
+            }
+        }
+
+        function renderAgentCard(agent, index) {
+            var meta = AGENT_META[agent.agent_type] || { name: agent.agent_type.toUpperCase(), icon: '' };
+            var isActive = agent.status === 'active';
+            var statusClass = isActive ? 'status-active' : 'status-setup';
+            var statusLabel = isActive ? 'Active' : 'Setting Up';
+            var delays = ['', 'delay-2', 'delay-3', 'delay-4', 'delay-5', 'delay-6'];
+            var delay = delays[Math.min(index + 1, 5)];
+            var body = isActive ? renderActiveBody(agent) : renderOnboardingBody();
+            return '<div class="agent-card animate-in ' + delay + '" id="card-' + agent.agent_type + '">'
+                + '<div class="agent-header">'
+                +   '<div class="agent-title-block">'
+                +     '<div class="agent-name">' + meta.name + '</div>'
+                +     '<div class="agent-status ' + statusClass + '"><span class="status-dot"></span>' + statusLabel + '</div>'
+                +   '</div>'
+                +   '<div class="agent-icon">' + meta.icon + '</div>'
+                + '</div>'
+                + body
+                + '</div>';
+        }
+
+        function renderActiveBody(agent) {
+            return '<div class="agent-stats">'
+                + '<div class="stat-item"><div class="stat-value">—</div><div class="stat-label">Data loading</div></div>'
+                + '</div>'
+                + '<div class="agent-actions"><button class="btn btn-ghost btn-sm" onclick="openSettings()">Settings</button></div>';
+        }
+
+        function renderOnboardingBody() {
+            return '<div class="agent-stats">'
+                + '<div class="stat-item" style="grid-column:1/-1;">'
+                + '<div class="stat-label" style="line-height:1.6;color:var(--text-secondary);">Remy will reach out within 24 hours to get this configured and live.</div>'
+                + '</div></div>'
+                + '<div class="agent-actions">'
+                + '<a href="mailto:remyleon11@gmail.com" class="btn btn-primary btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;gap:0.5rem;">Message Remy</a>'
+                + '</div>';
+        }
+
+        sb.auth.onAuthStateChange(function(event) {
+            if (event === 'SIGNED_OUT') window.location.href = '/auth.html';
+        });
 
 
         /* ===========================================================
@@ -1847,12 +1922,11 @@
 
 
         /* ===========================================================
-           Sign Out (placeholder, replace with Supabase call)
+           Sign Out
            =========================================================== */
-        function signOut() {
-            // When Supabase is configured, replace this with:
-            // supabaseSignOut();
-            alert('Sign out triggered. Connect Supabase to enable real authentication.');
+        async function signOut() {
+            await sb.auth.signOut();
+            window.location.href = '/auth.html';
         }
 
 

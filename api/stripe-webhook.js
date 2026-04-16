@@ -111,15 +111,32 @@ async function handleCheckoutComplete(session) {
   }
 
   if (!linkedClientId) {
-    // Park the purchase. We log the full session ID + email so Remy can
-    // manually reconcile in the admin dashboard until the client signs up.
-    console.log(
-      '[stripe-webhook] Parked purchase — no Supabase client yet. email=%s session=%s agents=%s',
+    if (!customerEmail) {
+      console.error('[stripe-webhook] No email and no client_id — cannot provision. session=%s', session.id);
+      return;
+    }
+    const siteUrl = process.env.SITE_URL || 'https://stiloaipartners.com';
+    const { data: invite, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(
       customerEmail,
-      session.id,
-      agentCodes.join(',')
+      {
+        redirectTo: siteUrl + '/dashboard.html',
+        data: {
+          business_name: md.business_name || '',
+          contact_name: md.contact_name || '',
+        },
+      }
     );
-    return;
+    if (inviteErr) {
+      console.error('[stripe-webhook] Failed to invite user %s: %s session=%s', customerEmail, inviteErr.message, session.id);
+      return;
+    }
+    linkedClientId = invite.user.id;
+    // The on_auth_user_created trigger creates the clients row.
+    // Update phone since the trigger doesn't set it.
+    if (md.phone) {
+      await supabase.from('clients').update({ phone: md.phone }).eq('id', linkedClientId);
+    }
+    console.log('[stripe-webhook] Invited new user %s (id=%s) for session %s', customerEmail, linkedClientId, session.id);
   }
 
   // Create one client_agents row per agent
