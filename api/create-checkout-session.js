@@ -14,34 +14,49 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-// Replace these with actual Stripe Price IDs after creating products in Stripe Dashboard
+// ============================================================
+// PRICE IDS -- fill these in after running stripe_setup.py
+// ============================================================
+// 1. Run: python stripe_setup.py  (add your sk_live_ key first)
+// 2. Open the generated stripe_products.json
+// 3. Copy each price_id into the matching field below
+//
+// stripe_products.json structure:
+//   products.receptionist.prices.Setup.price_id    -> installation
+//   products.receptionist.prices.Monthly.price_id  -> monthly
+// ============================================================
 const PRICE_IDS = {
   receptionist: {
-    installation: 'price_receptionist_install', // $1,500 one-time
-    monthly: 'price_receptionist_monthly'       // $450/mo recurring
+    installation: 'price_receptionist_install', // $1,500 one-time  <- replace
+    monthly: 'price_receptionist_monthly'       // $450/mo recurring <- replace
   },
   lead_reply: {
-    installation: 'price_lead_reply_install',   // $2,000 one-time
-    monthly: 'price_lead_reply_monthly'         // $650/mo recurring
+    installation: 'price_lead_reply_install',   // $2,000 one-time  <- replace
+    monthly: 'price_lead_reply_monthly'         // $650/mo recurring <- replace
   },
   website: {
-    installation: 'price_website_install',      // $1,250 one-time
-    monthly: 'price_website_monthly'            // $200/mo recurring
+    installation: 'price_website_install',      // $1,250 one-time  <- replace
+    monthly: 'price_website_monthly'            // $200/mo recurring <- replace
   },
   seo: {
-    installation: 'price_seo_install'           // $1,000 one-time (no monthly)
+    installation: 'price_seo_install'           // $1,000 one-time  <- replace (no monthly)
   },
-  ontology: {
-    installation: 'price_ontology_install',     // $3,000 one-time
-    monthly: 'price_ontology_monthly'           // $1,000/mo recurring
+  ontology_t1: {
+    installation: 'price_ontology_t1_install'   // $1,000 one-time  <- replace
+  },
+  ontology_t2: {
+    monthly: 'price_ontology_t2_monthly'        // $3,250/mo        <- replace
+  },
+  ontology_t3: {
+    monthly: 'price_ontology_t3_monthly'        // $6,000/mo        <- replace
   },
   lcr: {
-    installation: 'price_lcr_install',          // $2,500 one-time
-    monthly: 'price_lcr_monthly'                // $800/mo recurring
+    installation: 'price_lcr_install',          // $2,500 one-time  <- replace
+    monthly: 'price_lcr_monthly'                // $800/mo recurring <- replace
   },
   lead_gen: {
-    installation: 'price_lead_gen_install',     // $2,500 one-time
-    monthly: 'price_lead_gen_monthly'           // $1,000/mo recurring
+    installation: 'price_lead_gen_install',     // $2,500 one-time  <- replace
+    monthly: 'price_lead_gen_monthly'           // $1,000/mo        <- replace
   }
 };
 
@@ -92,6 +107,9 @@ async function createCheckoutSession(req, res) {
           client_id: clientId || '',
           agent_type: agentId
         }
+      } : undefined,
+      payment_intent_data: !prices.monthly ? {
+        receipt_email: clientEmail || undefined
       } : undefined
     });
 

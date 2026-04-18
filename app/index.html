@@ -1162,7 +1162,7 @@
          ========================================================= -->
     <header class="topbar">
         <div class="topbar-left">
-            <div class="logo">STILO AI PARTNERS</div>
+            <div class="logo" onclick="window.location.reload()" style="cursor:pointer;" title="Refresh">STILO AI PARTNERS</div>
             <div class="topbar-divider"></div>
             <div class="client-name">Demo Business</div>
         </div>
@@ -1209,18 +1209,18 @@
         <div class="summary-strip">
             <div class="summary-card animate-in delay-1">
                 <div class="summary-label">Total Calls Handled</div>
-                <div class="summary-value">127</div>
-                <div class="summary-change up">+18% vs last week</div>
+                <div class="summary-value" id="stat-calls">--</div>
+                <div class="summary-change" id="stat-calls-label" style="background:transparent;color:var(--text-tertiary);">last 7 days</div>
             </div>
             <div class="summary-card animate-in delay-2">
                 <div class="summary-label">Leads Captured</div>
-                <div class="summary-value">113</div>
-                <div class="summary-change up">+24% vs last week</div>
+                <div class="summary-value" id="stat-leads">--</div>
+                <div class="summary-change" id="stat-leads-label" style="background:transparent;color:var(--text-tertiary);">last 7 days</div>
             </div>
             <div class="summary-card animate-in delay-3">
                 <div class="summary-label">Appointments Booked</div>
-                <div class="summary-value">46</div>
-                <div class="summary-change up">+9% vs last week</div>
+                <div class="summary-value" id="stat-appts">--</div>
+                <div class="summary-change" id="stat-appts-label" style="background:transparent;color:var(--text-tertiary);">last 7 days</div>
             </div>
             <div class="summary-card animate-in delay-4">
                 <div class="summary-label">Active Agents</div>
@@ -1624,16 +1624,20 @@
                         <div class="settings-row">
                             <div class="form-group">
                                 <label class="form-label">Business Name</label>
-                                <input type="text" value="Demo Business">
+                                <input type="text" id="settingBusinessName" placeholder="Your business name">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Industry</label>
-                                <select>
+                                <select id="settingIndustry">
+                                    <option value="">Select industry</option>
                                     <option>Medical Spa</option>
                                     <option>Dental Practice</option>
                                     <option>Law Firm</option>
                                     <option>Real Estate</option>
                                     <option>Home Services</option>
+                                    <option>Veterinary</option>
+                                    <option>Restaurant</option>
+                                    <option>Gym / Fitness</option>
                                     <option>Other</option>
                                 </select>
                             </div>
@@ -1641,16 +1645,16 @@
                         <div class="settings-row">
                             <div class="form-group">
                                 <label class="form-label">Contact Email</label>
-                                <input type="email" value="owner@demobusiness.com">
+                                <input type="email" id="settingEmail" placeholder="you@yourbusiness.com">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Phone</label>
-                                <input type="tel" value="(305) 555-0142">
+                                <input type="tel" id="settingPhone" placeholder="(305) 000-0000">
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Address</label>
-                            <input type="text" value="1234 Brickell Ave, Miami, FL 33131">
+                            <input type="text" id="settingAddress" placeholder="Street, City, State ZIP">
                         </div>
                         <button class="btn btn-primary btn-sm" style="align-self:flex-start;">Save Changes</button>
                     </div>
@@ -1659,23 +1663,21 @@
                 <!-- Plan / Billing -->
                 <div class="settings-section">
                     <h3>Plan and Billing</h3>
-                    <div class="plan-card">
+                    <div class="plan-card" id="planCard">
                         <div class="plan-info">
-                            <div class="plan-name">Growth Plan (4 Agents)</div>
-                            <div class="plan-price">$1,950/mo, billed monthly</div>
+                            <div class="plan-name" id="planName">Loading...</div>
+                            <div class="plan-price" id="planPrice"></div>
                         </div>
-                        <div class="plan-badge">Active</div>
+                        <div class="plan-badge" id="planBadge">Active</div>
                     </div>
                 </div>
 
                 <!-- Invoice History -->
                 <div class="settings-section">
                     <h3>Invoice History</h3>
-                    <div class="invoice-list">
+                    <div class="invoice-list" id="invoiceList">
                         <div class="invoice-row">
-                            <span class="invoice-date">Apr 1, 2026</span>
-                            <span class="invoice-amount">$1,950.00</span>
-                            <span class="invoice-dl">Download</span>
+                            <span style="color:var(--text-tertiary);font-size:0.875rem;">Invoice history will appear here once your first billing cycle completes.</span>
                         </div>
                         <div class="invoice-row">
                             <span class="invoice-date">Mar 1, 2026</span>
@@ -1748,42 +1750,236 @@
                 window.location.href = '/auth.html';
                 return;
             }
-            // If admin, bounce to admin dashboard
+            const user = session.user;
+
+            // Load client row from DB (source of truth for business info)
             const { data: clientRow } = await sb.from('clients')
-                .select('is_admin').eq('id', session.user.id).single();
+                .select('*').eq('id', user.id).single();
+
             if (clientRow && clientRow.is_admin) {
                 window.location.href = '/admin';
                 return;
             }
-            const user = session.user;
+
+            // Prefer DB values, fall back to auth metadata, then email prefix
             const meta = user.user_metadata || {};
-            document.querySelector('.client-name').textContent = meta.business_name || 'My Business';
-            document.querySelector('.profile-name').textContent = meta.business_name || 'My Business';
-            document.querySelector('.avatar').textContent = (meta.business_name || 'U').charAt(0).toUpperCase();
+            const displayName = (clientRow && clientRow.business_name)
+                || meta.business_name
+                || user.email.split('@')[0];
+
+            // Update top bar
+            document.querySelector('.client-name').textContent = displayName;
+            document.querySelector('.profile-name').textContent = displayName;
+            document.querySelector('.avatar').textContent = displayName.charAt(0).toUpperCase();
             document.querySelector('.page-header p').textContent =
-                'Overview of all active and pending agents for ' + (meta.business_name || 'your business') + '.';
-            document.querySelector('.page-header h1').textContent = 'Your Agents';
-            // TODO: loadAgentData(user.id) once real agents are deployed
+                'Overview of all active and pending agents for ' + displayName + '.';
+
+            // Populate Account Settings form from DB
+            if (clientRow) {
+                var f = document.getElementById('settingBusinessName');
+                if (f) f.value = clientRow.business_name || '';
+                var fe = document.getElementById('settingEmail');
+                if (fe) fe.value = clientRow.email || user.email || '';
+                var fp = document.getElementById('settingPhone');
+                if (fp) fp.value = clientRow.phone || '';
+                var fa = document.getElementById('settingAddress');
+                if (fa) fa.value = clientRow.address || '';
+                var fi = document.getElementById('settingIndustry');
+                if (fi && clientRow.business_type) {
+                    var opt = Array.from(fi.options).find(function(o) {
+                        return o.value === clientRow.business_type || o.text === clientRow.business_type;
+                    });
+                    if (opt) opt.selected = true;
+                }
+            }
+
+            loadAgentData(user.id);
         })();
+
+        // Maps Stripe agent_type values to card IDs in the HTML
+        const AGENT_CARD_MAP = {
+            receptionist: 'card-receptionist',
+            echo:         'card-receptionist',
+            lead_reply:   'card-leadresponse',
+            ignite:       'card-leadresponse',
+            lcr:          'card-lcr',
+            revive:       'card-lcr',
+            website:      'card-website',
+            forge:        'card-website',
+            seo:          'card-seo',
+            signal:       'card-seo',
+            ontology:     'card-ontology',
+            oracle:       'card-ontology',
+            lead_gen:     'card-leadgen',
+            scout:        'card-leadgen',
+            custom:       'card-custom',
+            flux:         'card-custom'
+        };
 
         // --- Load agent data from Supabase ---
         async function loadAgentData(clientId) {
-            const { data: agents } = await sb.from('client_agents')
-                .select('*')
-                .eq('client_id', clientId);
-            // TODO: populate agent cards dynamically from agents array
-            // Each agent has: agent_type (echo/ignite/revive/etc), status, config
+            const { data: agents, error } = await sb
+                .from('client_agents')
+                .select('*, onboarding_steps(*)')
+                .eq('client_id', clientId)
+                .neq('status', 'cancelled');
+
+            if (error || !agents) return;
+
+            // Hide all agent cards first
+            document.querySelectorAll('.agent-card').forEach(function(card) {
+                card.style.display = 'none';
+            });
+
+            var activeCount = 0;
+            var setupCount = 0;
+
+            agents.forEach(function(agent) {
+                var cardId = AGENT_CARD_MAP[agent.agent_type];
+                if (!cardId) return;
+                var card = document.getElementById(cardId);
+                if (!card) return;
+
+                card.style.display = '';
+
+                // Update status badge
+                var statusEl = card.querySelector('.agent-status');
+                if (statusEl) {
+                    if (agent.status === 'onboarding') {
+                        statusEl.className = 'agent-status status-setup';
+                        statusEl.innerHTML = '<span class="status-dot"></span>Setting up';
+                        setupCount++;
+                    } else if (agent.status === 'active') {
+                        statusEl.className = 'agent-status status-active';
+                        statusEl.innerHTML = '<span class="status-dot"></span>Active';
+                        activeCount++;
+                    } else if (agent.status === 'paused') {
+                        statusEl.className = 'agent-status status-paused';
+                        statusEl.innerHTML = '<span class="status-dot"></span>Paused';
+                    }
+                }
+
+                // Update onboarding steps panel if agent is in setup
+                if (agent.status === 'onboarding' && agent.onboarding_steps) {
+                    var steps = agent.onboarding_steps.sort(function(a, b) {
+                        return a.step_number - b.step_number;
+                    });
+                    var stepList = card.querySelector('.step-list');
+                    if (stepList) {
+                        stepList.innerHTML = steps.map(function(step) {
+                            var cls = step.status === 'completed' ? 'completed'
+                                    : step.status === 'in_progress' ? 'current' : 'pending';
+                            var check = step.status === 'completed'
+                                ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+                                : '<span>' + step.step_number + '</span>';
+                            return '<div class="step ' + cls + '">'
+                                + '<div class="step-indicator">' + check + '</div>'
+                                + '<div class="step-content"><div class="step-name">' + step.step_name + '</div></div>'
+                                + '</div>';
+                        }).join('');
+                    }
+
+                    // Show setup progress bar
+                    var done = steps.filter(function(s) { return s.status === 'completed'; }).length;
+                    var pct = Math.round((done / steps.length) * 100);
+                    var progressEl = card.querySelector('.setup-progress');
+                    if (progressEl) {
+                        progressEl.querySelector('.progress-fill').style.width = pct + '%';
+                        progressEl.querySelector('.progress-label').textContent = pct + '% complete';
+                    }
+                }
+            });
+
+            // Update "Active Agents" summary card
+            var activeValueEl = document.querySelector('.summary-card:last-child .summary-value');
+            if (activeValueEl) {
+                activeValueEl.innerHTML = activeCount
+                    + (setupCount > 0
+                        ? '<span style="font-size:0.875rem;font-weight:500;color:var(--text-tertiary);"> / ' + (activeCount + setupCount) + '</span>'
+                        : '');
+            }
+
+            // Update plan card with real agent count
+            var total = activeCount + setupCount;
+            var planNameEl = document.getElementById('planName');
+            if (planNameEl) {
+                planNameEl.textContent = total === 0
+                    ? 'No agents yet'
+                    : total + ' Agent' + (total !== 1 ? 's' : '') + ' — ' + (setupCount > 0 ? setupCount + ' setting up' : 'all active');
+            }
+            var planPriceEl = document.getElementById('planPrice');
+            if (planPriceEl) planPriceEl.textContent = 'Billed monthly per agent';
+            var planBadgeEl = document.getElementById('planBadge');
+            if (planBadgeEl) {
+                planBadgeEl.textContent = setupCount > 0 ? 'Setting Up' : 'Active';
+                planBadgeEl.style.background = setupCount > 0 ? 'var(--yellow-bg)' : '';
+                planBadgeEl.style.color = setupCount > 0 ? 'var(--yellow)' : '';
+            }
+
+            // If no agents at all, show empty state
+            if (agents.length === 0) {
+                var grid = document.querySelector('.agent-grid');
+                if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--text-tertiary);">'
+                    + '<p style="font-size:1rem;color:var(--text-secondary);margin-bottom:0.5rem;">No agents yet</p>'
+                    + '<p style="font-size:0.875rem;">Your agents will appear here after purchase.</p>'
+                    + '</div>';
+            }
+
+            // Load summary metrics across all agents
+            var agentIds = agents.map(function(a) { return a.id; });
+            if (agentIds.length > 0) loadSummaryMetrics(agentIds);
         }
 
-        // --- Load metrics ---
+        // --- 7-day summary metrics across all client agents ---
+        async function loadSummaryMetrics(agentIds) {
+            var since = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+            var { data: rows } = await sb.from('agent_metrics')
+                .select('metrics')
+                .in('client_agent_id', agentIds)
+                .gte('metric_date', since);
+
+            if (!rows || rows.length === 0) {
+                // No metrics yet — show 0 so it's clear the dashboard is live, just empty
+                document.getElementById('stat-calls').textContent = '0';
+                document.getElementById('stat-leads').textContent = '0';
+                document.getElementById('stat-appts').textContent = '0';
+                return;
+            }
+
+            var calls = 0, leads = 0, appts = 0;
+            rows.forEach(function(r) {
+                var m = r.metrics || {};
+                calls += (m.calls_handled || m.calls_answered || 0);
+                leads += (m.leads_captured || m.leads_processed || 0);
+                appts += (m.appointments_booked || m.booking_confirmed || 0);
+            });
+
+            document.getElementById('stat-calls').textContent = calls.toLocaleString();
+            document.getElementById('stat-leads').textContent = leads.toLocaleString();
+            document.getElementById('stat-appts').textContent = appts.toLocaleString();
+
+            if (calls > 0) {
+                document.getElementById('stat-calls-label').textContent = 'last 7 days';
+                document.getElementById('stat-calls-label').className = 'summary-change up';
+            }
+            if (leads > 0) {
+                document.getElementById('stat-leads-label').textContent = 'last 7 days';
+                document.getElementById('stat-leads-label').className = 'summary-change up';
+            }
+            if (appts > 0) {
+                document.getElementById('stat-appts-label').textContent = 'last 7 days';
+                document.getElementById('stat-appts-label').className = 'summary-change up';
+            }
+        }
+
+        // --- Load metrics (7-day rollup for summary strip) ---
         async function loadMetrics(clientAgentId) {
             const { data: metrics } = await sb.from('agent_metrics')
                 .select('*')
                 .eq('client_agent_id', clientAgentId)
                 .gte('metric_date', new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0])
                 .order('metric_date', { ascending: false });
-            // TODO: populate summary strip and agent stat items from metrics
-            return metrics;
+            return metrics || [];
         }
 
         // --- Sign out (called from supabaseSignOut below) ---
