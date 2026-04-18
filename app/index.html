@@ -1330,7 +1330,8 @@
                                             <label class="form-label">Booking URL or Calendar Link</label>
                                             <input type="url" placeholder="https://calendly.com/your-business">
                                         </div>
-                                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;margin-top:0.25rem;">Save and Continue</button>
+                                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;margin-top:0.25rem;"
+                          onclick="saveOnboardingStep(this.closest('.agent-card'), 4, {booking_platform: this.closest('.step-form').querySelector('select').value, booking_url: this.closest('.step-form').querySelector('input[type=url]').value})">Save and Continue</button>
                                     </div>
                                 </div>
                             </div>
@@ -1848,6 +1849,7 @@
                 if (!card) return;
 
                 card.style.display = '';
+                card.dataset.agentId = agent.id;
 
                 // Update status badge
                 var statusEl = card.querySelector('.agent-status');
@@ -1856,6 +1858,11 @@
                         statusEl.className = 'agent-status status-setup';
                         statusEl.innerHTML = '<span class="status-dot"></span>Setting up';
                         setupCount++;
+                        // Clear fake stats — real numbers appear once agent goes live
+                        var statsEl = card.querySelector('.agent-stats');
+                        if (statsEl) {
+                            statsEl.innerHTML = '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats will appear once this agent goes live.</div>';
+                        }
                     } else if (agent.status === 'active') {
                         statusEl.className = 'agent-status status-active';
                         statusEl.innerHTML = '<span class="status-dot"></span>Active';
@@ -1935,6 +1942,25 @@
             // Load summary metrics across all agents
             var agentIds = agents.map(function(a) { return a.id; });
             if (agentIds.length > 0) loadSummaryMetrics(agentIds);
+        }
+
+        // --- Save an onboarding step and advance to the next ---
+        async function saveOnboardingStep(cardEl, stepNumber, formData) {
+            var clientAgentId = cardEl.dataset.agentId;
+            if (!clientAgentId) return;
+
+            await sb.from('onboarding_steps')
+                .update({ status: 'completed', response_data: formData, completed_at: new Date().toISOString() })
+                .eq('client_agent_id', clientAgentId)
+                .eq('step_number', stepNumber);
+
+            await sb.from('onboarding_steps')
+                .update({ status: 'in_progress' })
+                .eq('client_agent_id', clientAgentId)
+                .eq('step_number', stepNumber + 1);
+
+            var { data: { session } } = await sb.auth.getSession();
+            if (session) loadAgentData(session.user.id);
         }
 
         // --- 7-day summary metrics across all client agents ---

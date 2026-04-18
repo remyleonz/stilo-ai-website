@@ -564,7 +564,7 @@
                     email: email,
                     password: password,
                     options: {
-                        emailRedirectTo: window.location.origin + '/dashboard.html',
+                        emailRedirectTo: window.location.origin + '/app/',
                         data: { contact_name: name, business_name: business, phone: phone, business_type: businessType }
                     }
                 });
@@ -588,7 +588,7 @@
             try {
                 const { error } = await sb.auth.signInWithOtp({
                     email: email,
-                    options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+                    options: { emailRedirectTo: window.location.origin + '/app/' }
                 });
                 if (error) { showError(error.message); return; }
                 showSuccess('Login link sent. Click it in your inbox and you\'ll land straight in your dashboard.');
@@ -618,7 +618,7 @@
             try {
                 const { error } = await sb.auth.signInWithOtp({
                     email: email,
-                    options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+                    options: { emailRedirectTo: window.location.origin + '/app/' }
                 });
                 if (error) {
                     errEl.textContent = error.message;
@@ -630,7 +630,7 @@
                 // Replace card content with success state
                 document.getElementById('welcome-mode').innerHTML =
                     '<div style="text-align:center; padding:20px 0;">' +
-                    '<div style="font-size:3rem; margin-bottom:16px;">📬</div>' +
+                    '<div style="margin-bottom:20px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>' +
                     '<h3 style="color:var(--text-primary); margin-bottom:10px; font-size:18px;">Check your inbox</h3>' +
                     '<p style="color:var(--text-secondary); font-size:14px; line-height:1.6;">We sent a login link to <strong style="color:var(--text-primary);">' + email + '</strong>.<br>Click it and you\'ll land directly in your client dashboard.</p>' +
                     '<p style="color:var(--text-muted); font-size:12px; margin-top:20px;">Didn\'t get it? Check spam, or <button onclick="location.reload()" style="background:none;border:none;color:var(--purple-light);cursor:pointer;font-size:12px;padding:0;">try again</button>.</p>' +
