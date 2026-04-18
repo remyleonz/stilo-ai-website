@@ -1,95 +1,38 @@
 /**
- * Stripe Webhook Handler
+ * POST /api/stripe-webhook
  *
- * This handles Stripe webhook events for payment confirmation.
- * Deploy as a serverless function (Vercel, Netlify, or standalone Express).
+ * Handles Stripe events for multi-agent bundle purchases.
  *
- * Setup:
- * 1. npm install stripe @supabase/supabase-js
- * 2. Set environment variables: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY
- * 3. Register webhook URL in Stripe Dashboard > Webhooks
- * 4. Subscribe to events: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted
+ * On checkout.session.completed:
+ *   1. Read `selected_agents` (comma-separated codes) from session metadata
+ *   2. Create one client_agents row per agent, each with status="onboarding"
+ *   3. Create the per-agent onboarding_steps for each
+ *   4. If client_id was passed, link to existing Supabase user; otherwise
+ *      just log — the client will sign up on dashboard and get linked via
+ *      customer_email match later.
+ *
+ * Required env vars:
+ *   STRIPE_SECRET_KEY
+ *   STRIPE_WEBHOOK_SECRET
+ *   SUPABASE_URL
+ *   SUPABASE_SERVICE_KEY
  */
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
+const { AGENTS, normalizeAgentId } = require('./_agents');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY // Use service key for admin access
-);
+function getSupabase() {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    return null;
+  }
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  );
+}
 
-// Agent type to readable name mapping
-const AGENT_NAMES = {
-  receptionist: 'AI Receptionist',
-  lead_reply: 'Lead Response Agent',
-  lcr: 'Customer Reactivation (LCR)',
-  website: 'AI Website',
-  seo: 'AI SEO (GEO)',
-  ontology: 'Growth Intelligence',
-  lead_gen: 'Lead Generator',
-  custom: 'Custom Automation'
-};
-
-// Onboarding steps per agent type
-const ONBOARDING_STEPS = {
-  receptionist: [
-    'Business info',
-    'Services & pricing',
-    'Business hours',
-    'Booking system connection',
-    'Phone setup',
-    'Voice personality',
-    'Review & activate'
-  ],
-  lcr: [
-    'Upload customer database',
-    'Map columns',
-    'Set win-back offers',
-    'Email sender config',
-    'Review segments',
-    'Launch'
-  ],
-  lead_reply: [
-    'Business info',
-    'Lead sources',
-    'Current offers',
-    'Response preferences',
-    'Review & activate'
-  ],
-  website: [
-    'Business info',
-    'Design preferences',
-    'Content requirements',
-    'Review & approve'
-  ],
-  seo: [
-    'Website audit',
-    'Keyword targets',
-    'Review & implement'
-  ],
-  ontology: [
-    'Data source mapping',
-    'KPI selection',
-    'Reporting cadence',
-    'Baseline analysis',
-    'Review & activate'
-  ],
-  lead_gen: [
-    'Target criteria',
-    'Outreach preferences',
-    'Email setup',
-    'Review & launch'
-  ],
-  custom: [
-    'Requirements gathering',
-    'Solution design',
-    'Build & test',
-    'Review & deploy'
-  ]
-};
-
-async function handleWebhook(req, res) {
+module.exports = async function handleWebhook(req, res) {
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -104,102 +47,176 @@ async function handleWebhook(req, res) {
     return res.status(400).send('Webhook Error: ' + err.message);
   }
 
-  switch (event.type) {
-    case 'checkout.session.completed':
-      await handleCheckoutComplete(event.data.object);
-      break;
-
-    case 'customer.subscription.updated':
-      await handleSubscriptionUpdate(event.data.object);
-      break;
-
-    case 'customer.subscription.deleted':
-      await handleSubscriptionCancelled(event.data.object);
-      break;
-
-    default:
-      console.log('Unhandled event type:', event.type);
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutComplete(event.data.object);
+        break;
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdate(event.data.object);
+        break;
+      case 'customer.subscription.deleted':
+        await handleSubscriptionCancelled(event.data.object);
+        break;
+      default:
+        console.log('Unhandled event type:', event.type);
+    }
+  } catch (err) {
+    console.error('Webhook handler error:', err);
+    // Still 200 so Stripe doesn't retry forever; log for investigation
   }
 
   res.status(200).json({ received: true });
-}
+};
 
 async function handleCheckoutComplete(session) {
-  const clientId = session.metadata.client_id;
-  const agentType = session.metadata.agent_type;
-
-  if (!clientId || !agentType) {
-    console.error('Missing metadata in checkout session');
+  const supabase = getSupabase();
+  if (!supabase) {
+    console.warn(
+      '[stripe-webhook] Supabase not configured — logging only. Selected agents:',
+      session.metadata && session.metadata.selected_agents
+    );
     return;
   }
 
-  // Create the agent record
-  const { data: agent, error: agentError } = await supabase
-    .from('client_agents')
-    .insert({
-      client_id: clientId,
-      agent_type: agentType,
-      status: 'onboarding',
-      stripe_subscription_id: session.subscription || null
-    })
-    .select()
-    .single();
+  const md = session.metadata || {};
+  const rawCodes = (md.selected_agents || md.agent_type || '').split(',');
+  const agentCodes = rawCodes
+    .map(function (c) { return normalizeAgentId(c.trim()); })
+    .filter(function (c) { return !!c && AGENTS[c]; });
 
-  if (agentError) {
-    console.error('Error creating agent:', agentError);
+  if (agentCodes.length === 0) {
+    console.error('Checkout session has no valid agents in metadata', md);
     return;
   }
 
-  // Create onboarding steps
-  const steps = ONBOARDING_STEPS[agentType] || ONBOARDING_STEPS.custom;
-  const stepRecords = steps.map(function(name, index) {
+  const clientId = md.client_id || null;
+  const customerEmail =
+    (session.customer_details && session.customer_details.email) ||
+    session.customer_email ||
+    null;
+
+  // If we don't have a client_id, try to find one by email. If no match,
+  // create nothing yet — the user will sign up and the auth trigger (see
+  // schema.sql handle_new_user) will create the clients row. The admin
+  // can then link this purchase via the admin dashboard, or we can retry.
+  let linkedClientId = clientId;
+  if (!linkedClientId && customerEmail) {
+    const { data: existing } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('email', customerEmail)
+      .maybeSingle();
+    if (existing) linkedClientId = existing.id;
+  }
+
+  if (!linkedClientId) {
+    if (!customerEmail) {
+      console.error('[stripe-webhook] No email and no client_id — cannot provision. session=%s', session.id);
+      return;
+    }
+    const siteUrl = process.env.SITE_URL || 'https://stiloaipartners.com';
+    const { data: invite, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(
+      customerEmail,
+      {
+        redirectTo: siteUrl + '/dashboard.html',
+        data: {
+          business_name: md.business_name || '',
+          contact_name: md.contact_name || '',
+        },
+      }
+    );
+    if (inviteErr) {
+      console.error('[stripe-webhook] Failed to invite user %s: %s session=%s', customerEmail, inviteErr.message, session.id);
+      return;
+    }
+    linkedClientId = invite.user.id;
+    // The on_auth_user_created trigger creates the clients row.
+    // Update phone since the trigger doesn't set it.
+    if (md.phone) {
+      await supabase.from('clients').update({ phone: md.phone }).eq('id', linkedClientId);
+    }
+    console.log('[stripe-webhook] Invited new user %s (id=%s) for session %s', customerEmail, linkedClientId, session.id);
+  }
+
+  // Create one client_agents row per agent
+  const rows = agentCodes.map(function (code) {
     return {
-      client_agent_id: agent.id,
-      step_number: index + 1,
-      step_name: name,
-      status: index === 0 ? 'in_progress' : 'pending'
+      client_id: linkedClientId,
+      agent_type: code,
+      status: 'onboarding',
+      stripe_subscription_id: session.subscription || null,
+      config: {
+        stripe_session_id: session.id,
+        amount_total_cents: session.amount_total || 0,
+      },
     };
   });
 
-  const { error: stepsError } = await supabase
-    .from('onboarding_steps')
-    .insert(stepRecords);
+  const { data: inserted, error: insertErr } = await supabase
+    .from('client_agents')
+    .insert(rows)
+    .select();
 
-  if (stepsError) {
-    console.error('Error creating onboarding steps:', stepsError);
+  if (insertErr) {
+    console.error('Error creating client_agents rows:', insertErr);
+    return;
   }
 
-  // Activate client status
+  // Build onboarding_steps for every newly-created agent
+  const stepRows = [];
+  for (const row of inserted) {
+    const agent = AGENTS[row.agent_type];
+    if (!agent) continue;
+    agent.onboardingSteps.forEach(function (name, index) {
+      stepRows.push({
+        client_agent_id: row.id,
+        step_number: index + 1,
+        step_name: name,
+        status: index === 0 ? 'in_progress' : 'pending',
+      });
+    });
+  }
+
+  if (stepRows.length > 0) {
+    const { error: stepsErr } = await supabase
+      .from('onboarding_steps')
+      .insert(stepRows);
+    if (stepsErr) console.error('Error creating onboarding_steps:', stepsErr);
+  }
+
+  // Flip client to active status
   await supabase
     .from('clients')
     .update({ status: 'active' })
-    .eq('id', clientId);
+    .eq('id', linkedClientId);
 
-  console.log('Agent ' + agentType + ' created for client ' + clientId);
+  console.log(
+    '[stripe-webhook] Provisioned %d agents for client %s: %s',
+    inserted.length,
+    linkedClientId,
+    agentCodes.join(',')
+  );
 }
 
 async function handleSubscriptionUpdate(subscription) {
+  const supabase = getSupabase();
+  if (!supabase) return;
   const { error } = await supabase
     .from('client_agents')
     .update({
-      status: subscription.status === 'active' ? 'active' : 'paused'
+      status: subscription.status === 'active' ? 'active' : 'paused',
     })
     .eq('stripe_subscription_id', subscription.id);
-
-  if (error) {
-    console.error('Error updating subscription:', error);
-  }
+  if (error) console.error('Error updating subscription:', error);
 }
 
 async function handleSubscriptionCancelled(subscription) {
+  const supabase = getSupabase();
+  if (!supabase) return;
   const { error } = await supabase
     .from('client_agents')
     .update({ status: 'cancelled' })
     .eq('stripe_subscription_id', subscription.id);
-
-  if (error) {
-    console.error('Error cancelling subscription:', error);
-  }
+  if (error) console.error('Error cancelling subscription:', error);
 }
-
-module.exports = handleWebhook;

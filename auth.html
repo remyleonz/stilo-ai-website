@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+    <script defer src="/_vercel/insights/script.js"></script>
     <title>STILO AI PARTNERS | Sign In</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -323,6 +326,20 @@
             .auth-card { padding: 24px; }
             .form-row { grid-template-columns: 1fr; }
         }
+
+        /* Welcome mode (arriving from Stripe checkout) */
+        .welcome-header { text-align: center; margin-bottom: 24px; }
+        .welcome-check {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: rgba(34, 197, 94, 0.12); border: 2px solid rgba(34, 197, 94, 0.35);
+            color: var(--green); font-size: 22px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+        }
+        .welcome-header h2 { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+        .welcome-header p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; }
+        .welcome-email-note { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 12px; line-height: 1.5; }
+        .welcome-email-note button { background: none; border: none; color: var(--purple-light); cursor: pointer; font-size: 12px; padding: 0; }
     </style>
 </head>
 <body>
@@ -336,13 +353,35 @@
         </div>
 
         <div class="auth-card">
-            <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchTab('signin')">Sign In</button>
-                <button class="auth-tab" onclick="switchTab('signup')">Create Account</button>
+            <!-- Welcome mode — shown after Stripe checkout (JS toggles visibility) -->
+            <div id="welcome-mode" style="display:none;">
+              <div class="welcome-header">
+                <div class="welcome-check">✓</div>
+                <h2>Payment confirmed</h2>
+                <p>Your AI agents are reserved. Enter your email below and we'll send you a one-click link to access your dashboard — no password needed.</p>
+              </div>
+              <div id="error-msg-welcome" class="error-message"></div>
+              <div id="success-msg-welcome" class="success-message"></div>
+              <div class="form-group">
+                <label for="welcome-email">Your email</label>
+                <input type="email" id="welcome-email" placeholder="you@business.com" autocomplete="email">
+              </div>
+              <button type="button" class="btn-primary" id="welcomeSendBtn" onclick="sendWelcomeMagicLink()">
+                Send My Login Link
+              </button>
+              <p class="welcome-email-note">You'll get a secure link straight to your client portal. No password, no hassle.</p>
             </div>
 
-            <div id="error-msg" class="error-message"></div>
-            <div id="success-msg" class="success-message"></div>
+            <!-- Normal tabs — hidden in welcome mode -->
+            <div id="normal-mode">
+              <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchTab('signin')">Sign In</button>
+                <button class="auth-tab" onclick="switchTab('signup')">Create Account</button>
+              </div>
+
+              <div id="error-msg" class="error-message"></div>
+              <div id="success-msg" class="success-message"></div>
+            </div>
 
             <!-- Sign In Form -->
             <form id="signin-form" class="auth-form active" onsubmit="handleSignIn(event)">
@@ -521,27 +560,82 @@
                     email: email,
                     password: password,
                     options: {
+                        emailRedirectTo: window.location.origin + '/dashboard.html',
                         data: { contact_name: name, business_name: business, phone: phone, business_type: businessType }
                     }
                 });
                 if (authError) { showError(authError.message); return; }
 
-                showSuccess('Account created. Check your email to confirm, then sign in.');
+                // If session exists immediately (email confirm disabled), go to dashboard
+                if (authData.session) {
+                    window.location.href = '/dashboard.html';
+                    return;
+                }
+                showSuccess('Account created. Check your email for a confirmation link, then you\'ll land straight in your dashboard.');
             } catch (err) {
                 showError('Something went wrong. Please try again.');
             }
         }
 
         async function handleMagicLink() {
-            var email = document.getElementById('signin-email').value;
+            var email = document.getElementById('signin-email').value.trim();
             if (!email) { showError('Enter your email first.'); return; }
 
             try {
-                const { error } = await sb.auth.signInWithOtp({ email: email });
+                const { error } = await sb.auth.signInWithOtp({
+                    email: email,
+                    options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+                });
                 if (error) { showError(error.message); return; }
-                showSuccess('Magic link sent. Check your inbox.');
+                showSuccess('Login link sent. Click it in your inbox and you\'ll land straight in your dashboard.');
             } catch (err) {
                 showError('Something went wrong. Please try again.');
+            }
+        }
+
+        // ============================================
+        // WELCOME MODE (post-Stripe checkout)
+        // ============================================
+        async function sendWelcomeMagicLink() {
+            var email = document.getElementById('welcome-email').value.trim();
+            var errEl = document.getElementById('error-msg-welcome');
+            var sucEl = document.getElementById('success-msg-welcome');
+            errEl.style.display = 'none';
+
+            if (!email) {
+                errEl.textContent = 'Enter your email to continue.';
+                errEl.style.display = 'block';
+                return;
+            }
+            var btn = document.getElementById('welcomeSendBtn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const { error } = await sb.auth.signInWithOtp({
+                    email: email,
+                    options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+                });
+                if (error) {
+                    errEl.textContent = error.message;
+                    errEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Send My Login Link';
+                    return;
+                }
+                // Replace card content with success state
+                document.getElementById('welcome-mode').innerHTML =
+                    '<div style="text-align:center; padding:20px 0;">' +
+                    '<div style="font-size:3rem; margin-bottom:16px;">📬</div>' +
+                    '<h3 style="color:var(--text-primary); margin-bottom:10px; font-size:18px;">Check your inbox</h3>' +
+                    '<p style="color:var(--text-secondary); font-size:14px; line-height:1.6;">We sent a login link to <strong style="color:var(--text-primary);">' + email + '</strong>.<br>Click it and you\'ll land directly in your client dashboard.</p>' +
+                    '<p style="color:var(--text-muted); font-size:12px; margin-top:20px;">Didn\'t get it? Check spam, or <button onclick="location.reload()" style="background:none;border:none;color:var(--purple-light);cursor:pointer;font-size:12px;padding:0;">try again</button>.</p>' +
+                    '</div>';
+            } catch (err) {
+                errEl.textContent = 'Something went wrong. Please try again.';
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Send My Login Link';
             }
         }
 
@@ -564,27 +658,55 @@
             }
         })();
 
-        // Pre-fill from URL params (quiz data passthrough)
-        var params = new URLSearchParams(window.location.search);
-        if (params.get('name')) {
-            var nameField = document.getElementById('signup-name');
-            if (nameField) nameField.value = params.get('name');
-        }
-        if (params.get('email')) {
-            var emailField = document.getElementById('signup-email') || document.getElementById('signin-email');
-            if (emailField) emailField.value = params.get('email');
-        }
-        if (params.get('business')) {
-            var bizField = document.getElementById('signup-business');
-            if (bizField) bizField.value = params.get('business');
-        }
-        if (params.get('type')) {
-            var typeField = document.getElementById('signup-type');
-            if (typeField) typeField.value = params.get('type');
-        }
-        if (params.get('tab') === 'signup') {
-            switchTab('signup');
-        }
+        // ============================================
+        // PAGE INIT: welcome mode vs normal mode
+        // ============================================
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var isWelcome = params.get('welcome') === '1' || params.get('welcome') === 'true';
+
+            if (isWelcome) {
+                // Hide normal tabs/forms, show welcome card
+                document.getElementById('normal-mode').style.display = 'none';
+                document.getElementById('signin-form').style.display = 'none';
+                document.getElementById('signup-form').style.display = 'none';
+                document.getElementById('welcome-mode').style.display = 'block';
+
+                // Pre-fill email
+                var email = params.get('email') || '';
+                if (email) document.getElementById('welcome-email').value = email;
+
+                // Update subtitle
+                var logoP = document.querySelector('.logo p');
+                if (logoP) logoP.textContent = 'You\'re almost in';
+
+            } else {
+                // Normal mode: pre-fill signup form from URL params
+                if (params.get('name')) {
+                    var nf = document.getElementById('signup-name');
+                    if (nf) nf.value = params.get('name');
+                }
+                if (params.get('email')) {
+                    var ef = document.getElementById('signup-email') || document.getElementById('signin-email');
+                    if (ef) ef.value = params.get('email');
+                }
+                if (params.get('business')) {
+                    var bf = document.getElementById('signup-business');
+                    if (bf) bf.value = params.get('business');
+                }
+                if (params.get('phone')) {
+                    var pf = document.getElementById('signup-phone');
+                    if (pf) pf.value = params.get('phone');
+                }
+                if (params.get('type')) {
+                    var tf = document.getElementById('signup-type');
+                    if (tf) tf.value = params.get('type');
+                }
+                if (params.get('tab') === 'signup') {
+                    switchTab('signup');
+                }
+            }
+        })();
 
         // Rotating hero quotes
         var heroQuotes = [

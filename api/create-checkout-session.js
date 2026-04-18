@@ -1,123 +1,155 @@
 /**
- * Create Stripe Checkout Session
+ * POST /api/create-checkout-session
  *
- * Called when a user clicks "Get Started Now" on the website.
- * Creates a Stripe Checkout session and returns the URL.
+ * Bundle checkout: customer can select 1..N agents and buy all of them in
+ * a single Stripe Checkout Session.
  *
- * Deploy as a serverless function (Vercel API route or standalone Express).
+ * Body:
+ *   {
+ *     agent_ids:  ["echo", "ignite", "forge"]  // required, array of agent codenames
+ *     email:      "jessica@planetfitnessmiami.com",
+ *     client_id:  "<uuid from Supabase auth>" | null,  // optional, passed back in webhook metadata
+ *     business_name: "Planet Fitness Miami"  // optional
+ *   }
  *
- * Setup:
- * 1. npm install stripe
- * 2. Set environment variables: STRIPE_SECRET_KEY
- * 3. Create Stripe Price IDs for each agent (see PRICE_IDS below)
+ * Backward compatible: if a single `agent_id` is sent (old clients) we wrap it
+ * in an array.
+ *
+ * Stripe requires subscription mode when ANY line item is recurring. So: if
+ * any selected agent has a monthly fee, the session is mode=subscription and
+ * the one-time setup fees ride along on the first invoice. Otherwise it's
+ * mode=payment (happens when the cart is SIGNAL-only or FLUX-only).
+ *
+ * Required env vars (per agent, only for agents actually in the cart):
+ *   STRIPE_PRICE_ECHO_SETUP, STRIPE_PRICE_ECHO_MONTHLY
+ *   STRIPE_PRICE_IGNITE_SETUP, STRIPE_PRICE_IGNITE_MONTHLY
+ *   ... (see api/_agents.js for full list)
+ *   STRIPE_SECRET_KEY
+ *   SITE_URL  (e.g. https://stiloaipartners.com)
  */
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { AGENTS, normalizeAgentId, calculateTotals } = require('./_agents');
 
-// ============================================================
-// PRICE IDS -- fill these in after running stripe_setup.py
-// ============================================================
-// 1. Run: python stripe_setup.py  (add your sk_live_ key first)
-// 2. Open the generated stripe_products.json
-// 3. Copy each price_id into the matching field below
-//
-// stripe_products.json structure:
-//   products.receptionist.prices.Setup.price_id    -> installation
-//   products.receptionist.prices.Monthly.price_id  -> monthly
-// ============================================================
-const PRICE_IDS = {
-  receptionist: {
-    installation: 'price_receptionist_install', // $1,500 one-time  <- replace
-    monthly: 'price_receptionist_monthly'       // $450/mo recurring <- replace
-  },
-  lead_reply: {
-    installation: 'price_lead_reply_install',   // $2,000 one-time  <- replace
-    monthly: 'price_lead_reply_monthly'         // $650/mo recurring <- replace
-  },
-  website: {
-    installation: 'price_website_install',      // $1,250 one-time  <- replace
-    monthly: 'price_website_monthly'            // $200/mo recurring <- replace
-  },
-  seo: {
-    installation: 'price_seo_install'           // $1,000 one-time  <- replace (no monthly)
-  },
-  ontology_t1: {
-    installation: 'price_ontology_t1_install'   // $1,000 one-time  <- replace
-  },
-  ontology_t2: {
-    monthly: 'price_ontology_t2_monthly'        // $3,250/mo        <- replace
-  },
-  ontology_t3: {
-    monthly: 'price_ontology_t3_monthly'        // $6,000/mo        <- replace
-  },
-  lcr: {
-    installation: 'price_lcr_install',          // $2,500 one-time  <- replace
-    monthly: 'price_lcr_monthly'                // $800/mo recurring <- replace
-  },
-  lead_gen: {
-    installation: 'price_lead_gen_install',     // $2,500 one-time  <- replace
-    monthly: 'price_lead_gen_monthly'           // $1,000/mo        <- replace
+module.exports = async function createCheckoutSession(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
-};
-
-async function createCheckoutSession(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  var agentId = req.body.agent_id;
-  var clientId = req.body.client_id;
-  var clientEmail = req.body.email;
+  const body = req.body || {};
+  let ids = Array.isArray(body.agent_ids) ? body.agent_ids.slice() : [];
+  if (ids.length === 0 && body.agent_id) ids = [body.agent_id];
 
-  if (!agentId || !PRICE_IDS[agentId]) {
-    return res.status(400).json({ error: 'Invalid agent type' });
+  const normalized = [];
+  const rejected = [];
+  for (const id of ids) {
+    const code = normalizeAgentId(id);
+    if (code && AGENTS[code].purchaseMode === 'self_serve') {
+      if (!normalized.includes(code)) normalized.push(code);
+    } else {
+      rejected.push(id);
+    }
   }
 
-  var prices = PRICE_IDS[agentId];
-  var lineItems = [];
-
-  // Add installation fee (one-time)
-  lineItems.push({
-    price: prices.installation,
-    quantity: 1
-  });
-
-  // Add monthly retainer (recurring) if applicable
-  if (prices.monthly) {
-    lineItems.push({
-      price: prices.monthly,
-      quantity: 1
+  if (normalized.length === 0) {
+    return res.status(400).json({
+      error:
+        'No valid self-serve agents selected. FLUX is consult-only; book a call for custom work.',
+      rejected: rejected,
     });
   }
+
+  // Verify every agent has the Stripe price IDs it needs
+  const missingEnv = [];
+  for (const code of normalized) {
+    const a = AGENTS[code];
+    if (!a.stripeSetupPriceEnv || !process.env[a.stripeSetupPriceEnv]) {
+      missingEnv.push(a.stripeSetupPriceEnv || `SETUP price env for ${code}`);
+    }
+    if (
+      a.monthlyFeeCents > 0 &&
+      (!a.stripeMonthlyPriceEnv || !process.env[a.stripeMonthlyPriceEnv])
+    ) {
+      missingEnv.push(a.stripeMonthlyPriceEnv || `MONTHLY price env for ${code}`);
+    }
+  }
+  if (missingEnv.length > 0) {
+    console.error('Missing Stripe price env vars:', missingEnv);
+    return res.status(500).json({
+      error:
+        'Stripe is not fully configured. Missing price IDs for selected agents. See SETUP.md.',
+      missing: missingEnv,
+    });
+  }
+
+  // Build line items
+  const lineItems = [];
+  let hasRecurring = false;
+  for (const code of normalized) {
+    const a = AGENTS[code];
+    lineItems.push({ price: process.env[a.stripeSetupPriceEnv], quantity: 1 });
+    if (a.monthlyFeeCents > 0 && a.stripeMonthlyPriceEnv) {
+      lineItems.push({
+        price: process.env[a.stripeMonthlyPriceEnv],
+        quantity: 1,
+      });
+      hasRecurring = true;
+    }
+  }
+
+  const totals = calculateTotals(normalized);
+  const origin = process.env.SITE_URL || req.headers.origin || '';
+
+  const metadata = {
+    selected_agents: normalized.join(','),
+    client_id: body.client_id || '',
+    business_name: body.business_name || '',
+    contact_name: body.name || '',
+    phone: body.phone || '',
+    source: 'stilo-ai-site',
+  };
 
   try {
-    var session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: lineItems,
-      mode: prices.monthly ? 'subscription' : 'payment',
-      success_url: process.env.SITE_URL + '/dashboard.html?welcome=true&agent=' + agentId,
-      cancel_url: process.env.SITE_URL + '/index.html#pricing',
-      customer_email: clientEmail || undefined,
-      metadata: {
-        client_id: clientId || '',
-        agent_type: agentId
-      },
-      subscription_data: prices.monthly ? {
-        metadata: {
-          client_id: clientId || '',
-          agent_type: agentId
-        }
-      } : undefined,
-      payment_intent_data: !prices.monthly ? {
-        receipt_email: clientEmail || undefined
-      } : undefined
-    });
+    const session = await stripe.checkout.sessions.create(
+      Object.assign(
+        {
+          mode: hasRecurring ? 'subscription' : 'payment',
+          payment_method_types: ['card'],
+          line_items: lineItems,
+          customer_email: body.email || undefined,
+          allow_promotion_codes: true,
+          success_url: (function() {
+            var base = (origin || '') + '/auth.html?welcome=1&session_id={CHECKOUT_SESSION_ID}';
+            if (body.email) base += '&email=' + encodeURIComponent(body.email);
+            if (body.name) base += '&name=' + encodeURIComponent(body.name);
+            if (body.business_name) base += '&business=' + encodeURIComponent(body.business_name);
+            if (body.phone) base += '&phone=' + encodeURIComponent(body.phone);
+            return base;
+          })(),
+          cancel_url: (origin || '') + '/index.html#contact',
+          metadata: metadata,
+        },
+        hasRecurring
+          ? { subscription_data: { metadata: metadata } }
+          : { payment_intent_data: { receipt_email: body.email || undefined } }
+      )
+    );
 
-    res.status(200).json({ checkout_url: session.url });
+    return res.status(200).json({
+      checkout_url: session.url,
+      session_id: session.id,
+      totals: totals,
+      agents: normalized,
+    });
   } catch (err) {
     console.error('Stripe session error:', err);
-    res.status(500).json({ error: 'Failed to create checkout session' });
+    return res.status(500).json({
+      error: 'Failed to create checkout session',
+      detail: err && err.message ? err.message : String(err),
+    });
   }
-}
-
-module.exports = createCheckoutSession;
+};

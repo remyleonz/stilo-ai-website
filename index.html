@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+    <script defer src="/_vercel/insights/script.js"></script>
     <title>STILO AI PARTNERS | AI Consulting for Growing Businesses</title>
     <meta name="description" content="AI consulting agency: custom AI agents for receptionist, lead response, customer reactivation, SEO, lead generation, and more. Free AI audit. Deployed in days, not months.">
     <meta property="og:title" content="STILO AI PARTNERS | AI Consulting for Growing Businesses">
@@ -11,7 +14,7 @@
     <meta name="geo.region" content="US-FL">
     <meta name="geo.placename" content="Miami">
 
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://assets.calendly.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://assets.calendly.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://formspree.io https://calendly.com https://api.stripe.com; frame-src https://calendly.com https://js.stripe.com; form-action 'self' https://formspree.io; base-uri 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://assets.calendly.com https://js.stripe.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://assets.calendly.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://formspree.io https://calendly.com https://api.stripe.com https://va.vercel-scripts.com; frame-src https://calendly.com https://js.stripe.com; form-action 'self' https://formspree.io; base-uri 'self';">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -527,6 +530,7 @@
             grid-template-columns: 1fr;
             gap: 20px;
             margin-bottom: 72px;
+            align-items: start;
         }
         @media (min-width: 768px) { .services-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (min-width: 1024px) { .services-grid { grid-template-columns: repeat(4, 1fr); } }
@@ -1111,6 +1115,21 @@
         .rec-total-label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
         .rec-total-price { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
         .rec-intro { color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9375rem; }
+        .quiz-back-btn {
+            background: none; border: none; color: var(--text-secondary);
+            font-size: 0.875rem; cursor: pointer; padding: 0; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 6px; font-family: var(--font-body);
+            opacity: 0.7; transition: opacity 0.15s;
+        }
+        .quiz-back-btn:hover { opacity: 1; }
+        .all-agents-toggle-btn {
+            width: 100%; margin-top: 8px; padding: 10px 16px;
+            background: transparent; border: 1px dashed var(--border-strong);
+            color: var(--text-secondary); border-radius: var(--radius);
+            font-family: var(--font-body); font-size: 0.875rem; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .all-agents-toggle-btn:hover { border-color: var(--accent); color: var(--accent-light); }
     </style>
 </head>
 <body>
@@ -1694,6 +1713,7 @@
 
           <!-- STEP 2: Business Onboarding Quiz -->
           <div id="quizStep2" class="quiz-step" style="display:none;">
+            <button type="button" id="quizBackBtn" class="quiz-back-btn" style="display:none;" onclick="goBackQuestion()">&#8592; Back</button>
             <div class="quiz-step-label">Step 2 of 3 &middot; Your Business</div>
             <h3 class="quiz-step-title" id="quizGreeting">Tell us about your business</h3>
             <div id="quizQuestions">
@@ -1808,6 +1828,7 @@
 
           <!-- STEP 3: Recommendation -->
           <div id="quizStep3" class="quiz-step" style="display:none;">
+            <button type="button" class="quiz-back-btn" onclick="backToQuiz()">&#8592; Back to quiz</button>
             <div class="quiz-step-label">Step 3 of 3 &middot; Your AI Team</div>
             <h3 class="quiz-step-title" id="recTitle">Here's your recommended AI team</h3>
             <p class="rec-intro" id="recIntro">Based on your answers, here's what we'd build for you.</p>
@@ -1820,14 +1841,14 @@
             </div>
             <div class="rec-total-row">
               <span class="rec-total-label">Estimated Investment</span>
-              <span class="rec-total-price" id="recTotalPrice">$7,485 setup + $1,340/mo</span>
+              <span class="rec-total-price" id="recTotalPrice"></span>
             </div>
             <div style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;">
-              <a href="auth.html?tab=signup" class="btn-primary" style="flex:1; text-align:center; min-width:200px;">
+              <button type="button" id="proceedToCheckoutBtn" class="btn-primary" style="flex:1; min-width:200px;">
                 Get Started Now
-              </a>
-              <a href="#" onclick="openCalendlyPopup(); return false;" class="btn-ghost" style="flex:1; text-align:center; min-width:200px;">
-                Book a Free Audit
+              </button>
+              <a href="#" onclick="openCalendlyPopup(); return false;" class="btn-ghost" style="flex:1; min-width:200px; display:flex; align-items:center; justify-content:center; text-align:center;">
+                15 Min Free Call
               </a>
             </div>
             <p class="form-privacy" style="margin-top:12px;">Get started instantly, or book a 15-minute strategy call with Remy.</p>
@@ -2099,20 +2120,20 @@
   var totalQ = 10;
 
   var agentCatalog = [
-    { id: 'receptionist', name: 'AI Receptionist', icon: '📞', price: '$1,500 setup + $450/mo', desc: '24/7 voice agent that answers, books, and captures every call.', tiers: ['starter','growth','partner'] },
-    { id: 'lead-response', name: 'Lead Response Agent', icon: '⚡', price: '$2,000 setup + $650/mo', desc: 'Responds to every inbound lead in seconds, by email, text, and call.', tiers: ['growth','partner'] },
-    { id: 'reactivation', name: 'Customer Reactivation', icon: '🔁', price: '$2,500 setup + $800/mo', desc: 'Re-engage your dormant customer list and turn it back into revenue.', tiers: ['growth','partner'] },
-    { id: 'lead-gen', name: 'Lead Generator', icon: '🎯', price: '$2,500 setup + $1,000/mo', desc: 'AI-powered prospecting that finds and contacts your ideal customers at scale.', tiers: ['partner'] },
-    { id: 'website', name: 'AI Website', icon: '🌐', price: '$1,250 setup + $200/mo', desc: 'Conversion-optimized site researched and built for your exact business.', tiers: ['starter','growth','partner'] },
-    { id: 'seo', name: 'AI SEO (GEO)', icon: '🔍', price: '$1,000 one-time', desc: 'Get recommended by ChatGPT, Google AI, and every AI assistant in your area.', tiers: ['growth','partner'] },
-    { id: 'growth-intel', name: 'Growth Intelligence', icon: '📊', price: '$3,000 setup + $1,000/mo', desc: 'Weekly data-driven strategy: what\'s working, what\'s not, and what to do next.', tiers: ['partner'] },
-    { id: 'custom', name: 'Custom Automation', icon: '⚙️', price: 'From $1,000', desc: 'Got a specific problem? We\'ll build the AI solution for it.', tiers: ['partner'] }
+    { id: 'echo',   name: 'ECHO — AI Receptionist',      icon: '📞', setupCents: 150000, monthlyCents: 45000,  price: '$1,500 setup + $450/mo',     desc: '24/7 voice agent that answers, books, and captures every call.',                              tiers: ['starter','growth','partner'], selfServe: true },
+    { id: 'ignite', name: 'IGNITE — Lead Response',       icon: '⚡', setupCents: 200000, monthlyCents: 65000,  price: '$2,000 setup + $650/mo',     desc: 'Responds to every inbound lead in seconds, by email, text, and call.',                        tiers: ['growth','partner'], selfServe: true },
+    { id: 'revive', name: 'REVIVE — Customer Reactivation',icon:'🔁', setupCents: 250000, monthlyCents: 80000,  price: '$2,500 setup + $800/mo',     desc: 'Re-engage your dormant customer list and turn it back into revenue.',                         tiers: ['growth','partner'], selfServe: true },
+    { id: 'scout',  name: 'SCOUT — Lead Generator',       icon: '🎯', setupCents: 250000, monthlyCents: 100000, price: '$2,500 setup + $1,000/mo',   desc: 'AI-powered prospecting that finds and contacts your ideal customers at scale.',               tiers: ['partner'], selfServe: true },
+    { id: 'forge',  name: 'FORGE — AI Website',           icon: '🌐', setupCents: 125000, monthlyCents: 20000,  price: '$1,250 setup + $200/mo',     desc: 'Conversion-optimized site researched and built for your exact business.',                    tiers: ['starter','growth','partner'], selfServe: true },
+    { id: 'signal', name: 'SIGNAL — AI SEO (GEO)',        icon: '🔍', setupCents: 100000, monthlyCents: 0,      price: '$1,000 one-time',            desc: 'Get recommended by ChatGPT, Google AI, and every AI assistant in your area.',               tiers: ['growth','partner'], selfServe: true },
+    { id: 'oracle', name: 'ORACLE — Growth Intelligence', icon: '📊', setupCents: 300000, monthlyCents: 100000, price: '$3,000 setup + $1,000/mo',   desc: 'Weekly data-driven strategy: what\'s working, what\'s not, and what to do next.',           tiers: ['partner'], selfServe: true },
+    { id: 'flux',   name: 'FLUX — Custom Automation',     icon: '⚙️', setupCents: 0,      monthlyCents: 0,      price: 'From $1,000 (consult)',       desc: 'Got a specific problem? We\'ll build the AI solution for it.',                               tiers: ['partner'], selfServe: false }
   ];
 
   var tierData = {
-    starter: { label: 'Starter Package', agents: ['receptionist','website'], price: '$2,475 setup (10% off) + $650/mo' },
-    growth: { label: 'Growth Package', agents: ['receptionist','lead-response','reactivation','website','seo'], price: '$7,888 setup (15% off) + $2,800/mo' },
-    partner: { label: 'Growth Partner Package', agents: ['receptionist','lead-response','reactivation','lead-gen','website','seo','growth-intel'], price: '$7,485 setup + $1,340/mo' }
+    starter: { label: 'Starter Package',        agents: ['echo','forge'] },
+    growth:  { label: 'Growth Package',          agents: ['echo','ignite','revive','forge','signal'] },
+    partner: { label: 'Growth Partner Package',  agents: ['echo','ignite','revive','scout','forge','signal','oracle'] }
   };
 
   var currentTier = 'partner';
@@ -2156,6 +2177,7 @@
       next.style.display = 'block';
       currentQ = q + 1;
       updateProgress();
+      updateBackBtn();
     } else {
       showRecommendation();
     }
@@ -2165,6 +2187,42 @@
     var bar = document.getElementById('quizProgressBar');
     if (bar) bar.style.width = Math.round((currentQ / totalQ) * 100) + '%';
   }
+
+  function updateBackBtn() {
+    var btn = document.getElementById('quizBackBtn');
+    if (btn) btn.style.display = currentQ > 1 ? 'block' : 'none';
+  }
+
+  function goBackQuestion() {
+    if (currentQ <= 1) return;
+    var current = document.querySelector('.quiz-question[data-q="' + currentQ + '"]');
+    if (current) current.style.display = 'none';
+    currentQ -= 1;
+    var prev = document.querySelector('.quiz-question[data-q="' + currentQ + '"]');
+    if (prev) prev.style.display = 'block';
+    updateProgress();
+    updateBackBtn();
+  }
+
+  function backToQuiz() {
+    document.getElementById('quizStep3').style.display = 'none';
+    document.getElementById('quizStep2').style.display = 'block';
+    // Show the last answered question
+    for (var i = totalQ; i >= 1; i--) {
+      var q = document.querySelector('.quiz-question[data-q="' + i + '"]');
+      if (quizAnswers['q' + i] !== undefined) {
+        document.querySelectorAll('.quiz-question').forEach(function(el) { el.style.display = 'none'; });
+        if (q) q.style.display = 'block';
+        currentQ = i;
+        break;
+      }
+    }
+    updateProgress();
+    updateBackBtn();
+  }
+
+  window.goBackQuestion = goBackQuestion;
+  window.backToQuiz = backToQuiz;
 
   function showRecommendation() {
     var rev = quizAnswers.q6;
@@ -2184,6 +2242,43 @@
     renderTier(currentTier);
   }
 
+  function makeAgentCard(agent, included) {
+    var card = document.createElement('div');
+    card.className = 'agent-rec-card' + (included ? ' included' : '');
+    card.dataset.agentId = agent.id;
+    card.innerHTML =
+      '<div class="agent-rec-card-icon">' + agent.icon + '</div>' +
+      '<div class="agent-rec-card-body">' +
+        '<h4>' + agent.name + '</h4>' +
+        '<p>' + agent.desc + '</p>' +
+        '<span class="agent-rec-card-price">' + agent.price + '</span>' +
+      '</div>' +
+      '<button class="agent-toggle-btn" data-id="' + agent.id + '" title="' + (included ? 'Remove' : 'Add') + '">' +
+        (included ? '✓' : '+') +
+      '</button>';
+    card.querySelector('.agent-toggle-btn').addEventListener('click', function() { toggleAgent(this.dataset.id); });
+    return card;
+  }
+
+  function recalcPrice() {
+    var setupCents = 0;
+    var monthlyCents = 0;
+    Object.keys(selectedAgents).forEach(function(id) {
+      var a = agentCatalog.find(function(x) { return x.id === id; });
+      if (a && a.selfServe !== false) {
+        setupCents += a.setupCents;
+        monthlyCents += a.monthlyCents;
+      }
+    });
+    var el = document.getElementById('recTotalPrice');
+    if (!el) return;
+    if (!setupCents && !monthlyCents) { el.textContent = 'Select agents above'; return; }
+    var fmt = function(n) { return '$' + (n / 100).toLocaleString('en-US'); };
+    el.textContent = monthlyCents > 0
+      ? fmt(setupCents) + ' setup + ' + fmt(monthlyCents) + '/mo'
+      : fmt(setupCents) + ' one-time';
+  }
+
   function renderTier(tier) {
     currentTier = tier;
     var data = tierData[tier];
@@ -2192,8 +2287,6 @@
 
     var badge = document.getElementById('tierBadge');
     if (badge) badge.textContent = data.label;
-    var priceEl = document.getElementById('recTotalPrice');
-    if (priceEl) priceEl.textContent = data.price;
 
     // Update tier buttons
     document.querySelectorAll('.tier-switch-btn').forEach(function(btn) {
@@ -2205,32 +2298,45 @@
     var grid = document.getElementById('agentCards');
     if (!grid) return;
     grid.innerHTML = '';
+
+    // Tier agents
     agentCatalog.forEach(function(agent) {
-      if (agent.tiers.indexOf(tier) === -1) return;
-      var included = !!selectedAgents[agent.id];
-      var card = document.createElement('div');
-      card.className = 'agent-rec-card' + (included ? ' included' : '');
-      card.dataset.agentId = agent.id;
-      card.innerHTML =
-        '<div class="agent-rec-card-icon">' + agent.icon + '</div>' +
-        '<div class="agent-rec-card-body">' +
-          '<h4>' + agent.name + '</h4>' +
-          '<p>' + agent.desc + '</p>' +
-          '<span class="agent-rec-card-price">' + agent.price + '</span>' +
-        '</div>' +
-        '<button class="agent-toggle-btn" data-id="' + agent.id + '" title="' + (included ? 'Remove' : 'Add') + '">' +
-          (included ? '✓' : '+') +
-        '</button>';
-      grid.appendChild(card);
+      if (!agent.selfServe || agent.tiers.indexOf(tier) === -1) return;
+      grid.appendChild(makeAgentCard(agent, true));
     });
 
-    // Bind toggle buttons
-    grid.querySelectorAll('.agent-toggle-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() { toggleAgent(this.dataset.id); });
+    // "All Agents" expand — shows agents not in this tier
+    var extras = agentCatalog.filter(function(a) {
+      return a.selfServe && a.tiers.indexOf(tier) === -1;
     });
+    if (extras.length > 0) {
+      var allBtn = document.createElement('button');
+      allBtn.className = 'all-agents-toggle-btn';
+      allBtn.textContent = '+ All Agents';
+      var extraOpen = false;
+      var extraCards = [];
+      extras.forEach(function(agent) {
+        var card = makeAgentCard(agent, false);
+        card.style.display = 'none';
+        grid.insertBefore(card, null); // will append after allBtn is added below
+        extraCards.push(card);
+      });
+      allBtn.addEventListener('click', function() {
+        extraOpen = !extraOpen;
+        extraCards.forEach(function(c) { c.style.display = extraOpen ? '' : 'none'; });
+        allBtn.textContent = extraOpen ? '− Fewer agents' : '+ All Agents';
+      });
+      // Insert allBtn before the extra cards
+      extraCards.forEach(function(c) { grid.removeChild(c); });
+      grid.appendChild(allBtn);
+      extraCards.forEach(function(c) { grid.appendChild(c); });
+    }
+
+    recalcPrice();
   }
 
   function toggleAgent(id) {
+    if (!agentCatalog.find(function(a) { return a.id === id; })) return;
     if (selectedAgents[id]) {
       delete selectedAgents[id];
     } else {
@@ -2243,10 +2349,65 @@
       var btn = card.querySelector('.agent-toggle-btn');
       if (btn) { btn.textContent = inc ? '✓' : '+'; btn.title = inc ? 'Remove' : 'Add'; }
     });
+    recalcPrice();
   }
 
   // Expose switchTier globally for onclick attributes
   window.switchTier = function(tier) { renderTier(tier); };
+
+  // Expose quiz state for the checkout handler
+  window.getQuizCheckoutPayload = function() {
+    var ids = Object.keys(selectedAgents).filter(function(id) {
+      var meta = agentCatalog.find(function(a) { return a.id === id; });
+      return meta && meta.selfServe !== false;
+    });
+    return {
+      agent_ids: ids,
+      email: (document.getElementById('f_email') || {}).value || '',
+      business_name: (document.getElementById('f_business') || {}).value || '',
+      phone: (document.getElementById('f_phone') || {}).value || '',
+      name: (document.getElementById('f_name') || {}).value || ''
+    };
+  };
+
+  // Wire the Proceed to Checkout button
+  var checkoutBtn = document.getElementById('proceedToCheckoutBtn');
+  if (checkoutBtn) {
+    checkoutBtn.addEventListener('click', function() {
+      var payload = window.getQuizCheckoutPayload();
+      if (!payload.agent_ids.length) {
+        alert('Pick at least one agent from your team before checking out. FLUX (Custom Automation) is consult-only — book a call instead.');
+        return;
+      }
+      checkoutBtn.disabled = true;
+      var originalText = checkoutBtn.textContent;
+      checkoutBtn.textContent = 'Redirecting to Stripe...';
+      fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(res) {
+          return res.json().then(function(body) { return { ok: res.ok, body: body }; });
+        })
+        .then(function(result) {
+          if (!result.ok || !result.body.checkout_url) {
+            console.error('Checkout error:', result.body);
+            alert(result.body.error || 'Could not start checkout. Please try again or book a call.');
+            checkoutBtn.disabled = false;
+            checkoutBtn.textContent = originalText;
+            return;
+          }
+          window.location.href = result.body.checkout_url;
+        })
+        .catch(function(err) {
+          console.error('Checkout network error:', err);
+          alert('Network error. Please try again or book a call.');
+          checkoutBtn.disabled = false;
+          checkoutBtn.textContent = originalText;
+        });
+    });
+  }
 })();
 </script>
 
@@ -2270,72 +2431,21 @@ function openCalendlyPopup() {
 }
 </script>
 
-<!--
-============================================
-STRIPE CHECKOUT INTEGRATION
-============================================
-To enable Stripe checkout:
-
-1. Create a Stripe account at https://stripe.com
-2. Create Products and Prices for each agent:
-
-   AI Receptionist:
-     - Installation: $1,500 (one-time)
-     - Monthly: $450/mo (recurring)
-
-   Lead Response Agent:
-     - Installation: $2,000 (one-time)
-     - Monthly: $650/mo (recurring)
-
-   Custom AI Website:
-     - Installation: $1,250 (one-time)
-     - Monthly: $200/mo (recurring)
-
-   AI SEO (GEO):
-     - One-time: $1,000
-
-   Ontology Agent:
-     - Installation: $3,000 (one-time)
-     - Monthly: $1,000/mo (recurring)
-
-   LCR Agent:
-     - Installation: $2,500 (one-time)
-     - Monthly: $800/mo (recurring)
-
-   Lead Generator:
-     - Installation: $2,500 (one-time)
-     - Monthly: $1,000/mo (recurring)
-
-3. Set up Stripe Checkout Sessions via your backend API
-4. Create webhook endpoint for payment confirmation
-5. On successful payment: activate client account, redirect to dashboard
-
-Bundle discounts:
-  - Receptionist + Lead Response: 10% off installation ($3,150)
-  - Any 3+ agents: 15% off combined installation
-  - Full suite: Custom pricing
-
-Replace the auth.html signup links with Stripe Checkout session URLs
-when the backend API is deployed.
-============================================
--->
 <script>
-// Stripe checkout handler (connects to backend API when deployed)
+// Legacy single-agent checkout entry point kept for any deep links that still
+// pass one agent_id. Sends a single-item cart through the real bundle endpoint.
 function initiateStripeCheckout(agentId) {
-  // When backend is ready, this will create a Stripe Checkout Session
-  // and redirect the user to Stripe's hosted checkout page.
-  //
-  // fetch('/api/create-checkout-session', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ agent_id: agentId })
-  // })
-  // .then(function(res) { return res.json(); })
-  // .then(function(data) { window.location.href = data.checkout_url; })
-  // .catch(function(err) { console.error('Checkout error:', err); });
-
-  // For now, redirect to signup with agent pre-selected
-  window.location.href = 'auth.html?tab=signup&agent=' + agentId;
+  fetch('/api/create-checkout-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agent_ids: [agentId] })
+  })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.checkout_url) window.location.href = data.checkout_url;
+      else { alert(data.error || 'Could not start checkout.'); }
+    })
+    .catch(function(err) { console.error('Checkout error:', err); });
 }
 </script>
 
@@ -2353,12 +2463,25 @@ function initiateStripeCheckout(agentId) {
 // ============================================================
 document.querySelectorAll('.service-card').forEach(function(card) {
   card.addEventListener('click', function() {
-    var wasExpanded = this.classList.contains('expanded');
-    this.classList.toggle('expanded');
+    var self = this;
+    var wasExpanded = self.classList.contains('expanded');
+
+    // Close any other currently-expanded card (only one open at a time)
+    document.querySelectorAll('.service-card.expanded').forEach(function(other) {
+      if (other === self) return;
+      other.classList.remove('expanded');
+      var otherVideo = other.querySelector('.agent-demo-video');
+      if (otherVideo) {
+        otherVideo.pause();
+        otherVideo.currentTime = 0;
+      }
+    });
+
+    self.classList.toggle('expanded');
 
     if (!wasExpanded) {
       // Card just opened — load video if not already loaded
-      var video = this.querySelector('.agent-demo-video[data-src]');
+      var video = self.querySelector('.agent-demo-video[data-src]');
       if (video && !video.src) {
         video.src = video.dataset.src;
         video.load();
@@ -2366,7 +2489,7 @@ document.querySelectorAll('.service-card').forEach(function(card) {
       }
     } else {
       // Card just closed — pause and reset video
-      var video = this.querySelector('.agent-demo-video');
+      var video = self.querySelector('.agent-demo-video');
       if (video) {
         video.pause();
         video.currentTime = 0;
