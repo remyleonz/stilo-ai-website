@@ -967,6 +967,9 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
         <p class="rec-intro" id="recIntro">Based on your answers, here's what we'd build for you.</p>
         <div id="tierBadge" class="tier-badge"></div>
         <div id="agentCards" class="agent-rec-grid"></div>
+        <div style="margin-top:10px;margin-bottom:4px;">
+          <button id="showAllAgentsBtn" onclick="window.toggleShowAllAgents()" style="background:none;border:none;color:var(--violet-hi);font-size:0.82rem;cursor:pointer;padding:0;letter-spacing:0.02em;">+ Show all agents</button>
+        </div>
         <div class="tier-switch-row">
           <button class="tier-switch-btn" onclick="switchTier('starter')">Starter</button>
           <button class="tier-switch-btn" onclick="switchTier('growth')">Growth</button>
@@ -974,10 +977,10 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
         </div>
         <div class="rec-total-row">
           <span class="rec-total-label">Estimated Investment</span>
-          <span class="rec-total-price" id="recTotalPrice">$7,485 setup + $1,340/mo</span>
+          <span class="rec-total-price" id="recTotalPrice"></span>
         </div>
         <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
-          <a href="auth.html?tab=signup" onclick="return window.stiloCTA('purchase', event)" class="btn-primary" style="flex:1;text-align:center;min-width:200px;justify-content:center">Get Started Now</a>
+          <a href="#" onclick="return window.stiloCTA('purchase', event)" class="btn-primary" style="flex:1;text-align:center;min-width:200px;justify-content:center">Get Started Now</a>
           <a href="#" onclick="return window.stiloCTA('audit', event)" class="btn-ghost" style="flex:1;text-align:center;min-width:200px;justify-content:center">Book a Free 15-min Audit</a>
         </div>
         <p class="form-privacy" style="margin-top:12px;">Get started instantly, or book a 15-minute strategy call with Remy.</p>
@@ -1258,10 +1261,34 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
     { id: 'custom', name: 'Custom Automation', icon: 'FLUX', price: 'From $1,000', desc: 'Got a specific problem? We\'ll build the AI solution for it.', tiers: ['partner'] }
   ];
 
+  // Per-agent pricing — source of truth for all calculations
+  var agentPrices = {
+    'receptionist':  { setup: 1500, monthly: 450  },
+    'lead-response': { setup: 2000, monthly: 650  },
+    'reactivation':  { setup: 2500, monthly: 800  },
+    'lead-gen':      { setup: 2500, monthly: 1000 },
+    'website':       { setup: 1250, monthly: 200  },
+    'seo':           { setup: 1000, monthly: 0    },
+    'growth-intel':  { setup: 3000, monthly: 1000 },
+    'custom':        { setup: 1000, monthly: 0    }
+  };
+
+  // Maps quiz agent IDs to the API codenames expected by create-checkout-session
+  var agentApiMap = {
+    'receptionist':  'echo',
+    'lead-response': 'ignite',
+    'reactivation':  'revive',
+    'lead-gen':      'scout',
+    'website':       'forge',
+    'seo':           'signal',
+    'growth-intel':  'oracle',
+    'custom':        'flux'
+  };
+
   var tierData = {
-    starter: { label: 'Starter Package', agents: ['receptionist','website'], price: '$2,475 setup (10% off) + $650/mo' },
-    growth: { label: 'Growth Package', agents: ['receptionist','lead-response','reactivation','website','seo'], price: '$7,888 setup (15% off) + $2,800/mo' },
-    partner: { label: 'Growth Partner Package', agents: ['receptionist','lead-response','reactivation','lead-gen','website','seo','growth-intel'], price: '$7,485 setup + $1,340/mo' }
+    starter: { label: 'Starter',      agents: ['receptionist','website'] },
+    growth:  { label: 'Growth',       agents: ['receptionist','lead-response','reactivation','website','seo'] },
+    partner: { label: 'Partner',      agents: ['receptionist','lead-response','reactivation','lead-gen','website','seo','growth-intel'] }
   };
 
   var currentTier = 'partner';
@@ -1331,27 +1358,55 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
     renderTier(currentTier);
   }
 
+  var showingAllAgents = false;
+
+  function calcPrice() {
+    var setup = 0, monthly = 0;
+    Object.keys(selectedAgents).forEach(function(id) {
+      var p = agentPrices[id];
+      if (!p) return;
+      setup += p.setup;
+      monthly += p.monthly;
+    });
+    var parts = [];
+    if (setup > 0) parts.push('$' + setup.toLocaleString() + ' setup');
+    if (monthly > 0) parts.push('$' + monthly.toLocaleString() + '/mo');
+    if (parts.length === 0) parts.push('Select agents above');
+    return parts.join(' + ');
+  }
+
+  function updatePriceDisplay() {
+    var priceEl = document.getElementById('recTotalPrice');
+    if (priceEl) priceEl.textContent = calcPrice();
+  }
+
   function renderTier(tier) {
     currentTier = tier;
     var data = tierData[tier];
     selectedAgents = {};
     data.agents.forEach(function(id) { selectedAgents[id] = true; });
+    showingAllAgents = false;
 
     var badge = document.getElementById('tierBadge');
     if (badge) badge.textContent = data.label;
-    var priceEl = document.getElementById('recTotalPrice');
-    if (priceEl) priceEl.textContent = data.price;
 
     document.querySelectorAll('.tier-switch-btn').forEach(function(btn) {
       var onclick = btn.getAttribute('onclick') || '';
       btn.classList.toggle('active', onclick.indexOf("'" + tier + "'") !== -1);
     });
 
+    renderAgentGrid();
+    updatePriceDisplay();
+  }
+
+  function renderAgentGrid() {
     var grid = document.getElementById('agentCards');
     if (!grid) return;
     grid.innerHTML = '';
+
     agentCatalog.forEach(function(agent) {
-      if (agent.tiers.indexOf(tier) === -1) return;
+      var inTier = agent.tiers.indexOf(currentTier) !== -1;
+      if (!showingAllAgents && !inTier) return;
       var included = !!selectedAgents[agent.id];
       var card = document.createElement('div');
       card.className = 'agent-rec-card' + (included ? ' included' : '');
@@ -1364,7 +1419,7 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
           '<span class="agent-rec-card-price">' + agent.price + '</span>' +
         '</div>' +
         '<button class="agent-toggle-btn" data-id="' + agent.id + '" title="' + (included ? 'Remove' : 'Add') + '">' +
-          (included ? '✓' : '+') +
+          (included ? '&#10003;' : '+') +
         '</button>';
       grid.appendChild(card);
     });
@@ -1372,6 +1427,12 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
     grid.querySelectorAll('.agent-toggle-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { toggleAgent(this.dataset.id); });
     });
+
+    // Show/hide the "Show all agents" toggle button
+    var toggleAllBtn = document.getElementById('showAllAgentsBtn');
+    if (toggleAllBtn) {
+      toggleAllBtn.textContent = showingAllAgents ? 'Show recommended only' : '+ Show all agents';
+    }
   }
 
   function toggleAgent(id) {
@@ -1385,11 +1446,16 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
       var inc = !!selectedAgents[aid];
       card.classList.toggle('included', inc);
       var btn = card.querySelector('.agent-toggle-btn');
-      if (btn) { btn.textContent = inc ? '✓' : '+'; btn.title = inc ? 'Remove' : 'Add'; }
+      if (btn) { btn.innerHTML = inc ? '&#10003;' : '+'; btn.title = inc ? 'Remove' : 'Add'; }
     });
+    updatePriceDisplay();
   }
 
   window.switchTier = function(tier) { renderTier(tier); };
+  window.toggleShowAllAgents = function() {
+    showingAllAgents = !showingAllAgents;
+    renderAgentGrid();
+  };
 
   // Log lead to Supabase, then route to CTA destination.
   // cta_type: 'purchase' (Stripe flow) or 'audit' (Calendly popup)
@@ -1419,7 +1485,6 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
     } catch(e) {}
 
     if (ctaType === 'audit') {
-      // Open Calendly popup
       if (window.Calendly && window.Calendly.initPopupWidget) {
         window.Calendly.initPopupWidget({
           url: 'https://calendly.com/stiloaiconsulting/15min?hide_gdpr_banner=1&background_color=0c0c12&text_color=f6f6f8&primary_color=1d4ed8'
@@ -1429,9 +1494,43 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
       }
       return false;
     }
-    // Purchase path: go to signup with tier context
-    var params = new URLSearchParams({ tab: 'signup', tier: currentTier });
-    window.location.href = 'auth.html?' + params.toString();
+
+    // Purchase path: call Stripe bundle checkout with selected agents
+    var selectedIds = Object.keys(selectedAgents);
+    var apiIds = selectedIds.map(function(id) { return agentApiMap[id] || id; }).filter(Boolean);
+
+    if (apiIds.length === 0) {
+      alert('Please select at least one agent to get started.');
+      return false;
+    }
+
+    var getStartedBtn = document.querySelector('.btn-primary');
+    if (getStartedBtn) { getStartedBtn.textContent = 'Loading...'; getStartedBtn.style.pointerEvents = 'none'; }
+
+    fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agent_ids: apiIds,
+        email: payload.email || '',
+        business_name: payload.business_name || '',
+        name: payload.contact_name || ''
+      })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        // Fallback: go to auth signup if checkout session fails
+        window.location.href = 'auth.html?tab=signup&tier=' + currentTier;
+      }
+    })
+    .catch(function() {
+      // Fallback on network error
+      window.location.href = 'auth.html?tab=signup&tier=' + currentTier;
+    });
+
     return false;
   };
 })();
@@ -1441,21 +1540,6 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
 <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
 <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
 
-<!-- Stripe Checkout stub (preserved) -->
-<script>
-function initiateStripeCheckout(agentId) {
-  // When backend is ready:
-  // fetch('/api/create-checkout-session', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ agent_id: agentId })
-  // })
-  // .then(function(res) { return res.json(); })
-  // .then(function(data) { window.location.href = data.checkout_url; })
-  // .catch(function(err) { console.error('Checkout error:', err); });
-  window.location.href = 'auth.html?tab=signup&agent=' + agentId;
-}
-</script>
 
 </body>
 </html>
