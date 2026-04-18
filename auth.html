@@ -154,45 +154,6 @@
             box-shadow: 0 24px 60px -24px rgba(37,99,235,0.25);
         }
 
-        .auth-tabs {
-            display: flex;
-            gap: 0;
-            margin-bottom: 28px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 12px 0;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-family: var(--font-body);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            position: relative;
-            transition: color 0.2s;
-        }
-
-        .auth-tab.active {
-            color: var(--purple-light);
-        }
-
-        .auth-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--purple);
-            border-radius: 2px 2px 0 0;
-        }
-
-        .auth-form { display: none; }
-        .auth-form.active { display: block; }
-
         .form-group {
             margin-bottom: 18px;
         }
@@ -227,12 +188,6 @@
             color: var(--text-muted);
         }
 
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
         .btn-primary {
             width: 100%;
             padding: 13px 24px;
@@ -255,41 +210,6 @@
 
         .btn-primary:active {
             transform: translateY(0);
-        }
-
-        .divider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 20px 0;
-            color: var(--text-muted);
-            font-size: 12px;
-        }
-
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
-
-        .btn-magic-link {
-            width: 100%;
-            padding: 12px 24px;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-secondary);
-            font-family: var(--font-body);
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: border-color 0.2s, color 0.2s;
-        }
-
-        .btn-magic-link:hover {
-            border-color: var(--purple);
-            color: var(--purple-light);
         }
 
         .error-message {
@@ -376,66 +296,21 @@
               <p class="welcome-email-note">You'll get a secure link straight to your client portal. No password, no hassle.</p>
             </div>
 
-            <!-- Normal tabs — hidden in welcome mode -->
+            <!-- Sign-in — magic link only -->
             <div id="normal-mode">
-              <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchTab('signin')">Sign In</button>
-                <button class="auth-tab" onclick="switchTab('signup')">Create Account</button>
+              <div style="margin-bottom:24px;">
+                <h2 style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">Sign in to your dashboard</h2>
+                <p style="font-size:13px;color:var(--text-secondary);line-height:1.55;">Enter your email and we'll send a one-click login link straight to your inbox. No password needed.</p>
               </div>
-
               <div id="error-msg" class="error-message"></div>
               <div id="success-msg" class="success-message"></div>
+              <div class="form-group">
+                <label for="signin-email">Email</label>
+                <input type="email" id="signin-email" placeholder="you@business.com" autocomplete="email">
+              </div>
+              <button type="button" class="btn-primary" onclick="handleMagicLink()">Send My Login Link</button>
+              <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:14px;line-height:1.5;">Link expires in 1 hour and works once. Check spam if it doesn't arrive.</p>
             </div>
-
-            <!-- Sign In Form -->
-            <form id="signin-form" class="auth-form active" onsubmit="handleSignIn(event)">
-                <div class="form-group">
-                    <label for="signin-email">Email</label>
-                    <input type="email" id="signin-email" placeholder="you@business.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="signin-password">Password</label>
-                    <input type="password" id="signin-password" placeholder="Your password" required>
-                </div>
-                <button type="submit" class="btn-primary">Sign In</button>
-
-                <div class="divider">or</div>
-
-                <button type="button" class="btn-magic-link" onclick="handleMagicLink()">
-                    Sign in with Magic Link
-                </button>
-            </form>
-
-            <!-- Sign Up Form -->
-            <form id="signup-form" class="auth-form" onsubmit="handleSignUp(event)">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="signup-name">Your Name</label>
-                        <input type="text" id="signup-name" placeholder="Remy Leon" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="signup-phone">Phone</label>
-                        <input type="tel" id="signup-phone" placeholder="(786) 555-0100">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="signup-business">Business Name</label>
-                    <input type="text" id="signup-business" placeholder="Your Business" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-type">Business Type</label>
-                    <input type="text" id="signup-type" placeholder="Salon, gym, dental, restaurant...">
-                </div>
-                <div class="form-group">
-                    <label for="signup-email">Email</label>
-                    <input type="email" id="signup-email" placeholder="you@business.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-password">Password</label>
-                    <input type="password" id="signup-password" placeholder="At least 8 characters" minlength="8" required>
-                </div>
-                <button type="submit" class="btn-primary">Create Account</button>
-            </form>
         </div>
 
         <p class="footer-text">
@@ -482,23 +357,6 @@
 
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ============================================
-        // TAB SWITCHING
-        // ============================================
-        function switchTab(tab) {
-            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-            hideMessages();
-
-            if (tab === 'signin') {
-                document.querySelectorAll('.auth-tab')[0].classList.add('active');
-                document.getElementById('signin-form').classList.add('active');
-            } else {
-                document.querySelectorAll('.auth-tab')[1].classList.add('active');
-                document.getElementById('signup-form').classList.add('active');
-            }
-        }
-
         function showError(msg) {
             var el = document.getElementById('error-msg');
             el.textContent = msg;
@@ -516,69 +374,6 @@
         function hideMessages() {
             document.getElementById('error-msg').style.display = 'none';
             document.getElementById('success-msg').style.display = 'none';
-        }
-
-        // ============================================
-        // AUTH HANDLERS (demo mode, swap for Supabase)
-        // ============================================
-
-        async function handleSignIn(e) {
-            e.preventDefault();
-            var email = document.getElementById('signin-email').value;
-            var password = document.getElementById('signin-password').value;
-
-            try {
-                const { data, error } = await sb.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-                if (error) { showError(error.message); return; }
-
-                // Check if admin, route accordingly
-                const { data: client } = await sb.from('clients')
-                    .select('is_admin')
-                    .eq('id', data.user.id)
-                    .single();
-
-                if (client && client.is_admin) {
-                    window.location.href = '/admin';
-                } else {
-                    window.location.href = '/app';
-                }
-            } catch (err) {
-                showError('Something went wrong. Please try again.');
-            }
-        }
-
-        async function handleSignUp(e) {
-            e.preventDefault();
-            var name = document.getElementById('signup-name').value;
-            var phone = document.getElementById('signup-phone').value;
-            var business = document.getElementById('signup-business').value;
-            var businessType = document.getElementById('signup-type').value;
-            var email = document.getElementById('signup-email').value;
-            var password = document.getElementById('signup-password').value;
-
-            try {
-                const { data: authData, error: authError } = await sb.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: {
-                        emailRedirectTo: window.location.origin + '/app/',
-                        data: { contact_name: name, business_name: business, phone: phone, business_type: businessType }
-                    }
-                });
-                if (authError) { showError(authError.message); return; }
-
-                // If session exists immediately (email confirm disabled), go to dashboard
-                if (authData.session) {
-                    window.location.href = '/dashboard.html';
-                    return;
-                }
-                showSuccess('Account created. Check your email for a confirmation link, then you\'ll land straight in your dashboard.');
-            } catch (err) {
-                showError('Something went wrong. Please try again.');
-            }
         }
 
         async function handleMagicLink() {
@@ -670,44 +465,21 @@
             var isWelcome = params.get('welcome') === '1' || params.get('welcome') === 'true';
 
             if (isWelcome) {
-                // Hide normal tabs/forms, show welcome card
                 document.getElementById('normal-mode').style.display = 'none';
-                document.getElementById('signin-form').style.display = 'none';
-                document.getElementById('signup-form').style.display = 'none';
                 document.getElementById('welcome-mode').style.display = 'block';
 
-                // Pre-fill email
+                // Pre-fill email if passed from Stripe redirect
                 var email = params.get('email') || '';
                 if (email) document.getElementById('welcome-email').value = email;
 
-                // Update subtitle
                 var logoP = document.querySelector('.logo p');
                 if (logoP) logoP.textContent = 'You\'re almost in';
-
             } else {
-                // Normal mode: pre-fill signup form from URL params
-                if (params.get('name')) {
-                    var nf = document.getElementById('signup-name');
-                    if (nf) nf.value = params.get('name');
-                }
-                if (params.get('email')) {
-                    var ef = document.getElementById('signup-email') || document.getElementById('signin-email');
-                    if (ef) ef.value = params.get('email');
-                }
-                if (params.get('business')) {
-                    var bf = document.getElementById('signup-business');
-                    if (bf) bf.value = params.get('business');
-                }
-                if (params.get('phone')) {
-                    var pf = document.getElementById('signup-phone');
-                    if (pf) pf.value = params.get('phone');
-                }
-                if (params.get('type')) {
-                    var tf = document.getElementById('signup-type');
-                    if (tf) tf.value = params.get('type');
-                }
-                if (params.get('tab') === 'signup') {
-                    switchTab('signup');
+                // Pre-fill email from URL param (e.g. from marketing site)
+                var email = params.get('email') || '';
+                if (email) {
+                    var ef = document.getElementById('signin-email');
+                    if (ef) ef.value = email;
                 }
             }
         })();
