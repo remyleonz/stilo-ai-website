@@ -9,22 +9,26 @@
     <title>STILO AI PARTNERS | Sign In</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-accent: 'Instrument Serif', Georgia, serif;
+            --font-body: 'Geist', system-ui, sans-serif;
+            --font-mono: 'Geist Mono', ui-monospace, monospace;
             --bg-primary: #0a0a0f;
             --bg-secondary: #12121a;
             --bg-card: #1a1a2e;
             --bg-input: #16162a;
-            --border: rgba(168, 85, 247, 0.15);
-            --border-focus: rgba(168, 85, 247, 0.5);
+            --border: rgba(37, 99, 235, 0.15);
+            --border-focus: rgba(37, 99, 235, 0.5);
             --text-primary: #f0f0f5;
             --text-secondary: #8888a0;
             --text-muted: #555570;
-            --purple: #a855f7;
-            --purple-dark: #7c3aed;
-            --purple-light: #c084fc;
-            --purple-glow: rgba(168, 85, 247, 0.15);
+            --purple: #2563eb;
+            --purple-dark: #2563eb;
+            --purple-light: #60a5fa;
+            --purple-glow: rgba(37, 99, 235, 0.15);
             --green: #22c55e;
             --red: #ef4444;
         }
@@ -32,7 +36,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: var(--font-body);
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -55,8 +59,8 @@
             padding: 48px 24px;
             position: relative;
             background:
-              radial-gradient(ellipse at 30% 20%, rgba(168, 85, 247, 0.08) 0%, transparent 55%),
-              radial-gradient(ellipse at 70% 80%, rgba(124, 58, 237, 0.05) 0%, transparent 55%),
+              radial-gradient(ellipse at 30% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 55%),
+              radial-gradient(ellipse at 70% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 55%),
               var(--bg-primary);
         }
         .starfield {
@@ -67,7 +71,7 @@
               radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.6) 50%, transparent),
               radial-gradient(1px 1px at 65% 55%, rgba(255,255,255,0.5) 50%, transparent),
               radial-gradient(1px 1px at 15% 85%, #fff 50%, transparent),
-              radial-gradient(1.5px 1.5px at 90% 40%, #a855f7 50%, transparent);
+              radial-gradient(1.5px 1.5px at 90% 40%, #2563eb 50%, transparent);
             background-size: 400px 400px;
         }
 
@@ -92,7 +96,7 @@
         }
         .auth-hero-overlay {
             position: absolute; inset: 0;
-            background: linear-gradient(135deg, rgba(124,58,237,0.35) 0%, rgba(10,10,15,0.85) 100%);
+            background: linear-gradient(135deg, rgba(37,99,235,0.35) 0%, rgba(10,10,15,0.85) 100%);
         }
         .auth-hero-content {
             position: absolute; inset: 0;
@@ -105,8 +109,8 @@
             font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
             text-transform: uppercase; color: var(--purple-light);
             padding: 6px 12px; border-radius: 999px;
-            background: rgba(168, 85, 247, 0.12);
-            border: 1px solid rgba(168, 85, 247, 0.25);
+            background: rgba(37, 99, 235, 0.12);
+            border: 1px solid rgba(37, 99, 235, 0.25);
             width: fit-content;
         }
         .auth-hero-quotes {
@@ -124,7 +128,7 @@
         }
 
         .logo a {
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: var(--font-display);
             font-size: 28px;
             font-weight: 800;
             text-decoration: none;
@@ -142,12 +146,12 @@
 
         .auth-card {
             background: rgba(26, 26, 46, 0.55);
-            border: 1px solid rgba(168, 85, 247, 0.18);
+            border: 1px solid rgba(37, 99, 235, 0.18);
             border-radius: 18px;
             padding: 36px;
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            box-shadow: 0 24px 60px -24px rgba(168,85,247,0.25);
+            box-shadow: 0 24px 60px -24px rgba(37,99,235,0.25);
         }
 
         .auth-tabs {
@@ -163,7 +167,7 @@
             background: none;
             border: none;
             color: var(--text-secondary);
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-body);
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
@@ -208,7 +212,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             color: var(--text-primary);
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-body);
             font-size: 14px;
             transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
@@ -236,7 +240,7 @@
             border: none;
             border-radius: 10px;
             color: white;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-body);
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
@@ -246,7 +250,7 @@
 
         .btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 8px 24px rgba(168, 85, 247, 0.25);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
         }
 
         .btn-primary:active {
@@ -276,7 +280,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             color: var(--text-secondary);
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-body);
             font-size: 13px;
             font-weight: 500;
             cursor: pointer;
