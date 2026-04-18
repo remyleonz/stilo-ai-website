@@ -14,6 +14,45 @@
 --   oracle = Growth Intelligence
 --   flux = Custom Automations
 
+-- Leads table (pre-purchase / pre-booking capture)
+-- Captures quiz results and contact info at the moment someone clicks
+-- "Get Started Now" or "Book a Free Audit", BEFORE they hit Stripe or
+-- confirm Calendly. This gives us retargeting data for drop-offs.
+create table public.leads (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  cta_type text not null check (cta_type in ('purchase','audit')),
+  contact_name text,
+  email text,
+  phone text,
+  business_name text,
+  quiz_answers jsonb default '{}',
+  tier text,
+  selected_agents jsonb default '[]',
+  estimated_price text,
+  referrer text,
+  page_url text,
+  ip text,
+  user_agent text,
+  -- populated later when/if they convert
+  converted boolean default false,
+  converted_at timestamptz,
+  stripe_session_id text,
+  client_id uuid references public.clients(id) on delete set null
+);
+
+create index idx_leads_email on public.leads(email);
+create index idx_leads_created_at on public.leads(created_at desc);
+create index idx_leads_cta_type on public.leads(cta_type);
+create index idx_leads_converted on public.leads(converted);
+
+alter table public.leads enable row level security;
+-- Only admins can read leads. No public read/write (API uses service role).
+create policy "Admins can view all leads" on public.leads
+  for select using (
+    exists (select 1 from public.clients where id = auth.uid() and is_admin = true)
+  );
+
 -- Users table (extends Supabase auth.users)
 create table public.clients (
   id uuid references auth.users primary key,

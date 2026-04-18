@@ -88,13 +88,13 @@
   --fg:#F6F6F8;
   --fg-2:#A8A8B3;
   --fg-3:#6E6E7A;
-  --violet:#2563EB;
-  --violet-hi:#3B82F6;
-  --violet-glow:#60A5FA;
-  --plasma:#06B6D4;
-  --iris:#38BDF8;
-  --grad-rim:linear-gradient(135deg,#2563EB 0%,#06B6D4 100%);
-  --grad-text:linear-gradient(135deg,#F6F6F8 0%,#3B82F6 40%,#06B6D4 80%,#F6F6F8 100%);
+  --violet:#1D4ED8;
+  --violet-hi:#2563EB;
+  --violet-glow:#3B82F6;
+  --plasma:#0891B2;
+  --iris:#0284C7;
+  --grad-rim:linear-gradient(135deg,#1D4ED8 0%,#0891B2 100%);
+  --grad-text:linear-gradient(135deg,#F6F6F8 0%,#2563EB 40%,#0E7490 80%,#F6F6F8 100%);
   --font-display:'Space Grotesk',system-ui,sans-serif;
   --font-accent:'Instrument Serif',Georgia,serif;
   --font-body:'Geist','Inter Tight',system-ui,sans-serif;
@@ -549,17 +549,6 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
   .marquee-track,.testi-track{animation:none}
 }
 
-/* ========== BOOK / CALENDLY INLINE ========== */
-.book-section{padding:120px 0;border-top:1px solid var(--stroke);background:linear-gradient(180deg,var(--bg-void) 0%,var(--bg-plate) 100%)}
-.book-inner{display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.2fr);gap:56px;align-items:start}
-.book-copy h2{font-size:clamp(2rem,3.6vw,2.8rem);margin-bottom:20px}
-.book-copy p{color:var(--fg-2);max-width:48ch;margin-bottom:28px}
-.book-bullets{list-style:none;display:flex;flex-direction:column;gap:14px}
-.book-bullets li{position:relative;padding-left:28px;color:var(--fg-2);font-size:0.98rem}
-.book-bullets li::before{content:"";position:absolute;left:0;top:9px;width:14px;height:2px;background:var(--violet-hi);border-radius:2px}
-.book-bullets b{color:var(--fg)}
-.calendly-inline-widget{border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--stroke);background:var(--bg-plate)}
-@media (max-width:900px){.book-inner{grid-template-columns:1fr}.calendly-inline-widget{height:660px !important;min-width:100% !important}}
     </style>
 </head>
 <body>
@@ -988,30 +977,12 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
           <span class="rec-total-price" id="recTotalPrice">$7,485 setup + $1,340/mo</span>
         </div>
         <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
-          <a href="auth.html?tab=signup" class="btn-primary" style="flex:1;text-align:center;min-width:200px;justify-content:center">Get Started Now</a>
-          <a href="#book" onclick="revealCalendly();return false;" class="btn-ghost" style="flex:1;text-align:center;min-width:200px;justify-content:center">Book a Free 15-min Audit</a>
+          <a href="auth.html?tab=signup" onclick="return window.stiloCTA('purchase', event)" class="btn-primary" style="flex:1;text-align:center;min-width:200px;justify-content:center">Get Started Now</a>
+          <a href="#" onclick="return window.stiloCTA('audit', event)" class="btn-ghost" style="flex:1;text-align:center;min-width:200px;justify-content:center">Book a Free 15-min Audit</a>
         </div>
         <p class="form-privacy" style="margin-top:12px;">Get started instantly, or book a 15-minute strategy call with Remy.</p>
       </div>
 
-    </div>
-  </div>
-</section>
-
-<!-- ===== CALENDLY INLINE EMBED ===== -->
-<section id="book" class="book-section">
-  <div class="container">
-    <div class="book-inner">
-      <div class="book-copy">
-        <h2>Book your <span class="gradient-text">free 15-minute audit</span></h2>
-        <p>Pick a time that works. You'll get a focused 15-minute walkthrough of where AI can move the needle for your business — no fluff, no pressure.</p>
-        <ul class="book-bullets">
-          <li><b>ROI projections</b> per agent, based on your actual numbers</li>
-          <li><b>AI search readiness score</b> you can keep</li>
-          <li><b>No sales pitch.</b> If we're not a fit, we'll tell you</li>
-        </ul>
-      </div>
-      <div class="calendly-inline-widget" data-url="https://calendly.com/stiloaiconsulting/15min?hide_gdpr_banner=1&background_color=0c0c12&text_color=f6f6f8&primary_color=2563eb" style="min-width:320px;height:720px;"></div>
     </div>
   </div>
 </section>
@@ -1094,10 +1065,10 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
     '  q.y+=0.18*fbm(q+vec2(3.7,1.2)+T*0.038);',
     '  float n=fbm(q*1.5+T*0.05);',
     '  float n2=fbm(q*2.6-T*0.035);',
-    '  vec3 cA=vec3(0.486,0.227,0.929);',
-    '  vec3 cB=vec3(0.910,0.475,0.976);',
-    '  vec3 cC=vec3(0.376,0.647,0.980);',
-    '  vec3 cD=vec3(0.024,0.024,0.039);',
+    '  vec3 cA=vec3(0.067,0.137,0.341);',
+    '  vec3 cB=vec3(0.114,0.306,0.847);',
+    '  vec3 cC=vec3(0.055,0.455,0.565);',
+    '  vec3 cD=vec3(0.008,0.024,0.090);',
     '  vec3 col=mix(cD,cA,smoothstep(-0.2,0.6,n));',
     '  col=mix(col,cB,smoothstep(0.2,0.9,n2)*0.7);',
     '  col=mix(col,cC,smoothstep(0.1,0.8,n*n2)*0.35);',
@@ -1419,19 +1390,56 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
   }
 
   window.switchTier = function(tier) { renderTier(tier); };
+
+  // Log lead to Supabase, then route to CTA destination.
+  // cta_type: 'purchase' (Stripe flow) or 'audit' (Calendly popup)
+  window.stiloCTA = function(ctaType, ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    var payload = {
+      cta_type: ctaType,
+      contact_name: (document.getElementById('f_name')||{}).value || '',
+      email: (document.getElementById('f_email')||{}).value || '',
+      phone: (document.getElementById('f_phone')||{}).value || '',
+      business_name: (document.getElementById('f_business')||{}).value || '',
+      quiz_answers: quizAnswers,
+      tier: currentTier,
+      selected_agents: Object.keys(selectedAgents),
+      estimated_price: (tierData[currentTier]||{}).price || '',
+      referrer: document.referrer || '',
+      page_url: window.location.href
+    };
+    // Fire-and-forget. Don't block the user if the API is slow/down.
+    try {
+      fetch('/api/log-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(function(){});
+    } catch(e) {}
+
+    if (ctaType === 'audit') {
+      // Open Calendly popup
+      if (window.Calendly && window.Calendly.initPopupWidget) {
+        window.Calendly.initPopupWidget({
+          url: 'https://calendly.com/stiloaiconsulting/15min?hide_gdpr_banner=1&background_color=0c0c12&text_color=f6f6f8&primary_color=1d4ed8'
+        });
+      } else {
+        window.open('https://calendly.com/stiloaiconsulting/15min', '_blank');
+      }
+      return false;
+    }
+    // Purchase path: go to signup with tier context
+    var params = new URLSearchParams({ tab: 'signup', tier: currentTier });
+    window.location.href = 'auth.html?' + params.toString();
+    return false;
+  };
 })();
 </script>
 
-<!-- Calendly Popup Widget (preserved) -->
+<!-- Calendly Popup Widget -->
 <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
 <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
-<script>
-function openCalendlyPopup() { revealCalendly(); return false; }
-function revealCalendly() {
-  var el = document.getElementById('book');
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-</script>
 
 <!-- Stripe Checkout stub (preserved) -->
 <script>
