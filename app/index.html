@@ -1170,14 +1170,8 @@
     <header class="topbar">
         <div class="topbar-left">
             <div class="logo" onclick="window.location.reload()" style="cursor:pointer;" title="Refresh">STILO AI PARTNERS</div>
-            <div class="topbar-divider"></div>
-            <div class="client-name">Demo Business</div>
         </div>
         <div class="topbar-right">
-            <button class="topbar-btn" onclick="openSettings()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                Settings
-            </button>
             <div class="profile-trigger" id="profileTrigger" onclick="toggleProfile()">
                 <div class="avatar">DB</div>
                 <span class="profile-name">Demo Business</span>
@@ -1776,7 +1770,6 @@
                 || user.email.split('@')[0];
 
             // Update top bar
-            document.querySelector('.client-name').textContent = displayName;
             document.querySelector('.profile-name').textContent = displayName;
             document.querySelector('.avatar').textContent = displayName.charAt(0).toUpperCase();
             document.querySelector('.page-header p').textContent =
@@ -1826,18 +1819,33 @@
 
         // --- Load agent data from Supabase ---
         async function loadAgentData(clientId) {
+            // Always hide demo cards immediately — never show hardcoded data
+            var grid = document.querySelector('.agent-grid');
+            document.querySelectorAll('.agent-card').forEach(function(card) {
+                card.style.display = 'none';
+            });
+
             const { data: agents, error } = await sb
                 .from('client_agents')
                 .select('*, onboarding_steps(*)')
                 .eq('client_id', clientId)
                 .neq('status', 'cancelled');
 
-            if (error || !agents) return;
-
-            // Hide all agent cards first
-            document.querySelectorAll('.agent-card').forEach(function(card) {
-                card.style.display = 'none';
-            });
+            if (error) {
+                console.error('[loadAgentData] query error:', error.message);
+                if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;">'
+                    + '<p style="font-size:0.9375rem;color:var(--text-secondary);margin-bottom:0.5rem;">Could not load your agents.</p>'
+                    + '<p style="font-size:0.8125rem;color:var(--text-tertiary);">Refresh the page or contact support if this continues.</p>'
+                    + '</div>';
+                return;
+            }
+            if (!agents || agents.length === 0) {
+                if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--text-tertiary);">'
+                    + '<p style="font-size:1rem;color:var(--text-secondary);margin-bottom:0.5rem;">No agents yet</p>'
+                    + '<p style="font-size:0.875rem;">Your agents will appear here after purchase.</p>'
+                    + '</div>';
+                return;
+            }
 
             var activeCount = 0;
             var setupCount = 0;
@@ -1858,11 +1866,6 @@
                         statusEl.className = 'agent-status status-setup';
                         statusEl.innerHTML = '<span class="status-dot"></span>Setting up';
                         setupCount++;
-                        // Clear fake stats — real numbers appear once agent goes live
-                        var statsEl = card.querySelector('.agent-stats');
-                        if (statsEl) {
-                            statsEl.innerHTML = '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats will appear once this agent goes live.</div>';
-                        }
                     } else if (agent.status === 'active') {
                         statusEl.className = 'agent-status status-active';
                         statusEl.innerHTML = '<span class="status-dot"></span>Active';
@@ -1870,6 +1873,19 @@
                     } else if (agent.status === 'paused') {
                         statusEl.className = 'agent-status status-paused';
                         statusEl.innerHTML = '<span class="status-dot"></span>Paused';
+                    }
+                }
+
+                // Always wipe hardcoded demo stats — replace with real data or placeholder
+                var statsEl = card.querySelector('.agent-stats');
+                if (statsEl) {
+                    if (agent.status === 'onboarding') {
+                        statsEl.innerHTML = '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats will appear once this agent goes live.</div>';
+                    } else {
+                        // Replace every stat-value with "--" until real metrics load
+                        statsEl.querySelectorAll('.stat-value').forEach(function(el) {
+                            el.textContent = '--';
+                        });
                     }
                 }
 
@@ -1928,15 +1944,6 @@
                 planBadgeEl.textContent = setupCount > 0 ? 'Setting Up' : 'Active';
                 planBadgeEl.style.background = setupCount > 0 ? 'var(--yellow-bg)' : '';
                 planBadgeEl.style.color = setupCount > 0 ? 'var(--yellow)' : '';
-            }
-
-            // If no agents at all, show empty state
-            if (agents.length === 0) {
-                var grid = document.querySelector('.agent-grid');
-                if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--text-tertiary);">'
-                    + '<p style="font-size:1rem;color:var(--text-secondary);margin-bottom:0.5rem;">No agents yet</p>'
-                    + '<p style="font-size:0.875rem;">Your agents will appear here after purchase.</p>'
-                    + '</div>';
             }
 
             // Load summary metrics across all agents
