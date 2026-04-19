@@ -1658,7 +1658,8 @@
                             <label class="form-label">Address</label>
                             <input type="text" id="settingAddress" placeholder="Street, City, State ZIP">
                         </div>
-                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;">Save Changes</button>
+                        <button class="btn btn-primary btn-sm" id="saveSettingsBtn" style="align-self:flex-start;" onclick="saveAccountSettings()">Save Changes</button>
+                        <div id="saveSettingsMsg" style="display:none;font-size:13px;margin-top:8px;"></div>
                     </div>
                 </div>
 
@@ -1748,6 +1749,7 @@
         // Admin emails — same list as admin/index.html so we can redirect without a DB query
         var ADMIN_EMAILS_APP = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com'];
         var appInitialized = false;
+        var currentUserId = null; // set during initDashboard, used by saveAccountSettings
 
         async function initDashboard(session) {
             if (appInitialized) return;
@@ -1756,6 +1758,7 @@
                 return;
             }
             appInitialized = true;
+            currentUserId = session.user.id;
 
             // If an admin was redirected here by a magic link, send them to /admin/
             // Check email first (fast, no DB), then also check DB is_admin as fallback
@@ -1967,6 +1970,52 @@
             // Load summary metrics across all agents
             var agentIds = agents.map(function(a) { return a.id; });
             if (agentIds.length > 0) loadSummaryMetrics(agentIds);
+        }
+
+        // --- Account Settings: save business info to Supabase ---
+        async function saveAccountSettings() {
+            if (!currentUserId) return;
+            var btn = document.getElementById('saveSettingsBtn');
+            var msg = document.getElementById('saveSettingsMsg');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            if (msg) msg.style.display = 'none';
+
+            var businessName = (document.getElementById('settingBusinessName') || {}).value || '';
+            var email = (document.getElementById('settingEmail') || {}).value || '';
+            var phone = (document.getElementById('settingPhone') || {}).value || '';
+            var address = (document.getElementById('settingAddress') || {}).value || '';
+            var industryEl = document.getElementById('settingIndustry');
+            var industry = industryEl ? industryEl.options[industryEl.selectedIndex].value : '';
+
+            var { error } = await sb.from('clients')
+                .update({
+                    business_name: businessName,
+                    email: email,
+                    phone: phone,
+                    address: address,
+                    business_type: industry
+                })
+                .eq('id', currentUserId);
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+            if (msg) {
+                msg.style.display = 'block';
+                if (error) {
+                    msg.style.color = 'var(--red)';
+                    msg.textContent = 'Could not save. Try again.';
+                } else {
+                    msg.style.color = 'var(--green)';
+                    msg.textContent = 'Saved.';
+                    // Update top bar with new business name
+                    if (businessName) {
+                        var pName = document.querySelector('.profile-name');
+                        var avatar = document.querySelector('.avatar');
+                        if (pName) pName.textContent = businessName;
+                        if (avatar) avatar.textContent = businessName.charAt(0).toUpperCase();
+                    }
+                    setTimeout(function(){ if (msg) msg.style.display = 'none'; }, 3000);
+                }
+            }
         }
 
         // --- Save an onboarding step and advance to the next ---

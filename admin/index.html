@@ -889,7 +889,7 @@
         <main class="main-content">
             <div class="main-header">
                 <h1 id="pageTitle">Dashboard</h1>
-                <span class="header-meta">April 14, 2026</span>
+                <span class="header-meta" id="headerDate"></span>
             </div>
 
             <!-- ============================================================
@@ -919,38 +919,32 @@
                     </button>
                 </div>
 
-                <!-- Summary Cards -->
+                <!-- Summary Cards — values populated by loadDashboard() -->
                 <div class="summary-strip">
                     <div class="summary-card">
-                        <div class="summary-card-label">Monthly Recurring Revenue</div>
-                        <div class="summary-card-value">$8,450</div>
-                        <span class="summary-card-change up">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"/></svg>
-                            12%
-                        </span>
+                        <div class="summary-card-label">Total Clients</div>
+                        <div class="summary-card-value" id="statTotalClients">—</div>
+                        <span class="summary-card-change neutral">All accounts</span>
                     </div>
                     <div class="summary-card">
                         <div class="summary-card-label">Active Clients</div>
-                        <div class="summary-card-value">6</div>
-                        <span class="summary-card-change neutral">Current</span>
+                        <div class="summary-card-value" id="statActiveClients">—</div>
+                        <span class="summary-card-change neutral">Status: active</span>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-card-label">Total Active Agents</div>
-                        <div class="summary-card-value">18</div>
+                        <div class="summary-card-label">Total Agents Deployed</div>
+                        <div class="summary-card-value" id="statTotalAgents">—</div>
                         <span class="summary-card-change neutral">Across all clients</span>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-card-label">Avg Revenue per Client</div>
-                        <div class="summary-card-value">$1,408</div>
-                        <span class="summary-card-change up">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"/></svg>
-                            8%
-                        </span>
+                        <div class="summary-card-label">Agents Active</div>
+                        <div class="summary-card-value" id="statActiveAgents">—</div>
+                        <span class="summary-card-change neutral">Live right now</span>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-card-label">Churn Rate</div>
-                        <div class="summary-card-value">0%</div>
-                        <span class="summary-card-change up">No churn</span>
+                        <div class="summary-card-label">Setting Up</div>
+                        <div class="summary-card-value" id="statOnboarding">—</div>
+                        <span class="summary-card-change neutral">In onboarding</span>
                     </div>
                 </div>
 
@@ -964,110 +958,18 @@
 
                 <div class="table-container">
                     <div class="table-scroll">
-                        <!-- TODO: Replace hardcoded data with Supabase query
-                             const { data: clients } = await supabase
-                                 .from('clients')
-                                 .select('*')
-                                 .order('mrr', { ascending: false });
-                        -->
                         <table>
                             <thead>
                                 <tr>
                                     <th>Client</th>
                                     <th>Status</th>
                                     <th>Agents</th>
-                                    <th>MRR</th>
-                                    <th>Onboarding</th>
-                                    <th>Last Active</th>
+                                    <th>Signed Up</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr onclick="viewClient('Brickell Med Spa')">
-                                    <td class="client-name-cell">Brickell Med Spa</td>
-                                    <td><span class="status-badge active"><span class="status-dot"></span> Active</span></td>
-                                    <td>
-                                        <div class="agent-tags">
-                                            <span class="agent-tag">ECHO</span>
-                                            <span class="agent-tag">IGNITE</span>
-                                            <span class="agent-tag">FORGE</span>
-                                        </div>
-                                    </td>
-                                    <td class="mrr-cell">$2,100/mo</td>
-                                    <td class="onboarding-cell"><span class="complete">Complete</span></td>
-                                    <td class="last-active-cell">Today</td>
-                                    <td><button class="view-btn" onclick="event.stopPropagation(); viewClient('Brickell Med Spa')">View</button></td>
-                                </tr>
-                                <tr onclick="viewClient('Coral Gables Dental')">
-                                    <td class="client-name-cell">Coral Gables Dental</td>
-                                    <td><span class="status-badge active"><span class="status-dot"></span> Active</span></td>
-                                    <td>
-                                        <div class="agent-tags">
-                                            <span class="agent-tag">ECHO</span>
-                                            <span class="agent-tag">REVIVE</span>
-                                        </div>
-                                    </td>
-                                    <td class="mrr-cell">$1,250/mo</td>
-                                    <td class="onboarding-cell"><span class="complete">Complete</span></td>
-                                    <td class="last-active-cell">Yesterday</td>
-                                    <td><button class="view-btn" onclick="event.stopPropagation(); viewClient('Coral Gables Dental')">View</button></td>
-                                </tr>
-                                <tr onclick="viewClient('Miami Auto Works')">
-                                    <td class="client-name-cell">Miami Auto Works</td>
-                                    <td><span class="status-badge active"><span class="status-dot"></span> Active</span></td>
-                                    <td>
-                                        <div class="agent-tags">
-                                            <span class="agent-tag">ECHO</span>
-                                            <span class="agent-tag">IGNITE</span>
-                                            <span class="agent-tag">SCOUT</span>
-                                        </div>
-                                    </td>
-                                    <td class="mrr-cell">$2,450/mo</td>
-                                    <td class="onboarding-cell"><span class="complete">Complete</span></td>
-                                    <td class="last-active-cell">Today</td>
-                                    <td><button class="view-btn" onclick="event.stopPropagation(); viewClient('Miami Auto Works')">View</button></td>
-                                </tr>
-                                <tr onclick="viewClient('Sunset Veterinary')">
-                                    <td class="client-name-cell">Sunset Veterinary</td>
-                                    <td><span class="status-badge onboarding"><span class="status-dot"></span> Onboarding</span></td>
-                                    <td>
-                                        <div class="agent-tags">
-                                            <span class="agent-tag">ECHO</span>
-                                            <span class="agent-tag">FORGE</span>
-                                        </div>
-                                    </td>
-                                    <td class="mrr-cell">$1,150/mo</td>
-                                    <td class="onboarding-cell"><span class="in-progress">4/7 steps</span></td>
-                                    <td class="last-active-cell">2 days ago</td>
-                                    <td><button class="view-btn" onclick="event.stopPropagation(); viewClient('Sunset Veterinary')">View</button></td>
-                                </tr>
-                                <tr onclick="viewClient('Doral Fitness Club')">
-                                    <td class="client-name-cell">Doral Fitness Club</td>
-                                    <td><span class="status-badge active"><span class="status-dot"></span> Active</span></td>
-                                    <td>
-                                        <div class="agent-tags">
-                                            <span class="agent-tag">REVIVE</span>
-                                            <span class="agent-tag">SIGNAL</span>
-                                        </div>
-                                    </td>
-                                    <td class="mrr-cell">$1,200/mo</td>
-                                    <td class="onboarding-cell"><span class="complete">Complete</span></td>
-                                    <td class="last-active-cell">Today</td>
-                                    <td><button class="view-btn" onclick="event.stopPropagation(); viewClient('Doral Fitness Club')">View</button></td>
-                                </tr>
-                                <tr onclick="viewClient('Wynwood Salon')">
-                                    <td class="client-name-cell">Wynwood Salon</td>
-                                    <td><span class="status-badge paused"><span class="status-dot"></span> Paused</span></td>
-                                    <td>
-                                        <div class="agent-tags">
-                                            <span class="agent-tag">ECHO</span>
-                                        </div>
-                                    </td>
-                                    <td class="mrr-cell">$300/mo</td>
-                                    <td class="onboarding-cell"><span class="complete">Complete</span></td>
-                                    <td class="last-active-cell">1 week ago</td>
-                                    <td><button class="view-btn" onclick="event.stopPropagation(); viewClient('Wynwood Salon')">View</button></td>
-                                </tr>
+                            <tbody id="dashClientsBody">
+                                <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1084,113 +986,9 @@
                             </div>
                         </div>
 
-                        <!-- TODO: Replace with Supabase query
-                             const { data: agents } = await supabase
-                                 .from('agent_deployments')
-                                 .select('agent_type, status, client_id')
-                                 .then(group by agent_type);
-                        -->
-                        <div class="agent-grid">
-                            <div class="agent-card">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">ECHO</span>
-                                    <span class="agent-card-deployed">5 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">4</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">1</span>
-                                        <span class="agent-stat-label">Onboarding</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="agent-card">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">IGNITE</span>
-                                    <span class="agent-card-deployed">2 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">2</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="agent-card">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">REVIVE</span>
-                                    <span class="agent-card-deployed">2 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">2</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="agent-card">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">SCOUT</span>
-                                    <span class="agent-card-deployed">1 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">1</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="agent-card">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">FORGE</span>
-                                    <span class="agent-card-deployed">3 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">3</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="agent-card">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">SIGNAL</span>
-                                    <span class="agent-card-deployed">1 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">1</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="agent-card inactive">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">ORACLE</span>
-                                    <span class="agent-card-deployed none">0 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">0</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="agent-card inactive">
-                                <div class="agent-card-header">
-                                    <span class="agent-card-name">FLUX</span>
-                                    <span class="agent-card-deployed none">0 deployed</span>
-                                </div>
-                                <div class="agent-card-stats">
-                                    <div class="agent-stat">
-                                        <span class="agent-stat-value">0</span>
-                                        <span class="agent-stat-label">Active</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- Populated by loadDashboard() from real client_agents data -->
+                        <div class="agent-grid" id="agentHealthGrid">
+                            <div style="color:var(--text-muted);font-size:13px;padding:12px;">Loading...</div>
                         </div>
                     </div>
 
@@ -1202,48 +1000,9 @@
                             </div>
                         </div>
 
-                        <!-- TODO: Replace with Supabase realtime subscription
-                             const channel = supabase
-                                 .channel('activity')
-                                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_log' }, handleNewActivity)
-                                 .subscribe();
-                        -->
-                        <div class="activity-feed">
-                            <div class="activity-item">
-                                <div class="activity-dot green"></div>
-                                <div>
-                                    <div class="activity-text"><strong>Brickell Med Spa:</strong> ECHO handled 23 calls today</div>
-                                    <div class="activity-time">12 minutes ago</div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-dot"></div>
-                                <div>
-                                    <div class="activity-text"><strong>Miami Auto Works:</strong> IGNITE responded to 8 leads</div>
-                                    <div class="activity-time">34 minutes ago</div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-dot yellow"></div>
-                                <div>
-                                    <div class="activity-text"><strong>Sunset Veterinary:</strong> Completed onboarding step 4</div>
-                                    <div class="activity-time">1 hour ago</div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-dot blue"></div>
-                                <div>
-                                    <div class="activity-text"><strong>Coral Gables Dental:</strong> REVIVE reactivated 12 customers this week</div>
-                                    <div class="activity-time">2 hours ago</div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-dot green"></div>
-                                <div>
-                                    <div class="activity-text"><strong>Doral Fitness Club:</strong> SIGNAL audit completed</div>
-                                    <div class="activity-time">3 hours ago</div>
-                                </div>
-                            </div>
+                        <!-- Populated by loadDashboard() — shows recently joined clients -->
+                        <div class="activity-feed" id="activityFeed">
+                            <div style="color:var(--text-muted);font-size:13px;padding:12px;">Loading...</div>
                         </div>
                     </div>
                 </div>
@@ -1480,6 +1239,7 @@
            =========================================================== */
         var clientsCache = [];
         var agentCountsByClient = {};
+        var agentTypeData = {}; // { echo: { total, active, onboarding }, ... }
 
         async function loadClientsGrid() {
             try {
@@ -1489,16 +1249,119 @@
                 var clients = clientsRes.data || [];
                 clientsCache = clients;
 
-                var agentsRes = await sb.from('client_agents').select('client_id, status');
+                // Fetch agents with agent_type so we can build Agent Health breakdown
+                var agentsRes = await sb.from('client_agents').select('client_id, status, agent_type');
                 agentCountsByClient = {};
+                agentTypeData = {};
                 (agentsRes.data || []).forEach(function(a){
                     agentCountsByClient[a.client_id] = (agentCountsByClient[a.client_id] || 0) + 1;
+                    var key = (a.agent_type || 'unknown').toLowerCase();
+                    if (!agentTypeData[key]) agentTypeData[key] = { total: 0, active: 0, onboarding: 0, paused: 0 };
+                    agentTypeData[key].total++;
+                    if (a.status === 'active') agentTypeData[key].active++;
+                    else if (a.status === 'onboarding') agentTypeData[key].onboarding++;
+                    else if (a.status === 'paused') agentTypeData[key].paused++;
                 });
 
                 renderClientsGrid();
+                loadDashboard();
             } catch (err) {
                 document.getElementById('clientsTableBody').innerHTML =
                     '<tr><td colspan="6" style="padding:24px;text-align:center;color:#ef4444;">Error loading clients: ' + err.message + '</td></tr>';
+            }
+        }
+
+        function loadDashboard() {
+            // Filter out admin accounts so the stats reflect real paying clients
+            var realClients = clientsCache.filter(function(c){
+                return !ADMIN_EMAILS.includes(c.email);
+            });
+
+            // --- Summary stats ---
+            var totalClients = realClients.length;
+            var activeClients = realClients.filter(function(c){ return c.status === 'active'; }).length;
+            var totalAgents = 0, activeAgents = 0, onboardingAgents = 0;
+            Object.values(agentTypeData).forEach(function(d){
+                totalAgents += d.total;
+                activeAgents += d.active;
+                onboardingAgents += d.onboarding;
+            });
+
+            var el = document.getElementById('statTotalClients');
+            if (el) el.textContent = totalClients;
+            el = document.getElementById('statActiveClients');
+            if (el) el.textContent = activeClients;
+            el = document.getElementById('statTotalAgents');
+            if (el) el.textContent = totalAgents;
+            el = document.getElementById('statActiveAgents');
+            if (el) el.textContent = activeAgents;
+            el = document.getElementById('statOnboarding');
+            if (el) el.textContent = onboardingAgents;
+
+            // --- Dashboard clients table ---
+            var tbody = document.getElementById('dashClientsBody');
+            if (tbody) {
+                if (!realClients.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="padding:32px;text-align:center;color:var(--text-muted);">No clients yet. They\'ll appear here after signing up.</td></tr>';
+                } else {
+                    tbody.innerHTML = realClients.slice(0, 15).map(function(c){
+                        var count = agentCountsByClient[c.id] || 0;
+                        var sClass = c.status === 'active' ? 'active' : (c.status === 'paused' ? 'paused' : 'onboarding');
+                        var name = c.business_name || '—';
+                        var dt = c.created_at ? new Date(c.created_at).toLocaleDateString() : '—';
+                        return '<tr onclick="openClientDrawer(\'' + c.id + '\')" style="cursor:pointer;">' +
+                          '<td class="client-name-cell">' + name + '<div style="font-size:12px;color:var(--text-muted);">' + (c.email||'') + '</div></td>' +
+                          '<td><span class="status-badge ' + sClass + '"><span class="status-dot"></span> ' + (c.status||'—') + '</span></td>' +
+                          '<td>' + count + ' agent' + (count===1?'':'s') + '</td>' +
+                          '<td class="last-active-cell">' + dt + '</td>' +
+                          '<td><button class="view-btn" onclick="event.stopPropagation();openClientDrawer(\'' + c.id + '\')">View</button></td>' +
+                          '</tr>';
+                    }).join('');
+                }
+            }
+
+            // --- Agent Health grid ---
+            var agentNames = ['echo','ignite','revive','scout','forge','signal','oracle','flux'];
+            var grid = document.getElementById('agentHealthGrid');
+            if (grid) {
+                grid.innerHTML = agentNames.map(function(name){
+                    var d = agentTypeData[name] || { total: 0, active: 0, onboarding: 0, paused: 0 };
+                    var inactive = d.total === 0;
+                    return '<div class="agent-card' + (inactive ? ' inactive' : '') + '">' +
+                        '<div class="agent-card-header">' +
+                          '<span class="agent-card-name">' + name.toUpperCase() + '</span>' +
+                          '<span class="agent-card-deployed' + (inactive ? ' none' : '') + '">' + d.total + ' deployed</span>' +
+                        '</div>' +
+                        '<div class="agent-card-stats">' +
+                          '<div class="agent-stat"><span class="agent-stat-value">' + d.active + '</span><span class="agent-stat-label">Active</span></div>' +
+                          (d.onboarding > 0 ? '<div class="agent-stat"><span class="agent-stat-value">' + d.onboarding + '</span><span class="agent-stat-label">Setting Up</span></div>' : '') +
+                        '</div>' +
+                      '</div>';
+                }).join('');
+            }
+
+            // --- Recent Activity — newest clients + their agent counts ---
+            var feed = document.getElementById('activityFeed');
+            if (feed) {
+                if (!realClients.length) {
+                    feed.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">No activity yet.</div>';
+                } else {
+                    feed.innerHTML = realClients.slice(0, 6).map(function(c){
+                        var name = c.business_name || c.email || 'New client';
+                        var count = agentCountsByClient[c.id] || 0;
+                        var msg = count > 0
+                            ? count + ' agent' + (count===1?'':'s') + ' deployed'
+                            : 'Account created, no agents yet';
+                        var dotClass = count > 0 ? 'activity-dot green' : 'activity-dot';
+                        var dt = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
+                        return '<div class="activity-item">' +
+                          '<div class="' + dotClass + '"></div>' +
+                          '<div>' +
+                            '<div class="activity-text"><strong>' + name + ':</strong> ' + msg + '</div>' +
+                            '<div class="activity-time">Joined ' + dt + '</div>' +
+                          '</div></div>';
+                    }).join('');
+                }
             }
         }
 
@@ -1611,6 +1474,10 @@
             var f = document.getElementById('clientFilter');
             if (s) s.addEventListener('input', renderClientsGrid);
             if (f) f.addEventListener('change', renderClientsGrid);
+
+            // Live date in header
+            var d = document.getElementById('headerDate');
+            if (d) d.textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         });
     </script>
 </body>
