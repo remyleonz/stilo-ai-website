@@ -1331,30 +1331,42 @@
 
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Auth gate: admin only
-        (async function checkAdminAuth() {
-            const { data: { session } } = await sb.auth.getSession();
+        // Admin emails — checked against the signed JWT, not the DB (avoids RLS issues)
+        var ADMIN_EMAILS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com'];
+        var adminReady = false;
+
+        function grantAdminAccess(session) {
+            if (adminReady) return;
+            adminReady = true;
+            // Kick off data load now that we know the user is an admin
+            loadClientsGrid();
+        }
+
+        async function checkIsAdmin(session) {
             if (!session) {
                 window.location.href = '/auth.html';
                 return;
             }
-
-            // Verify this user is an admin
-            const { data: client } = await sb.from('clients')
-                .select('is_admin, contact_name')
-                .eq('id', session.user.id)
-                .single();
-
-            if (!client || !client.is_admin) {
-                // Not an admin, send to client dashboard
+            if (!ADMIN_EMAILS.includes(session.user.email)) {
                 window.location.href = '/app';
                 return;
             }
+            grantAdminAccess(session);
+        }
+
+        // Primary check: getSession() fires immediately from stored token
+        (async function() {
+            const { data: { session } } = await sb.auth.getSession();
+            await checkIsAdmin(session);
         })();
 
-        // Auth state listener
-        sb.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT') window.location.href = '/auth.html';
+        // Fallback + sign-out handler via auth state changes
+        sb.auth.onAuthStateChange(async function(event, session) {
+            if (event === 'SIGNED_OUT') {
+                window.location.href = '/auth.html';
+            } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !adminReady) {
+                await checkIsAdmin(session);
+            }
         });
 
 
@@ -1591,14 +1603,12 @@
             setTimeout(function(){ t.remove(); }, 2200);
         }
 
-        // Wire up search/filter + initial load
+        // Wire up search/filter listeners only (loadClientsGrid is called by grantAdminAccess)
         document.addEventListener('DOMContentLoaded', function() {
             var s = document.getElementById('clientSearch');
             var f = document.getElementById('clientFilter');
             if (s) s.addEventListener('input', renderClientsGrid);
             if (f) f.addEventListener('change', renderClientsGrid);
-            // Load when admin visits Clients tab
-            setTimeout(loadClientsGrid, 400);
         });
     </script>
 </body>
