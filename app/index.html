@@ -1745,13 +1745,25 @@
 
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // --- Auth gate: redirect to login if no session ---
-        (async function checkAuth() {
-            const { data: { session } } = await sb.auth.getSession();
+        // Admin emails — same list as admin/index.html so we can redirect without a DB query
+        var ADMIN_EMAILS_APP = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com'];
+        var appInitialized = false;
+
+        async function initDashboard(session) {
+            if (appInitialized) return;
             if (!session) {
                 window.location.href = '/auth.html';
                 return;
             }
+            appInitialized = true;
+
+            // If an admin was redirected here by a magic link, send them to /admin/
+            // Check email first (fast, no DB), then also check DB is_admin as fallback
+            if (ADMIN_EMAILS_APP.includes(session.user.email)) {
+                window.location.href = '/admin/';
+                return;
+            }
+
             const user = session.user;
 
             // Load client row from DB (source of truth for business info)
@@ -1759,7 +1771,7 @@
                 .select('*').eq('id', user.id).single();
 
             if (clientRow && clientRow.is_admin) {
-                window.location.href = '/admin';
+                window.location.href = '/admin/';
                 return;
             }
 
@@ -1795,6 +1807,12 @@
             }
 
             loadAgentData(user.id);
+        }
+
+        // Primary check — covers already-signed-in users
+        (async function() {
+            const { data: { session } } = await sb.auth.getSession();
+            await initDashboard(session);
         })();
 
         // Maps Stripe agent_type values to card IDs in the HTML
@@ -2029,8 +2047,14 @@
         }
 
         // --- Auth state listener ---
-        sb.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT') window.location.href = '/auth.html';
+        // SIGNED_IN fires when a magic link token in the URL hash is processed —
+        // this catches the case where getSession() resolves before the token is ready.
+        sb.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_OUT') {
+                window.location.href = '/auth.html';
+            } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !appInitialized) {
+                await initDashboard(session);
+            }
         });
 
 

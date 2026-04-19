@@ -441,21 +441,27 @@
         // ============================================
         // CHECK AUTH STATE ON LOAD
         // ============================================
+        var ADMIN_EMAILS_AUTH = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com'];
+
+        function redirectAfterAuth(session) {
+            if (!session) return;
+            if (ADMIN_EMAILS_AUTH.includes(session.user.email)) {
+                window.location.href = '/admin/';
+            } else {
+                window.location.href = '/app/';
+            }
+        }
+
+        // If already signed in, redirect immediately (no DB query needed)
         (async function() {
             const { data: { session } } = await sb.auth.getSession();
-            if (session) {
-                const { data: client } = await sb.from('clients')
-                    .select('is_admin')
-                    .eq('id', session.user.id)
-                    .single();
-
-                if (client && client.is_admin) {
-                    window.location.href = '/admin';
-                } else {
-                    window.location.href = '/app';
-                }
-            }
+            if (session) redirectAfterAuth(session);
         })();
+
+        // Also handle SIGNED_IN event — fires when magic link token in URL hash is processed
+        sb.auth.onAuthStateChange(function(event, session) {
+            if (event === 'SIGNED_IN') redirectAfterAuth(session);
+        });
 
         // ============================================
         // PAGE INIT: welcome mode vs normal mode

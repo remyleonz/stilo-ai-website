@@ -1344,6 +1344,8 @@
 
         async function checkIsAdmin(session) {
             if (!session) {
+                // Store destination so auth.html can redirect back here after sign-in
+                localStorage.setItem('auth_redirect', '/admin/');
                 window.location.href = '/auth.html';
                 return;
             }
