@@ -1047,8 +1047,8 @@
             </div>
 
             <!-- Client drawer -->
-            <div id="clientDrawer" style="position:fixed;top:0;right:-520px;width:520px;max-width:100vw;height:100vh;background:#0f0f1a;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px;">
-                <button onclick="closeDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;">&times;</button>
+            <div id="clientDrawer" style="position:fixed;top:0;right:-780px;width:780px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 36px;">
+                <button onclick="closeDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;line-height:1;">&times;</button>
                 <div id="drawerContent"></div>
             </div>
             <div id="drawerOverlay" onclick="closeDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
@@ -1402,62 +1402,315 @@
             }).join('');
         }
 
+        // ============================================================
+        // CLIENT MANAGEMENT DRAWER
+        // ============================================================
+
+        var drawerClientId = null;
+
         async function openClientDrawer(clientId) {
+            drawerClientId = clientId;
             var c = clientsCache.find(function(x){ return x.id === clientId; });
             if (!c) return;
-            var drawer = document.getElementById('clientDrawer');
+
+            var drawer  = document.getElementById('clientDrawer');
             var overlay = document.getElementById('drawerOverlay');
             var content = document.getElementById('drawerContent');
 
-            var agentsRes = await sb.from('client_agents')
-                .select('id, agent_type, status, created_at, activated_at').eq('client_id', clientId);
-            var agents = agentsRes.data || [];
-
-            var stepsRes = await sb.from('onboarding_steps')
-                .select('step_name, status, completed_at, client_agent_id')
-                .in('client_agent_id', agents.map(function(a){return a.id;}).concat(['00000000-0000-0000-0000-000000000000']))
-                .order('completed_at', { ascending: false }).limit(8);
-            var steps = stepsRes.data || [];
-
-            content.innerHTML =
-              '<div style="margin-bottom:24px;">' +
-                '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">' + (c.business_name||'—') + '</h2>' +
-                '<div style="color:var(--text-secondary,#8a8aa0);font-size:14px;margin-top:4px;">' + (c.business_type||'') + '</div>' +
-              '</div>' +
-              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">' +
-                '<a href="mailto:' + (c.email||'') + '?subject=STILO%20AI%20Partners" style="padding:10px 14px;background:linear-gradient(135deg,#2563eb,#2563eb);border-radius:8px;text-align:center;font-weight:600;text-decoration:none;color:#fff;">Email</a>' +
-                (c.phone ? '<a href="tel:'+c.phone+'" style="padding:10px 14px;background:var(--bg-elev,#22223a);border:1px solid rgba(37,99,235,0.2);border-radius:8px;text-align:center;font-weight:600;text-decoration:none;color:inherit;">Call</a>' : '<button disabled style="padding:10px 14px;background:var(--bg-elev,#22223a);border:1px solid rgba(37,99,235,0.1);border-radius:8px;color:var(--text-muted,#5a5a75);">No phone</button>') +
-              '</div>' +
-              '<div style="margin-bottom:20px;">' +
-                '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);margin-bottom:8px;">Contact</h3>' +
-                '<div style="font-size:14px;line-height:1.8;">' +
-                  '<div>' + (c.contact_name||'—') + '</div>' +
-                  '<div style="color:var(--text-secondary,#8a8aa0);">' + (c.email||'') + '</div>' +
-                  '<div style="color:var(--text-secondary,#8a8aa0);">' + (c.phone||'No phone on file') + '</div>' +
-                '</div>' +
-              '</div>' +
-              '<div style="margin-bottom:20px;">' +
-                '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);margin-bottom:8px;">Agents (' + agents.length + ')</h3>' +
-                (agents.length ? agents.map(function(a){
-                  return '<div style="padding:10px 12px;background:var(--bg-elev,#22223a);border-radius:8px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:13px;"><strong>' + (a.agent_type||'').toUpperCase() + '</strong><span style="color:var(--text-secondary,#8a8aa0);">' + a.status + '</span></div>';
-                }).join('') : '<div style="color:var(--text-muted,#5a5a75);font-size:13px;">No agents deployed yet.</div>') +
-              '</div>' +
-              '<div>' +
-                '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);margin-bottom:8px;">Recent onboarding</h3>' +
-                (steps.length ? steps.map(function(s){
-                  return '<div style="padding:8px 12px;font-size:13px;color:var(--text-secondary,#8a8aa0);border-left:2px solid rgba(37,99,235,0.3);margin-bottom:4px;">' + s.step_name + ' — <span style="color:var(--text-muted,#5a5a75);">' + s.status + '</span></div>';
-                }).join('') : '<div style="color:var(--text-muted,#5a5a75);font-size:13px;">No onboarding activity.</div>') +
-              '</div>';
-
+            content.innerHTML = '<div style="color:var(--text-muted,#5a5a75);padding:20px 0;font-size:14px;">Loading client...</div>';
             drawer.style.right = '0';
             overlay.style.display = 'block';
+
+            // Fetch full agent list with config
+            var agentsRes = await sb.from('client_agents')
+                .select('id, agent_type, status, created_at, activated_at, config')
+                .eq('client_id', clientId)
+                .order('created_at');
+            var agents = agentsRes.data || [];
+
+            // Fetch ALL onboarding steps for these agents
+            var stepsMap = {};
+            if (agents.length > 0) {
+                var stepsRes = await sb.from('onboarding_steps')
+                    .select('id, client_agent_id, step_number, step_name, status, data, completed_at')
+                    .in('client_agent_id', agents.map(function(a){ return a.id; }))
+                    .order('step_number');
+                (stepsRes.data || []).forEach(function(s){
+                    if (!stepsMap[s.client_agent_id]) stepsMap[s.client_agent_id] = [];
+                    stepsMap[s.client_agent_id].push(s);
+                });
+            }
+
+            content.innerHTML = buildMgmtHtml(c, agents, stepsMap);
         }
 
         function closeDrawer() {
-            var drawer = document.getElementById('clientDrawer');
+            var drawer  = document.getElementById('clientDrawer');
             var overlay = document.getElementById('drawerOverlay');
-            if (drawer) drawer.style.right = '-520px';
+            if (drawer)  drawer.style.right  = '-780px';
             if (overlay) overlay.style.display = 'none';
+        }
+
+        function esc(s) {
+            return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function buildMgmtHtml(c, agents, stepsMap) {
+            var typeNames = {
+                echo:'AI Receptionist', ignite:'Lead Response', revive:'Customer Reactivation',
+                scout:'Lead Generator', forge:'AI Website', signal:'AI SEO',
+                oracle:'Growth Intelligence', flux:'Custom Automations'
+            };
+            var allTypes = ['echo','ignite','revive','scout','forge','signal','oracle','flux'];
+            var deployed = agents.map(function(a){ return a.agent_type; });
+            var available = allTypes.filter(function(t){ return !deployed.includes(t); });
+
+            var h = '';
+
+            // ---- Header ----
+            h += '<div style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(37,99,235,0.1);">' +
+                 '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">' + esc(c.business_name || '—') + '</h2>' +
+                 '<div style="font-size:13px;color:var(--text-secondary,#8a8aa0);margin-top:3px;">' + esc(c.business_type||'') + (c.business_type&&c.email?' · ':'') + esc(c.email||'') + '</div>' +
+                 '<div style="display:flex;gap:8px;margin-top:14px;">' +
+                   '<a href="mailto:'+esc(c.email||'')+'?subject=STILO%20AI%20Partners" style="padding:8px 16px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;">Email</a>' +
+                   (c.phone ? '<a href="tel:'+esc(c.phone)+'" style="padding:8px 16px;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:inherit;">Call</a>' : '') +
+                 '</div>' +
+               '</div>';
+
+            // ---- Edit client info ----
+            h += '<details style="margin-bottom:20px;" open>' +
+                 '<summary style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">&#9660; Client Info</summary>' +
+                 '<div style="margin-top:12px;background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.1);border-radius:10px;padding:16px;">' +
+                   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Business Name</div>' +
+                       '<input id="mi-biz" type="text" value="'+esc(c.business_name)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
+                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Contact Name</div>' +
+                       '<input id="mi-contact" type="text" value="'+esc(c.contact_name)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
+                   '</div>' +
+                   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">' +
+                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Email</div>' +
+                       '<input id="mi-email" type="email" value="'+esc(c.email)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
+                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Phone</div>' +
+                       '<input id="mi-phone" type="tel" value="'+esc(c.phone)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
+                   '</div>' +
+                   '<button onclick="adminSaveClientInfo(\''+c.id+'\')" id="mi-savebtn" style="padding:7px 16px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);border-radius:7px;font-size:13px;font-weight:600;color:#60a5fa;cursor:pointer;">Save Changes</button>' +
+                   '<span id="mi-savemsg" style="font-size:12px;margin-left:10px;display:none;"></span>' +
+                 '</div></details>';
+
+            // ---- Agents ----
+            h += '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);margin-bottom:12px;">Agents (' + agents.length + ')</div>';
+
+            if (!agents.length) {
+                h += '<div style="font-size:13px;color:var(--text-muted,#5a5a75);margin-bottom:20px;">No agents deployed yet. Use the form below to deploy one.</div>';
+            }
+
+            agents.forEach(function(a) {
+                var steps = stepsMap[a.id] || [];
+                var done  = steps.filter(function(s){ return s.status === 'completed'; }).length;
+                var total = steps.length;
+                var sColor = a.status === 'active' ? '#22c55e' : (a.status === 'paused' ? '#f59e0b' : '#3b82f6');
+                var agentLabel = (a.agent_type||'').toUpperCase() + ' — ' + (typeNames[a.agent_type] || a.agent_type);
+
+                h += '<div style="border:1px solid rgba(37,99,235,0.15);border-radius:10px;margin-bottom:14px;overflow:hidden;">' +
+
+                     // Agent header
+                     '<div style="padding:14px 16px;background:rgba(37,99,235,0.04);border-bottom:1px solid rgba(37,99,235,0.08);">' +
+                       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
+                         '<div>' +
+                           '<div style="font-weight:700;font-size:14px;">' + esc(agentLabel) + '</div>' +
+                           (total > 0 ? '<div style="font-size:12px;color:var(--text-muted,#5a5a75);margin-top:2px;">'+done+'/'+total+' onboarding steps complete</div>' : '') +
+                         '</div>' +
+                         '<span style="font-size:12px;font-weight:700;color:'+sColor+';background:'+sColor+'18;padding:4px 12px;border-radius:20px;white-space:nowrap;">'+a.status+'</span>' +
+                       '</div>' +
+                       // Status controls
+                       '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">' +
+                         (a.status!=='active'    ? '<button onclick="adminAgentStatus(\''+a.id+'\',\'active\',\''+c.id+'\')"    style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:6px;color:#22c55e;cursor:pointer;">Activate</button>' : '') +
+                         (a.status!=='paused'    ? '<button onclick="adminAgentStatus(\''+a.id+'\',\'paused\',\''+c.id+'\')"    style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;color:#f59e0b;cursor:pointer;">Pause</button>' : '') +
+                         (a.status!=='onboarding'? '<button onclick="adminAgentStatus(\''+a.id+'\',\'onboarding\',\''+c.id+'\')" style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:6px;color:#60a5fa;cursor:pointer;">Reset to Setup</button>' : '') +
+                         '<button onclick="adminRemoveAgent(\''+a.id+'\',\''+c.id+'\')" style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#ef4444;cursor:pointer;">Remove</button>' +
+                       '</div>' +
+                     '</div>';
+
+                // Onboarding steps
+                if (steps.length > 0) {
+                    h += '<div style="padding:0 16px;">';
+                    steps.forEach(function(s) {
+                        var isDone   = s.status === 'completed';
+                        var isActive = s.status === 'in_progress';
+                        var dc = isDone ? '#22c55e' : (isActive ? '#3b82f6' : '#4a4a5c');
+                        var notes = (s.data && s.data.admin_notes) ? s.data.admin_notes : '';
+
+                        h += '<div style="border-top:1px solid rgba(37,99,235,0.07);padding:12px 0;">' +
+                             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+                               '<div style="display:flex;align-items:center;gap:10px;">' +
+                                 '<div style="width:22px;height:22px;border-radius:50%;background:'+dc+'18;border:2px solid '+dc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:'+dc+';flex-shrink:0;">' + (isDone ? '✓' : s.step_number) + '</div>' +
+                                 '<div>' +
+                                   '<div style="font-size:13px;font-weight:600;">' + esc(s.step_name) + '</div>' +
+                                   (isDone ? '<div style="font-size:11px;color:var(--text-muted,#5a5a75);">Done ' + (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : '') + '</div>' : '') +
+                                 '</div>' +
+                               '</div>' +
+                               '<span style="font-size:11px;font-weight:600;color:'+dc+';white-space:nowrap;">'+s.status+'</span>' +
+                             '</div>';
+
+                        if (!isDone) {
+                            h += '<div style="margin-top:8px;padding-left:32px;">' +
+                                 '<textarea id="sn-'+s.id+'" placeholder="Notes for this step (optional)" rows="2" style="width:100%;padding:8px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:12px;font-family:inherit;resize:vertical;">'+esc(notes)+'</textarea>' +
+                                 '<div style="display:flex;gap:6px;margin-top:6px;">' +
+                                   '<button onclick="adminSaveStep(\''+s.id+'\','+s.step_number+',\''+a.id+'\',\''+c.id+'\',true)"  style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:6px;color:#22c55e;cursor:pointer;">Mark Complete</button>' +
+                                   '<button onclick="adminSaveStep(\''+s.id+'\','+s.step_number+',\''+a.id+'\',\''+c.id+'\',false)" style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:6px;color:#60a5fa;cursor:pointer;">Save Notes</button>' +
+                                 '</div>' +
+                               '</div>';
+                        } else if (notes) {
+                            h += '<div style="margin-top:4px;padding-left:32px;font-size:12px;color:var(--text-secondary,#8a8aa0);">' + esc(notes) + '</div>';
+                        }
+
+                        h += '</div>';
+                    });
+                    h += '</div>';
+                } else {
+                    h += '<div style="padding:12px 16px;font-size:13px;color:var(--text-muted,#5a5a75);">No onboarding steps yet.</div>';
+                }
+
+                h += '</div>'; // end agent card
+            });
+
+            // ---- Deploy new agent ----
+            h += '<div style="border:1px dashed rgba(37,99,235,0.2);border-radius:10px;padding:16px;margin-top:4px;">' +
+                 '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);margin-bottom:10px;">Deploy Another Agent</div>';
+
+            if (available.length > 0) {
+                h += '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                     '<select id="deploy-type" style="flex:1;padding:8px 12px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:7px;color:inherit;font-size:13px;font-family:inherit;">' +
+                       '<option value="">Select agent type...</option>' +
+                       available.map(function(t){ return '<option value="'+t+'">'+t.toUpperCase()+' — '+(typeNames[t]||t)+'</option>'; }).join('') +
+                     '</select>' +
+                     '<button onclick="adminDeploy(\''+c.id+'\')" style="padding:8px 18px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:7px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;white-space:nowrap;">Deploy</button>' +
+                     '</div>' +
+                     '<div id="deploy-msg" style="font-size:12px;margin-top:8px;display:none;"></div>';
+            } else {
+                h += '<div style="font-size:13px;color:var(--text-muted,#5a5a75);">All 8 agent types are already deployed for this client.</div>';
+            }
+
+            h += '</div>';
+            return h;
+        }
+
+        // ---- Action: save client info ----
+        async function adminSaveClientInfo(clientId) {
+            var btn = document.getElementById('mi-savebtn');
+            var msg = document.getElementById('mi-savemsg');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+            var biz     = (document.getElementById('mi-biz')     || {}).value || '';
+            var contact = (document.getElementById('mi-contact')  || {}).value || '';
+            var email   = (document.getElementById('mi-email')    || {}).value || '';
+            var phone   = (document.getElementById('mi-phone')    || {}).value || '';
+
+            var { error } = await sb.from('clients')
+                .update({ business_name: biz, contact_name: contact, email: email, phone: phone })
+                .eq('id', clientId);
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+            if (msg) {
+                msg.style.display = 'inline';
+                if (error) {
+                    msg.style.color = '#ef4444';
+                    msg.textContent = 'Error: ' + error.message;
+                } else {
+                    msg.style.color = '#22c55e';
+                    msg.textContent = 'Saved.';
+                    // Update cache so dashboard re-renders with new name
+                    var cached = clientsCache.find(function(x){ return x.id === clientId; });
+                    if (cached) { cached.business_name = biz; cached.contact_name = contact; cached.email = email; cached.phone = phone; }
+                    loadDashboard();
+                    setTimeout(function(){ if (msg) msg.style.display = 'none'; }, 2500);
+                }
+            }
+        }
+
+        // ---- Action: change agent status ----
+        async function adminAgentStatus(agentId, newStatus, clientId) {
+            var upd = { status: newStatus };
+            if (newStatus === 'active') upd.activated_at = new Date().toISOString();
+
+            var { error } = await sb.from('client_agents').update(upd).eq('id', agentId);
+            if (error) { showToast('Error: ' + error.message); return; }
+
+            showToast('Agent set to ' + newStatus);
+            openClientDrawer(clientId);
+            loadClientsGrid();
+        }
+
+        // ---- Action: mark / save onboarding step ----
+        async function adminSaveStep(stepId, stepNum, agentId, clientId, markDone) {
+            var notesEl = document.getElementById('sn-' + stepId);
+            var notes   = notesEl ? notesEl.value.trim() : '';
+
+            var upd = { data: { admin_notes: notes } };
+            if (markDone) { upd.status = 'completed'; upd.completed_at = new Date().toISOString(); }
+            else           { upd.status = 'in_progress'; }
+
+            var { error } = await sb.from('onboarding_steps').update(upd).eq('id', stepId);
+            if (error) { showToast('Error: ' + error.message); return; }
+
+            // Advance next pending step to in_progress
+            if (markDone) {
+                await sb.from('onboarding_steps')
+                    .update({ status: 'in_progress' })
+                    .eq('client_agent_id', agentId)
+                    .eq('step_number', stepNum + 1)
+                    .eq('status', 'pending');
+            }
+
+            showToast(markDone ? 'Step marked complete' : 'Notes saved');
+            openClientDrawer(clientId);
+        }
+
+        // ---- Action: remove agent ----
+        async function adminRemoveAgent(agentId, clientId) {
+            if (!confirm('Remove this agent? All onboarding steps for it will be deleted too.')) return;
+            var { error } = await sb.from('client_agents').delete().eq('id', agentId);
+            if (error) { showToast('Error: ' + error.message); return; }
+            showToast('Agent removed');
+            openClientDrawer(clientId);
+            loadClientsGrid();
+        }
+
+        // ---- Action: deploy new agent to client ----
+        async function adminDeploy(clientId) {
+            var sel = document.getElementById('deploy-type');
+            var typ = sel ? sel.value : '';
+            if (!typ) { showToast('Pick an agent type first'); return; }
+
+            var msg = document.getElementById('deploy-msg');
+            if (msg) { msg.style.display = 'none'; }
+
+            var { data: newAgent, error } = await sb.from('client_agents')
+                .insert({ client_id: clientId, agent_type: typ, status: 'onboarding' })
+                .select().single();
+
+            if (error) { showToast('Deploy error: ' + error.message); return; }
+
+            // Create default onboarding steps
+            var defaults = {
+                echo:   ['Business Info','Services and Pricing','Business Hours','Booking System Connection','Phone Setup','Voice Personality','Review and Activate'],
+                ignite: ['Business Info','Lead Source Setup','Response Templates','CRM Connection','Review and Activate'],
+                revive: ['Business Info','Customer List Upload','Reactivation Message','Schedule Setup','Review and Activate'],
+                scout:  ['Business Info','Target Audience','Lead Criteria','Outreach Channel Setup','Review and Activate'],
+                forge:  ['Business Info','Brand Guidelines','Page Structure','Content Review','Domain Setup','Review and Launch'],
+                signal: ['Business Info','Keyword Targets','Content Calendar','Review and Activate'],
+                oracle: ['Business Info','Data Sources','KPI Setup','Review and Activate'],
+                flux:   ['Business Info','Workflow Design','Integration Setup','Testing','Review and Activate']
+            };
+            var stepNames = defaults[typ] || ['Setup','Review and Activate'];
+            var rows = stepNames.map(function(name, i){
+                return { client_agent_id: newAgent.id, step_number: i+1, step_name: name, status: i===0 ? 'in_progress' : 'pending' };
+            });
+            await sb.from('onboarding_steps').insert(rows);
+
+            showToast(typ.toUpperCase() + ' deployed');
+            openClientDrawer(clientId);
+            loadClientsGrid();
         }
 
         function showToast(msg) {
