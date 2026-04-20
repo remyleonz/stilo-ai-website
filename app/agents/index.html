@@ -204,7 +204,7 @@
       <h2>Need help with this agent?</h2>
       <p style="color:var(--text-secondary);font-size:14px;">Email your STILO team or book a 15-minute call. We manage and tune every agent weekly.</p>
       <div class="action-bar">
-        <a class="btn primary" id="emailBtn" href="#">Email STILO Team</a>
+        <a class="btn primary" id="emailBtn" href="mailto:stiloaiconsulting@gmail.com">Email STILO Team</a>
         <a class="btn" href="https://calendly.com/stiloaipartners/free-ai-strategy-call" target="_blank" rel="noopener">Book 15-min Call</a>
       </div>
     </section>
@@ -292,64 +292,6 @@
     }
 
     // ============================================
-    // Deterministic seed (mock data when DB empty)
-    // ============================================
-    function hashStr(s) {
-      let h = 0;
-      for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-      return Math.abs(h);
-    }
-    function seededSeries(seed, baseline, variance, days=30) {
-      const out = [];
-      let v = baseline;
-      for (let i = 0; i < days; i++) {
-        const r = ((hashStr(seed + ':' + i) % 1000) / 1000) - 0.5;
-        v = Math.max(0, baseline + r * variance + Math.sin(i/4) * (variance*0.2));
-        out.push(Math.max(0, v));
-      }
-      return out;
-    }
-    function buildMockMetrics(clientId) {
-      const seed = clientId + ':' + agentId;
-      const series = seededSeries(seed, 40, 20);
-      const today = series[series.length - 1];
-      const base = {
-        calls_handled: Math.round(today * 1.2),
-        avg_duration: 142 + (hashStr(seed)%40),
-        booked_appointments: Math.round(today * 0.35),
-        missed_calls: Math.max(0, Math.round(today*0.05)),
-        leads_received: Math.round(today * 1.5),
-        response_time_avg: 4 + (hashStr(seed+'r')%6),
-        qualified: Math.round(today * 0.6),
-        conversion_rate: 22 + (hashStr(seed+'c')%18),
-        dormant_engaged: Math.round(today * 2.5),
-        replies: Math.round(today * 0.4),
-        recovered_revenue: Math.round(today * 120),
-        churn_saved: Math.round(today * 0.25),
-        prospects_found: Math.round(today * 8),
-        contacted: Math.round(today * 5),
-        meetings_set: Math.round(today * 0.5),
-        pipeline_value: Math.round(today * 450),
-        page_views: Math.round(today * 25),
-        avg_session: 95 + (hashStr(seed+'s')%60),
-        leads_captured: Math.round(today * 0.7),
-        ai_impressions: Math.round(today * 12),
-        ranked_queries: Math.round(today * 0.4),
-        citations: Math.round(today * 0.3),
-        click_throughs: Math.round(today * 1.1),
-        reports_delivered: Math.round(today / 7),
-        anomalies_flagged: Math.round(today * 0.15),
-        forecast_accuracy: 82 + (hashStr(seed+'f')%12),
-        opportunities: Math.round(today * 0.3),
-        automations_running: 6 + (hashStr(seed+'a')%6),
-        tasks_executed: Math.round(today * 14),
-        hours_saved: Math.round(today * 0.8),
-        error_rate: (hashStr(seed+'e')%15)/10
-      };
-      return { series, current: base };
-    }
-
-    // ============================================
     // Supabase
     // ============================================
     const SUPABASE_URL = 'https://zsrskphpvgautfgklgxf.supabase.co';
@@ -389,38 +331,37 @@
         metrics = res.data || [];
       }
 
-      let series, current;
-      if (metrics.length > 0) {
-        series = metrics.map(m => m.metrics[agent.primary] || 0);
-        current = metrics[metrics.length - 1].metrics;
-      } else {
-        const mock = buildMockMetrics(userId);
-        series = mock.series;
-        current = mock.current;
-      }
+      const hasData = metrics.length > 0;
+      const series  = hasData ? metrics.map(m => (m.metrics || {})[agent.primary] || 0) : [];
+      const current = hasData ? (metrics[metrics.length - 1].metrics || {}) : {};
 
-      renderKPIs(current);
-      renderSparkline(series);
-      renderActivity(metrics, current);
+      renderKPIs(current, hasData);
+      renderSparkline(series, hasData);
+      renderActivity(metrics, ca);
       renderConfig(ca ? ca.config : {});
 
-      // Email button
-      const email = 'remyleon11@gmail.com';
+      // Email button routes to support inbox
       const subject = encodeURIComponent('Question about ' + agent.name + ' (' + agent.role + ')');
-      document.getElementById('emailBtn').href = 'mailto:' + email + '?subject=' + subject;
+      document.getElementById('emailBtn').href = 'mailto:stiloaiconsulting@gmail.com?subject=' + subject;
     }
 
-    function renderKPIs(data) {
+    function renderKPIs(data, hasData) {
       const row = document.getElementById('kpiRow');
       row.innerHTML = agent.kpis.map(k => {
-        const val = data[k.key];
-        return '<div class="kpi"><div class="label">' + k.label + '</div><div class="value">' + fmt(val, k.fmt) + '</div><div class="delta">last 30 days</div></div>';
+        const raw = hasData ? data[k.key] : null;
+        const val = (raw == null) ? '—' : fmt(raw, k.fmt);
+        const delta = hasData ? 'last 30 days' : 'no data yet';
+        return '<div class="kpi"><div class="label">' + k.label + '</div><div class="value">' + val + '</div><div class="delta" style="color:var(--text-muted);font-weight:500;">' + delta + '</div></div>';
       }).join('');
       document.getElementById('primaryMetricLabel').textContent = agent.kpis[0].label + ' — 30-day trend';
     }
 
-    function renderSparkline(series) {
+    function renderSparkline(series, hasData) {
       const svg = document.getElementById('sparkline');
+      if (!hasData || series.length === 0) {
+        svg.innerHTML = '<text x="400" y="64" text-anchor="middle" fill="#5a5a75" font-family="Inter,sans-serif" font-size="13">No activity yet. Data appears once this agent starts running.</text>';
+        return;
+      }
       const w = 800, h = 120, pad = 8;
       const max = Math.max(...series, 1);
       const step = (w - pad*2) / Math.max(series.length - 1, 1);
@@ -433,39 +374,34 @@
         '<path d="' + linePath + '" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
     }
 
-    function renderActivity(metrics, current) {
+    function renderActivity(metrics, ca) {
       const list = document.getElementById('activityList');
-      const items = [];
       if (metrics && metrics.length) {
-        metrics.slice(-5).reverse().forEach(m => {
-          items.push('<li><strong>' + fmt(m.metrics[agent.primary], agent.kpis[0].fmt) + ' ' + agent.kpis[0].label.toLowerCase() + '</strong><span class="when">' + m.metric_date + '</span></li>');
-        });
-      } else {
-        const today = new Date();
-        for (let i = 0; i < 5; i++) {
-          const d = new Date(today.getTime() - i*86400000);
-          items.push('<li><strong>' + agent.name + ' processed ' + (Math.round((current[agent.primary]||0) * (0.9 + Math.random()*0.2))) + ' ' + agent.kpis[0].label.toLowerCase() + '</strong><span class="when">' + d.toISOString().split('T')[0] + '</span></li>');
-        }
+        list.innerHTML = metrics.slice(-5).reverse().map(m => {
+          const v = (m.metrics || {})[agent.primary];
+          return '<li><strong>' + fmt(v, agent.kpis[0].fmt) + ' ' + agent.kpis[0].label.toLowerCase() + '</strong><span class="when">' + m.metric_date + '</span></li>';
+        }).join('');
+        return;
       }
-      list.innerHTML = items.join('');
+      const status = ca ? ca.status : null;
+      const msg = status === 'onboarding'
+        ? 'Finish this agent\'s onboarding to start generating activity.'
+        : 'No activity yet. Events will appear here once this agent runs.';
+      list.innerHTML = '<li style="color:var(--text-muted);justify-content:flex-start;">' + msg + '</li>';
     }
 
     function renderConfig(config) {
       const grid = document.getElementById('configGrid');
-      const defaults = {
-        echo:   { 'Greeting': 'Custom', 'Transfer number': 'On', 'After-hours': 'Voicemail + SMS', 'Language': 'English' },
-        ignite: { 'Response SLA': '< 5s', 'Channels': 'Email + SMS', 'Qualifying': 'On', 'Routing': 'Calendar' },
-        revive: { 'Dormancy threshold': '6 months', 'Send window': '9am-6pm', 'Channels': 'SMS + Email', 'Offer': 'Configured' },
-        scout:  { 'Target ICP': 'Configured', 'Batch size': '500', 'Outreach': 'On', 'Geography': 'Local + 25mi' },
-        forge:  { 'Theme': 'Live', 'A/B testing': 'On', 'Forms': '3 active', 'Analytics': 'Connected' },
-        signal: { 'GEO score': '82/100', 'Tracked queries': '45', 'Schema': 'Deployed', 'Refresh': 'Weekly' },
-        oracle: { 'Report cadence': 'Weekly', 'Competitors': '5 tracked', 'Alerts': 'On', 'Forecast horizon': '90 days' },
-        flux:   { 'Environment': 'Production', 'Error alerts': 'On', 'Logs': 'Retained 30d', 'Deploy hook': 'Configured' }
-      };
-      const cfg = Object.keys(config||{}).length ? config : (defaults[agentId] || {});
-      grid.innerHTML = Object.entries(cfg).map(([k,v]) =>
-        '<div class="config-row"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'
-      ).join('');
+      const entries = Object.entries(config || {}).filter(([k,v]) => v != null && v !== '');
+      if (entries.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);font-size:13px;padding:8px 0;">No configuration saved yet. Configure this agent during onboarding.</div>';
+        return;
+      }
+      grid.innerHTML = entries.map(([k,v]) => {
+        const label = String(k).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const val = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+        return '<div class="config-row"><span class="k">' + label + '</span><span class="v">' + val + '</span></div>';
+      }).join('');
     }
 
     init();

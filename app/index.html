@@ -1173,8 +1173,8 @@
         </div>
         <div class="topbar-right">
             <div class="profile-trigger" id="profileTrigger" onclick="toggleProfile()">
-                <div class="avatar">DB</div>
-                <span class="profile-name">Demo Business</span>
+                <div class="avatar" id="profileAvatar">--</div>
+                <span class="profile-name" id="profileName">Loading...</span>
                 <svg class="chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 <div class="profile-dropdown" id="profileDropdown">
                     <button class="dropdown-item" onclick="openSettings()">
@@ -1185,6 +1185,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                         Billing
                     </button>
+                    <a class="dropdown-item" href="mailto:stiloaiconsulting@gmail.com?subject=Support%20request%20from%20STILO%20AI%20Partners%20client">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Email Support
+                    </a>
                     <div class="dropdown-divider"></div>
                     <button class="dropdown-item danger" onclick="signOut()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1203,7 +1207,7 @@
         <!-- Page Header -->
         <div class="page-header animate-in">
             <h1>Your Agents</h1>
-            <p>Overview of all active and pending agents for Demo Business.</p>
+            <p id="pageHeaderSub">Overview of all active and pending agents.</p>
         </div>
 
         <!-- Summary Strip -->
@@ -1225,8 +1229,8 @@
             </div>
             <div class="summary-card animate-in delay-4">
                 <div class="summary-label">Active Agents</div>
-                <div class="summary-value">3<span style="font-size:0.875rem;font-weight:500;color:var(--text-tertiary);"> / 4</span></div>
-                <div class="summary-change" style="background:var(--yellow-bg);color:var(--yellow);">1 setting up</div>
+                <div class="summary-value" id="stat-active-agents">--</div>
+                <div class="summary-change" id="stat-active-agents-sub" style="background:transparent;color:var(--text-tertiary);">loading...</div>
             </div>
         </div>
 
@@ -1234,374 +1238,7 @@
         <div class="section-label">Your Agents</div>
         <div class="agent-grid">
 
-            <!-- ECHO (AI Receptionist) -->
-            <div class="agent-card animate-in delay-2" id="card-receptionist">
-                <div class="agent-header">
-                    <div class="agent-title-block">
-                        <div class="agent-name">ECHO <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">AI Receptionist</span></div>
-                        <div class="agent-status status-active">
-                            <span class="status-dot"></span>
-                            Active
-                        </div>
-                    </div>
-                    <div class="agent-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    </div>
-                </div>
-                <div class="agent-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">127</div>
-                        <div class="stat-label">Calls handled</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">34</div>
-                        <div class="stat-label">Appts booked</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">98%</div>
-                        <div class="stat-label">Answer rate</div>
-                    </div>
-                </div>
-                <div class="agent-actions">
-                    <button class="btn btn-primary btn-sm" onclick="togglePanel('receptionist')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>
-                        Configure
-                    </button>
-                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=echo">View Agent →</a>
-                </div>
-
-                <!-- Onboarding Panel: AI Receptionist -->
-                <div class="onboarding-panel" id="panel-receptionist">
-                    <div class="onboarding-inner">
-                        <div class="onboarding-title">Configuration</div>
-                        <div class="step-list">
-                            <div class="step completed">
-                                <div class="step-indicator">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                </div>
-                                <div class="step-content">
-                                    <div class="step-name">Business Info</div>
-                                    <div class="step-desc">Name, address, industry (auto-filled)</div>
-                                </div>
-                            </div>
-                            <div class="step completed">
-                                <div class="step-indicator">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                </div>
-                                <div class="step-content">
-                                    <div class="step-name">Services and Pricing</div>
-                                    <div class="step-desc">Service list, pricing, packages</div>
-                                </div>
-                            </div>
-                            <div class="step completed">
-                                <div class="step-indicator">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                </div>
-                                <div class="step-content">
-                                    <div class="step-name">Business Hours</div>
-                                    <div class="step-desc">Operating hours, holidays, after-hours handling</div>
-                                </div>
-                            </div>
-                            <div class="step current expanded">
-                                <div class="step-indicator">4</div>
-                                <div class="step-content">
-                                    <div class="step-name">Booking System Connection</div>
-                                    <div class="step-desc">Connect your calendar or booking tool</div>
-                                    <div class="step-form">
-                                        <div class="form-group">
-                                            <label class="form-label">Booking Platform</label>
-                                            <select>
-                                                <option value="">Select your platform</option>
-                                                <option>Google Calendar</option>
-                                                <option>Calendly</option>
-                                                <option>Acuity Scheduling</option>
-                                                <option>Square Appointments</option>
-                                                <option>Jane App</option>
-                                                <option>Custom / Other</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="form-label">Booking URL or Calendar Link</label>
-                                            <input type="url" placeholder="https://calendly.com/your-business">
-                                        </div>
-                                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;margin-top:0.25rem;"
-                          onclick="saveOnboardingStep(this.closest('.agent-card'), 4, {booking_platform: this.closest('.step-form').querySelector('select').value, booking_url: this.closest('.step-form').querySelector('input[type=url]').value})">Save and Continue</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="step pending">
-                                <div class="step-indicator">5</div>
-                                <div class="step-content">
-                                    <div class="step-name">Phone Setup</div>
-                                    <div class="step-desc">New number, call forwarding, or port your number</div>
-                                    <div class="step-form">
-                                        <div class="form-group">
-                                            <label class="form-label">Phone Setup Method</label>
-                                            <div class="radio-group">
-                                                <div class="radio-option" onclick="selectRadio(this)">
-                                                    <div class="radio-dot"></div>
-                                                    New Number
-                                                </div>
-                                                <div class="radio-option" onclick="selectRadio(this)">
-                                                    <div class="radio-dot"></div>
-                                                    Call Forwarding
-                                                </div>
-                                                <div class="radio-option" onclick="selectRadio(this)">
-                                                    <div class="radio-dot"></div>
-                                                    Port Existing
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="step pending">
-                                <div class="step-indicator">6</div>
-                                <div class="step-content">
-                                    <div class="step-name">Voice Personality</div>
-                                    <div class="step-desc">Tone, style, and language for the AI voice</div>
-                                    <div class="step-form">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label class="form-label">Voice Tone</label>
-                                                <select>
-                                                    <option value="">Select tone</option>
-                                                    <option>Professional</option>
-                                                    <option>Friendly</option>
-                                                    <option>Casual</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Language</label>
-                                                <select>
-                                                    <option>English</option>
-                                                    <option>Spanish</option>
-                                                    <option>English + Spanish</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="step pending">
-                                <div class="step-indicator">7</div>
-                                <div class="step-content">
-                                    <div class="step-name">Review and Activate</div>
-                                    <div class="step-desc">Confirm everything looks good, then go live</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- IGNITE (Lead Response) -->
-            <div class="agent-card animate-in delay-3" id="card-leadresponse">
-                <div class="agent-header">
-                    <div class="agent-title-block">
-                        <div class="agent-name">IGNITE <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">Lead Response</span></div>
-                        <div class="agent-status status-active">
-                            <span class="status-dot"></span>
-                            Active
-                        </div>
-                    </div>
-                    <div class="agent-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    </div>
-                </div>
-                <div class="agent-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">45</div>
-                        <div class="stat-label">Leads responded</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">12</div>
-                        <div class="stat-label">Appts booked</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">3.2m</div>
-                        <div class="stat-label">Avg response</div>
-                    </div>
-                </div>
-                <div class="agent-actions">
-                    <button class="btn btn-primary btn-sm" onclick="togglePanel('leadresponse')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
-                        Configure
-                    </button>
-                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=ignite">View Agent →</a>
-                </div>
-                <div class="onboarding-panel" id="panel-leadresponse">
-                    <div class="onboarding-inner">
-                        <div class="onboarding-title">Configuration</div>
-                        <p style="font-size:0.8125rem;color:var(--text-secondary);">All setup steps complete. This agent is fully active and responding to leads automatically.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- REVIVE (Customer Reactivation) -->
-            <div class="agent-card animate-in delay-4" id="card-lcr">
-                <div class="agent-header">
-                    <div class="agent-title-block">
-                        <div class="agent-name">REVIVE <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">Customer Reactivation</span></div>
-                        <div class="agent-status status-setup">
-                            <span class="status-dot"></span>
-                            Setting Up
-                        </div>
-                    </div>
-                    <div class="agent-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    </div>
-                </div>
-                <div class="setup-progress">
-                    <div class="progress-header">
-                        <span class="progress-text">Onboarding progress</span>
-                        <span class="progress-count">3 / 6 steps</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: 50%"></div>
-                    </div>
-                </div>
-                <div class="agent-actions">
-                    <button class="btn btn-primary btn-sm" onclick="togglePanel('lcr')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
-                        Continue Setup
-                    </button>
-                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=revive">View Agent →</a>
-                </div>
-
-                <!-- Onboarding Panel: LCR -->
-                <div class="onboarding-panel" id="panel-lcr">
-                    <div class="onboarding-inner">
-                        <div class="onboarding-title">Setup Wizard</div>
-                        <div class="step-list">
-                            <div class="step completed">
-                                <div class="step-indicator">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                </div>
-                                <div class="step-content">
-                                    <div class="step-name">Upload Customer Database</div>
-                                    <div class="step-desc">customers_export.csv (2,341 records)</div>
-                                </div>
-                            </div>
-                            <div class="step completed">
-                                <div class="step-indicator">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                </div>
-                                <div class="step-content">
-                                    <div class="step-name">Map Columns</div>
-                                    <div class="step-desc">Name, email, phone, last visit, total spend mapped</div>
-                                </div>
-                            </div>
-                            <div class="step completed">
-                                <div class="step-indicator">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                </div>
-                                <div class="step-content">
-                                    <div class="step-name">Set Win-Back Offers</div>
-                                    <div class="step-desc">3 tiers configured with discount codes</div>
-                                </div>
-                            </div>
-                            <div class="step current expanded">
-                                <div class="step-indicator">4</div>
-                                <div class="step-content">
-                                    <div class="step-name">Email Sender Config</div>
-                                    <div class="step-desc">Connect your email account to send campaigns</div>
-                                    <div class="step-form">
-                                        <div class="form-group">
-                                            <label class="form-label">Email Provider</label>
-                                            <div class="radio-group">
-                                                <div class="radio-option selected" onclick="selectRadio(this)">
-                                                    <div class="radio-dot"></div>
-                                                    Gmail
-                                                </div>
-                                                <div class="radio-option" onclick="selectRadio(this)">
-                                                    <div class="radio-dot"></div>
-                                                    Outlook
-                                                </div>
-                                                <div class="radio-option" onclick="selectRadio(this)">
-                                                    <div class="radio-dot"></div>
-                                                    Custom SMTP
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button class="btn btn-primary btn-sm" style="align-self:flex-start;">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                                            Connect Gmail Account
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="step pending">
-                                <div class="step-indicator">5</div>
-                                <div class="step-content">
-                                    <div class="step-name">Review Segments and Approve</div>
-                                    <div class="step-desc">Preview customer segments and email templates</div>
-                                </div>
-                            </div>
-                            <div class="step pending">
-                                <div class="step-indicator">6</div>
-                                <div class="step-content">
-                                    <div class="step-name">Launch Campaign</div>
-                                    <div class="step-desc">Confirm and start sending to lapsed customers</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FORGE (AI Website) -->
-            <div class="agent-card animate-in delay-5" id="card-website">
-                <div class="agent-header">
-                    <div class="agent-title-block">
-                        <div class="agent-name">FORGE <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">AI Website</span></div>
-                        <div class="agent-status status-active">
-                            <span class="status-dot"></span>
-                            Active
-                        </div>
-                    </div>
-                    <div class="agent-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                    </div>
-                </div>
-                <div class="agent-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">2,341</div>
-                        <div class="stat-label">Visits</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">67</div>
-                        <div class="stat-label">Leads captured</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">2.8%</div>
-                        <div class="stat-label">Conversion rate</div>
-                    </div>
-                </div>
-                <div class="agent-actions">
-                    <button class="btn btn-primary btn-sm" onclick="togglePanel('website')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>
-                        Configure
-                    </button>
-                    <a class="btn btn-ghost btn-sm" href="/app/agents/?agent=forge">View Agent →</a>
-                </div>
-                <div class="onboarding-panel" id="panel-website">
-                    <div class="onboarding-inner">
-                        <div class="onboarding-title">Configuration</div>
-                        <p style="font-size:0.8125rem;color:var(--text-secondary);">Your website is live and collecting leads. All setup steps are complete.</p>
-                        <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem;">
-                            <div class="form-group">
-                                <label class="form-label">Live URL</label>
-                                <input type="text" value="https://demo-business.stiloai.com" readonly style="color:var(--purple-light);">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Custom Domain</label>
-                                <input type="text" placeholder="www.yourdomain.com">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Agent cards are generated dynamically by loadAgentData() from Supabase client_agents rows -->
 
         </div>
     </main>
@@ -1680,22 +1317,7 @@
                     <h3>Invoice History</h3>
                     <div class="invoice-list" id="invoiceList">
                         <div class="invoice-row">
-                            <span style="color:var(--text-tertiary);font-size:0.875rem;">Invoice history will appear here once your first billing cycle completes.</span>
-                        </div>
-                        <div class="invoice-row">
-                            <span class="invoice-date">Mar 1, 2026</span>
-                            <span class="invoice-amount">$1,950.00</span>
-                            <span class="invoice-dl">Download</span>
-                        </div>
-                        <div class="invoice-row">
-                            <span class="invoice-date">Feb 1, 2026</span>
-                            <span class="invoice-amount">$1,950.00</span>
-                            <span class="invoice-dl">Download</span>
-                        </div>
-                        <div class="invoice-row">
-                            <span class="invoice-date">Jan 1, 2026</span>
-                            <span class="invoice-amount">$1,500.00</span>
-                            <span class="invoice-dl">Download</span>
+                            <span style="color:var(--text-tertiary);font-size:0.875rem;">Loading invoices...</span>
                         </div>
                     </div>
                 </div>
@@ -1716,7 +1338,7 @@
     <div class="confirm-dialog" id="cancelConfirm">
         <div class="confirm-box">
             <h3>Cancel your service?</h3>
-            <p>Your 4 active agents will stop working at the end of your current billing period (April 30, 2026). This can't be undone.</p>
+            <p id="cancelDialogCopy">Your agents will stop working at the end of your current billing period. This can't be undone.</p>
             <div class="confirm-actions">
                 <button class="btn btn-ghost btn-sm" onclick="hideCancelConfirm()">Keep My Agents</button>
                 <button class="btn btn-danger btn-sm" onclick="hideCancelConfirm()">Yes, Cancel</button>
@@ -1759,57 +1381,116 @@
             }
             appInitialized = true;
             currentUserId = session.user.id;
+            const user = session.user;
 
-            // If an admin was redirected here by a magic link, send them to /admin/
-            // Check email first (fast, no DB), then also check DB is_admin as fallback
-            if (ADMIN_EMAILS_APP.includes(session.user.email)) {
+            if (ADMIN_EMAILS_APP.includes(user.email)) {
                 window.location.href = '/admin/';
                 return;
             }
 
-            const user = session.user;
+            // Show email-based name immediately so the topbar never stays on "Loading..."
+            const emailFallback = (user.email || '').split('@')[0] || 'User';
+            const profileNameEl = document.querySelector('.profile-name');
+            const avatarEl = document.querySelector('.avatar');
+            if (profileNameEl) profileNameEl.textContent = emailFallback;
+            if (avatarEl) avatarEl.textContent = emailFallback.charAt(0).toUpperCase();
 
-            // Load client row from DB (source of truth for business info)
-            const { data: clientRow } = await sb.from('clients')
-                .select('*').eq('id', user.id).single();
+            // Pre-fill settings email from auth so even a failed DB read shows something real
+            const settingEmailEarly = document.getElementById('settingEmail');
+            if (settingEmailEarly) settingEmailEarly.value = user.email || '';
+
+            // Pull the real client row. maybeSingle + try/catch keep the dashboard
+            // rendering even when RLS or the network hiccups.
+            let clientRow = null;
+            try {
+                const res = await sb.from('clients').select('*').eq('id', user.id).maybeSingle();
+                if (res.error) console.error('[initDashboard] clients query error:', res.error.message);
+                else clientRow = res.data;
+            } catch (e) {
+                console.error('[initDashboard] clients query threw:', e);
+            }
 
             if (clientRow && clientRow.is_admin) {
                 window.location.href = '/admin/';
                 return;
             }
 
-            // Prefer DB values, fall back to auth metadata, then email prefix
             const meta = user.user_metadata || {};
             const displayName = (clientRow && clientRow.business_name)
                 || meta.business_name
-                || user.email.split('@')[0];
+                || emailFallback;
 
-            // Update top bar
-            document.querySelector('.profile-name').textContent = displayName;
-            document.querySelector('.avatar').textContent = displayName.charAt(0).toUpperCase();
-            document.querySelector('.page-header p').textContent =
+            if (profileNameEl) profileNameEl.textContent = displayName;
+            if (avatarEl) avatarEl.textContent = displayName.charAt(0).toUpperCase();
+            const pageHeaderSub = document.getElementById('pageHeaderSub');
+            if (pageHeaderSub) pageHeaderSub.textContent =
                 'Overview of all active and pending agents for ' + displayName + '.';
 
-            // Populate Account Settings form from DB
-            if (clientRow) {
-                var f = document.getElementById('settingBusinessName');
-                if (f) f.value = clientRow.business_name || '';
-                var fe = document.getElementById('settingEmail');
-                if (fe) fe.value = clientRow.email || user.email || '';
-                var fp = document.getElementById('settingPhone');
-                if (fp) fp.value = clientRow.phone || '';
-                var fa = document.getElementById('settingAddress');
-                if (fa) fa.value = clientRow.address || '';
-                var fi = document.getElementById('settingIndustry');
-                if (fi && clientRow.business_type) {
-                    var opt = Array.from(fi.options).find(function(o) {
-                        return o.value === clientRow.business_type || o.text === clientRow.business_type;
-                    });
-                    if (opt) opt.selected = true;
-                }
+            // Populate Account Settings form
+            const src = clientRow || {};
+            var f = document.getElementById('settingBusinessName');
+            if (f) f.value = src.business_name || meta.business_name || '';
+            var fe = document.getElementById('settingEmail');
+            if (fe) fe.value = src.email || user.email || '';
+            var fp = document.getElementById('settingPhone');
+            if (fp) fp.value = src.phone || '';
+            var fa = document.getElementById('settingAddress');
+            if (fa) fa.value = src.address || '';
+            var fi = document.getElementById('settingIndustry');
+            if (fi && src.business_type) {
+                var opt = Array.from(fi.options).find(function(o) {
+                    return o.value === src.business_type || o.text === src.business_type;
+                });
+                if (opt) opt.selected = true;
             }
 
             loadAgentData(user.id);
+            loadInvoices(user.id);
+        }
+
+        // --- Load real Stripe invoices via our API ---
+        async function loadInvoices(clientId) {
+            var listEl = document.getElementById('invoiceList');
+            if (!listEl) return;
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                if (!session) return;
+                var res = await fetch('/api/list-invoices', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ access_token: session.access_token })
+                });
+                var payload = await res.json();
+                if (!res.ok) throw new Error(payload.error || 'Failed to load invoices');
+                var invoices = payload.invoices || [];
+                if (invoices.length === 0) {
+                    listEl.innerHTML = '<div class="invoice-row">'
+                        + '<span style="color:var(--text-tertiary);font-size:0.875rem;">No invoices yet. Your first invoice will appear here after your first billing cycle.</span>'
+                        + '</div>';
+                    return;
+                }
+                listEl.innerHTML = invoices.map(function(inv) {
+                    var d = new Date(inv.created_at);
+                    var dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    var amount = '$' + (inv.amount_cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    var statusBadge = inv.status !== 'paid'
+                        ? ' <span style="font-size:0.6875rem;padding:1px 6px;border-radius:4px;background:var(--yellow-bg);color:var(--yellow);text-transform:uppercase;margin-left:6px;">' + inv.status + '</span>'
+                        : '';
+                    var dl = inv.pdf_url
+                        ? '<a class="invoice-dl" href="' + inv.pdf_url + '" target="_blank" rel="noopener">Download</a>'
+                        : '<span class="invoice-dl" style="opacity:0.4;cursor:default;">Download</span>';
+                    return '<div class="invoice-row">'
+                        + '<span class="invoice-date">' + dateLabel + statusBadge + '</span>'
+                        + '<span class="invoice-amount">' + amount + '</span>'
+                        + dl
+                        + '</div>';
+                }).join('');
+            } catch (err) {
+                console.error('[loadInvoices]', err);
+                listEl.innerHTML = '<div class="invoice-row">'
+                    + '<span style="color:var(--text-tertiary);font-size:0.875rem;">Could not load invoices. Refresh or contact support.</span>'
+                    + '</div>';
+            }
         }
 
         // Primary check — covers already-signed-in users
@@ -1818,158 +1499,250 @@
             await initDashboard(session);
         })();
 
-        // Maps Stripe agent_type values to card IDs in the HTML
-        const AGENT_CARD_MAP = {
-            receptionist: 'card-receptionist',
-            echo:         'card-receptionist',
-            lead_reply:   'card-leadresponse',
-            ignite:       'card-leadresponse',
-            lcr:          'card-lcr',
-            revive:       'card-lcr',
-            website:      'card-website',
-            forge:        'card-website',
-            seo:          'card-seo',
-            signal:       'card-seo',
-            ontology:     'card-ontology',
-            oracle:       'card-ontology',
-            lead_gen:     'card-leadgen',
-            scout:        'card-leadgen',
-            custom:       'card-custom',
-            flux:         'card-custom'
+        // Agent presentation catalog (mirrors api/_agents.js). All 8 agents render
+        // through here, so adding a new agent is one entry, not a new card block.
+        const AGENT_CATALOG = {
+            echo:   { name: 'ECHO',   subtitle: 'AI Receptionist',        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' },
+            ignite: { name: 'IGNITE', subtitle: 'Lead Response',          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+            revive: { name: 'REVIVE', subtitle: 'Customer Reactivation',  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+            scout:  { name: 'SCOUT',  subtitle: 'Lead Generator',         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' },
+            forge:  { name: 'FORGE',  subtitle: 'AI Website',             icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' },
+            signal: { name: 'SIGNAL', subtitle: 'AI SEO (GEO)',           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+            oracle: { name: 'ORACLE', subtitle: 'Growth Intelligence',    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+            flux:   { name: 'FLUX',   subtitle: 'Custom Automations',     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.3.23.65.36 1 .4h.09a2 2 0 0 1 0 4H21a1.65 1.65 0 0 0-1 1.51z"/></svg>' }
         };
+        const AGENT_ORDER = ['echo','ignite','revive','scout','forge','signal','oracle','flux'];
 
-        // --- Load agent data from Supabase ---
+        // Render one agent card as an HTML string. Called from loadAgentData.
+        function renderAgentCard(agent, index) {
+            const meta = AGENT_CATALOG[agent.agent_type];
+            if (!meta) return '';
+            const isOnboarding = agent.status === 'onboarding';
+            const isActive     = agent.status === 'active';
+            const isPaused     = agent.status === 'paused';
+            const statusClass  = isOnboarding ? 'status-setup'
+                              : isActive     ? 'status-active'
+                              : isPaused     ? 'status-paused'
+                              : 'status-setup';
+            const statusText   = isOnboarding ? 'Setting up'
+                              : isActive     ? 'Active'
+                              : isPaused     ? 'Paused'
+                              : agent.status;
+
+            const steps = (agent.onboarding_steps || []).slice().sort(function(a,b){ return a.step_number - b.step_number; });
+            const total = steps.length;
+            const done  = steps.filter(function(s){ return s.status === 'completed'; }).length;
+            const pct   = total > 0 ? Math.round((done/total)*100) : 0;
+
+            const stepListHtml = steps.map(function(s) {
+                const cls  = s.status === 'completed' ? 'completed'
+                           : s.status === 'in_progress' ? 'current' : 'pending';
+                const icon = s.status === 'completed'
+                    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+                    : '<span>' + s.step_number + '</span>';
+                return '<div class="step ' + cls + '">'
+                    + '<div class="step-indicator">' + icon + '</div>'
+                    + '<div class="step-content"><div class="step-name">' + s.step_name + '</div></div>'
+                    + '</div>';
+            }).join('');
+
+            let body;
+            if (isOnboarding) {
+                body = '<div class="setup-progress">'
+                    + '<div class="progress-header">'
+                        + '<span class="progress-text">Onboarding progress</span>'
+                        + '<span class="progress-count">' + done + ' / ' + total + ' steps</span>'
+                    + '</div>'
+                    + '<div class="progress-track"><div class="progress-fill" style="width:' + pct + '%"></div></div>'
+                + '</div>'
+                + '<div class="agent-actions">'
+                    + '<button class="btn btn-primary btn-sm" onclick="togglePanel(\'' + agent.agent_type + '\')">Continue Setup</button>'
+                    + '<a class="btn btn-ghost btn-sm" href="/app/agents/?agent=' + agent.agent_type + '">View Agent →</a>'
+                + '</div>'
+                + '<div class="onboarding-panel" id="panel-' + agent.agent_type + '">'
+                    + '<div class="onboarding-inner">'
+                        + '<div class="onboarding-title">Setup Wizard</div>'
+                        + '<div class="step-list">' + stepListHtml + '</div>'
+                    + '</div>'
+                + '</div>';
+            } else {
+                body = '<div class="agent-stats">'
+                    + '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats appear once this agent has handled events.</div>'
+                + '</div>'
+                + '<div class="agent-actions">'
+                    + '<a class="btn btn-primary btn-sm" href="/app/agents/?agent=' + agent.agent_type + '">Configure</a>'
+                    + '<a class="btn btn-ghost btn-sm" href="/app/agents/?agent=' + agent.agent_type + '">View Agent →</a>'
+                + '</div>';
+            }
+
+            return '<div class="agent-card animate-in" id="card-' + agent.agent_type + '" data-agent-id="' + agent.id + '" style="animation-delay:' + (index * 0.05) + 's;">'
+                + '<div class="agent-header">'
+                    + '<div class="agent-title-block">'
+                        + '<div class="agent-name">' + meta.name + ' <span style="font-size:0.75rem;font-weight:500;color:var(--text-tertiary);margin-left:6px;">' + meta.subtitle + '</span></div>'
+                        + '<div class="agent-status ' + statusClass + '"><span class="status-dot"></span>' + statusText + '</div>'
+                    + '</div>'
+                    + '<div class="agent-icon">' + meta.icon + '</div>'
+                + '</div>'
+                + body
+            + '</div>';
+        }
+
+        // --- Write the top-right "Active Agents" tile + cancel-dialog count ---
+        function renderAgentSummary(activeCount, setupCount) {
+            var total = activeCount + setupCount;
+            var valEl = document.getElementById('stat-active-agents');
+            var subEl = document.getElementById('stat-active-agents-sub');
+            if (valEl) {
+                if (total === 0) {
+                    valEl.textContent = '0';
+                } else {
+                    valEl.innerHTML = activeCount
+                        + '<span style="font-size:0.875rem;font-weight:500;color:var(--text-tertiary);"> / ' + total + '</span>';
+                }
+            }
+            if (subEl) {
+                if (total === 0) {
+                    subEl.textContent = 'none yet';
+                    subEl.style.background = 'transparent';
+                    subEl.style.color = 'var(--text-tertiary)';
+                } else if (setupCount > 0) {
+                    subEl.textContent = setupCount + ' setting up';
+                    subEl.style.background = 'var(--yellow-bg)';
+                    subEl.style.color = 'var(--yellow)';
+                } else {
+                    subEl.textContent = 'all live';
+                    subEl.style.background = 'transparent';
+                    subEl.style.color = 'var(--text-tertiary)';
+                }
+            }
+            // Cancel-dialog copy: "Your N active agents will stop working..."
+            var cancelCopy = document.getElementById('cancelDialogCopy');
+            if (cancelCopy) {
+                if (total === 0) {
+                    cancelCopy.textContent = 'You have no active agents to cancel.';
+                } else {
+                    cancelCopy.textContent = 'Your ' + total + ' ' + (total === 1 ? 'agent' : 'agents')
+                        + ' will stop working at the end of your current billing period. This can\'t be undone.';
+                }
+            }
+        }
+
+        // --- Load agent data from Supabase and render every card from scratch ---
         async function loadAgentData(clientId) {
-            // Always hide demo cards immediately — never show hardcoded data
-            var grid = document.querySelector('.agent-grid');
-            document.querySelectorAll('.agent-card').forEach(function(card) {
-                card.style.display = 'none';
-            });
+            const grid = document.querySelector('.agent-grid');
+            if (!grid) return;
 
-            const { data: agents, error } = await sb
-                .from('client_agents')
-                .select('*, onboarding_steps(*)')
-                .eq('client_id', clientId)
-                .neq('status', 'cancelled');
+            let agents = [];
+            let queryError = null;
+            try {
+                const res = await sb
+                    .from('client_agents')
+                    .select('*, onboarding_steps(*)')
+                    .eq('client_id', clientId)
+                    .neq('status', 'cancelled');
+                if (res.error) queryError = res.error;
+                else agents = res.data || [];
+            } catch (e) {
+                queryError = e;
+            }
 
-            if (error) {
-                console.error('[loadAgentData] query error:', error.message);
-                if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;">'
+            if (queryError) {
+                console.error('[loadAgentData] query error:', queryError.message || queryError);
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;">'
                     + '<p style="font-size:0.9375rem;color:var(--text-secondary);margin-bottom:0.5rem;">Could not load your agents.</p>'
                     + '<p style="font-size:0.8125rem;color:var(--text-tertiary);">Refresh the page or contact support if this continues.</p>'
                     + '</div>';
+                renderAgentSummary(0, 0);
+                renderPlanCard(0, 0);
+                loadSummaryMetrics([]);
                 return;
             }
-            if (!agents || agents.length === 0) {
-                if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--text-tertiary);">'
+
+            if (agents.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--text-tertiary);">'
                     + '<p style="font-size:1rem;color:var(--text-secondary);margin-bottom:0.5rem;">No agents yet</p>'
                     + '<p style="font-size:0.875rem;">Your agents will appear here after purchase.</p>'
                     + '</div>';
+                renderAgentSummary(0, 0);
+                renderPlanCard(0, 0);
+                loadSummaryMetrics([]);
                 return;
             }
 
-            var activeCount = 0;
-            var setupCount = 0;
-
-            agents.forEach(function(agent) {
-                var cardId = AGENT_CARD_MAP[agent.agent_type];
-                if (!cardId) return;
-                var card = document.getElementById(cardId);
-                if (!card) return;
-
-                card.style.display = '';
-                card.dataset.agentId = agent.id;
-
-                // Update status badge
-                var statusEl = card.querySelector('.agent-status');
-                if (statusEl) {
-                    if (agent.status === 'onboarding') {
-                        statusEl.className = 'agent-status status-setup';
-                        statusEl.innerHTML = '<span class="status-dot"></span>Setting up';
-                        setupCount++;
-                    } else if (agent.status === 'active') {
-                        statusEl.className = 'agent-status status-active';
-                        statusEl.innerHTML = '<span class="status-dot"></span>Active';
-                        activeCount++;
-                    } else if (agent.status === 'paused') {
-                        statusEl.className = 'agent-status status-paused';
-                        statusEl.innerHTML = '<span class="status-dot"></span>Paused';
-                    }
-                }
-
-                // Always wipe hardcoded demo stats — replace with real data or placeholder
-                var statsEl = card.querySelector('.agent-stats');
-                if (statsEl) {
-                    if (agent.status === 'onboarding') {
-                        statsEl.innerHTML = '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats will appear once this agent goes live.</div>';
-                    } else {
-                        // Replace every stat-value with "--" until real metrics load
-                        statsEl.querySelectorAll('.stat-value').forEach(function(el) {
-                            el.textContent = '--';
-                        });
-                    }
-                }
-
-                // Update onboarding steps panel if agent is in setup
-                if (agent.status === 'onboarding' && agent.onboarding_steps) {
-                    var steps = agent.onboarding_steps.sort(function(a, b) {
-                        return a.step_number - b.step_number;
-                    });
-                    var stepList = card.querySelector('.step-list');
-                    if (stepList) {
-                        stepList.innerHTML = steps.map(function(step) {
-                            var cls = step.status === 'completed' ? 'completed'
-                                    : step.status === 'in_progress' ? 'current' : 'pending';
-                            var check = step.status === 'completed'
-                                ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
-                                : '<span>' + step.step_number + '</span>';
-                            return '<div class="step ' + cls + '">'
-                                + '<div class="step-indicator">' + check + '</div>'
-                                + '<div class="step-content"><div class="step-name">' + step.step_name + '</div></div>'
-                                + '</div>';
-                        }).join('');
-                    }
-
-                    // Show setup progress bar
-                    var done = steps.filter(function(s) { return s.status === 'completed'; }).length;
-                    var pct = Math.round((done / steps.length) * 100);
-                    var progressEl = card.querySelector('.setup-progress');
-                    if (progressEl) {
-                        progressEl.querySelector('.progress-fill').style.width = pct + '%';
-                        progressEl.querySelector('.progress-label').textContent = pct + '% complete';
-                    }
-                }
+            // Sort by canonical agent order so cards always appear in the same sequence
+            agents.sort(function(a, b) {
+                return AGENT_ORDER.indexOf(a.agent_type) - AGENT_ORDER.indexOf(b.agent_type);
             });
 
-            // Update "Active Agents" summary card
-            var activeValueEl = document.querySelector('.summary-card:last-child .summary-value');
-            if (activeValueEl) {
-                activeValueEl.innerHTML = activeCount
-                    + (setupCount > 0
-                        ? '<span style="font-size:0.875rem;font-weight:500;color:var(--text-tertiary);"> / ' + (activeCount + setupCount) + '</span>'
-                        : '');
-            }
+            let activeCount = 0;
+            let setupCount = 0;
+            agents.forEach(function(a) {
+                if (a.status === 'active') activeCount++;
+                else if (a.status === 'onboarding') setupCount++;
+            });
 
-            // Update plan card with real agent count
-            var total = activeCount + setupCount;
-            var planNameEl = document.getElementById('planName');
-            if (planNameEl) {
-                planNameEl.textContent = total === 0
-                    ? 'No agents yet'
-                    : total + ' Agent' + (total !== 1 ? 's' : '') + ' — ' + (setupCount > 0 ? setupCount + ' setting up' : 'all active');
-            }
-            var planPriceEl = document.getElementById('planPrice');
-            if (planPriceEl) planPriceEl.textContent = 'Billed monthly per agent';
-            var planBadgeEl = document.getElementById('planBadge');
-            if (planBadgeEl) {
-                planBadgeEl.textContent = setupCount > 0 ? 'Setting Up' : 'Active';
-                planBadgeEl.style.background = setupCount > 0 ? 'var(--yellow-bg)' : '';
-                planBadgeEl.style.color = setupCount > 0 ? 'var(--yellow)' : '';
-            }
+            grid.innerHTML = agents.map(renderAgentCard).join('');
+
+            renderAgentSummary(activeCount, setupCount);
+            renderPlanCard(activeCount, setupCount, agents);
 
             // Load summary metrics across all agents
             var agentIds = agents.map(function(a) { return a.id; });
-            if (agentIds.length > 0) loadSummaryMetrics(agentIds);
+            loadSummaryMetrics(agentIds);
+        }
+
+        // Prices come from the public quiz; we mirror them here so the plan card
+        // can show the real monthly without a round-trip. Cents.
+        var AGENT_MONTHLY_CENTS = {
+            echo: 45000, ignite: 65000, revive: 80000, scout: 100000,
+            forge: 20000, signal: 0, oracle: 100000, flux: 0
+        };
+
+        function renderPlanCard(activeCount, setupCount, agents) {
+            var total = activeCount + setupCount;
+            var planNameEl = document.getElementById('planName');
+            var planPriceEl = document.getElementById('planPrice');
+            var planBadgeEl = document.getElementById('planBadge');
+
+            if (planNameEl) {
+                planNameEl.textContent = total === 0
+                    ? 'No agents yet'
+                    : total + ' Agent' + (total !== 1 ? 's' : '') + (setupCount > 0 ? ', ' + setupCount + ' setting up' : ', all live');
+            }
+
+            if (planPriceEl) {
+                if (!agents || agents.length === 0) {
+                    planPriceEl.textContent = 'No recurring charges yet';
+                } else {
+                    var cents = 0;
+                    agents.forEach(function(a) {
+                        var m = AGENT_MONTHLY_CENTS[a.agent_type] || 0;
+                        cents += m;
+                    });
+                    if (cents > 0) {
+                        var dollars = (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                        planPriceEl.textContent = '$' + dollars + '/month, billed across ' + agents.length + ' subscription' + (agents.length !== 1 ? 's' : '');
+                    } else {
+                        planPriceEl.textContent = 'One-time setup only, no recurring charges';
+                    }
+                }
+            }
+
+            if (planBadgeEl) {
+                if (total === 0) {
+                    planBadgeEl.textContent = 'None';
+                    planBadgeEl.style.background = 'transparent';
+                    planBadgeEl.style.color = 'var(--text-tertiary)';
+                } else if (setupCount > 0) {
+                    planBadgeEl.textContent = 'Setting Up';
+                    planBadgeEl.style.background = 'var(--yellow-bg)';
+                    planBadgeEl.style.color = 'var(--yellow)';
+                } else {
+                    planBadgeEl.textContent = 'Active';
+                    planBadgeEl.style.background = '';
+                    planBadgeEl.style.color = '';
+                }
+            }
         }
 
         // --- Account Settings: save business info to Supabase ---
@@ -2096,13 +1869,19 @@
         }
 
         // --- Auth state listener ---
-        // SIGNED_IN fires when a magic link token in the URL hash is processed —
-        // this catches the case where getSession() resolves before the token is ready.
-        sb.auth.onAuthStateChange(async (event, session) => {
+        // SIGNED_IN fires when a magic link token in the URL hash is processed.
+        // IMPORTANT: do NOT await async work (especially sb.from queries) inside
+        // this callback. gotrue holds the auth lock while it runs, and any DB
+        // call from within also tries to acquire that lock, which deadlocks and
+        // shows up as "Lock was not released within 5000ms" in the console.
+        // Defer initDashboard via setTimeout so it runs after the lock releases.
+        sb.auth.onAuthStateChange(function (event, session) {
             if (event === 'SIGNED_OUT') {
                 window.location.href = '/auth.html';
-            } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !appInitialized) {
-                await initDashboard(session);
+                return;
+            }
+            if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !appInitialized) {
+                setTimeout(function () { initDashboard(session); }, 0);
             }
         });
 
