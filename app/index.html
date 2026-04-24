@@ -842,6 +842,120 @@
         }
 
         /* ============================================================
+           Onboarding Wizard (per agent)
+           ============================================================ */
+        .wizard-stepper {
+            display: flex;
+            gap: 0.375rem;
+            margin: 0.25rem 0 1rem;
+            flex-wrap: wrap;
+        }
+        .wizard-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            border: 1.5px solid var(--text-tertiary);
+            color: var(--text-tertiary);
+            background: transparent;
+        }
+        .wizard-dot.done {
+            background: var(--green);
+            border-color: var(--green);
+            color: white;
+        }
+        .wizard-dot.current {
+            background: var(--purple-primary);
+            border-color: var(--purple-primary);
+            color: white;
+            box-shadow: 0 0 10px rgba(37,99,235,0.4);
+        }
+
+        .wizard-head { margin-bottom: 0.75rem; }
+        .wizard-step-num {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .wizard-step-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: 0.125rem;
+        }
+
+        .wizard-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.875rem;
+        }
+        .wizard-group .form-input {
+            width: 100%;
+            padding: 0.55rem 0.7rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-medium);
+            background: var(--bg-elevated, rgba(255,255,255,0.02));
+            color: var(--text-primary);
+            font-size: 0.8125rem;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: border-color var(--transition-fast);
+        }
+        .wizard-group .form-input:focus {
+            outline: none;
+            border-color: var(--purple-primary);
+        }
+        .wizard-group textarea.form-input {
+            resize: vertical;
+            min-height: 72px;
+            line-height: 1.45;
+        }
+        .wizard-group textarea.wizard-json {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.75rem;
+        }
+        .wizard-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+        .wizard-hint {
+            font-size: 0.6875rem;
+            color: var(--text-tertiary);
+            margin-top: 0.25rem;
+        }
+
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .wizard-msg {
+            font-size: 0.75rem;
+            min-height: 1em;
+        }
+        .wizard-msg.error { color: var(--red); }
+        .wizard-msg.ok    { color: var(--green); }
+
+        .wizard-empty {
+            font-size: 0.8125rem;
+            color: var(--text-tertiary);
+            padding: 0.75rem;
+        }
+
+        /* ============================================================
            Account Settings Modal
            ============================================================ */
         .modal-overlay {
@@ -1548,6 +1662,12 @@
 
             let body;
             if (isOnboarding) {
+                // The wizard opens to whichever step is in_progress, falling back
+                // to the first non-completed step, falling back to the last step.
+                var activeIdx = steps.findIndex(function(s){ return s.status === 'in_progress'; });
+                if (activeIdx === -1) activeIdx = steps.findIndex(function(s){ return s.status !== 'completed'; });
+                if (activeIdx === -1) activeIdx = Math.max(0, steps.length - 1);
+
                 body = '<div class="setup-progress">'
                     + '<div class="progress-header">'
                         + '<span class="progress-text">Onboarding progress</span>'
@@ -1562,7 +1682,10 @@
                 + '<div class="onboarding-panel" id="panel-' + agent.agent_type + '">'
                     + '<div class="onboarding-inner">'
                         + '<div class="onboarding-title">Setup Wizard</div>'
-                        + '<div class="step-list">' + stepListHtml + '</div>'
+                        + '<div class="wizard-stepper">' + renderWizardStepper(steps, activeIdx) + '</div>'
+                        + '<div class="wizard-body" id="wizard-body-' + agent.agent_type + '">'
+                            + renderWizardStep(agent, steps, activeIdx)
+                        + '</div>'
                     + '</div>'
                 + '</div>';
             } else {
@@ -1792,22 +1915,233 @@
         }
 
         // --- Save an onboarding step and advance to the next ---
-        async function saveOnboardingStep(cardEl, stepNumber, formData) {
+        // Schema note: onboarding_steps has a `data` jsonb column (not `response_data`).
+        // We nest the form payload under data.response_data to match how the
+        // simulation seeder (apply-onboarding.js) writes it.
+        async function saveOnboardingStep(cardEl, stepNumber, formData, isLastStep) {
             var clientAgentId = cardEl.dataset.agentId;
-            if (!clientAgentId) return;
+            if (!clientAgentId) return { ok: false };
 
-            await sb.from('onboarding_steps')
-                .update({ status: 'completed', response_data: formData, completed_at: new Date().toISOString() })
+            var now = new Date().toISOString();
+            var { error: e1 } = await sb.from('onboarding_steps')
+                .update({
+                    status: 'completed',
+                    data: { response_data: formData, saved_at: now, saved_from: 'client_dashboard' },
+                    completed_at: now,
+                })
                 .eq('client_agent_id', clientAgentId)
                 .eq('step_number', stepNumber);
+            if (e1) { console.error('[saveOnboardingStep] step update failed:', e1.message); return { ok: false, error: e1 }; }
 
-            await sb.from('onboarding_steps')
-                .update({ status: 'in_progress' })
-                .eq('client_agent_id', clientAgentId)
-                .eq('step_number', stepNumber + 1);
+            if (!isLastStep) {
+                await sb.from('onboarding_steps')
+                    .update({ status: 'in_progress' })
+                    .eq('client_agent_id', clientAgentId)
+                    .eq('step_number', stepNumber + 1);
+            }
+
+            // On the last step, flip the agent from onboarding -> active via the
+            // finalize endpoint. It re-validates ownership server-side and
+            // stamps config.onboarding_completed_at.
+            if (isLastStep) {
+                try {
+                    var { data: { session: s } } = await sb.auth.getSession();
+                    if (s) {
+                        var resp = await fetch('/api/finalize-agent-onboarding', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + s.access_token,
+                            },
+                            body: JSON.stringify({ client_agent_id: clientAgentId }),
+                        });
+                        if (!resp.ok) {
+                            var t = await resp.text();
+                            console.error('[finalize] failed:', resp.status, t);
+                        }
+                    }
+                } catch (e) {
+                    console.error('[finalize] network error:', e);
+                }
+            }
 
             var { data: { session } } = await sb.auth.getSession();
             if (session) loadAgentData(session.user.id);
+            return { ok: true };
+        }
+
+        /* ===========================================================
+           Wizard rendering and submit (per-agent onboarding forms)
+           ===========================================================
+           Each agent's onboarding_steps row carries a `data.response_data`
+           object that was pre-populated from the client's quiz answers.
+           The wizard reads that object, renders one form field per top-level
+           key, and lets the client review/edit before advancing.
+           =========================================================== */
+        function humanizeKey(k) {
+            return String(k)
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function renderWizardStepper(steps, activeIdx) {
+            if (!steps || steps.length === 0) return '';
+            return steps.map(function(s, i) {
+                var cls = s.status === 'completed' ? 'wizard-dot done'
+                        : (i === activeIdx ? 'wizard-dot current' : 'wizard-dot pending');
+                return '<span class="' + cls + '" title="' + escapeHtml(s.step_name) + '">' + (i + 1) + '</span>';
+            }).join('');
+        }
+
+        function renderWizardField(key, val, pathPrefix) {
+            var name = pathPrefix ? pathPrefix + '.' + key : key;
+            var label = humanizeKey(key);
+            var control;
+            if (typeof val === 'boolean') {
+                control = '<label class="wizard-check"><input type="checkbox" data-wizard-key="' + escapeHtml(name) + '" data-wizard-type="boolean" '
+                    + (val ? 'checked' : '') + ' /> <span>' + (val ? 'Yes' : 'No') + '</span></label>';
+            } else if (typeof val === 'number') {
+                control = '<input type="number" class="form-input" data-wizard-key="' + escapeHtml(name) + '" data-wizard-type="number" value="' + escapeHtml(val) + '" />';
+            } else if (val === null || val === undefined) {
+                control = '<input type="text" class="form-input" data-wizard-key="' + escapeHtml(name) + '" data-wizard-type="string" value="" />';
+            } else if (typeof val === 'string') {
+                if (val.length > 70 || val.indexOf('\n') !== -1) {
+                    control = '<textarea class="form-input" data-wizard-key="' + escapeHtml(name) + '" data-wizard-type="string" rows="3">' + escapeHtml(val) + '</textarea>';
+                } else {
+                    control = '<input type="text" class="form-input" data-wizard-key="' + escapeHtml(name) + '" data-wizard-type="string" value="' + escapeHtml(val) + '" />';
+                }
+            } else {
+                // objects and arrays: JSON-edit textarea
+                var json = JSON.stringify(val, null, 2);
+                var rows = Math.min(12, Math.max(3, json.split('\n').length));
+                control = '<textarea class="form-input wizard-json" data-wizard-key="' + escapeHtml(name) + '" data-wizard-type="json" rows="' + rows + '">' + escapeHtml(json) + '</textarea>';
+            }
+            return '<div class="form-group wizard-group">'
+                + '<label class="form-label">' + escapeHtml(label) + '</label>'
+                + control
+                + '</div>';
+        }
+
+        function renderWizardStep(agent, steps, activeIdx) {
+            if (!steps || steps.length === 0) {
+                return '<div class="wizard-empty">No steps configured for this agent yet.</div>';
+            }
+            var step = steps[activeIdx];
+            if (!step) return '<div class="wizard-empty">All steps complete.</div>';
+
+            var payload = (step.data && step.data.response_data) ? step.data.response_data : {};
+            var keys = Object.keys(payload);
+            var fieldsHtml;
+            if (keys.length === 0) {
+                // No pre-fill from the quiz. Give the client a blank JSON editor
+                // so they can still submit something and advance.
+                fieldsHtml = '<div class="form-group wizard-group">'
+                    + '<label class="form-label">Response</label>'
+                    + '<textarea class="form-input wizard-json" data-wizard-key="_payload" data-wizard-type="json" rows="5">{}</textarea>'
+                    + '<div class="wizard-hint">No quiz answers were captured for this step. Add details as JSON or leave as {} to confirm and continue.</div>'
+                + '</div>';
+            } else {
+                fieldsHtml = keys.map(function(k){ return renderWizardField(k, payload[k], ''); }).join('');
+            }
+
+            var isLast = activeIdx >= steps.length - 1;
+            var stepNumber = step.step_number;
+            var nextLabel = isLast ? 'Confirm & Activate Agent' : 'Save & Continue';
+
+            return ''
+                + '<div class="wizard-head">'
+                    + '<div class="wizard-step-num">Step ' + (activeIdx + 1) + ' of ' + steps.length + '</div>'
+                    + '<div class="wizard-step-name">' + escapeHtml(step.step_name) + '</div>'
+                + '</div>'
+                + '<form class="wizard-form" onsubmit="return submitWizardStep(event, \'' + agent.agent_type + '\', ' + stepNumber + ', ' + (isLast ? 'true' : 'false') + ')">'
+                    + fieldsHtml
+                    + '<div class="wizard-msg" data-role="msg"></div>'
+                    + '<div class="wizard-actions">'
+                        + (activeIdx > 0
+                            ? '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardGoTo(\'' + agent.agent_type + '\', ' + (activeIdx - 1) + ')">← Back</button>'
+                            : '<span></span>')
+                        + '<button type="submit" class="btn btn-primary btn-sm">' + nextLabel + '</button>'
+                    + '</div>'
+                + '</form>';
+        }
+
+        // Walk the form, reconstruct the response_data object from the typed
+        // inputs (including nested JSON textareas for arrays/objects), call
+        // saveOnboardingStep, and re-render the card.
+        async function submitWizardStep(event, agentType, stepNumber, isLastStep) {
+            event.preventDefault();
+            var form = event.target;
+            var submitBtn = form.querySelector('button[type=submit]');
+            var msgEl = form.querySelector('[data-role=msg]');
+            if (msgEl) { msgEl.textContent = ''; msgEl.className = 'wizard-msg'; }
+
+            var payload = {};
+            var inputs = form.querySelectorAll('[data-wizard-key]');
+            for (var i = 0; i < inputs.length; i++) {
+                var el = inputs[i];
+                var key = el.getAttribute('data-wizard-key');
+                var type = el.getAttribute('data-wizard-type');
+                var v;
+                if (type === 'boolean') v = !!el.checked;
+                else if (type === 'number') v = el.value === '' ? null : Number(el.value);
+                else if (type === 'json') {
+                    try { v = el.value.trim() === '' ? null : JSON.parse(el.value); }
+                    catch (e) {
+                        if (msgEl) {
+                            msgEl.className = 'wizard-msg error';
+                            msgEl.textContent = 'Invalid JSON in field "' + humanizeKey(key) + '". ' + e.message;
+                        }
+                        return false;
+                    }
+                } else v = el.value;
+
+                if (key === '_payload') { payload = v || {}; break; }
+                payload[key] = v;
+            }
+
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = isLastStep ? 'Activating...' : 'Saving...'; }
+
+            var cardEl = document.getElementById('card-' + agentType);
+            var res = await saveOnboardingStep(cardEl, stepNumber, payload, !!isLastStep);
+
+            if (!res || !res.ok) {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = isLastStep ? 'Confirm & Activate Agent' : 'Save & Continue'; }
+                if (msgEl) {
+                    msgEl.className = 'wizard-msg error';
+                    msgEl.textContent = 'Could not save. Check your connection and try again.';
+                }
+            }
+            // On success, loadAgentData re-renders the full grid; the next step
+            // is automatically the new in_progress one.
+            return false;
+        }
+
+        // Jump back to a previous step without writing anything. We just
+        // re-render the wizard body for that agent at the chosen index.
+        function wizardGoTo(agentType, targetIdx) {
+            var cardEl = document.getElementById('card-' + agentType);
+            if (!cardEl) return;
+            var body = document.getElementById('wizard-body-' + agentType);
+            if (!body) return;
+            var clientAgentId = cardEl.dataset.agentId;
+            // We need the latest steps; pull from Supabase since we don't keep a cache.
+            sb.from('onboarding_steps')
+                .select('*')
+                .eq('client_agent_id', clientAgentId)
+                .order('step_number', { ascending: true })
+                .then(function(r) {
+                    var steps = r.data || [];
+                    body.innerHTML = renderWizardStep({ agent_type: agentType }, steps, targetIdx);
+                    // Update stepper highlight
+                    var stepperEl = cardEl.querySelector('.wizard-stepper');
+                    if (stepperEl) stepperEl.innerHTML = renderWizardStepper(steps, targetIdx);
+                });
         }
 
         // --- 7-day summary metrics across all client agents ---
