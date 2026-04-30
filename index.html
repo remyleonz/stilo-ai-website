@@ -35,8 +35,8 @@
                 "name": "STILO AI PARTNERS",
                 "description": "STILO AI PARTNERS is an AI consulting agency for local businesses, deploying custom AI agents for call handling, lead response, customer reactivation, websites, SEO, and lead generation.",
                 "url": "https://stiloai.com",
-                "email": "hello@stiloai.com",
-                "telephone": "+1-786-671-2484",
+                "email": "stiloaiconsulting@gmail.com",
+                "telephone": "+1-786-806-7509",
                 "founder": { "@type": "Person", "name": "Remy Leon" },
                 "areaServed": { "@type": "City", "name": "Miami" },
                 "address": { "@type": "PostalAddress", "addressLocality": "Miami", "addressRegion": "FL", "addressCountry": "US" },
@@ -53,7 +53,7 @@
                 "url": "https://stiloai.com",
                 "logo": { "@type": "ImageObject", "url": "https://stiloai.com/logo.png" },
                 "sameAs": ["https://www.linkedin.com/company/stiloai", "https://www.instagram.com/stiloai"],
-                "contactPoint": { "@type": "ContactPoint", "telephone": "+1-786-671-2484", "contactType": "customer service", "availableLanguage": ["English", "Spanish"] }
+                "contactPoint": { "@type": "ContactPoint", "telephone": "+1-786-806-7509", "contactType": "customer service", "availableLanguage": ["English", "Spanish"] }
             },
             {
                 "@type": "WebSite",
@@ -190,7 +190,7 @@ nav.scrolled{padding:10px 0;backdrop-filter:blur(18px);-webkit-backdrop-filter:b
 .nav-cta::before{
   content:"";position:absolute;inset:-2px;z-index:-1;border-radius:999px;
   background:conic-gradient(from 0deg, transparent 0deg, var(--plasma) 60deg, var(--violet) 120deg, transparent 180deg);
-  animation:rimSpin 3s linear infinite;opacity:.7;
+  animation:rimSpin 8s linear infinite;opacity:.7;will-change:transform;
 }
 .nav-cta::after{content:"";position:absolute;inset:1px;background:var(--bg-elevated);border-radius:999px;z-index:-1}
 .nav-cta:hover::before{opacity:1}
@@ -367,12 +367,13 @@ section{padding:120px 0;position:relative}
 .services-section{background:linear-gradient(180deg,var(--bg-void),var(--bg-plate))}
 .services-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;
+  align-items:start;
 }
 .agent-card{
   position:relative;padding:28px 26px 26px;border-radius:var(--radius-lg);
   background:linear-gradient(180deg,rgba(19,19,28,0.9),rgba(12,12,18,0.9));
   border:1px solid var(--stroke);
-  transform-style:preserve-3d;transition:transform .4s var(--ease-out),border-color .3s;
+  transition:transform .4s var(--ease-out),border-color .3s;
   overflow:hidden;isolation:isolate;cursor:pointer;
 }
 .agent-card::before{
@@ -460,8 +461,7 @@ section{padding:120px 0;position:relative}
 .why-section{background:linear-gradient(180deg,var(--bg-void),var(--bg-plate))}
 .why-grid{
   display:grid;
-  grid-template-columns:repeat(12,1fr);
-  grid-auto-rows:minmax(180px,auto);
+  grid-template-columns:repeat(2,1fr);
   gap:16px;
 }
 .why-card{
@@ -469,12 +469,11 @@ section{padding:120px 0;position:relative}
   background:var(--bg-elevated);border:1px solid var(--stroke);
   transition:border-color .3s,transform .3s;
   overflow:hidden;
+  min-height:240px;
+  display:flex;flex-direction:column;
 }
 .why-card:hover{border-color:var(--stroke-hi);transform:translateY(-2px)}
-.why-card:nth-child(1){grid-column:span 7;grid-row:span 2}
-.why-card:nth-child(2){grid-column:span 5}
-.why-card:nth-child(3){grid-column:span 5}
-.why-card:nth-child(4){grid-column:span 7}
+@media (max-width:720px){.why-grid{grid-template-columns:1fr}}
 .why-icon{
   width:44px;height:44px;border-radius:12px;margin-bottom:20px;
   background:linear-gradient(135deg,rgba(37,99,235,0.18),rgba(59,130,246,0.1));
@@ -901,7 +900,7 @@ html.lenis,html.lenis body{height:auto}
     <div class="section-header fade-in">
       <span class="eyebrow">// Why Us</span>
       <h2>What makes <span class="gradient-text">STILO</span> different</h2>
-      <p>Four reasons every other AI agency looks the same and we don't.</p>
+      <p>Every other agency sells you the same chatbot in a different wrapper. We build agents around your business, your customers, and the way you actually work.</p>
     </div>
     <div class="why-grid">
       <div class="why-card fade-in">
@@ -977,13 +976,14 @@ html.lenis,html.lenis body{height:auto}
             </div>
           </div>
           <div class="quiz-question" data-q="2" style="display:none;">
-            <p class="q-label">How many inbound calls does your business get per week?</p>
-            <div class="q-options">
-              <button class="q-option" data-value="few">Under 10 calls</button>
-              <button class="q-option" data-value="moderate">10&ndash;30 calls</button>
-              <button class="q-option" data-value="high">30&ndash;75 calls</button>
-              <button class="q-option" data-value="very-high">75+ calls</button>
+            <p class="q-label">On a typical day, how many inbound calls does your business get?</p>
+            <p style="font-size:0.85rem;color:var(--muted);margin:-8px 0 14px;">Best estimate is fine. We use this to size your AI receptionist and quote your monthly price.</p>
+            <div class="q-options" style="flex-direction:row;align-items:center;gap:12px;">
+              <input id="callsPerDayInput" type="number" min="1" max="500" placeholder="e.g. 25" inputmode="numeric"
+                style="flex:1;padding:14px 16px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.03);color:var(--fg);border-radius:10px;font-size:1rem;font-family:inherit;">
+              <button id="callsPerDayNext" class="btn-primary" type="button" style="padding:14px 22px;white-space:nowrap;">Continue</button>
             </div>
+            <p id="callsPerDayError" style="display:none;font-size:0.85rem;color:#ff6b6b;margin-top:10px;">Enter a number between 1 and 500.</p>
           </div>
           <div class="quiz-question" data-q="3" style="display:none;">
             <p class="q-label">What typically happens when you miss a call?</p>
@@ -1107,8 +1107,8 @@ html.lenis,html.lenis body{height:auto}
       <div class="footer-col">
         <h4>Contact</h4>
         <ul>
-          <li><a href="tel:+17866712484">(786) 671-2484</a></li>
-          <li><a href="mailto:hello@stiloai.com">hello@stiloai.com</a></li>
+          <li><a href="tel:+17868067509">(786) 806-7509</a></li>
+          <li><a href="mailto:stiloaiconsulting@gmail.com">stiloaiconsulting@gmail.com</a></li>
           <li><span style="color:var(--fg-3);font-size:0.9rem;">Miami, FL</span></li>
         </ul>
         <div class="footer-social">
@@ -1143,8 +1143,8 @@ const canvas = document.getElementById('heroCanvas');
 if (!canvas) { /* no-op */ } else if (reduced) {
   canvas.style.background = 'radial-gradient(900px 600px at 70% 40%, rgba(37,99,235,0.12), transparent 70%)';
 } else {
-  const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
   camera.position.z = 5.2;
@@ -1181,10 +1181,6 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     mouse.ty = (e.clientY / window.innerHeight - 0.5) * 0.5;
   }, {passive:true});
 
-  // Scroll-driven camera zoom-out + mesh spin
-  let scrollY = 0;
-  window.addEventListener('scroll', () => { scrollY = window.scrollY; }, {passive:true});
-
   // Pause rendering when hero is off-screen
   let heroVisible = true;
   const hero = document.getElementById('hero') || canvas.parentElement;
@@ -1202,7 +1198,7 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     mouse.x += (mouse.tx - mouse.x) * 0.05;
     mouse.y += (mouse.ty - mouse.y) * 0.05;
 
-    const scrollT = Math.min(scrollY / (window.innerHeight || 800), 1);
+    const scrollT = Math.min(window.scrollY / (window.innerHeight || 800), 1);
     meshA.rotation.y = t*0.12 + mouse.x*0.6 + scrollT*0.8;
     meshA.rotation.x = t*0.06 + mouse.y*0.4 + scrollT*0.3;
     ringB.rotation.z = -t*0.08 + mouse.x*0.3;
@@ -1370,6 +1366,7 @@ if (!canvas) { /* no-op */ } else if (reduced) {
 
   if (!hasGSAP || reduced) return;
   if (!hasLenis) gsap.registerPlugin(ScrollTrigger);
+  ScrollTrigger.config({ ignoreMobileResize: true });
   document.documentElement.classList.add('gsap-ready');
 
   // --- Split h2/h1 section headers into line-reveal wrappers ---
@@ -1404,50 +1401,50 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     });
   });
 
-  // --- Agent cards: cinematic stagger (3D lift + blur-in) ---
-  gsap.utils.toArray('.agent-card').forEach(function(card, i){
-    gsap.fromTo(card,
-      { y: 60, opacity: 0, scale: 0.94, rotationX: 8, filter: 'blur(8px)' },
-      {
+  // --- Agent cards: cinematic stagger via batched ScrollTrigger ---
+  gsap.set('.agent-card', { y: 60, opacity: 0, scale: 0.94, rotationX: 8, filter: 'blur(8px)' });
+  ScrollTrigger.batch('.agent-card', {
+    start: 'top 92%',
+    onEnter: function(batch){
+      gsap.to(batch, {
         y: 0, opacity: 1, scale: 1, rotationX: 0, filter: 'blur(0px)',
-        duration: 1.0, ease: 'power3.out', delay: (i % 3) * 0.1,
-        scrollTrigger: { trigger: card, start: 'top 92%' }
-      }
-    );
-  });
-
-  // --- Process steps: number elastic pop + connecting line fill ---
-  gsap.utils.toArray('.process-step').forEach(function(step, i){
-    gsap.fromTo(step,
-      { y: 48, opacity: 0, scale: 0.95, filter: 'blur(6px)' },
-      {
-        y: 0, opacity: 1, scale: 1, filter: 'blur(0px)',
-        duration: 1.0, ease: 'power3.out', delay: i*0.12,
-        scrollTrigger: { trigger: step, start: 'top 85%' }
-      }
-    );
-    var num = step.querySelector('.step-num');
-    if (num){
-      gsap.fromTo(num,
-        { scale: 0.4, opacity: 0, rotation: -15 },
-        {
-          scale: 1, opacity: 1, rotation: 0, duration: 1.25, ease: 'elastic.out(1,0.6)',
-          scrollTrigger: { trigger: step, start: 'top 82%' }
-        }
-      );
+        duration: 1.0, ease: 'power3.out', stagger: 0.1, overwrite: true
+      });
     }
   });
 
-  // --- Why cards: alternating lift with scale + blur ---
+  // --- Process steps: stagger reveal + number elastic pop ---
+  gsap.set('.process-step', { y: 48, opacity: 0, scale: 0.95, filter: 'blur(6px)' });
+  gsap.set('.process-step .step-num', { scale: 0.4, opacity: 0, rotation: -15 });
+  ScrollTrigger.batch('.process-step', {
+    start: 'top 85%',
+    onEnter: function(batch){
+      gsap.to(batch, {
+        y: 0, opacity: 1, scale: 1, filter: 'blur(0px)',
+        duration: 1.0, ease: 'power3.out', stagger: 0.12, overwrite: true
+      });
+      batch.forEach(function(step){
+        var num = step.querySelector('.step-num');
+        if (num) gsap.to(num, {
+          scale: 1, opacity: 1, rotation: 0,
+          duration: 1.25, ease: 'elastic.out(1,0.6)', overwrite: true
+        });
+      });
+    }
+  });
+
+  // --- Why cards: alternating lift via batched ScrollTrigger ---
   gsap.utils.toArray('.why-card').forEach(function(card, i){
-    gsap.fromTo(card,
-      { y: 60, opacity: 0, scale: 0.92, filter: 'blur(6px)', rotationY: i % 2 === 0 ? -6 : 6 },
-      {
+    gsap.set(card, { y: 60, opacity: 0, scale: 0.92, filter: 'blur(6px)', rotationY: i % 2 === 0 ? -6 : 6 });
+  });
+  ScrollTrigger.batch('.why-card', {
+    start: 'top 90%',
+    onEnter: function(batch){
+      gsap.to(batch, {
         y: 0, opacity: 1, scale: 1, rotationY: 0, filter: 'blur(0px)',
-        duration: 1.0, ease: 'power3.out', delay: i*0.09,
-        scrollTrigger: { trigger: card, start: 'top 90%' }
-      }
-    );
+        duration: 1.0, ease: 'power3.out', stagger: 0.09, overwrite: true
+      });
+    }
   });
 
   // --- Section-header eyebrows: slide + pulse as headers enter ---
@@ -1515,25 +1512,29 @@ if (!canvas) { /* no-op */ } else if (reduced) {
 
 <!-- ===== INTERACTIONS ===== -->
 <script>
-// Scroll progress
+// Scroll progress + nav scroll state (coalesced through one rAF tick)
 (function(){
-  var el=document.getElementById('scrollProgress');
-  function onScroll(){
-    var h=document.documentElement;
-    var p=h.scrollTop/(h.scrollHeight-h.clientHeight);
-    el.style.setProperty('--p',p);
-    el.style.background='linear-gradient(90deg,var(--accent) '+(p*100)+'%,transparent '+(p*100)+'%)';
-    el.style.boxShadow='0 0 12px rgba(59,130,246,'+(0.3+p*0.5)+')';
-  }
-  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
-})();
-
-// Nav scroll state
-(function(){
+  var progressEl=document.getElementById('scrollProgress');
   var nav=document.getElementById('topNav');
-  window.addEventListener('scroll',function(){
-    nav.classList.toggle('scrolled',window.scrollY>20);
-  },{passive:true});
+  var ticking=false;
+  function update(){
+    ticking=false;
+    if (progressEl){
+      var h=document.documentElement;
+      var p=h.scrollTop/(h.scrollHeight-h.clientHeight);
+      progressEl.style.setProperty('--p',p);
+      progressEl.style.background='linear-gradient(90deg,var(--accent) '+(p*100)+'%,transparent '+(p*100)+'%)';
+      progressEl.style.boxShadow='0 0 12px rgba(59,130,246,'+(0.3+p*0.5)+')';
+    }
+    if (nav) nav.classList.toggle('scrolled',window.scrollY>20);
+  }
+  function onScroll(){ if (!ticking){ ticking=true; requestAnimationFrame(update); } }
+  if (window.__lenis){
+    window.__lenis.on('scroll', onScroll);
+  } else {
+    window.addEventListener('scroll',onScroll,{passive:true});
+  }
+  update();
 })();
 
 // Mobile menu
@@ -1707,6 +1708,26 @@ if (!canvas) { /* no-op */ } else if (reduced) {
       var qNum = parseInt(qDiv.dataset.q);
       setTimeout(function() { advanceQuestion(qNum); }, 320);
     });
+  });
+
+  var callsInput = document.getElementById('callsPerDayInput');
+  var callsNext = document.getElementById('callsPerDayNext');
+  var callsErr = document.getElementById('callsPerDayError');
+  function submitCallsPerDay() {
+    var v = parseInt(callsInput.value, 10);
+    if (!v || v < 1 || v > 500) {
+      callsErr.style.display = 'block';
+      callsInput.focus();
+      return;
+    }
+    callsErr.style.display = 'none';
+    quizAnswers.q2 = v;
+    quizAnswers.calls_per_day = v;
+    advanceQuestion(2);
+  }
+  if (callsNext) callsNext.addEventListener('click', submitCallsPerDay);
+  if (callsInput) callsInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitCallsPerDay(); }
   });
 
   function advanceQuestion(q) {
