@@ -16,14 +16,15 @@
     --bg-secondary: #12121a;
     --bg-card: #1a1a2e;
     --bg-elev: #22223a;
-    --border: rgba(168,85,247,0.14);
-    --border-hover: rgba(168,85,247,0.32);
+    --border: rgba(37,99,235,0.14);
+    --border-hover: rgba(37,99,235,0.32);
     --text-primary: #f0f0f5;
     --text-secondary: #8a8aa0;
     --text-muted: #5a5a75;
-    --purple: #a855f7;
-    --purple-dark: #7c3aed;
-    --purple-light: #c084fc;
+    /* Accent: blue per brand. Variable names kept for legacy CSS. */
+    --purple: #2563EB;
+    --purple-dark: #1d4ed8;
+    --purple-light: #60a5fa;
     --green: #22c55e;
     --amber: #f59e0b;
     --red: #ef4444;
@@ -60,8 +61,8 @@
   }
   .agent-header .avatar {
     width: 80px; height: 80px; border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(168,85,247,0.35), rgba(30,20,60,0.95));
-    border: 1px solid rgba(168,85,247,0.4);
+    background: radial-gradient(circle at 30% 30%, rgba(37,99,235,0.35), rgba(15,23,42,0.95));
+    border: 1px solid rgba(37,99,235,0.4);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
@@ -196,15 +197,27 @@
     </section>
 
     <section class="panel">
-      <h2>Configuration</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <h2 style="margin:0;">Configuration</h2>
+        <div style="display:flex;gap:8px;">
+          <button id="editBtn" class="btn" type="button">Edit</button>
+          <button id="pauseBtn" class="btn" type="button" style="display:none;">Pause</button>
+        </div>
+      </div>
       <div class="config-grid" id="configGrid"></div>
+      <form id="configEditForm" style="display:none;flex-direction:column;gap:12px;margin-top:8px;"></form>
+      <div id="configEditMsg" style="font-size:13px;margin-top:8px;min-height:1em;"></div>
+      <div id="configEditActions" style="display:none;gap:8px;margin-top:8px;">
+        <button id="saveBtn" class="btn primary" type="button">Save changes</button>
+        <button id="cancelBtn" class="btn" type="button">Cancel</button>
+      </div>
     </section>
 
     <section class="panel">
       <h2>Need help with this agent?</h2>
-      <p style="color:var(--text-secondary);font-size:14px;">Email your STILO team or book a 15-minute call. We manage and tune every agent weekly.</p>
+      <p style="color:var(--text-secondary);font-size:14px;">Send us a message tagged to this agent and we will reply right here. For anything urgent you can also book a 15-minute call.</p>
       <div class="action-bar">
-        <a class="btn primary" id="emailBtn" href="mailto:stiloaiconsulting@gmail.com">Email STILO Team</a>
+        <button id="messageSupportBtn" class="btn primary" type="button">Message support about this agent</button>
         <a class="btn" href="https://calendly.com/stiloaipartners/free-ai-strategy-call" target="_blank" rel="noopener">Book 15-min Call</a>
       </div>
     </section>
@@ -299,6 +312,10 @@
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.supabaseSignOut = async function() { await sb.auth.signOut(); window.location.href = '/auth.html'; };
 
+    // Module-level state — populated by init(), read by edit/pause handlers.
+    let currentCa = null;
+    let agentSchema = null; // { onboardingSchema: [...] } for this agent_type, or null
+
     async function init() {
       const { data: { session } } = await sb.auth.getSession();
       if (!session) { window.location.href = '/auth.html'; return; }
@@ -311,10 +328,15 @@
       const robot = ROBOTS[agentId];
       if (robot) document.getElementById('agentAvatar').innerHTML = robot.svg;
 
-      // Find client_agent row for this agent type
-      const { data: clientAgents } = await sb.from('client_agents')
-        .select('*').eq('client_id', userId).eq('agent_type', agentId).limit(1);
-      const ca = clientAgents && clientAgents[0];
+      // Fetch schema in parallel with the client_agent row.
+      const [schemaRes, agentRes] = await Promise.all([
+        fetch('/api/agents-meta').then(r => r.ok ? r.json() : { agents: {} }).catch(() => ({ agents: {} })),
+        sb.from('client_agents').select('*').eq('client_id', userId).eq('agent_type', agentId).limit(1),
+      ]);
+      agentSchema = (schemaRes.agents && schemaRes.agents[agentId]) || null;
+      const ca = agentRes.data && agentRes.data[0];
+      currentCa = ca;
+
       if (ca) {
         const statusEl = document.getElementById('agentStatus');
         statusEl.textContent = ca.status;
@@ -340,9 +362,282 @@
       renderActivity(metrics, ca);
       renderConfig(ca ? ca.config : {});
 
-      // Email button routes to support inbox
-      const subject = encodeURIComponent('Question about ' + agent.name + ' (' + agent.role + ')');
-      document.getElementById('emailBtn').href = 'mailto:stiloaiconsulting@gmail.com?subject=' + subject;
+      // Show pause/resume only when the agent is active or paused.
+      const pauseBtn = document.getElementById('pauseBtn');
+      if (ca && (ca.status === 'active' || ca.status === 'paused')) {
+        pauseBtn.style.display = '';
+        pauseBtn.textContent = ca.status === 'paused' ? 'Resume' : 'Pause';
+        pauseBtn.onclick = () => togglePause(pauseBtn);
+      }
+
+      // Edit button is only useful when the agent is past onboarding and we
+      // have a schema with at least one editable field.
+      const editBtn = document.getElementById('editBtn');
+      if (!ca || ca.status === 'onboarding' || !hasEditableFields()) {
+        editBtn.style.display = 'none';
+      } else {
+        editBtn.onclick = enterEditMode;
+        document.getElementById('saveBtn').onclick = saveConfigEdits;
+        document.getElementById('cancelBtn').onclick = exitEditMode;
+      }
+
+      // Wire the support button to the global helper if loaded by the parent
+      // dashboard, otherwise fall back to a mailto for now.
+      const msgBtn = document.getElementById('messageSupportBtn');
+      msgBtn.onclick = () => {
+        if (window.parent && typeof window.parent.openSupportForAgent === 'function' && ca) {
+          window.parent.openSupportForAgent(ca.id, agentId);
+          return;
+        }
+        const subject = encodeURIComponent('Question about ' + agent.name + ' (' + agent.role + ')');
+        window.location.href = 'mailto:stiloaiconsulting@gmail.com?subject=' + subject;
+      };
+    }
+
+    function hasEditableFields() {
+      if (!agentSchema || !Array.isArray(agentSchema.onboardingSchema)) return false;
+      return agentSchema.onboardingSchema.some(step =>
+        (step.fields || []).some(f => f.editable === true)
+      );
+    }
+
+    function escapeAttr(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function enterEditMode() {
+      const form = document.getElementById('configEditForm');
+      const grid = document.getElementById('configGrid');
+      const actions = document.getElementById('configEditActions');
+      const editBtn = document.getElementById('editBtn');
+
+      const cfg = (currentCa && currentCa.config) || {};
+      const editable = [];
+      for (const step of (agentSchema.onboardingSchema || [])) {
+        for (const f of (step.fields || [])) {
+          if (f.editable === true) editable.push(f);
+        }
+      }
+
+      form.innerHTML = editable.map(f => {
+        const v = cfg[f.key];
+        const label = (f.label || f.key) + (f.required ? ' <span style="color:var(--red);">*</span>' : '');
+        let control;
+        const val = v == null ? '' : v;
+        const reqAttr = f.required ? ' data-required="1"' : '';
+        switch (f.type) {
+          case 'boolean':
+            control = '<label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" data-key="' + escapeAttr(f.key) + '" data-type="boolean"' + (val === true ? ' checked' : '') + ' /> Yes</label>';
+            break;
+          case 'textarea':
+            control = '<textarea class="form-input" data-key="' + escapeAttr(f.key) + '" data-type="string"' + reqAttr + ' rows="3" style="width:100%;padding:10px 12px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;">' + escapeAttr(val) + '</textarea>';
+            break;
+          case 'select': {
+            const opts = (f.options || []).map(o =>
+              '<option value="' + escapeAttr(o.value) + '"' + (String(val) === String(o.value) ? ' selected' : '') + '>' + escapeAttr(o.label) + '</option>'
+            ).join('');
+            control = '<select class="form-input" data-key="' + escapeAttr(f.key) + '" data-type="string"' + reqAttr + ' style="width:100%;padding:10px 12px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;"><option value="">Select…</option>' + opts + '</select>';
+            break;
+          }
+          case 'number':
+            control = '<input type="number" class="form-input" data-key="' + escapeAttr(f.key) + '" data-type="number"' + reqAttr + ' value="' + escapeAttr(val) + '" style="width:100%;padding:10px 12px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;" />';
+            break;
+          case 'time-range': {
+            const tv = (val && typeof val === 'object') ? val : {};
+            control = '<div data-key="' + escapeAttr(f.key) + '" data-type="time-range" style="display:flex;align-items:center;gap:8px;">'
+              + '<input type="time" data-time-role="open" value="' + escapeAttr(tv.open || '') + '" style="padding:8px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;" />'
+              + '<span style="color:var(--text-muted);font-size:12px;">to</span>'
+              + '<input type="time" data-time-role="close" value="' + escapeAttr(tv.close || '') + '" style="padding:8px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;" />'
+              + '<label style="display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:var(--text-secondary);"><input type="checkbox" data-time-role="closed"' + (tv.closed ? ' checked' : '') + ' /> Closed</label>'
+              + '</div>';
+            break;
+          }
+          case 'key-value-list': {
+            const pairs = Array.isArray(val) ? val : (val ? [val] : [{ key: '', value: '' }]);
+            const rows = pairs.length === 0 ? [{ key: '', value: '' }] : pairs;
+            control = '<div data-key="' + escapeAttr(f.key) + '" data-type="key-value-list" style="display:flex;flex-direction:column;gap:6px;">'
+              + rows.map((p, i) =>
+                '<div data-kv-row="' + i + '" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;">'
+                + '<input type="text" data-kv-role="key" placeholder="Item / service" value="' + escapeAttr(p.key || '') + '" style="padding:8px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;" />'
+                + '<input type="text" data-kv-role="value" placeholder="Price / detail" value="' + escapeAttr(p.value || '') + '" style="padding:8px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;" />'
+                + '<button type="button" data-kv-action="remove" style="padding:6px 10px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;cursor:pointer;">×</button>'
+                + '</div>'
+              ).join('')
+              + '<button type="button" data-kv-action="add" style="align-self:flex-start;padding:6px 12px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">+ Add row</button>'
+              + '</div>';
+            break;
+          }
+          case 'email':
+          case 'phone':
+          case 'url':
+          case 'text':
+          default: {
+            const inputType = f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'url' ? 'url' : 'text';
+            control = '<input type="' + inputType + '" class="form-input" data-key="' + escapeAttr(f.key) + '" data-type="string"' + reqAttr + ' value="' + escapeAttr(val) + '" style="width:100%;padding:10px 12px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;" />';
+          }
+        }
+        const help = f.help ? '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">' + escapeAttr(f.help) + '</div>' : '';
+        return '<div class="form-row"><label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">' + label + '</label>' + control + help + '</div>';
+      }).join('');
+
+      // Wire kv add/remove inside the form (event delegation).
+      form.onclick = (e) => {
+        const action = e.target.getAttribute && e.target.getAttribute('data-kv-action');
+        if (action === 'add') {
+          const container = e.target.parentElement;
+          const idx = container.querySelectorAll('[data-kv-row]').length;
+          const div = document.createElement('div');
+          div.setAttribute('data-kv-row', idx);
+          div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;';
+          div.innerHTML = '<input type="text" data-kv-role="key" placeholder="Item / service" value="" style="padding:8px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;" />'
+            + '<input type="text" data-kv-role="value" placeholder="Price / detail" value="" style="padding:8px;background:var(--bg-elev);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;" />'
+            + '<button type="button" data-kv-action="remove" style="padding:6px 10px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;cursor:pointer;">×</button>';
+          container.insertBefore(div, e.target);
+          e.preventDefault();
+        } else if (action === 'remove') {
+          e.target.parentElement.remove();
+          e.preventDefault();
+        }
+      };
+
+      grid.style.display = 'none';
+      form.style.display = 'flex';
+      actions.style.display = 'flex';
+      editBtn.style.display = 'none';
+    }
+
+    function exitEditMode() {
+      document.getElementById('configEditForm').style.display = 'none';
+      document.getElementById('configEditActions').style.display = 'none';
+      document.getElementById('configGrid').style.display = '';
+      document.getElementById('editBtn').style.display = '';
+      document.getElementById('configEditMsg').textContent = '';
+    }
+
+    async function saveConfigEdits() {
+      const form = document.getElementById('configEditForm');
+      const msg = document.getElementById('configEditMsg');
+      const saveBtn = document.getElementById('saveBtn');
+      msg.style.color = 'var(--text-secondary)';
+      msg.textContent = '';
+
+      const patch = {};
+      const missing = [];
+      const items = form.querySelectorAll('[data-key]');
+      items.forEach(el => {
+        const key = el.getAttribute('data-key');
+        const type = el.getAttribute('data-type');
+        let v;
+        if (type === 'boolean') v = !!el.checked;
+        else if (type === 'number') v = el.value === '' ? null : Number(el.value);
+        else if (type === 'time-range') {
+          const open = el.querySelector('[data-time-role=open]');
+          const close = el.querySelector('[data-time-role=close]');
+          const closedCb = el.querySelector('[data-time-role=closed]');
+          v = { open: open ? open.value : '', close: close ? close.value : '', closed: !!(closedCb && closedCb.checked) };
+        }
+        else if (type === 'key-value-list') {
+          const rows = el.querySelectorAll('[data-kv-row]');
+          v = [];
+          rows.forEach(row => {
+            const k = row.querySelector('[data-kv-role=key]');
+            const vEl = row.querySelector('[data-kv-role=value]');
+            const ks = k ? k.value.trim() : '';
+            const vs = vEl ? vEl.value.trim() : '';
+            if (ks || vs) v.push({ key: ks, value: vs });
+          });
+        }
+        else v = el.value;
+
+        if (el.getAttribute('data-required') === '1') {
+          const empty = v == null || (typeof v === 'string' && v.trim() === '') || (Array.isArray(v) && v.length === 0) || (type === 'boolean' && v !== true);
+          if (empty) missing.push(key);
+        }
+        patch[key] = v;
+      });
+
+      if (missing.length > 0) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = 'Required: ' + missing.join(', ');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        const resp = await fetch('/api/agent-config', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + session.access_token,
+          },
+          body: JSON.stringify({ client_agent_id: currentCa.id, patch }),
+        });
+        const payload = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          msg.style.color = 'var(--red)';
+          msg.textContent = payload.error || 'Save failed';
+          if (payload.rejected_keys) {
+            msg.textContent += ' (' + payload.rejected_keys.join(', ') + ')';
+          }
+        } else {
+          // Merge changes into local state, re-render the read-only grid, exit edit mode.
+          currentCa.config = Object.assign({}, currentCa.config || {}, patch, { config_version: payload.config_version });
+          renderConfig(currentCa.config);
+          exitEditMode();
+          if (payload.sync && !payload.sync.synced && payload.sync.note) {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'margin-top:8px;font-size:12px;color:var(--amber);';
+            banner.textContent = 'Saved, but live sync warning: ' + payload.sync.note;
+            document.getElementById('configEditMsg').appendChild(banner);
+          }
+        }
+      } catch (e) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = 'Network error. Try again.';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save changes';
+      }
+    }
+
+    async function togglePause(btn) {
+      if (!currentCa) return;
+      const next = currentCa.status === 'paused' ? 'resume' : 'pause';
+      const origLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = next === 'pause' ? 'Pausing...' : 'Resuming...';
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        const resp = await fetch('/api/agent-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + session.access_token,
+          },
+          body: JSON.stringify({ client_agent_id: currentCa.id, action: next }),
+        });
+        const payload = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          btn.disabled = false;
+          btn.textContent = origLabel;
+          alert(payload.error || 'Could not update status');
+          return;
+        }
+        currentCa.status = payload.status;
+        const statusEl = document.getElementById('agentStatus');
+        statusEl.textContent = payload.status;
+        statusEl.className = 'status ' + payload.status;
+        btn.disabled = false;
+        btn.textContent = payload.status === 'paused' ? 'Resume' : 'Pause';
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = origLabel;
+        alert('Network error. Try again.');
+      }
     }
 
     function renderKPIs(data, hasData) {
@@ -369,9 +664,9 @@
       const linePath = 'M ' + pts.map(p => p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L ');
       const areaPath = linePath + ' L ' + pts[pts.length-1][0] + ',' + (h-pad) + ' L ' + pts[0][0] + ',' + (h-pad) + ' Z';
       svg.innerHTML =
-        '<defs><linearGradient id="sparkG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a855f7" stop-opacity="0.35"/><stop offset="1" stop-color="#a855f7" stop-opacity="0"/></linearGradient></defs>' +
+        '<defs><linearGradient id="sparkG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2563EB" stop-opacity="0.35"/><stop offset="1" stop-color="#2563EB" stop-opacity="0"/></linearGradient></defs>' +
         '<path d="' + areaPath + '" fill="url(#sparkG)"/>' +
-        '<path d="' + linePath + '" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+        '<path d="' + linePath + '" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
     }
 
     function renderActivity(metrics, ca) {

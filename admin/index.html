@@ -864,6 +864,13 @@
                     </svg>
                     Revenue
                 </button>
+                <button class="nav-item" data-page="support" onclick="switchPage('support')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/>
+                    </svg>
+                    Support
+                    <span id="supportUnreadBadge" style="display:none;margin-left:auto;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;"></span>
+                </button>
                 <button class="nav-item" data-page="settings" onclick="switchPage('settings')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/>
@@ -1053,29 +1060,122 @@
             </div>
             <div id="drawerOverlay" onclick="closeDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
 
-            <div class="page-content coming-soon" id="page-agents">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
-                </svg>
-                <h2>Agent Configuration</h2>
-                <p>Deploy, monitor, and configure all 8 agent types from one place. Coming soon.</p>
+            <!-- Agents tab: cross-cutting list of every deployment -->
+            <div class="page-content" id="page-agents" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="margin:0 0 6px 0;font-size:18px;">All agent deployments</h2>
+                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Every (client × agent) row across the agency. Click any row to open the client drawer.</p>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <select id="agentTypeFilter" onchange="loadAgentsTable()" style="padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;">
+                            <option value="">All agents</option>
+                            <option value="echo">ECHO</option>
+                            <option value="ignite">IGNITE</option>
+                            <option value="revive">REVIVE</option>
+                            <option value="scout">SCOUT</option>
+                            <option value="forge">FORGE</option>
+                            <option value="signal">SIGNAL</option>
+                            <option value="oracle">ORACLE</option>
+                            <option value="flux">FLUX</option>
+                        </select>
+                        <select id="agentStatusFilter" onchange="loadAgentsTable()" style="padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;">
+                            <option value="">All statuses</option>
+                            <option value="onboarding">Onboarding</option>
+                            <option value="active">Active</option>
+                            <option value="paused">Paused</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="agentsTableWrap" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow:hidden;">
+                    <div style="padding:24px;color:var(--text-secondary);font-size:13px;">Loading deployments...</div>
+                </div>
             </div>
 
-            <div class="page-content coming-soon" id="page-revenue">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                </svg>
-                <h2>Revenue Analytics</h2>
-                <p>MRR trends, forecasts, and per-client revenue breakdowns. Coming soon.</p>
+            <!-- Revenue tab -->
+            <div class="page-content" id="page-revenue" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                    <div>
+                        <h2 style="margin:0 0 6px 0;font-size:18px;">Revenue analytics</h2>
+                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">MRR + churn computed from active subscriptions in <code style="background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:4px;font-size:12px;">client_agents</code> and the agent fee catalog.</p>
+                    </div>
+                    <button class="quick-action-btn" onclick="loadRevenue()">Refresh</button>
+                </div>
+                <div id="revenueGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px;"></div>
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">
+                    <h3 style="margin:0 0 12px 0;font-size:14px;">MRR by agent type</h3>
+                    <div id="revenueByAgent"></div>
+                </div>
+                <div style="margin-top:16px;background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">
+                    <h3 style="margin:0 0 12px 0;font-size:14px;">Top clients by MRR</h3>
+                    <div id="revenueTopClients"></div>
+                </div>
             </div>
 
-            <div class="page-content coming-soon" id="page-settings">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                </svg>
-                <h2>Settings</h2>
-                <p>Account preferences, team access, billing, and integrations. Coming soon.</p>
+            <!-- Support inbox tab -->
+            <div class="page-content" id="page-support" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="margin:0 0 6px 0;font-size:18px;">Support inbox</h2>
+                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Threads from clients, ordered by most recent message.</p>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <select id="supportStatusFilter" onchange="adminLoadSupportThreads()" style="padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;">
+                            <option value="open">Open</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;height:calc(100vh - 220px);min-height:520px;">
+                    <aside id="adminSupportList" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow-y:auto;"></aside>
+                    <section style="display:flex;flex-direction:column;background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow:hidden;">
+                        <div id="adminSupportContext" style="padding:14px 18px;border-bottom:1px solid rgba(37,99,235,0.14);font-size:13px;color:var(--text-secondary);"></div>
+                        <div id="adminSupportTranscript" style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px;"></div>
+                        <form id="adminSupportComposeForm" onsubmit="return adminSubmitSupportMessage(event)" style="border-top:1px solid rgba(37,99,235,0.14);padding:12px;display:flex;flex-direction:column;gap:8px;">
+                            <textarea id="adminSupportComposeBody" rows="3" placeholder="Type your reply..." style="width:100%;padding:10px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                                <span id="adminSupportComposeMsg" style="font-size:12px;color:var(--text-secondary);min-height:1em;"></span>
+                                <div style="display:flex;gap:8px;">
+                                    <button id="adminSupportResolveBtn" type="button" class="quick-action-btn" onclick="adminToggleResolved()" style="padding:6px 14px;font-size:12px;">Mark resolved</button>
+                                    <button type="submit" class="quick-action-btn" style="padding:6px 14px;font-size:12px;background:#2563EB;color:#fff;border-color:#2563EB;">Send</button>
+                                </div>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Settings tab -->
+            <div class="page-content" id="page-settings" style="display:none;">
+                <h2 style="margin:0 0 6px 0;font-size:18px;">Settings</h2>
+                <p style="margin:0 0 24px 0;color:var(--text-secondary);font-size:13px;">Team access, defaults, and integration health.</p>
+
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;margin-bottom:14px;">
+                    <h3 style="margin:0 0 12px 0;font-size:14px;">Admin team</h3>
+                    <p style="margin:0 0 12px 0;color:var(--text-secondary);font-size:12px;">Anyone in this list can sign into <code style="background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:4px;">/admin/</code>.</p>
+                    <div id="adminTeamList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+                    <form onsubmit="return adminAddTeamMember(event)" style="display:flex;gap:8px;">
+                        <input type="email" id="adminTeamEmail" placeholder="email@example.com" required style="flex:1;padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;" />
+                        <input type="text" id="adminTeamName" placeholder="Display name (optional)" style="flex:1;padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;" />
+                        <button type="submit" class="quick-action-btn" style="padding:8px 16px;font-size:13px;background:#2563EB;color:#fff;border-color:#2563EB;">Add</button>
+                    </form>
+                    <div id="adminTeamMsg" style="font-size:12px;color:var(--text-secondary);margin-top:8px;min-height:1em;"></div>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;margin-bottom:14px;">
+                    <h3 style="margin:0 0 12px 0;font-size:14px;">Integrations</h3>
+                    <div id="integrationsHealth" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;"></div>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">
+                    <h3 style="margin:0 0 12px 0;font-size:14px;">About</h3>
+                    <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
+                        STILO AI Partners admin · <span id="aboutAdminEmail">--</span><br>
+                        Schema version: <code style="background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:4px;">2026.04</code>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -1148,6 +1248,7 @@
                 clients: 'Clients',
                 agents: 'Agents',
                 revenue: 'Revenue',
+                support: 'Support',
                 settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
@@ -1166,6 +1267,12 @@
                     el.style.display = 'none';
                 }
             });
+
+            // Page-specific lazy load
+            if (page === 'agents') loadAgentsTable();
+            else if (page === 'revenue') loadRevenue();
+            else if (page === 'support') adminLoadSupportThreads();
+            else if (page === 'settings') loadSettings();
 
             // Close sidebar on mobile after selection
             closeSidebar();
@@ -1327,7 +1434,9 @@
                 grid.innerHTML = agentNames.map(function(name){
                     var d = agentTypeData[name] || { total: 0, active: 0, onboarding: 0, paused: 0 };
                     var inactive = d.total === 0;
-                    return '<div class="agent-card' + (inactive ? ' inactive' : '') + '">' +
+                    // Click-through: jump to Agents tab filtered to this agent type.
+                    var clickAttr = inactive ? '' : ' style="cursor:pointer;" onclick="openAgentsForType(\'' + name + '\')"';
+                    return '<div class="agent-card' + (inactive ? ' inactive' : '') + '"' + clickAttr + '>' +
                         '<div class="agent-card-header">' +
                           '<span class="agent-card-name">' + name.toUpperCase() + '</span>' +
                           '<span class="agent-card-deployed' + (inactive ? ' none' : '') + '">' + d.total + ' deployed</span>' +
@@ -1430,18 +1539,44 @@
 
             // Fetch ALL onboarding steps for these agents
             var stepsMap = {};
+            var metricsMap = {};
+            var eventsMap = {};
             if (agents.length > 0) {
+                var agentIds = agents.map(function(a){ return a.id; });
+                var since = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+
                 var stepsRes = await sb.from('onboarding_steps')
                     .select('id, client_agent_id, step_number, step_name, status, data, completed_at')
-                    .in('client_agent_id', agents.map(function(a){ return a.id; }))
+                    .in('client_agent_id', agentIds)
                     .order('step_number');
                 (stepsRes.data || []).forEach(function(s){
                     if (!stepsMap[s.client_agent_id]) stepsMap[s.client_agent_id] = [];
                     stepsMap[s.client_agent_id].push(s);
                 });
+
+                // Last 7 days of metrics, latest snapshot per agent.
+                var metricsRes = await sb.from('agent_metrics')
+                    .select('client_agent_id, metric_date, metrics')
+                    .in('client_agent_id', agentIds)
+                    .gte('metric_date', since)
+                    .order('metric_date', { ascending: false });
+                (metricsRes.data || []).forEach(function(m){
+                    if (!metricsMap[m.client_agent_id]) metricsMap[m.client_agent_id] = m;
+                });
+
+                // Last 10 events per agent. We pull a generous batch and filter.
+                var eventsRes = await sb.from('agent_events')
+                    .select('client_agent_id, event_type, occurred_at, metadata')
+                    .in('client_agent_id', agentIds)
+                    .order('occurred_at', { ascending: false })
+                    .limit(80);
+                (eventsRes.data || []).forEach(function(ev){
+                    if (!eventsMap[ev.client_agent_id]) eventsMap[ev.client_agent_id] = [];
+                    if (eventsMap[ev.client_agent_id].length < 10) eventsMap[ev.client_agent_id].push(ev);
+                });
             }
 
-            content.innerHTML = buildMgmtHtml(c, agents, stepsMap);
+            content.innerHTML = buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap);
         }
 
         function closeDrawer() {
@@ -1455,7 +1590,9 @@
             return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        function buildMgmtHtml(c, agents, stepsMap) {
+        function buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap) {
+            metricsMap = metricsMap || {};
+            eventsMap = eventsMap || {};
             var typeNames = {
                 echo:'AI Receptionist', ignite:'Lead Response', revive:'Customer Reactivation',
                 scout:'Lead Generator', forge:'AI Website', signal:'AI SEO',
@@ -1471,9 +1608,10 @@
             h += '<div style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(37,99,235,0.1);">' +
                  '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">' + esc(c.business_name || '—') + '</h2>' +
                  '<div style="font-size:13px;color:var(--text-secondary,#8a8aa0);margin-top:3px;">' + esc(c.business_type||'') + (c.business_type&&c.email?' · ':'') + esc(c.email||'') + '</div>' +
-                 '<div style="display:flex;gap:8px;margin-top:14px;">' +
+                 '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">' +
                    '<a href="mailto:'+esc(c.email||'')+'?subject=STILO%20AI%20Partners" style="padding:8px 16px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;">Email</a>' +
                    (c.phone ? '<a href="tel:'+esc(c.phone)+'" style="padding:8px 16px;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:inherit;">Call</a>' : '') +
+                   '<a href="/app/?impersonate='+esc(c.id)+'" target="_blank" rel="noopener" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#ef4444;" title="Open this client\'s dashboard with your admin session, every action logged.">Open as client →</a>' +
                  '</div>' +
                '</div>';
 
@@ -1530,6 +1668,37 @@
                          '<button onclick="adminRemoveAgent(\''+a.id+'\',\''+c.id+'\')" style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#ef4444;cursor:pointer;">Remove</button>' +
                        '</div>' +
                      '</div>';
+
+                // ---- KPI snapshot + recent events ----
+                var snap = metricsMap[a.id];
+                var evs = eventsMap[a.id] || [];
+                if (snap || evs.length > 0) {
+                    h += '<div style="padding:12px 16px;border-bottom:1px solid rgba(37,99,235,0.07);background:rgba(37,99,235,0.02);">';
+                    if (snap && snap.metrics) {
+                        var entries = Object.entries(snap.metrics).slice(0, 4);
+                        h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:'+(evs.length > 0 ? '12px' : '0')+';">'
+                          + entries.map(function(e){
+                                var label = e[0].replace(/_/g, ' ');
+                                var v = e[1];
+                                if (typeof v === 'number') v = v.toLocaleString();
+                                return '<div style="background:rgba(37,99,235,0.06);border-radius:8px;padding:8px 10px;">'
+                                    + '<div style="font-size:10px;color:var(--text-muted,#5a5a75);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;">'+esc(label)+'</div>'
+                                    + '<div style="font-size:14px;font-weight:700;margin-top:2px;">'+esc(String(v))+'</div>'
+                                    + '</div>';
+                            }).join('')
+                          + '</div>';
+                    }
+                    if (evs.length > 0) {
+                        h += '<div style="font-size:11px;color:var(--text-muted,#5a5a75);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin-bottom:6px;">Recent activity</div>'
+                          + '<div style="display:flex;flex-direction:column;gap:4px;">'
+                          + evs.slice(0,5).map(function(ev){
+                                var when = new Date(ev.occurred_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+                                return '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary,#8a8aa0);"><span>'+esc(ev.event_type)+'</span><span style="color:var(--text-muted,#5a5a75);">'+when+'</span></div>';
+                            }).join('')
+                          + '</div>';
+                    }
+                    h += '</div>';
+                }
 
                 // Onboarding steps
                 if (steps.length > 0) {
@@ -1732,6 +1901,425 @@
             var d = document.getElementById('headerDate');
             if (d) d.textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         });
+
+        /* ============================================================
+           Agent Health click-through + Agents tab
+           ============================================================ */
+        function openAgentsForType(agentType) {
+            switchPage('agents');
+            var sel = document.getElementById('agentTypeFilter');
+            if (sel) { sel.value = agentType; loadAgentsTable(); }
+        }
+
+        var AGENT_FEES_MONTHLY = {
+            echo: 45000, ignite: 65000, revive: 80000, scout: 100000,
+            forge: 20000, signal: 0, oracle: 100000, flux: 0,
+        };
+
+        async function loadAgentsTable() {
+            var wrap = document.getElementById('agentsTableWrap');
+            if (!wrap) return;
+            wrap.innerHTML = '<div style="padding:24px;color:var(--text-secondary);font-size:13px;">Loading deployments...</div>';
+            var typeFilter = (document.getElementById('agentTypeFilter') || {}).value || '';
+            var statusFilter = (document.getElementById('agentStatusFilter') || {}).value || '';
+
+            try {
+                // Pull every (client_agents) row + the parent client
+                var q = sb.from('client_agents')
+                    .select('id, client_id, agent_type, status, created_at, activated_at, config, clients(business_name, contact_name, email)')
+                    .order('created_at', { ascending: false });
+                if (typeFilter) q = q.eq('agent_type', typeFilter);
+                if (statusFilter) q = q.eq('status', statusFilter);
+                var { data, error } = await q;
+                if (error) throw error;
+                var rows = (data || []).filter(function(r){
+                    var em = (r.clients && r.clients.email) || '';
+                    return !ADMIN_EMAILS.includes(em.toLowerCase());
+                });
+                if (rows.length === 0) {
+                    wrap.innerHTML = '<div style="padding:24px;color:var(--text-secondary);font-size:13px;">No deployments match those filters.</div>';
+                    return;
+                }
+                var html = '<table style="width:100%;border-collapse:collapse;">'
+                    + '<thead><tr style="text-align:left;background:rgba(37,99,235,0.06);">'
+                    + '<th style="padding:12px 14px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Client</th>'
+                    + '<th style="padding:12px 14px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Agent</th>'
+                    + '<th style="padding:12px 14px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Status</th>'
+                    + '<th style="padding:12px 14px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Activated</th>'
+                    + '<th style="padding:12px 14px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;text-align:right;">MRR</th>'
+                    + '</tr></thead><tbody>'
+                    + rows.map(function(r){
+                        var c = r.clients || {};
+                        var name = c.business_name || c.email || '—';
+                        var monthly = (AGENT_FEES_MONTHLY[r.agent_type] || 0) / 100;
+                        var mrrCell = r.status === 'active' ? '$' + monthly.toLocaleString() : '—';
+                        var statusBg = r.status === 'active' ? 'rgba(34,197,94,0.12)' :
+                                       r.status === 'paused' ? 'rgba(239,68,68,0.12)' :
+                                       r.status === 'onboarding' ? 'rgba(245,158,11,0.14)' : 'rgba(255,255,255,0.04)';
+                        var statusFg = r.status === 'active' ? '#22c55e' :
+                                       r.status === 'paused' ? '#ef4444' :
+                                       r.status === 'onboarding' ? '#f59e0b' : 'var(--text-secondary)';
+                        var activated = r.activated_at ? new Date(r.activated_at).toLocaleDateString() : '—';
+                        return '<tr style="border-top:1px solid rgba(37,99,235,0.08);cursor:pointer;" onclick="openClientDrawer(\'' + r.client_id + '\')">'
+                            + '<td style="padding:12px 14px;font-size:13px;">' + escapeAdminHtml(name) + '</td>'
+                            + '<td style="padding:12px 14px;font-size:13px;font-weight:600;">' + r.agent_type.toUpperCase() + '</td>'
+                            + '<td style="padding:12px 14px;font-size:12px;"><span style="padding:2px 8px;border-radius:4px;background:' + statusBg + ';color:' + statusFg + ';text-transform:uppercase;font-weight:600;font-size:10px;">' + r.status + '</span></td>'
+                            + '<td style="padding:12px 14px;font-size:12px;color:var(--text-secondary);">' + activated + '</td>'
+                            + '<td style="padding:12px 14px;font-size:13px;text-align:right;">' + mrrCell + '</td>'
+                            + '</tr>';
+                    }).join('') + '</tbody></table>';
+                wrap.innerHTML = html;
+            } catch (e) {
+                console.error('[loadAgentsTable]', e);
+                wrap.innerHTML = '<div style="padding:24px;color:#ef4444;font-size:13px;">Could not load deployments. Refresh the page.</div>';
+            }
+        }
+
+        function escapeAdminHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        /* ============================================================
+           Revenue tab
+           ============================================================ */
+        async function loadRevenue() {
+            var grid = document.getElementById('revenueGrid');
+            var byAgent = document.getElementById('revenueByAgent');
+            var topClients = document.getElementById('revenueTopClients');
+            if (!grid) return;
+            grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);font-size:13px;">Computing...</div>';
+            byAgent.innerHTML = '';
+            topClients.innerHTML = '';
+
+            try {
+                // MRR is computed from active client_agents × monthly fee. This is the
+                // dashboard truth; Stripe truth is handled by the existing list-invoices
+                // endpoint, surfaced separately on each client.
+                var { data: agents, error } = await sb.from('client_agents')
+                    .select('id, client_id, agent_type, status, created_at, activated_at, clients(business_name, email)');
+                if (error) throw error;
+                var rows = (agents || []).filter(function(r){
+                    var em = (r.clients && r.clients.email) || '';
+                    return !ADMIN_EMAILS.includes(em.toLowerCase());
+                });
+
+                var mrrCents = 0, activeCount = 0, onboardingCount = 0, pausedCount = 0;
+                var byType = {};
+                var byClient = {};
+                rows.forEach(function(r){
+                    var monthly = AGENT_FEES_MONTHLY[r.agent_type] || 0;
+                    if (r.status === 'active') {
+                        mrrCents += monthly;
+                        activeCount++;
+                        byType[r.agent_type] = (byType[r.agent_type] || 0) + monthly;
+                        var ck = r.client_id;
+                        if (!byClient[ck]) byClient[ck] = { name: (r.clients && r.clients.business_name) || (r.clients && r.clients.email) || '—', cents: 0 };
+                        byClient[ck].cents += monthly;
+                    } else if (r.status === 'onboarding') onboardingCount++;
+                    else if (r.status === 'paused') pausedCount++;
+                });
+
+                var fmtUsd = function(cents){ return '$' + (cents/100).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
+                grid.innerHTML = [
+                    { label: 'Current MRR', value: fmtUsd(mrrCents), sub: 'from active subs' },
+                    { label: 'Active deployments', value: activeCount, sub: 'across all agents' },
+                    { label: 'Onboarding', value: onboardingCount, sub: 'awaiting setup' },
+                    { label: 'Paused', value: pausedCount, sub: 'temporarily off' },
+                ].map(function(c){
+                    return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">'
+                        + '<div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">' + c.label + '</div>'
+                        + '<div style="font-size:26px;font-weight:700;margin-top:6px;">' + c.value + '</div>'
+                        + '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">' + c.sub + '</div>'
+                        + '</div>';
+                }).join('');
+
+                // MRR by agent type — simple bar table
+                var typeEntries = Object.entries(byType).sort(function(a,b){ return b[1] - a[1]; });
+                if (typeEntries.length === 0) {
+                    byAgent.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">No active deployments yet.</div>';
+                } else {
+                    var maxCents = typeEntries[0][1] || 1;
+                    byAgent.innerHTML = typeEntries.map(function(e){
+                        var pct = Math.round((e[1] / maxCents) * 100);
+                        return '<div style="display:grid;grid-template-columns:80px 1fr 100px;gap:10px;align-items:center;padding:6px 0;">'
+                            + '<span style="font-size:12px;font-weight:600;">' + e[0].toUpperCase() + '</span>'
+                            + '<div style="height:8px;background:rgba(37,99,235,0.08);border-radius:4px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:#2563EB;"></div></div>'
+                            + '<span style="font-size:13px;text-align:right;">' + fmtUsd(e[1]) + '</span>'
+                            + '</div>';
+                    }).join('');
+                }
+
+                // Top clients
+                var clientEntries = Object.entries(byClient).sort(function(a,b){ return b[1].cents - a[1].cents; }).slice(0, 10);
+                if (clientEntries.length === 0) {
+                    topClients.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">No revenue yet.</div>';
+                } else {
+                    topClients.innerHTML = clientEntries.map(function(e){
+                        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(37,99,235,0.08);font-size:13px;">'
+                            + '<span style="cursor:pointer;color:var(--text-primary);" onclick="openClientDrawer(\'' + e[0] + '\')">' + escapeAdminHtml(e[1].name) + '</span>'
+                            + '<strong>' + fmtUsd(e[1].cents) + '</strong>'
+                            + '</div>';
+                    }).join('');
+                }
+            } catch (e) {
+                console.error('[loadRevenue]', e);
+                grid.innerHTML = '<div style="grid-column:1/-1;color:#ef4444;font-size:13px;">Failed to load revenue: ' + (e.message || 'unknown error') + '</div>';
+            }
+        }
+
+        /* ============================================================
+           Support inbox (admin)
+           ============================================================ */
+        var adminSupportState = { threads: [], activeThreadId: null, realtimeChannel: null };
+
+        async function adminLoadSupportThreads() {
+            var listEl = document.getElementById('adminSupportList');
+            if (!listEl) return;
+            listEl.innerHTML = '<div style="padding:14px;color:var(--text-secondary);font-size:13px;">Loading...</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var status = (document.getElementById('supportStatusFilter') || {}).value || '';
+                var url = '/api/support/threads' + (status ? '?status=' + status : '');
+                var resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+                var payload = await resp.json();
+                if (!resp.ok) throw new Error(payload.error || 'load failed');
+                adminSupportState.threads = payload.threads || [];
+                renderAdminSupportList();
+                adminSubscribeRealtime();
+                if (adminSupportState.threads.length > 0) {
+                    adminOpenThread(adminSupportState.threads[0].id);
+                } else {
+                    document.getElementById('adminSupportTranscript').innerHTML = '<div style="margin:auto;color:var(--text-secondary);font-size:13px;">No threads in this view.</div>';
+                    document.getElementById('adminSupportContext').textContent = '';
+                }
+            } catch (e) {
+                console.error('[adminLoadSupportThreads]', e);
+                listEl.innerHTML = '<div style="padding:14px;color:#ef4444;font-size:13px;">Could not load.</div>';
+            }
+        }
+
+        function renderAdminSupportList() {
+            var listEl = document.getElementById('adminSupportList');
+            if (adminSupportState.threads.length === 0) {
+                listEl.innerHTML = '<div style="padding:14px;color:var(--text-secondary);font-size:13px;">No threads.</div>';
+                return;
+            }
+            // We need client names; clientsCache should already be populated.
+            var nameById = {};
+            (typeof clientsCache !== 'undefined' && clientsCache || []).forEach(function(c){ nameById[c.id] = c.business_name || c.email; });
+
+            listEl.innerHTML = adminSupportState.threads.map(function(t){
+                var active = t.id === adminSupportState.activeThreadId;
+                var subj = t.subject || (t.client_agent_id ? 'Agent question' : 'General question');
+                var when = new Date(t.last_message_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                var statusBadge = t.status === 'resolved' ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(34,197,94,0.12);color:#22c55e;text-transform:uppercase;margin-left:4px;">resolved</span>' : '';
+                var clientName = nameById[t.client_id] || 'Client';
+                return '<button onclick="adminOpenThread(\'' + t.id + '\')" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:12px 14px;border:0;background:' + (active ? 'rgba(37,99,235,0.12)' : 'transparent') + ';border-bottom:1px solid rgba(37,99,235,0.08);text-align:left;cursor:pointer;color:var(--text-primary);">'
+                    + '<span style="font-size:13px;font-weight:600;">' + escapeAdminHtml(clientName) + statusBadge + '</span>'
+                    + '<span style="font-size:12px;color:var(--text-secondary);">' + escapeAdminHtml(subj) + '</span>'
+                    + '<span style="font-size:11px;color:var(--text-muted);">' + when + '</span>'
+                    + '</button>';
+            }).join('');
+        }
+
+        async function adminOpenThread(threadId) {
+            adminSupportState.activeThreadId = threadId;
+            renderAdminSupportList();
+            var transcript = document.getElementById('adminSupportTranscript');
+            var ctx = document.getElementById('adminSupportContext');
+            transcript.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">Loading...</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/support/messages?thread_id=' + encodeURIComponent(threadId), {
+                    headers: { 'Authorization': 'Bearer ' + session.access_token },
+                });
+                var payload = await resp.json();
+                if (!resp.ok) throw new Error(payload.error || 'load failed');
+                renderAdminSupportTranscript(payload.messages || []);
+
+                // Build context line: client name + tagged agent
+                var t = payload.thread || {};
+                var nameById = {};
+                (typeof clientsCache !== 'undefined' && clientsCache || []).forEach(function(c){ nameById[c.id] = c.business_name || c.email; });
+                var clientName = nameById[t.client_id] || 'Client';
+                var ctxParts = [escapeAdminHtml(clientName)];
+                if (t.client_agent_id) ctxParts.push('tagged to one agent');
+                ctxParts.push(t.status === 'resolved' ? 'resolved' : 'open');
+                ctx.innerHTML = ctxParts.join(' · ') + ' <button onclick="openClientDrawer(\'' + t.client_id + '\')" style="margin-left:8px;font-size:11px;background:transparent;color:#2563EB;border:1px solid #2563EB;padding:2px 8px;border-radius:6px;cursor:pointer;">Open client →</button>';
+
+                var resolveBtn = document.getElementById('adminSupportResolveBtn');
+                if (resolveBtn) resolveBtn.textContent = t.status === 'resolved' ? 'Re-open' : 'Mark resolved';
+            } catch (e) {
+                console.error('[adminOpenThread]', e);
+                transcript.innerHTML = '<div style="color:#ef4444;font-size:13px;">Could not load messages.</div>';
+            }
+        }
+
+        function renderAdminSupportTranscript(messages) {
+            var transcript = document.getElementById('adminSupportTranscript');
+            if (!messages || messages.length === 0) {
+                transcript.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">Empty thread.</div>';
+                return;
+            }
+            transcript.innerHTML = messages.map(function(m){
+                var fromAdmin = m.sender_type === 'admin';
+                var when = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                var bubble = '<div style="max-width:70%;padding:10px 12px;border-radius:12px;background:' + (fromAdmin ? 'rgba(37,99,235,0.18)' : 'rgba(255,255,255,0.04)') + ';font-size:13px;line-height:1.45;white-space:pre-wrap;">' + escapeAdminHtml(m.body) + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">' + (fromAdmin ? 'You' : (m.sender_type === 'system' ? 'System' : 'Client')) + ' · ' + when + '</div>';
+                return '<div style="display:flex;flex-direction:column;align-items:' + (fromAdmin ? 'flex-end' : 'flex-start') + ';">' + bubble + '</div>';
+            }).join('');
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        async function adminSubmitSupportMessage(event) {
+            event.preventDefault();
+            var textarea = document.getElementById('adminSupportComposeBody');
+            var msgEl = document.getElementById('adminSupportComposeMsg');
+            var body = (textarea.value || '').trim();
+            if (!body || !adminSupportState.activeThreadId) return false;
+            msgEl.textContent = 'Sending...';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/support/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+                    body: JSON.stringify({ thread_id: adminSupportState.activeThreadId, body: body }),
+                });
+                var payload = await resp.json();
+                if (!resp.ok) throw new Error(payload.error || 'send failed');
+                textarea.value = '';
+                msgEl.textContent = '';
+                adminOpenThread(adminSupportState.activeThreadId);
+            } catch (e) {
+                msgEl.style.color = '#ef4444';
+                msgEl.textContent = e.message || 'Send failed';
+            }
+            return false;
+        }
+
+        async function adminToggleResolved() {
+            if (!adminSupportState.activeThreadId) return;
+            try {
+                var current = adminSupportState.threads.find(function(t){ return t.id === adminSupportState.activeThreadId; });
+                var nextStatus = (current && current.status === 'resolved') ? 'open' : 'resolved';
+                var { error } = await sb.from('support_threads')
+                    .update({ status: nextStatus })
+                    .eq('id', adminSupportState.activeThreadId);
+                if (error) throw error;
+                showToast('Thread ' + nextStatus);
+                adminLoadSupportThreads();
+            } catch (e) {
+                showToast('Failed: ' + e.message);
+            }
+        }
+
+        function adminSubscribeRealtime() {
+            if (adminSupportState.realtimeChannel) return;
+            try {
+                adminSupportState.realtimeChannel = sb
+                    .channel('admin_support_inbox')
+                    .on('postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'support_messages' },
+                        function(payload) {
+                            adminLoadSupportThreads();
+                            if (payload && payload.new && payload.new.thread_id === adminSupportState.activeThreadId) {
+                                adminOpenThread(payload.new.thread_id);
+                            }
+                        })
+                    .subscribe();
+            } catch (e) {
+                console.warn('[admin support realtime]', e);
+            }
+        }
+
+        /* ============================================================
+           Settings tab
+           ============================================================ */
+        async function loadSettings() {
+            // Admin team
+            try {
+                var { data, error } = await sb.from('admin_users').select('email, display_name, added_by, added_at, active').order('added_at', { ascending: true });
+                if (error) throw error;
+                var listEl = document.getElementById('adminTeamList');
+                if (listEl) {
+                    listEl.innerHTML = (data || []).map(function(u){
+                        var statusDot = u.active
+                            ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:8px;"></span>'
+                            : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#5a5a75;margin-right:8px;"></span>';
+                        var added = u.added_at ? new Date(u.added_at).toLocaleDateString() : '';
+                        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.02);border-radius:8px;font-size:13px;">'
+                            + '<div>' + statusDot + '<strong>' + escapeAdminHtml(u.email) + '</strong>'
+                            + (u.display_name ? ' <span style="color:var(--text-secondary);">— ' + escapeAdminHtml(u.display_name) + '</span>' : '')
+                            + '</div>'
+                            + '<div style="color:var(--text-muted);font-size:11px;">added ' + added + '</div>'
+                            + '</div>';
+                    }).join('');
+                }
+            } catch (e) {
+                console.error('[loadSettings/team]', e);
+                var listEl = document.getElementById('adminTeamList');
+                if (listEl) listEl.innerHTML = '<div style="color:#ef4444;font-size:12px;">Could not load team. Make sure the admin_users migration is applied.</div>';
+            }
+
+            // Integrations health (best-effort, soft probes)
+            var ih = document.getElementById('integrationsHealth');
+            if (ih) {
+                ih.innerHTML = ['supabase', 'stripe', 'retell', 'resend'].map(function(name){
+                    return '<div data-integration="' + name + '" style="padding:12px;background:rgba(255,255,255,0.02);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
+                        + '<span style="font-size:13px;font-weight:600;text-transform:capitalize;">' + name + '</span>'
+                        + '<span style="font-size:11px;color:var(--text-secondary);">checking...</span>'
+                        + '</div>';
+                }).join('');
+
+                // Supabase: ping the clients table (already authenticated).
+                sb.from('clients').select('id', { head: true, count: 'exact' }).limit(1).then(function(r){
+                    var el = ih.querySelector('[data-integration="supabase"] span:last-child');
+                    if (el) el.innerHTML = r.error ? '<span style="color:#ef4444;">down</span>' : '<span style="color:#22c55e;">connected</span>';
+                });
+                // Other probes happen via /api/admin/integrations-health (todo for next batch);
+                // for now mark them as unknown so the UI is honest.
+                ['stripe', 'retell', 'resend'].forEach(function(name){
+                    var el = ih.querySelector('[data-integration="' + name + '"] span:last-child');
+                    if (el) el.innerHTML = '<span style="color:var(--text-muted);">probe pending</span>';
+                });
+            }
+
+            // About
+            var emailEl = document.getElementById('aboutAdminEmail');
+            if (emailEl) {
+                var { data: { session } } = await sb.auth.getSession();
+                emailEl.textContent = session && session.user ? session.user.email : '--';
+            }
+        }
+
+        async function adminAddTeamMember(event) {
+            event.preventDefault();
+            var emailEl = document.getElementById('adminTeamEmail');
+            var nameEl = document.getElementById('adminTeamName');
+            var msgEl = document.getElementById('adminTeamMsg');
+            var email = (emailEl.value || '').trim().toLowerCase();
+            var displayName = (nameEl.value || '').trim() || null;
+            if (!email) return false;
+            msgEl.textContent = 'Adding...';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var addedBy = session.user.email;
+                var { error } = await sb.from('admin_users')
+                    .upsert({ email: email, display_name: displayName, added_by: addedBy, active: true }, { onConflict: 'email' });
+                if (error) throw error;
+                msgEl.style.color = '#22c55e';
+                msgEl.textContent = 'Added. Note: live RLS policies still use the hardcoded admin email list. Update schema.sql admin email arrays + redeploy migrations to fully grant access.';
+                emailEl.value = '';
+                nameEl.value = '';
+                loadSettings();
+            } catch (e) {
+                msgEl.style.color = '#ef4444';
+                msgEl.textContent = e.message || 'Failed';
+            }
+            return false;
+        }
     </script>
 </body>
 </html>

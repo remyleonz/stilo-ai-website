@@ -955,6 +955,33 @@
             padding: 0.75rem;
         }
 
+        /* Schema-driven field types (time-range, key-value-list, csv-upload) */
+        .wizard-required { color: var(--red); margin-left: 2px; }
+        .wizard-time-range {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .wizard-time-range .form-input { width: auto; flex: 0 0 auto; }
+        .wizard-time-sep { color: var(--text-tertiary); font-size: 0.8125rem; }
+        .wizard-kv { display: flex; flex-direction: column; gap: 0.5rem; }
+        .wizard-kv-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .wizard-upload {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .wizard-upload-current {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
         /* ============================================================
            Account Settings Modal
            ============================================================ */
@@ -1299,10 +1326,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                         Billing
                     </button>
-                    <a class="dropdown-item" href="mailto:stiloaiconsulting@gmail.com?subject=Support%20request%20from%20STILO%20AI%20Partners%20client">
+                    <button class="dropdown-item" onclick="openSupportInbox()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        Email Support
-                    </a>
+                        Message Support
+                    </button>
                     <div class="dropdown-divider"></div>
                     <button class="dropdown-item danger" onclick="signOut()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1461,6 +1488,36 @@
     </div>
 
     <!-- =========================================================
+         SUPPORT INBOX MODAL
+         ========================================================= -->
+    <div class="modal-overlay" id="supportOverlay" style="display:none;">
+        <div class="modal" id="supportModal" style="width:760px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;">
+            <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);">
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                    <h3 style="margin:0;font-size:1rem;">Support inbox</h3>
+                    <span id="supportContextLabel" style="font-size:0.75rem;color:var(--text-tertiary);"></span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="btn btn-ghost btn-sm" onclick="closeSupportInbox()" style="padding:6px 10px;">Close</button>
+                </div>
+            </div>
+            <div id="supportContent" style="display:grid;grid-template-columns:240px 1fr;flex:1;min-height:0;">
+                <aside id="supportThreadList" style="border-right:1px solid var(--border);overflow-y:auto;background:var(--bg-secondary);"></aside>
+                <section style="display:flex;flex-direction:column;min-height:0;">
+                    <div id="supportTranscript" style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px;"></div>
+                    <form id="supportComposeForm" onsubmit="return submitSupportMessage(event)" style="border-top:1px solid var(--border);padding:12px;display:flex;flex-direction:column;gap:8px;">
+                        <textarea id="supportComposeBody" class="form-input" rows="3" placeholder="Type your message..." style="resize:vertical;"></textarea>
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                            <span id="supportComposeMsg" style="font-size:0.75rem;color:var(--text-tertiary);min-height:1em;"></span>
+                            <button type="submit" class="btn btn-primary btn-sm">Send</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
          JAVASCRIPT
          ========================================================= -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1494,12 +1551,46 @@
                 return;
             }
             appInitialized = true;
-            currentUserId = session.user.id;
             const user = session.user;
+            const isAdminViewer = ADMIN_EMAILS_APP.includes(user.email);
 
-            if (ADMIN_EMAILS_APP.includes(user.email)) {
+            // Impersonation: when an admin opens /app/?impersonate=<client_id>
+            // we render this dashboard as that client. Admin RLS policies
+            // already let admins read/write any client_agents row, so we just
+            // swap the working client_id and show a sticky audit banner.
+            const url = new URL(window.location.href);
+            const impersonateId = url.searchParams.get('impersonate');
+            window.__impersonationSessionId = null;
+
+            if (impersonateId && isAdminViewer) {
+                try {
+                    const resp = await fetch('/api/admin/impersonate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + session.access_token,
+                        },
+                        body: JSON.stringify({ client_id: impersonateId }),
+                    });
+                    const payload = await resp.json();
+                    if (resp.ok) {
+                        currentUserId = impersonateId;
+                        window.__impersonationSessionId = payload.session_id;
+                        renderImpersonationBanner(payload.client);
+                    } else {
+                        console.error('[impersonate]', payload);
+                        currentUserId = user.id;
+                    }
+                } catch (e) {
+                    console.error('[impersonate]', e);
+                    currentUserId = user.id;
+                }
+            } else if (isAdminViewer) {
+                // Plain admin without impersonate param: redirect to /admin/.
                 window.location.href = '/admin/';
                 return;
+            } else {
+                currentUserId = user.id;
             }
 
             // Show email-based name immediately so the topbar never stays on "Loading..."
@@ -1558,8 +1649,81 @@
                 if (opt) opt.selected = true;
             }
 
+            // Fetch the agent catalog (with onboarding schemas) once. We block
+            // on this so the wizard renderer has the schema available before
+            // it draws the first step. Cached client-side by the browser via
+            // /api/agents-meta Cache-Control headers.
+            await loadAgentMeta();
+
             loadAgentData(user.id);
             loadInvoices(user.id);
+        }
+
+        // Render the sticky red banner that confirms an admin is acting as a
+        // client. Hides the banner if there's no current impersonation.
+        function renderImpersonationBanner(client) {
+            var existing = document.getElementById('impersonationBanner');
+            if (existing) existing.remove();
+            if (!client || !window.__impersonationSessionId) return;
+            var bar = document.createElement('div');
+            bar.id = 'impersonationBanner';
+            bar.style.cssText = 'position:sticky;top:0;left:0;right:0;z-index:1000;background:#ef4444;color:white;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;box-shadow:0 2px 12px rgba(239,68,68,0.3);';
+            bar.innerHTML = '<span>Impersonating <strong>' + (client.business_name || client.email || 'client') + '</strong> &mdash; every action is logged.</span>'
+                + '<button onclick="exitImpersonation()" style="background:white;color:#ef4444;border:0;padding:6px 14px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;">Exit impersonation</button>';
+            document.body.insertBefore(bar, document.body.firstChild);
+        }
+
+        function exitImpersonation() {
+            window.location.href = '/admin/';
+        }
+
+        // Audit helper: when impersonating, drop a row into impersonation_audit
+        // alongside the underlying mutation. Soft-fails so a logging glitch
+        // doesn't block the actual save.
+        async function auditImpersonation(action, target_table, target_id, payload) {
+            if (!window.__impersonationSessionId) return;
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                await fetch('/api/admin/impersonate-action', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + session.access_token,
+                    },
+                    body: JSON.stringify({
+                        session_id: window.__impersonationSessionId,
+                        client_id: currentUserId,
+                        action: action,
+                        target_table: target_table,
+                        target_id: target_id,
+                        payload: payload || {},
+                    }),
+                });
+            } catch (e) {
+                console.warn('[impersonation audit]', e);
+            }
+        }
+
+        // Module-level agent catalog. Populated by loadAgentMeta() on init.
+        // Shape: { echo: { code, shortName, name, onboardingSteps, onboardingSchema }, ... }
+        var AGENT_META = {};
+        var agentMetaPromise = null;
+        async function loadAgentMeta() {
+            if (Object.keys(AGENT_META).length > 0) return AGENT_META;
+            if (agentMetaPromise) return agentMetaPromise;
+            agentMetaPromise = (async function() {
+                try {
+                    var res = await fetch('/api/agents-meta');
+                    if (!res.ok) throw new Error('agents-meta status ' + res.status);
+                    var payload = await res.json();
+                    AGENT_META = payload.agents || {};
+                } catch (e) {
+                    console.error('[loadAgentMeta]', e);
+                    AGENT_META = {}; // wizard falls back to JSON path
+                }
+                return AGENT_META;
+            })();
+            return agentMetaPromise;
         }
 
         // --- Load real Stripe invoices via our API ---
@@ -1689,12 +1853,17 @@
                     + '</div>'
                 + '</div>';
             } else {
+                var pauseBtn = isPaused
+                    ? '<button class="btn btn-ghost btn-sm" onclick="agentStatusAction(\'' + agent.id + '\', \'resume\', this)">Resume</button>'
+                    : '<button class="btn btn-ghost btn-sm" onclick="agentStatusAction(\'' + agent.id + '\', \'pause\', this)">Pause</button>';
                 body = '<div class="agent-stats">'
                     + '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats appear once this agent has handled events.</div>'
                 + '</div>'
                 + '<div class="agent-actions">'
                     + '<a class="btn btn-primary btn-sm" href="/app/agents/?agent=' + agent.agent_type + '">Configure</a>'
                     + '<a class="btn btn-ghost btn-sm" href="/app/agents/?agent=' + agent.agent_type + '">View Agent →</a>'
+                    + pauseBtn
+                    + '<button class="btn btn-ghost btn-sm" onclick="openSupportForAgent(\'' + agent.id + '\', \'' + agent.agent_type + '\')">Message support</button>'
                 + '</div>';
             }
 
@@ -1931,6 +2100,7 @@
                 })
                 .eq('client_agent_id', clientAgentId)
                 .eq('step_number', stepNumber);
+            auditImpersonation('save_onboarding_step', 'onboarding_steps', clientAgentId, { step_number: stepNumber });
             if (e1) { console.error('[saveOnboardingStep] step update failed:', e1.message); return { ok: false, error: e1 }; }
 
             if (!isLastStep) {
@@ -2028,6 +2198,121 @@
                 + '</div>';
         }
 
+        // Schema-driven field renderer. Used when api/_agents.js defines an
+        // onboardingSchema for the current agent. Falls back to the legacy
+        // type-inferred renderer (above) when there is no schema.
+        function renderWizardFieldFromSchema(field, val) {
+            var key = field.key;
+            var name = escapeHtml(key);
+            var control;
+            var v = (val == null ? '' : val);
+            var requiredAttr = field.required ? ' data-wizard-required="1"' : '';
+
+            switch (field.type) {
+                case 'boolean': {
+                    var checked = v === true || v === 'true' ? 'checked' : '';
+                    control = '<label class="wizard-check"><input type="checkbox" data-wizard-key="' + name + '" data-wizard-type="boolean"' + requiredAttr + ' ' + checked + ' /> <span>Yes</span></label>';
+                    break;
+                }
+                case 'number': {
+                    control = '<input type="number" class="form-input" data-wizard-key="' + name + '" data-wizard-type="number"' + requiredAttr + ' value="' + escapeHtml(v) + '" />';
+                    break;
+                }
+                case 'email':
+                    control = '<input type="email" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' value="' + escapeHtml(v) + '" />';
+                    break;
+                case 'phone':
+                    control = '<input type="tel" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' value="' + escapeHtml(v) + '" />';
+                    break;
+                case 'url':
+                    control = '<input type="url" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' placeholder="https://" value="' + escapeHtml(v) + '" />';
+                    break;
+                case 'textarea':
+                    control = '<textarea class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' rows="3">' + escapeHtml(v) + '</textarea>';
+                    break;
+                case 'select': {
+                    var opts = (field.options || []).map(function(o) {
+                        var selected = String(v) === String(o.value) ? ' selected' : '';
+                        return '<option value="' + escapeHtml(o.value) + '"' + selected + '>' + escapeHtml(o.label) + '</option>';
+                    }).join('');
+                    control = '<select class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + '>'
+                        + '<option value="">Select…</option>' + opts + '</select>';
+                    break;
+                }
+                case 'time-range': {
+                    var open = (v && typeof v === 'object') ? (v.open || '') : '';
+                    var close = (v && typeof v === 'object') ? (v.close || '') : '';
+                    var closed = (v && typeof v === 'object' && v.closed) ? 'checked' : '';
+                    control = '<div class="wizard-time-range" data-wizard-key="' + name + '" data-wizard-type="time-range">'
+                        + '<input type="time" class="form-input" data-time-role="open" value="' + escapeHtml(open) + '" />'
+                        + '<span class="wizard-time-sep">to</span>'
+                        + '<input type="time" class="form-input" data-time-role="close" value="' + escapeHtml(close) + '" />'
+                        + '<label class="wizard-check" style="margin-left:auto;"><input type="checkbox" data-time-role="closed" ' + closed + ' /> <span>Closed</span></label>'
+                        + '</div>';
+                    break;
+                }
+                case 'csv-upload': {
+                    var current = (v && typeof v === 'object' && v.filename) ? v.filename : (typeof v === 'string' ? v : '');
+                    control = '<div class="wizard-upload" data-wizard-key="' + name + '" data-wizard-type="csv-upload">'
+                        + '<input type="file" accept=".csv,.xlsx,.xls" data-upload-role="file" />'
+                        + (current ? '<div class="wizard-upload-current">Current: ' + escapeHtml(current) + '</div>' : '')
+                        + '<input type="hidden" data-upload-role="filename" value="' + escapeHtml(current) + '" />'
+                        + '</div>';
+                    break;
+                }
+                case 'key-value-list': {
+                    var pairs = Array.isArray(v) ? v : [];
+                    if (pairs.length === 0) pairs = [{ key: '', value: '' }];
+                    var rows = pairs.map(function(p, i) {
+                        return '<div class="wizard-kv-row" data-kv-row="' + i + '">'
+                            + '<input type="text" class="form-input" data-kv-role="key" placeholder="Item / service" value="' + escapeHtml(p.key || '') + '" />'
+                            + '<input type="text" class="form-input" data-kv-role="value" placeholder="Price / detail" value="' + escapeHtml(p.value || '') + '" />'
+                            + '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardKvRemove(this)">Remove</button>'
+                            + '</div>';
+                    }).join('');
+                    control = '<div class="wizard-kv" data-wizard-key="' + name + '" data-wizard-type="key-value-list">'
+                        + rows
+                        + '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardKvAdd(this)">+ Add row</button>'
+                        + '</div>';
+                    break;
+                }
+                case 'text':
+                default:
+                    control = '<input type="text" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' value="' + escapeHtml(v) + '" />';
+            }
+
+            var requiredMark = field.required ? ' <span class="wizard-required">*</span>' : '';
+            var help = field.help ? '<div class="wizard-hint">' + escapeHtml(field.help) + '</div>' : '';
+            return '<div class="form-group wizard-group">'
+                + '<label class="form-label">' + escapeHtml(field.label || humanizeKey(key)) + requiredMark + '</label>'
+                + control
+                + help
+                + '</div>';
+        }
+
+        // Add/remove a row in a key-value-list field.
+        function wizardKvAdd(btn) {
+            var container = btn.parentElement;
+            var rows = container.querySelectorAll('[data-kv-row]');
+            var nextIdx = rows.length;
+            var div = document.createElement('div');
+            div.className = 'wizard-kv-row';
+            div.setAttribute('data-kv-row', nextIdx);
+            div.innerHTML = '<input type="text" class="form-input" data-kv-role="key" placeholder="Item / service" value="" />'
+                + '<input type="text" class="form-input" data-kv-role="value" placeholder="Price / detail" value="" />'
+                + '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardKvRemove(this)">Remove</button>';
+            btn.parentElement.insertBefore(div, btn);
+        }
+        function wizardKvRemove(btn) {
+            var row = btn.parentElement;
+            var container = row.parentElement;
+            row.remove();
+            // Always keep at least one row so the user has something to type into.
+            if (container.querySelectorAll('[data-kv-row]').length === 0) {
+                wizardKvAdd(container.querySelector('button'));
+            }
+        }
+
         function renderWizardStep(agent, steps, activeIdx) {
             if (!steps || steps.length === 0) {
                 return '<div class="wizard-empty">No steps configured for this agent yet.</div>';
@@ -2036,18 +2321,34 @@
             if (!step) return '<div class="wizard-empty">All steps complete.</div>';
 
             var payload = (step.data && step.data.response_data) ? step.data.response_data : {};
-            var keys = Object.keys(payload);
             var fieldsHtml;
-            if (keys.length === 0) {
-                // No pre-fill from the quiz. Give the client a blank JSON editor
-                // so they can still submit something and advance.
-                fieldsHtml = '<div class="form-group wizard-group">'
-                    + '<label class="form-label">Response</label>'
-                    + '<textarea class="form-input wizard-json" data-wizard-key="_payload" data-wizard-type="json" rows="5">{}</textarea>'
-                    + '<div class="wizard-hint">No quiz answers were captured for this step. Add details as JSON or leave as {} to confirm and continue.</div>'
-                + '</div>';
+
+            // Prefer the schema-driven path when api/_agents.js has a schema
+            // for this agent + step. The schema lives in AGENT_META, populated
+            // at init time from /api/agents-meta.
+            var meta = AGENT_META[agent.agent_type];
+            var schemaStep = null;
+            if (meta && Array.isArray(meta.onboardingSchema)) {
+                schemaStep = meta.onboardingSchema.find(function(s) { return s.step === step.step_number; });
+            }
+
+            if (schemaStep && Array.isArray(schemaStep.fields) && schemaStep.fields.length > 0) {
+                fieldsHtml = schemaStep.fields.map(function(f) {
+                    return renderWizardFieldFromSchema(f, payload[f.key]);
+                }).join('');
             } else {
-                fieldsHtml = keys.map(function(k){ return renderWizardField(k, payload[k], ''); }).join('');
+                // Fallback: legacy JSON-textarea path. Used for agents that don't
+                // yet have a schema (everything except echo/ignite/revive today).
+                var keys = Object.keys(payload);
+                if (keys.length === 0) {
+                    fieldsHtml = '<div class="form-group wizard-group">'
+                        + '<label class="form-label">Response</label>'
+                        + '<textarea class="form-input wizard-json" data-wizard-key="_payload" data-wizard-type="json" rows="5">{}</textarea>'
+                        + '<div class="wizard-hint">No quiz answers were captured for this step. Add details as JSON or leave as {} to confirm and continue.</div>'
+                    + '</div>';
+                } else {
+                    fieldsHtml = keys.map(function(k){ return renderWizardField(k, payload[k], ''); }).join('');
+                }
             }
 
             var isLast = activeIdx >= steps.length - 1;
@@ -2082,14 +2383,54 @@
             if (msgEl) { msgEl.textContent = ''; msgEl.className = 'wizard-msg'; }
 
             var payload = {};
+            var missingRequired = [];
             var inputs = form.querySelectorAll('[data-wizard-key]');
             for (var i = 0; i < inputs.length; i++) {
                 var el = inputs[i];
                 var key = el.getAttribute('data-wizard-key');
                 var type = el.getAttribute('data-wizard-type');
                 var v;
-                if (type === 'boolean') v = !!el.checked;
+
+                if (type === 'boolean') {
+                    var cb = el.tagName === 'INPUT' ? el : el.querySelector('input[type=checkbox]');
+                    v = !!(cb && cb.checked);
+                }
                 else if (type === 'number') v = el.value === '' ? null : Number(el.value);
+                else if (type === 'time-range') {
+                    var open = el.querySelector('[data-time-role=open]');
+                    var close = el.querySelector('[data-time-role=close]');
+                    var closedCb = el.querySelector('[data-time-role=closed]');
+                    v = {
+                        open: open ? open.value : '',
+                        close: close ? close.value : '',
+                        closed: !!(closedCb && closedCb.checked),
+                    };
+                }
+                else if (type === 'csv-upload') {
+                    // The actual upload + storage is wired by /api/agent-config (later
+                    // todo). For now we store the filename so the wizard advances.
+                    var file = el.querySelector('[data-upload-role=file]');
+                    var hidden = el.querySelector('[data-upload-role=filename]');
+                    if (file && file.files && file.files[0]) {
+                        v = { filename: file.files[0].name, size: file.files[0].size, pending_upload: true };
+                    } else if (hidden && hidden.value) {
+                        v = { filename: hidden.value };
+                    } else {
+                        v = null;
+                    }
+                }
+                else if (type === 'key-value-list') {
+                    var rows = el.querySelectorAll('[data-kv-row]');
+                    var pairs = [];
+                    for (var r = 0; r < rows.length; r++) {
+                        var kEl = rows[r].querySelector('[data-kv-role=key]');
+                        var vEl = rows[r].querySelector('[data-kv-role=value]');
+                        var kStr = kEl ? kEl.value.trim() : '';
+                        var vStr = vEl ? vEl.value.trim() : '';
+                        if (kStr || vStr) pairs.push({ key: kStr, value: vStr });
+                    }
+                    v = pairs;
+                }
                 else if (type === 'json') {
                     try { v = el.value.trim() === '' ? null : JSON.parse(el.value); }
                     catch (e) {
@@ -2101,8 +2442,29 @@
                     }
                 } else v = el.value;
 
+                // Required validation: a required field must be non-empty.
+                // For booleans, required means must be checked.
+                var isRequired = el.getAttribute('data-wizard-required') === '1'
+                    || (el.querySelector && el.querySelector('[data-wizard-required="1"]'));
+                if (isRequired) {
+                    var empty =
+                        v === null || v === undefined ||
+                        (typeof v === 'string' && v.trim() === '') ||
+                        (Array.isArray(v) && v.length === 0) ||
+                        (type === 'boolean' && v !== true);
+                    if (empty) missingRequired.push(key);
+                }
+
                 if (key === '_payload') { payload = v || {}; break; }
                 payload[key] = v;
+            }
+
+            if (missingRequired.length > 0) {
+                if (msgEl) {
+                    msgEl.className = 'wizard-msg error';
+                    msgEl.textContent = 'Please fill in: ' + missingRequired.map(humanizeKey).join(', ');
+                }
+                return false;
             }
 
             if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = isLastStep ? 'Activating...' : 'Saving...'; }
@@ -2194,6 +2556,272 @@
                 .gte('metric_date', new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0])
                 .order('metric_date', { ascending: false });
             return metrics || [];
+        }
+
+        // --- Pause / resume an agent ---
+        // Called from per-agent card buttons. Posts to /api/agent-status with
+        // the bearer token, optimistically disables the button, re-renders on
+        // success.
+        async function agentStatusAction(clientAgentId, action, btnEl) {
+            if (!btnEl) return;
+            var origLabel = btnEl.textContent;
+            btnEl.disabled = true;
+            btnEl.textContent = action === 'pause' ? 'Pausing...' : 'Resuming...';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                if (!session) { btnEl.disabled = false; btnEl.textContent = origLabel; return; }
+                var resp = await fetch('/api/agent-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + session.access_token,
+                    },
+                    body: JSON.stringify({ client_agent_id: clientAgentId, action: action }),
+                });
+                var payload = await resp.json().catch(function() { return {}; });
+                if (!resp.ok) {
+                    console.error('[agent-status]', payload);
+                    btnEl.disabled = false;
+                    btnEl.textContent = origLabel;
+                    alert(payload.error || 'Could not update agent status');
+                    return;
+                }
+                if (payload.sync && !payload.sync.synced && payload.sync.note) {
+                    console.warn('[agent-status sync]', payload.sync.note);
+                }
+                // Re-fetch the grid so the card flips state and the button label updates.
+                if (currentUserId) loadAgentData(currentUserId);
+            } catch (e) {
+                console.error('[agent-status] network', e);
+                btnEl.disabled = false;
+                btnEl.textContent = origLabel;
+                alert('Network error. Try again.');
+            }
+        }
+
+        // --- Support inbox: state + open/close ---
+        var supportState = {
+            threads: [],
+            activeThreadId: null,
+            scopedAgentId: null,    // when set, "Send" creates a new thread tagged to this agent
+            scopedAgentType: null,
+            realtimeChannel: null,
+        };
+
+        function openSupportInbox(opts) {
+            opts = opts || {};
+            supportState.scopedAgentId = opts.clientAgentId || null;
+            supportState.scopedAgentType = opts.agentType || null;
+
+            var label = document.getElementById('supportContextLabel');
+            if (label) {
+                if (supportState.scopedAgentType) {
+                    label.textContent = 'New thread tagged to ' + supportState.scopedAgentType.toUpperCase();
+                } else {
+                    label.textContent = '';
+                }
+            }
+
+            var overlay = document.getElementById('supportOverlay');
+            overlay.style.display = 'flex';
+            // Close the profile dropdown if it's open
+            var dd = document.getElementById('profileDropdown');
+            if (dd) dd.classList.remove('show');
+
+            loadSupportThreads();
+            subscribeSupportRealtime();
+        }
+
+        function closeSupportInbox() {
+            var overlay = document.getElementById('supportOverlay');
+            overlay.style.display = 'none';
+            if (supportState.realtimeChannel) {
+                try { sb.removeChannel(supportState.realtimeChannel); } catch (e) {}
+                supportState.realtimeChannel = null;
+            }
+        }
+
+        // Convenience for the per-agent "Message support" button on agent cards.
+        function openSupportForAgent(clientAgentId, agentType) {
+            openSupportInbox({ clientAgentId: clientAgentId, agentType: agentType });
+        }
+
+        async function loadSupportThreads() {
+            var listEl = document.getElementById('supportThreadList');
+            listEl.innerHTML = '<div style="padding:14px;color:var(--text-tertiary);font-size:0.8125rem;">Loading...</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/support/threads', {
+                    headers: { 'Authorization': 'Bearer ' + session.access_token },
+                });
+                var payload = await resp.json();
+                if (!resp.ok) throw new Error(payload.error || 'load failed');
+                supportState.threads = payload.threads || [];
+                renderSupportThreadList();
+
+                // If we opened the inbox scoped to a specific agent, prefer the
+                // most recent open thread for that agent. Otherwise auto-open
+                // the most recent thread.
+                if (supportState.threads.length > 0) {
+                    var preferred = supportState.scopedAgentId
+                        ? supportState.threads.find(function(t) { return t.client_agent_id === supportState.scopedAgentId; })
+                        : null;
+                    var pick = preferred || supportState.threads[0];
+                    openSupportThread(pick.id);
+                } else {
+                    renderEmptyTranscript();
+                }
+            } catch (e) {
+                console.error('[loadSupportThreads]', e);
+                listEl.innerHTML = '<div style="padding:14px;color:var(--red);font-size:0.8125rem;">Could not load threads. Refresh and try again.</div>';
+            }
+        }
+
+        function renderSupportThreadList() {
+            var listEl = document.getElementById('supportThreadList');
+            if (supportState.threads.length === 0) {
+                listEl.innerHTML = '<div style="padding:14px;color:var(--text-tertiary);font-size:0.8125rem;">No conversations yet. Type a message and we will start one.</div>';
+                return;
+            }
+            listEl.innerHTML = supportState.threads.map(function(t) {
+                var active = t.id === supportState.activeThreadId;
+                var subj = t.subject || (t.client_agent_id ? 'Question about an agent' : 'General question');
+                var when = new Date(t.last_message_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                var resolvedBadge = t.status === 'resolved'
+                    ? '<span style="font-size:0.625rem;padding:1px 6px;border-radius:4px;background:rgba(34,197,94,0.12);color:var(--green);text-transform:uppercase;margin-left:6px;">resolved</span>'
+                    : '';
+                return '<button onclick="openSupportThread(\'' + t.id + '\')" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:12px 14px;border:0;background:' + (active ? 'var(--bg-elev)' : 'transparent') + ';border-bottom:1px solid var(--border);text-align:left;cursor:pointer;color:var(--text-primary);">'
+                    + '<span style="font-size:0.8125rem;font-weight:500;">' + escapeHtml(subj) + resolvedBadge + '</span>'
+                    + '<span style="font-size:0.6875rem;color:var(--text-tertiary);">' + when + '</span>'
+                    + '</button>';
+            }).join('');
+        }
+
+        async function openSupportThread(threadId) {
+            supportState.activeThreadId = threadId;
+            supportState.scopedAgentId = null; // we're now in an existing thread
+            supportState.scopedAgentType = null;
+            renderSupportThreadList();
+            var transcript = document.getElementById('supportTranscript');
+            transcript.innerHTML = '<div style="color:var(--text-tertiary);font-size:0.8125rem;">Loading...</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/support/messages?thread_id=' + encodeURIComponent(threadId), {
+                    headers: { 'Authorization': 'Bearer ' + session.access_token },
+                });
+                var payload = await resp.json();
+                if (!resp.ok) throw new Error(payload.error || 'load failed');
+                renderSupportTranscript(payload.messages || []);
+
+                var label = document.getElementById('supportContextLabel');
+                if (label && payload.thread) {
+                    if (payload.thread.client_agent_id) {
+                        label.textContent = 'Tagged to one of your agents';
+                    } else {
+                        label.textContent = 'General conversation';
+                    }
+                }
+            } catch (e) {
+                console.error('[openSupportThread]', e);
+                transcript.innerHTML = '<div style="color:var(--red);font-size:0.8125rem;">Could not load messages.</div>';
+            }
+        }
+
+        function renderEmptyTranscript() {
+            var transcript = document.getElementById('supportTranscript');
+            var hint = supportState.scopedAgentType
+                ? 'Type your first message below. We will tag it to your ' + supportState.scopedAgentType.toUpperCase() + ' agent.'
+                : 'Type your first message below to start a conversation.';
+            transcript.innerHTML = '<div style="margin:auto;text-align:center;color:var(--text-tertiary);font-size:0.8125rem;max-width:320px;">' + hint + '</div>';
+        }
+
+        function renderSupportTranscript(messages) {
+            var transcript = document.getElementById('supportTranscript');
+            if (!messages || messages.length === 0) {
+                transcript.innerHTML = '<div style="color:var(--text-tertiary);font-size:0.8125rem;">No messages yet.</div>';
+                return;
+            }
+            transcript.innerHTML = messages.map(function(m) {
+                var fromMe = m.sender_type === 'client';
+                var when = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                var bubble = '<div style="max-width:70%;padding:10px 12px;border-radius:12px;background:' + (fromMe ? 'var(--blue-bg, rgba(37,99,235,0.18))' : 'var(--bg-elev)') + ';color:var(--text-primary);font-size:0.8125rem;line-height:1.45;white-space:pre-wrap;">' + escapeHtml(m.body) + '</div>'
+                    + '<div style="font-size:0.625rem;color:var(--text-tertiary);margin-top:4px;">' + (fromMe ? 'You' : (m.sender_type === 'system' ? 'Stilo system' : 'Stilo team')) + ' · ' + when + '</div>';
+                return '<div style="display:flex;flex-direction:column;align-items:' + (fromMe ? 'flex-end' : 'flex-start') + ';">' + bubble + '</div>';
+            }).join('');
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        async function submitSupportMessage(event) {
+            event.preventDefault();
+            var textarea = document.getElementById('supportComposeBody');
+            var msgEl = document.getElementById('supportComposeMsg');
+            var body = (textarea.value || '').trim();
+            if (!body) return false;
+            msgEl.style.color = 'var(--text-tertiary)';
+            msgEl.textContent = 'Sending...';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var auth = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token };
+                if (supportState.activeThreadId) {
+                    var resp = await fetch('/api/support/messages', {
+                        method: 'POST',
+                        headers: auth,
+                        body: JSON.stringify({ thread_id: supportState.activeThreadId, body: body }),
+                    });
+                    var payload = await resp.json();
+                    if (!resp.ok) throw new Error(payload.error || 'send failed');
+                } else {
+                    // No active thread — create a new one. If we were opened
+                    // scoped to an agent, tag it to that agent.
+                    var resp2 = await fetch('/api/support/threads', {
+                        method: 'POST',
+                        headers: auth,
+                        body: JSON.stringify({
+                            client_agent_id: supportState.scopedAgentId,
+                            subject: supportState.scopedAgentType ? 'Re: ' + supportState.scopedAgentType.toUpperCase() : null,
+                            first_message: body,
+                        }),
+                    });
+                    var payload2 = await resp2.json();
+                    if (!resp2.ok) throw new Error(payload2.error || 'create failed');
+                    supportState.activeThreadId = payload2.thread.id;
+                }
+                textarea.value = '';
+                msgEl.textContent = '';
+                await loadSupportThreads();
+                if (supportState.activeThreadId) await openSupportThread(supportState.activeThreadId);
+            } catch (e) {
+                console.error('[submitSupportMessage]', e);
+                msgEl.style.color = 'var(--red)';
+                msgEl.textContent = e.message || 'Could not send. Try again.';
+            }
+            return false;
+        }
+
+        // Realtime: subscribe to support_messages inserts so admin replies
+        // show up live in the open transcript without a manual refresh.
+        function subscribeSupportRealtime() {
+            if (supportState.realtimeChannel) return;
+            try {
+                supportState.realtimeChannel = sb
+                    .channel('support_messages_inbox')
+                    .on('postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'support_messages' },
+                        function(payload) {
+                            var newMsg = payload && payload.new;
+                            if (!newMsg) return;
+                            // Refresh thread list (last_message_at moved) and the
+                            // transcript if it's the open thread.
+                            loadSupportThreads();
+                            if (newMsg.thread_id === supportState.activeThreadId) {
+                                openSupportThread(newMsg.thread_id);
+                            }
+                        })
+                    .subscribe();
+            } catch (e) {
+                // Realtime is optional — silent failure is fine.
+                console.warn('[support realtime]', e);
+            }
         }
 
         // --- Sign out (called from supabaseSignOut below) ---
