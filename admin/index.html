@@ -858,6 +858,13 @@
                     </svg>
                     Agents
                 </button>
+                <button class="nav-item" data-page="review" onclick="switchPage('review')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z"/>
+                    </svg>
+                    Pending Review
+                    <span id="pendingReviewBadge" style="display:none;margin-left:auto;background:#3b82f6;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;"></span>
+                </button>
                 <button class="nav-item" data-page="revenue" onclick="switchPage('revenue')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
@@ -1093,6 +1100,20 @@
                 </div>
             </div>
 
+            <!-- Pending Review tab — final pre-flight before agents go live -->
+            <div class="page-content" id="page-review" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="margin:0 0 6px 0;font-size:18px;">Pending agent review</h2>
+                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Clients who finished onboarding and submitted for STILO Partners final pre-flight. Approve to provision the Retell agent and go live.</p>
+                    </div>
+                    <button class="quick-action-btn" onclick="loadPendingReview()">Refresh</button>
+                </div>
+                <div id="pendingReviewWrap" style="display:flex;flex-direction:column;gap:14px;">
+                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:24px;color:var(--text-secondary);font-size:13px;">Loading queue...</div>
+                </div>
+            </div>
+
             <!-- Revenue tab -->
             <div class="page-content" id="page-revenue" style="display:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
@@ -1199,6 +1220,24 @@
             adminReady = true;
             // Kick off data load now that we know the user is an admin
             loadClientsGrid();
+            // Update the Pending Review nav badge so admins notice queued submissions
+            // even before they navigate to the tab.
+            refreshPendingReviewBadge();
+        }
+
+        async function refreshPendingReviewBadge() {
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/agents-pending-review', {
+                    headers: { 'Authorization': 'Bearer ' + (session && session.access_token || '') },
+                });
+                if (!resp.ok) return;
+                var data = await resp.json();
+                var badge = document.getElementById('pendingReviewBadge');
+                if (!badge) return;
+                if (data.count > 0) { badge.style.display = ''; badge.textContent = String(data.count); }
+                else { badge.style.display = 'none'; }
+            } catch (e) {}
         }
 
         async function checkIsAdmin(session) {
@@ -1249,6 +1288,7 @@
                 agents: 'Agents',
                 revenue: 'Revenue',
                 support: 'Support',
+                review: 'Pending Review',
                 settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
@@ -1270,6 +1310,7 @@
 
             // Page-specific lazy load
             if (page === 'agents') loadAgentsTable();
+            else if (page === 'review') loadPendingReview();
             else if (page === 'revenue') loadRevenue();
             else if (page === 'support') adminLoadSupportThreads();
             else if (page === 'settings') loadSettings();
@@ -1979,6 +2020,235 @@
             return String(s == null ? '' : s)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        /* ============================================================
+           Pending Review queue
+           ============================================================ */
+
+        // Render a single submitted agent as a card with the wizard config summary
+        // and an "Approve & Provision" button. Clicking calls /api/agents-provision
+        // which compiles the prompt, creates the Retell agent + phone, and flips
+        // status to active.
+        function renderPendingReviewCard(item) {
+            var s = item.config_summary || {};
+            var checks = [
+                ['Compliance', s.compliance_confirmed],
+                ['CRM', s.crm_choice && s.crm_choice !== 'none' ? s.crm_test_passed : true],
+                ['Calendar', s.booking_method && s.booking_method !== 'manual_via_transfer' ? s.calendar_test_passed : true],
+                ['Test call', s.test_call_passed],
+            ];
+            var checkChips = checks.map(function(c) {
+                var ok = !!c[1];
+                var bg = ok ? 'rgba(34,197,94,0.14)' : 'rgba(239,68,68,0.14)';
+                var fg = ok ? '#22c55e' : '#ef4444';
+                return '<span style="padding:3px 9px;border-radius:5px;background:' + bg + ';color:' + fg + ';font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">'
+                    + (ok ? '✓ ' : '✗ ') + escapeAdminHtml(c[0]) + '</span>';
+            }).join(' ');
+
+            var rows = [
+                ['Agent', String(item.agent_code || '').toUpperCase()],
+                ['Industry', s.industry || '—'],
+                ['State', s.agent_state || '—'],
+                ['Lead source', s.lead_sources || '—'],
+                ['Expected vol/wk', s.expected_volume != null ? s.expected_volume : '—'],
+                ['CRM', s.crm_choice || 'none'],
+                ['Booking', s.booking_method || 'manual_via_transfer'],
+                ['Transfer to', s.transfer_enabled ? (s.agent_cell || '(missing)') : 'disabled'],
+                ['Voice', s.voice_id || '—'],
+                ['Area code', s.area_code || '—'],
+                ['Test calls fired', s.test_calls_log || 0],
+            ];
+            var rowsHtml = rows.map(function(r) {
+                return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;">'
+                    + '<span style="color:var(--text-secondary);">' + escapeAdminHtml(r[0]) + '</span>'
+                    + '<span style="font-weight:500;">' + escapeAdminHtml(String(r[1])) + '</span>'
+                + '</div>';
+            }).join('');
+
+            var submittedSince = '';
+            if (item.submitted_at) {
+                try {
+                    var hrs = Math.max(0, Math.round((Date.now() - new Date(item.submitted_at).getTime()) / 36e5));
+                    submittedSince = hrs < 1 ? 'just now' : (hrs + 'h ago');
+                } catch (e) {}
+            }
+
+            // Pre-flight section: admin fires a synthetic call to their own phone
+            // before approving. The phone number is remembered in localStorage so
+            // it does not need re-entry per client.
+            var savedAdminPhone = (function() { try { return localStorage.getItem('stilo_admin_test_phone') || ''; } catch (e) { return ''; } })();
+            var preflightHtml = ''
+                + '<div style="padding:14px 20px;background:rgba(255,255,255,0.015);border-top:1px solid rgba(37,99,235,0.08);">'
+                    + '<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:8px;">Admin pre-flight (self-test before approving)</div>'
+                    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+                        + '<input type="tel" placeholder="+13055551234" data-admin-phone style="padding:7px 10px;font-size:13px;background:var(--bg-elev,#22223a);color:var(--text-primary);border:1px solid var(--border-medium,rgba(255,255,255,0.1));border-radius:6px;min-width:180px;" value="' + escapeAdminHtml(savedAdminPhone) + '" />'
+                        + '<select data-admin-scenario style="padding:7px 10px;font-size:13px;background:var(--bg-elev,#22223a);color:var(--text-primary);border:1px solid var(--border-medium,rgba(255,255,255,0.1));border-radius:6px;">'
+                            + '<option value="hot_buyer">Hot Buyer</option>'
+                            + '<option value="cold_lead">Cold Lead</option>'
+                            + '<option value="seller_inquiry">Seller Inquiry</option>'
+                            + '<option value="voicemail">Voicemail</option>'
+                        + '</select>'
+                        + '<button class="quick-action-btn" onclick="firePreflightCall(this, \'' + escapeAdminHtml(item.client_agent_id) + '\')">Fire pre-flight call</button>'
+                        + '<div class="preflight-status" style="margin-left:auto;font-size:13px;color:var(--text-secondary);"></div>'
+                    + '</div>'
+                    + '<div class="preflight-log" style="margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>'
+                + '</div>';
+
+            return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.20);border-radius:12px;overflow:hidden;" data-pending-id="' + escapeAdminHtml(item.client_agent_id) + '">'
+                + '<div style="padding:16px 20px;border-bottom:1px solid rgba(37,99,235,0.14);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
+                    + '<div>'
+                        + '<div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">' + escapeAdminHtml(item.business_name) + '</div>'
+                        + '<div style="font-size:12px;color:var(--text-secondary);">' + escapeAdminHtml(item.submitted_by_email || '') + ' · submitted ' + escapeAdminHtml(submittedSince) + '</div>'
+                    + '</div>'
+                    + '<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;max-width:320px;">' + checkChips + '</div>'
+                + '</div>'
+                + '<div style="padding:16px 20px 8px 20px;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">' + rowsHtml + '</div>'
+                + preflightHtml
+                + '<div style="padding:14px 20px;display:flex;gap:10px;align-items:center;border-top:1px solid rgba(37,99,235,0.08);">'
+                    + '<button class="quick-action-btn" onclick="approvePendingAgent(this, \'' + escapeAdminHtml(item.client_agent_id) + '\')" style="background:var(--purple-primary);color:#fff;font-weight:600;">Approve & Provision</button>'
+                    + '<button class="quick-action-btn" onclick="openClientForReview(\'' + escapeAdminHtml(item.client_agent_id) + '\')">View full config</button>'
+                    + '<div class="approve-status" style="margin-left:auto;font-size:13px;color:var(--text-secondary);"></div>'
+                + '</div>'
+            + '</div>';
+        }
+
+        // Admin pre-flight: fires a synthetic test call to the admin's phone
+        // BEFORE provisioning. Admin listens, decides if the agent is on-brand
+        // and configured correctly, then either approves or rejects.
+        async function firePreflightCall(btn, clientAgentId) {
+            var card = btn.closest('[data-pending-id]');
+            if (!card) return;
+            var phoneInput = card.querySelector('[data-admin-phone]');
+            var scenarioSel = card.querySelector('[data-admin-scenario]');
+            var statusEl = card.querySelector('.preflight-status');
+            var logEl = card.querySelector('.preflight-log');
+            var phone = (phoneInput && phoneInput.value || '').trim();
+            var scenario = (scenarioSel && scenarioSel.value) || 'hot_buyer';
+
+            if (!phone) {
+                statusEl.style.color = '#ef4444';
+                statusEl.textContent = 'Enter your phone number first.';
+                return;
+            }
+            // Remember for next time
+            try { localStorage.setItem('stilo_admin_test_phone', phone); } catch (e) {}
+
+            btn.disabled = true;
+            var origText = btn.textContent;
+            btn.textContent = 'Sending…';
+            statusEl.style.color = 'var(--text-secondary)';
+            statusEl.textContent = 'Queueing synthetic ' + scenario.replace('_', ' ') + ' lead…';
+
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/agents-test-call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session && session.access_token || '') },
+                    body: JSON.stringify({ client_agent_id: clientAgentId, test_phone_number: phone, scenario: scenario }),
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (resp.ok && data.ok) {
+                    statusEl.style.color = '#22c55e';
+                    statusEl.textContent = 'Call queued. Answer your phone within 90 seconds.';
+                    var entry = '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">' + new Date().toLocaleTimeString() + ' · ' + escapeAdminHtml(scenario) + ' · lead ' + escapeAdminHtml(data.lead_id || '?') + '</div>';
+                    logEl.innerHTML = entry + (logEl.innerHTML || '');
+                } else {
+                    statusEl.style.color = '#ef4444';
+                    statusEl.textContent = data.error || data.message || 'Failed to queue test call';
+                }
+            } catch (e) {
+                statusEl.style.color = '#ef4444';
+                statusEl.textContent = 'Network error: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        async function loadPendingReview() {
+            var wrap = document.getElementById('pendingReviewWrap');
+            if (!wrap) return;
+            wrap.innerHTML = '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:24px;color:var(--text-secondary);font-size:13px;">Loading queue...</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/agents-pending-review', {
+                    headers: { 'Authorization': 'Bearer ' + (session && session.access_token || '') },
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+                var badge = document.getElementById('pendingReviewBadge');
+                if (badge) {
+                    if (data.count > 0) { badge.style.display = ''; badge.textContent = String(data.count); }
+                    else { badge.style.display = 'none'; }
+                }
+                if (!data.items || data.items.length === 0) {
+                    wrap.innerHTML = '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:32px;text-align:center;color:var(--text-secondary);font-size:13px;">No agents waiting for review. When a client submits, it appears here.</div>';
+                    return;
+                }
+                wrap.innerHTML = data.items.map(renderPendingReviewCard).join('');
+            } catch (e) {
+                console.error('[loadPendingReview]', e);
+                wrap.innerHTML = '<div style="padding:24px;color:#ef4444;font-size:13px;">Could not load the queue: ' + escapeAdminHtml(e.message) + '</div>';
+            }
+        }
+
+        // Approve a pending agent — calls /api/agents-provision (admin only).
+        // On success, the agent's status flips to 'active' and Retell is provisioned.
+        async function approvePendingAgent(btn, clientAgentId) {
+            var card = btn.closest('[data-pending-id]');
+            var statusEl = card ? card.querySelector('.approve-status') : null;
+
+            if (!confirm('Approve and provision this agent?\n\nThis creates the Retell agent + phone number and the agent goes LIVE immediately. Make sure you have manually verified the test call and config quality.')) {
+                return;
+            }
+
+            btn.disabled = true;
+            var originalText = btn.textContent;
+            btn.textContent = 'Provisioning…';
+            if (statusEl) {
+                statusEl.style.color = 'var(--text-secondary)';
+                statusEl.textContent = 'Compiling prompt, creating Retell agent, provisioning phone…';
+            }
+
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/agents-provision', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session && session.access_token || '') },
+                    body: JSON.stringify({ client_agent_id: clientAgentId }),
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (resp.ok && data.ok) {
+                    if (statusEl) {
+                        statusEl.style.color = '#22c55e';
+                        statusEl.textContent = 'Live: ' + (data.phone_number || '?') + ' · agent ' + (data.retell_agent_id || '?');
+                    }
+                    btn.textContent = 'Approved';
+                    setTimeout(loadPendingReview, 1200);
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    if (statusEl) {
+                        statusEl.style.color = '#ef4444';
+                        statusEl.textContent = (data.error || 'Provision failed') + (data.missing ? ' (missing: ' + data.missing.join(', ') + ')' : '');
+                    }
+                }
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                if (statusEl) {
+                    statusEl.style.color = '#ef4444';
+                    statusEl.textContent = 'Network error: ' + e.message;
+                }
+            }
+        }
+
+        // Open the client drawer scoped to this agent (existing pattern).
+        function openClientForReview(clientAgentId) {
+            // For now route to the agents tab and select the row.
+            // Phase B: open a dedicated review drawer with full config diff.
+            switchPage('agents');
         }
 
         /* ============================================================

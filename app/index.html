@@ -1798,11 +1798,14 @@
             const isOnboarding = agent.status === 'onboarding';
             const isActive     = agent.status === 'active';
             const isPaused     = agent.status === 'paused';
+            const isPendingReview = agent.status === 'pending_admin_review';
             const statusClass  = isOnboarding ? 'status-setup'
+                              : isPendingReview ? 'status-setup'
                               : isActive     ? 'status-active'
                               : isPaused     ? 'status-paused'
                               : 'status-setup';
             const statusText   = isOnboarding ? 'Setting up'
+                              : isPendingReview ? 'In STILO review'
                               : isActive     ? 'Active'
                               : isPaused     ? 'Paused'
                               : agent.status;
@@ -1825,7 +1828,32 @@
             }).join('');
 
             let body;
-            if (isOnboarding) {
+            if (isPendingReview) {
+                // Client finished the wizard. STILO Partners is doing the final
+                // pre-flight check. No further client action required here.
+                var submittedAt = (agent.config && agent.config.submitted_for_review_at) || '';
+                var sinceText = '';
+                if (submittedAt) {
+                    try {
+                        var diffMs = Date.now() - new Date(submittedAt).getTime();
+                        var diffH = Math.max(0, Math.round(diffMs / 36e5));
+                        sinceText = diffH < 1 ? 'just now' : (diffH + 'h ago');
+                    } catch (e) {}
+                }
+                body = '<div class="agent-stats" style="background:var(--bg-elev);border:1px solid var(--blue);border-radius:10px;padding:18px 20px;">'
+                    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+                        + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
+                        + '<strong style="color:var(--blue);">In STILO Partners review</strong>'
+                    + '</div>'
+                    + '<p style="color:var(--text-primary);font-size:14px;line-height:1.5;margin:0 0 8px 0;">Thank you. Your IGNITE setup is complete and queued for our final pre-flight check (compliance, CRM, calendar, voice).</p>'
+                    + '<p style="color:var(--text-secondary);font-size:13px;line-height:1.5;margin:0;">We aim to activate every new agent within 1 business day. You will receive an email the moment IGNITE is live.'
+                        + (sinceText ? ' (Submitted ' + escapeHtml(sinceText) + '.)' : '')
+                    + '</p>'
+                + '</div>'
+                + '<div class="agent-actions">'
+                    + '<button class="btn btn-ghost btn-sm" onclick="openSupportForAgent(\'' + agent.id + '\', \'' + agent.agent_type + '\')">Message STILO support</button>'
+                + '</div>';
+            } else if (isOnboarding) {
                 // The wizard opens to whichever step is in_progress, falling back
                 // to the first non-completed step, falling back to the last step.
                 var activeIdx = steps.findIndex(function(s){ return s.status === 'in_progress'; });
@@ -2293,6 +2321,144 @@
                         + '</div>';
                     break;
                 }
+                case 'tel': {
+                    control = '<input type="tel" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' placeholder="+13055551234" value="' + escapeHtml(v) + '" />';
+                    break;
+                }
+                case 'password': {
+                    control = '<input type="password" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' autocomplete="new-password" value="' + escapeHtml(v) + '" />';
+                    break;
+                }
+                case 'static-note': {
+                    // Read-only message inside the wizard. Not saved into payload.
+                    return '<div class="wizard-static-note" style="background:var(--bg-elev);border:1px dashed var(--border);border-radius:8px;padding:12px 14px;color:var(--text-secondary);font-size:13px;">'
+                        + escapeHtml(field.label || '')
+                        + '</div>';
+                }
+                case 'connection-test': {
+                    // Button that calls field.target with current form values; on success
+                    // sets a hidden input with the field key to true so submit picks it up.
+                    var passed = v === true || v === 'true';
+                    var statusHtml = passed
+                        ? '<span data-test-status style="color:var(--green);font-weight:600;">Connection verified</span>'
+                        : '<span data-test-status style="color:var(--text-secondary);">Not tested yet</span>';
+                    control = '<div class="wizard-conntest" data-wizard-key="' + name + '" data-wizard-type="boolean" data-target="' + escapeHtml(field.target || '') + '">'
+                        + '<input type="hidden" data-test-value' + requiredAttr + ' value="' + (passed ? 'true' : '') + '" />'
+                        + '<button type="button" class="btn btn-secondary btn-sm" onclick="wizardRunConnectionTest(this)">Run test</button>'
+                        + '<div class="wizard-conntest-status" style="margin-top:8px;font-size:13px;">' + statusHtml + '</div>'
+                        + '</div>';
+                    break;
+                }
+                case 'oauth-button': {
+                    var connected = v && (v === true || (typeof v === 'object' && v.connected));
+                    control = '<div class="wizard-oauth" data-wizard-key="' + name + '" data-wizard-type="json">'
+                        + '<input type="hidden" data-oauth-value' + requiredAttr + ' value="' + (connected ? 'connected' : '') + '" />'
+                        + '<button type="button" class="btn ' + (connected ? 'btn-secondary' : 'btn-primary') + ' btn-sm" onclick="wizardStartOAuth(this, \'' + escapeHtml(field.target || '') + '\')">'
+                        + (connected ? 'Reconnect' : 'Connect')
+                        + '</button>'
+                        + (connected ? '<span style="margin-left:10px;color:var(--green);font-size:13px;">Connected</span>' : '')
+                        + '</div>';
+                    break;
+                }
+                case 'audio-preview-select': {
+                    var voiceOpts = (field.options || []).map(function(o) {
+                        var sel = String(v) === String(o.value) ? ' checked' : '';
+                        var preview = o.preview ? ' data-preview="' + escapeHtml(o.preview) + '"' : '';
+                        return '<label class="wizard-voice-option" style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;">'
+                            + '<input type="radio" name="' + name + '_radio" value="' + escapeHtml(o.value) + '"' + sel + '' + preview + ' />'
+                            + '<span style="flex:1;font-size:14px;">' + escapeHtml(o.label) + '</span>'
+                            + (o.preview ? '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardPlayVoicePreview(event, \'' + escapeHtml(o.preview) + '\')">Play</button>' : '')
+                            + '</label>';
+                    }).join('');
+                    control = '<div class="wizard-audio-select" data-wizard-key="' + name + '" data-wizard-type="audio-select"' + requiredAttr + ' data-current="' + escapeHtml(v) + '">'
+                        + voiceOpts
+                        + '</div>';
+                    break;
+                }
+                case 'array-of-objects': {
+                    var rowsArr = Array.isArray(v) ? v : [];
+                    var minItems = field.minItems || 0;
+                    while (rowsArr.length < Math.max(1, minItems)) rowsArr.push({});
+                    var subSchema = field.schema || [];
+                    var rowsHtml = rowsArr.map(function(row, idx) {
+                        var subInputs = subSchema.map(function(sf) {
+                            var sv = (row && row[sf.key] != null) ? row[sf.key] : '';
+                            if (sf.type === 'textarea') {
+                                return '<div style="margin-bottom:6px;"><label style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">' + escapeHtml(sf.label) + '</label>'
+                                    + '<textarea class="form-input" data-aoo-sub="' + escapeHtml(sf.key) + '" rows="2">' + escapeHtml(sv) + '</textarea></div>';
+                            }
+                            return '<div style="margin-bottom:6px;"><label style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">' + escapeHtml(sf.label) + '</label>'
+                                + '<input type="text" class="form-input" data-aoo-sub="' + escapeHtml(sf.key) + '" value="' + escapeHtml(sv) + '" /></div>';
+                        }).join('');
+                        return '<div class="wizard-aoo-row" data-aoo-row="' + idx + '" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
+                            + subInputs
+                            + '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardAooRemove(this)">Remove</button>'
+                            + '</div>';
+                    }).join('');
+                    control = '<div class="wizard-aoo" data-wizard-key="' + name + '" data-wizard-type="array-of-objects" data-min-items="' + (minItems || 0) + '" data-schema=\'' + escapeHtml(JSON.stringify(subSchema)) + '\'>'
+                        + rowsHtml
+                        + '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardAooAdd(this)">+ Add</button>'
+                        + '</div>';
+                    break;
+                }
+                case 'phone-test-trigger': {
+                    var scenarios = (field.scenarios || []).map(function(s) {
+                        return '<button type="button" class="btn btn-secondary btn-sm" onclick="wizardTriggerTestCall(this, \'' + escapeHtml(s.value) + '\', \'' + escapeHtml(field.target || '') + '\')" style="margin:3px 4px 3px 0;">'
+                            + escapeHtml(s.label) + '</button>';
+                    }).join('');
+                    control = '<div class="wizard-test-trigger" data-wizard-key="' + name + '" data-wizard-type="json">'
+                        + scenarios
+                        + '<div class="wizard-test-trigger-status" data-test-trigger-status style="margin-top:10px;font-size:13px;color:var(--text-secondary);"></div>'
+                        + '</div>';
+                    break;
+                }
+                case 'test-calls-log': {
+                    var entries = Array.isArray(v) ? v : [];
+                    var listHtml = entries.length === 0
+                        ? '<div style="font-size:13px;color:var(--text-secondary);">No test calls yet.</div>'
+                        : entries.map(function(e) {
+                            return '<div style="font-size:12px;border-bottom:1px solid var(--border);padding:6px 0;">'
+                                + '<strong>' + escapeHtml(e.scenario || '?') + '</strong> &rarr; ' + escapeHtml(e.test_phone || '?')
+                                + ' <span style="color:var(--text-secondary);">at ' + escapeHtml(e.triggered_at || '') + '</span>'
+                                + '</div>';
+                        }).join('');
+                    control = '<div class="wizard-test-log" data-wizard-key="' + name + '" data-wizard-type="readonly">' + listHtml + '</div>';
+                    break;
+                }
+                case 'final-review': {
+                    var checks = [
+                        { key: 'compliance_confirmed', label: 'Compliance gate' },
+                        { key: 'crm_test_passed', label: 'CRM connection' },
+                        { key: 'calendar_test_passed', label: 'Calendar connection' },
+                        { key: 'webhook_confirmed', label: 'Lead source webhook' },
+                        { key: 'test_call_passed', label: 'Test call' },
+                    ];
+                    var rows = checks.map(function(c) {
+                        var ok = !!(allData && allData[c.key] === true);
+                        return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:14px;">'
+                            + '<span>' + escapeHtml(c.label) + '</span>'
+                            + '<span style="color:' + (ok ? 'var(--green)' : 'var(--red)') + ';font-weight:600;">' + (ok ? 'Ready' : 'Not satisfied') + '</span>'
+                            + '</div>';
+                    }).join('');
+                    control = '<div class="wizard-final-review" data-wizard-key="' + name + '" data-wizard-type="readonly">' + rows + '</div>';
+                    break;
+                }
+                case 'provision-button': {
+                    control = '<div class="wizard-provision" data-wizard-key="' + name + '" data-wizard-type="json" data-target="' + escapeHtml(field.target || '') + '">'
+                        + '<button type="button" class="btn btn-primary" onclick="wizardProvisionAgent(this)">' + escapeHtml(field.label || 'Provision agent') + '</button>'
+                        + '<div class="wizard-provision-status" style="margin-top:10px;font-size:13px;color:var(--text-secondary);"></div>'
+                        + '</div>';
+                    break;
+                }
+                case 'review-submit-button': {
+                    // Client-facing submit. Flips the agent into pending_admin_review.
+                    // STILO Partners then runs the actual provisioning from the admin queue.
+                    control = '<div class="wizard-submit-review" data-wizard-key="' + name + '" data-wizard-type="json" data-target="' + escapeHtml(field.target || '') + '">'
+                        + '<button type="button" class="btn btn-primary" onclick="wizardSubmitForReview(this)">' + escapeHtml(field.label || 'Submit for STILO review') + '</button>'
+                        + '<div class="wizard-submit-status" style="margin-top:10px;font-size:13px;color:var(--text-secondary);"></div>'
+                        + '</div>';
+                    break;
+                }
                 case 'text':
                 default:
                     control = '<input type="text" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' value="' + escapeHtml(v) + '" />';
@@ -2300,11 +2466,385 @@
 
             var requiredMark = field.required ? ' <span class="wizard-required">*</span>' : '';
             var help = field.help ? '<div class="wizard-hint">' + escapeHtml(field.help) + '</div>' : '';
+            // Field-level "What is this?" expander. Renders the same tiny markdown
+            // as step tutorials so we can drop in clear instructions per question.
+            var fieldTutorial = '';
+            if (field.tutorial) {
+                fieldTutorial = ''
+                    + '<details style="margin:6px 0 0 0;">'
+                        + '<summary style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:500;list-style:none;">What is this? Show me where to find it →</summary>'
+                        + '<div style="padding:8px 0 4px 0;font-size:12.5px;line-height:1.6;color:var(--text-secondary);">' + renderTutorialMarkdown(field.tutorial) + '</div>'
+                    + '</details>';
+            }
             return '<div class="form-group wizard-group">'
                 + '<label class="form-label">' + escapeHtml(field.label || humanizeKey(key)) + requiredMark + '</label>'
                 + control
                 + help
+                + fieldTutorial
                 + '</div>';
+        }
+
+        // Tiny markdown-ish renderer for tutorial blocks. Supports paragraphs,
+        // numbered lists, **bold**, `code`, and [text](url) links. Anything more
+        // complex should live in a help docs page; this is for short walkthroughs.
+        function renderTutorialMarkdown(md) {
+            if (!md) return '';
+            var safe = String(md);
+            var blocks = safe.split(/\n\s*\n/).map(function(block) {
+                var lines = block.split('\n').map(function(l) { return l.replace(/\s+$/, ''); }).filter(Boolean);
+                if (lines.length === 0) return '';
+                // Numbered list block: every line starts with "N. "
+                var allNumbered = lines.every(function(l) { return /^\d+[\.\)]\s/.test(l); });
+                // Bullet list: every line starts with "- " or "* "
+                var allBullet = lines.every(function(l) { return /^[\-\*]\s/.test(l); });
+                if (allNumbered) {
+                    return '<ol style="margin:6px 0 6px 22px;padding:0;">'
+                        + lines.map(function(l) { return '<li style="margin:4px 0;">' + inline(l.replace(/^\d+[\.\)]\s/, '')) + '</li>'; }).join('')
+                        + '</ol>';
+                }
+                if (allBullet) {
+                    return '<ul style="margin:6px 0 6px 22px;padding:0;">'
+                        + lines.map(function(l) { return '<li style="margin:4px 0;">' + inline(l.replace(/^[\-\*]\s/, '')) + '</li>'; }).join('')
+                        + '</ul>';
+                }
+                // Plain paragraph
+                return '<p style="margin:8px 0;">' + lines.map(inline).join('<br>') + '</p>';
+            });
+            return blocks.join('');
+
+            function inline(text) {
+                // Escape first, then re-introduce inline markup
+                var t = String(text)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                // Links [text](url)
+                t = t.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(_, label, url) {
+                    return '<a href="' + url + '" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;">' + label + '</a>';
+                });
+                // Bold **text**
+                t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                // Inline code `text`
+                t = t.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;font-size:12px;">$1</code>');
+                return t;
+            }
+        }
+
+        // Read a dotted key like 'crm_credentials.api_key' from a flat-or-nested object.
+        function _resolveNestedKey(obj, dottedKey) {
+            if (!obj) return undefined;
+            if (Object.prototype.hasOwnProperty.call(obj, dottedKey)) return obj[dottedKey];
+            var parts = dottedKey.split('.');
+            var cur = obj;
+            for (var i = 0; i < parts.length; i++) {
+                if (cur == null) return undefined;
+                cur = cur[parts[i]];
+            }
+            return cur;
+        }
+
+        // Inverse: write a value into a flat object using a dotted key by building nested objects.
+        function _setNestedKey(obj, dottedKey, value) {
+            var parts = dottedKey.split('.');
+            var cur = obj;
+            for (var i = 0; i < parts.length - 1; i++) {
+                if (cur[parts[i]] == null || typeof cur[parts[i]] !== 'object') cur[parts[i]] = {};
+                cur = cur[parts[i]];
+            }
+            cur[parts[parts.length - 1]] = value;
+        }
+
+        // ========== New wizard field type helpers ==========
+
+        // Connection test: posts the form payload to the field.target endpoint and
+        // flips the hidden value to 'true' on a green response. Used by Step 5 (CRM).
+        async function wizardRunConnectionTest(btn) {
+            var wrap = btn.closest('.wizard-conntest');
+            if (!wrap) return;
+            var target = wrap.getAttribute('data-target');
+            var statusEl = wrap.querySelector('[data-test-status]');
+            var hiddenEl = wrap.querySelector('[data-test-value]');
+            statusEl.textContent = 'Testing…';
+            statusEl.style.color = 'var(--text-secondary)';
+
+            // Walk the surrounding form to gather everything that could be a credential.
+            var form = btn.closest('form');
+            var payload = _collectFormPayload(form);
+            // Determine the agent + crm choice from the merged payload.
+            var clientAgentId = (btn.closest('[data-agent-id]') || {}).dataset && btn.closest('[data-agent-id]').dataset.agentId || '';
+            var crmChoice = payload.crm_choice || (window.AGENT_META && AGENT_META.ignite ? '' : '');
+            var creds = payload.crm_credentials || {};
+
+            try {
+                var resp = await fetch(target, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await _getAccessToken()) },
+                    body: JSON.stringify({
+                        client_agent_id: clientAgentId,
+                        crm_choice: crmChoice,
+                        credentials: creds,
+                    }),
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (resp.ok && data.ok) {
+                    statusEl.style.color = 'var(--green)';
+                    statusEl.textContent = data.message || 'Connection verified';
+                    hiddenEl.value = 'true';
+                } else {
+                    statusEl.style.color = 'var(--red)';
+                    statusEl.textContent = data.message || data.error || ('HTTP ' + resp.status);
+                    hiddenEl.value = '';
+                }
+            } catch (e) {
+                statusEl.style.color = 'var(--red)';
+                statusEl.textContent = 'Network error: ' + e.message;
+                hiddenEl.value = '';
+            }
+        }
+
+        // OAuth: open the start endpoint in a popup. The endpoint sets a cookie
+        // or postMessages back when done. v1: simple popup, polls until closed.
+        function wizardStartOAuth(btn, target) {
+            var w = window.open(target, 'stilo_oauth', 'width=520,height=620');
+            if (!w) { alert('Pop-up blocked. Allow pop-ups for this site and try again.'); return; }
+            var hidden = btn.parentElement.querySelector('[data-oauth-value]');
+            var poll = setInterval(function() {
+                if (w.closed) {
+                    clearInterval(poll);
+                    if (hidden) hidden.value = 'connected';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-secondary');
+                    btn.textContent = 'Reconnect';
+                    var note = document.createElement('span');
+                    note.style.cssText = 'margin-left:10px;color:var(--green);font-size:13px;';
+                    note.textContent = 'Connected';
+                    btn.parentElement.appendChild(note);
+                }
+            }, 600);
+        }
+
+        // Voice preview: play a sample audio clip when client clicks Play.
+        function wizardPlayVoicePreview(ev, url) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            try {
+                if (window._stiloVoicePreview) { window._stiloVoicePreview.pause(); }
+                var a = new Audio(url);
+                window._stiloVoicePreview = a;
+                a.play();
+            } catch (e) {}
+        }
+
+        // Add/remove rows in array-of-objects.
+        function wizardAooAdd(btn) {
+            var container = btn.parentElement;
+            var schema = JSON.parse(container.getAttribute('data-schema') || '[]');
+            var idx = container.querySelectorAll('[data-aoo-row]').length;
+            var subInputs = schema.map(function(sf) {
+                if (sf.type === 'textarea') {
+                    return '<div style="margin-bottom:6px;"><label style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">' + escapeHtml(sf.label) + '</label>'
+                        + '<textarea class="form-input" data-aoo-sub="' + escapeHtml(sf.key) + '" rows="2"></textarea></div>';
+                }
+                return '<div style="margin-bottom:6px;"><label style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">' + escapeHtml(sf.label) + '</label>'
+                    + '<input type="text" class="form-input" data-aoo-sub="' + escapeHtml(sf.key) + '" /></div>';
+            }).join('');
+            var div = document.createElement('div');
+            div.className = 'wizard-aoo-row';
+            div.setAttribute('data-aoo-row', idx);
+            div.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;';
+            div.innerHTML = subInputs + '<button type="button" class="btn btn-ghost btn-sm" onclick="wizardAooRemove(this)">Remove</button>';
+            container.insertBefore(div, btn);
+        }
+        function wizardAooRemove(btn) {
+            var row = btn.parentElement;
+            row.remove();
+        }
+
+        // Test call trigger: POST scenario to /api/agents-test-call. Records lead_id locally.
+        async function wizardTriggerTestCall(btn, scenario, target) {
+            var statusEl = btn.parentElement.querySelector('[data-test-trigger-status]');
+            statusEl.textContent = 'Sending test call (' + scenario + ')…';
+            statusEl.style.color = 'var(--text-secondary)';
+            // Read test_phone_number from sibling input
+            var form = btn.closest('form');
+            var phoneEl = form.querySelector('[data-wizard-key="test_phone_number"]');
+            if (!phoneEl || !phoneEl.value) {
+                statusEl.style.color = 'var(--red)';
+                statusEl.textContent = 'Enter your phone number above first.';
+                return;
+            }
+            var clientAgentId = (btn.closest('[data-agent-id]') || {}).dataset && btn.closest('[data-agent-id]').dataset.agentId || '';
+            try {
+                var resp = await fetch(target, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await _getAccessToken()) },
+                    body: JSON.stringify({
+                        client_agent_id: clientAgentId,
+                        test_phone_number: phoneEl.value,
+                        scenario: scenario,
+                    }),
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (resp.ok && data.ok) {
+                    statusEl.style.color = 'var(--green)';
+                    statusEl.textContent = 'Test call queued. Answer your phone within 90 seconds. Lead ID: ' + (data.lead_id || '—');
+                    // Auto-tick the test_call_passed checkbox is the client's job (after they
+                    // rate the call), but we set a hint that the test fired.
+                    var passedCb = form.querySelector('[data-wizard-key="test_call_passed"]');
+                    if (passedCb) {
+                        var hint = passedCb.parentElement.parentElement.querySelector('.wizard-hint');
+                        if (hint) hint.textContent = 'After the call, check this box to mark the test as passed.';
+                    }
+                } else {
+                    statusEl.style.color = 'var(--red)';
+                    statusEl.textContent = data.error || data.message || 'Failed to queue test call';
+                }
+            } catch (e) {
+                statusEl.style.color = 'var(--red)';
+                statusEl.textContent = 'Network error: ' + e.message;
+            }
+        }
+
+        // Submit-for-review: client-facing button on Step 12. Flips the agent into
+        // pending_admin_review. Does NOT provision. STILO Partners runs the actual
+        // provisioning from the admin queue after a final pre-flight check.
+        async function wizardSubmitForReview(btn) {
+            var wrap = btn.closest('.wizard-submit-review');
+            var statusEl = wrap.querySelector('.wizard-submit-status');
+            var target = wrap.getAttribute('data-target');
+            var clientAgentId = (btn.closest('[data-agent-id]') || {}).dataset && btn.closest('[data-agent-id]').dataset.agentId || '';
+
+            // Hard-check the ready_for_review checkbox in the same form.
+            var form = btn.closest('form');
+            var readyCb = form.querySelector('[data-wizard-key="ready_for_review"]');
+            if (readyCb && !readyCb.checked) {
+                statusEl.style.color = 'var(--red)';
+                statusEl.textContent = 'Check "I have reviewed all my answers" first.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Submitting…';
+            statusEl.style.color = 'var(--text-secondary)';
+            statusEl.textContent = 'Sending your setup to STILO Partners for review…';
+
+            try {
+                var resp = await fetch(target, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await _getAccessToken()) },
+                    body: JSON.stringify({ client_agent_id: clientAgentId }),
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (resp.ok && data.ok) {
+                    statusEl.style.color = 'var(--green)';
+                    statusEl.textContent = data.message || 'Submitted. STILO will email you when IGNITE is live.';
+                    btn.textContent = 'Submitted';
+                    // Reload after a beat so the dashboard re-renders into the waiting state.
+                    setTimeout(function() {
+                        if (typeof loadAgentData === 'function') {
+                            window.supabaseClient.auth.getSession().then(function(s) {
+                                if (s.data && s.data.session) loadAgentData(s.data.session.user.id);
+                            });
+                        }
+                    }, 1500);
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = 'Submit for STILO review';
+                    statusEl.style.color = 'var(--red)';
+                    statusEl.textContent = (data.error || 'Submission failed') + (data.missing ? ' (missing: ' + data.missing.join(', ') + ')' : '');
+                }
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = 'Submit for STILO review';
+                statusEl.style.color = 'var(--red)';
+                statusEl.textContent = 'Network error: ' + e.message;
+            }
+        }
+
+        // Provision: final go-live button. POSTs to /api/agents-provision.
+        async function wizardProvisionAgent(btn) {
+            var wrap = btn.closest('.wizard-provision');
+            var statusEl = wrap.querySelector('.wizard-provision-status');
+            var target = wrap.getAttribute('data-target');
+            var clientAgentId = (btn.closest('[data-agent-id]') || {}).dataset && btn.closest('[data-agent-id]').dataset.agentId || '';
+
+            // Hard-check the ready_to_go_live checkbox in the same form.
+            var form = btn.closest('form');
+            var readyCb = form.querySelector('[data-wizard-key="ready_to_go_live"]');
+            if (readyCb && !readyCb.checked) {
+                statusEl.style.color = 'var(--red)';
+                statusEl.textContent = 'Check "I am ready to go live" first.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Provisioning…';
+            statusEl.style.color = 'var(--text-secondary)';
+            statusEl.textContent = 'Compiling system prompt, creating Retell agent, provisioning phone number…';
+
+            try {
+                var resp = await fetch(target, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await _getAccessToken()) },
+                    body: JSON.stringify({ client_agent_id: clientAgentId }),
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (resp.ok && data.ok) {
+                    statusEl.style.color = 'var(--green)';
+                    statusEl.textContent = 'Live! Agent ID ' + (data.retell_agent_id || '?') + ' on ' + (data.phone_number || 'unknown number');
+                    btn.textContent = 'Live';
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = 'Provision and activate IGNITE';
+                    statusEl.style.color = 'var(--red)';
+                    statusEl.textContent = (data.error || 'Provision failed') + (data.missing ? ' (missing: ' + data.missing.join(', ') + ')' : '');
+                }
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = 'Provision and activate IGNITE';
+                statusEl.style.color = 'var(--red)';
+                statusEl.textContent = 'Network error: ' + e.message;
+            }
+        }
+
+        // Helper used by the new field types: walks a form and returns the same
+        // shape submitWizardStep would post, but without the side effect of saving.
+        function _collectFormPayload(form) {
+            var payload = {};
+            if (!form) return payload;
+            var inputs = form.querySelectorAll('[data-wizard-key]');
+            for (var i = 0; i < inputs.length; i++) {
+                var el = inputs[i];
+                var key = el.getAttribute('data-wizard-key');
+                var type = el.getAttribute('data-wizard-type');
+                var v;
+                if (type === 'boolean') {
+                    var cb = el.tagName === 'INPUT' ? el : el.querySelector('input[type=checkbox]');
+                    v = !!(cb && cb.checked);
+                    var hidden = el.querySelector && el.querySelector('[data-test-value]');
+                    if (hidden && hidden.value === 'true') v = true;
+                } else if (type === 'number') v = el.value === '' ? null : Number(el.value);
+                else v = el.value;
+                if (key.indexOf('.') >= 0) _setNestedKey(payload, key, v);
+                else payload[key] = v;
+            }
+            // audio-select radios
+            form.querySelectorAll('.wizard-audio-select').forEach(function(wrap) {
+                var k = wrap.getAttribute('data-wizard-key');
+                var checked = wrap.querySelector('input[type=radio]:checked');
+                if (checked) payload[k] = checked.value;
+            });
+            return payload;
+        }
+
+        async function _getAccessToken() {
+            // The dashboard already manages a Supabase session; this exposes the access_token.
+            try {
+                if (window.supabaseClient) {
+                    var s = await window.supabaseClient.auth.getSession();
+                    return (s && s.data && s.data.session && s.data.session.access_token) || '';
+                }
+            } catch (e) {}
+            return '';
         }
 
         // Add/remove a row in a key-value-list field.
@@ -2357,8 +2897,28 @@
                     Object.assign(allStepsData, sp);
                 }
                 Object.assign(allStepsData, payload);
-                fieldsHtml = schemaStep.fields.map(function(f) {
-                    return renderWizardFieldFromSchema(f, payload[f.key], allStepsData);
+                // Filter fields by showIf / showIf_not so industry-specific or
+                // CRM-credential fields only appear when relevant. A field with
+                // `showIf: { key: value }` is visible only when allData[key] === value.
+                // `showIf_not: { key: value }` is the inverse.
+                fieldsHtml = schemaStep.fields.filter(function(f) {
+                    if (f.showIf) {
+                        for (var sk in f.showIf) {
+                            if (f.showIf[sk] === '__truthy__') { if (!allStepsData[sk]) return false; }
+                            else if (sk === 'industry_not') { if (allStepsData.industry === f.showIf[sk]) return false; }
+                            else { if (allStepsData[sk] !== f.showIf[sk]) return false; }
+                        }
+                    }
+                    if (f.showIf_not) {
+                        for (var sk2 in f.showIf_not) {
+                            if (allStepsData[sk2] === f.showIf_not[sk2]) return false;
+                        }
+                    }
+                    return true;
+                }).map(function(f) {
+                    // Resolve nested-key values like 'crm_credentials.api_key'
+                    var resolved = f.key.indexOf('.') >= 0 ? _resolveNestedKey(payload, f.key) : payload[f.key];
+                    return renderWizardFieldFromSchema(f, resolved, allStepsData);
                 }).join('');
             } else {
                 // Fallback: legacy JSON-textarea path. Used for agents that don't
@@ -2379,11 +2939,30 @@
             var stepNumber = step.step_number;
             var nextLabel = isLast ? 'Confirm & Activate Agent' : 'Save & Continue';
 
+            // Step-level tutorial: a "Show me how" expander that renders the
+            // full walkthrough for this step. Pulled from schemaStep.tutorial
+            // (markdown) when present.
+            var tutorialBlock = '';
+            if (schemaStep && schemaStep.tutorial) {
+                var tutorialId = 'tut-' + agent.agent_type + '-' + stepNumber;
+                tutorialBlock = ''
+                    + '<details class="wizard-tutorial" style="margin:6px 0 14px 0;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.20);border-radius:8px;padding:0;">'
+                        + '<summary style="cursor:pointer;padding:10px 14px;font-size:13px;font-weight:600;color:var(--blue);list-style:none;display:flex;align-items:center;gap:8px;">'
+                            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>'
+                            + 'Show me how to do this step'
+                        + '</summary>'
+                        + '<div id="' + tutorialId + '" style="padding:0 16px 14px 16px;font-size:13px;line-height:1.65;color:var(--text-primary);">'
+                            + renderTutorialMarkdown(schemaStep.tutorial)
+                        + '</div>'
+                    + '</details>';
+            }
+
             return ''
                 + '<div class="wizard-head">'
                     + '<div class="wizard-step-num">Step ' + (activeIdx + 1) + ' of ' + steps.length + '</div>'
                     + '<div class="wizard-step-name">' + escapeHtml(step.step_name) + '</div>'
                 + '</div>'
+                + tutorialBlock
                 + '<form class="wizard-form" onsubmit="return submitWizardStep(event, \'' + agent.agent_type + '\', ' + stepNumber + ', ' + (isLast ? 'true' : 'false') + ')">'
                     + fieldsHtml
                     + '<div class="wizard-msg" data-role="msg"></div>'
@@ -2456,15 +3035,48 @@
                     v = pairs;
                 }
                 else if (type === 'json') {
-                    try { v = el.value.trim() === '' ? null : JSON.parse(el.value); }
-                    catch (e) {
-                        if (msgEl) {
-                            msgEl.className = 'wizard-msg error';
-                            msgEl.textContent = 'Invalid JSON in field "' + humanizeKey(key) + '". ' + e.message;
+                    // For oauth-button + provision-button + test-trigger we have a hidden
+                    // value or aggregated JSON sub-state. Read it by role.
+                    var oauthHidden = el.querySelector && el.querySelector('[data-oauth-value]');
+                    if (oauthHidden) {
+                        v = oauthHidden.value === 'connected' ? { connected: true } : null;
+                    } else {
+                        try { v = el.value && el.value.trim() !== '' ? JSON.parse(el.value) : null; }
+                        catch (e) {
+                            if (msgEl) {
+                                msgEl.className = 'wizard-msg error';
+                                msgEl.textContent = 'Invalid JSON in field "' + humanizeKey(key) + '". ' + e.message;
+                            }
+                            return false;
                         }
-                        return false;
                     }
-                } else v = el.value;
+                }
+                else if (type === 'audio-select') {
+                    var checked = el.querySelector('input[type=radio]:checked');
+                    v = checked ? checked.value : (el.getAttribute('data-current') || '');
+                }
+                else if (type === 'array-of-objects') {
+                    var aooRows = el.querySelectorAll('[data-aoo-row]');
+                    var collected = [];
+                    for (var ar = 0; ar < aooRows.length; ar++) {
+                        var subInputs = aooRows[ar].querySelectorAll('[data-aoo-sub]');
+                        var rowObj = {};
+                        var nonEmpty = false;
+                        for (var sj = 0; sj < subInputs.length; sj++) {
+                            var subKey = subInputs[sj].getAttribute('data-aoo-sub');
+                            var subVal = subInputs[sj].value;
+                            rowObj[subKey] = subVal;
+                            if (subVal && subVal.trim() !== '') nonEmpty = true;
+                        }
+                        if (nonEmpty) collected.push(rowObj);
+                    }
+                    v = collected;
+                }
+                else if (type === 'readonly') {
+                    // Skip read-only display fields (test-calls-log, final-review).
+                    continue;
+                }
+                else v = el.value;
 
                 // Required validation: a required field must be non-empty.
                 // For booleans, required means must be checked.
@@ -2480,7 +3092,9 @@
                 }
 
                 if (key === '_payload') { payload = v || {}; break; }
-                payload[key] = v;
+                // Dotted keys (e.g. crm_credentials.api_key) build nested objects.
+                if (key.indexOf('.') >= 0) _setNestedKey(payload, key, v);
+                else payload[key] = v;
             }
 
             if (missingRequired.length > 0) {
