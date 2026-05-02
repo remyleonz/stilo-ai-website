@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /admin/
+Disallow: /auth.html
+Disallow: /dashboard.html
+
+Sitemap: https://stiloaipartners.com/sitemap.xml
