@@ -1639,25 +1639,25 @@ if (!canvas) { /* no-op */ } else if (reduced) {
   var totalQ = 10;
 
   var agentCatalog = [
-    { id: 'receptionist', name: 'AI Receptionist', icon: 'ECHO', price: '$1,500 setup + $450/mo', desc: '24/7 voice agent that answers, books, and captures every call.', tiers: ['starter','growth','partner'] },
-    { id: 'lead-response', name: 'Lead Response Agent', icon: 'IGNITE', price: '$2,000 setup + $650/mo', desc: 'Responds to every inbound lead in seconds, by email, text, and call.', tiers: ['growth','partner'] },
-    { id: 'reactivation', name: 'Customer Reactivation', icon: 'REVIVE', price: '$2,500 setup + $800/mo', desc: 'Re-engage your dormant customer list and turn it back into revenue.', tiers: ['growth','partner'] },
-    { id: 'lead-gen', name: 'Lead Generator', icon: 'SCOUT', price: '$2,500 setup + $1,000/mo', desc: 'AI-powered prospecting that finds and contacts your ideal customers at scale.', tiers: ['partner'] },
+    { id: 'receptionist', name: 'AI Receptionist', icon: 'ECHO', price: '$2,000 setup + $1,000/mo', desc: '24/7 voice agent that answers, books, and captures every call.', tiers: ['starter','growth','partner'] },
+    { id: 'lead-response', name: 'Lead Response Agent', icon: 'IGNITE', price: '$2,500 setup + $1,500/mo', desc: 'Responds to every inbound lead in seconds, by email, text, and call.', tiers: ['growth','partner'] },
+    { id: 'reactivation', name: 'Customer Reactivation', icon: 'REVIVE', price: '$2,500 setup + $1,500/mo', desc: 'Re-engage your dormant customer list and turn it back into revenue.', tiers: ['growth','partner'] },
+    { id: 'lead-gen', name: 'Lead Generator', icon: 'SCOUT', price: '$3,000 setup + $2,000/mo', desc: 'AI-powered prospecting that finds and contacts your ideal customers at scale.', tiers: ['partner'] },
     { id: 'website', name: 'AI Website', icon: 'FORGE', price: '$1,250 setup + $200/mo', desc: 'Conversion-optimized site researched and built for your exact business.', tiers: ['starter','growth','partner'] },
     { id: 'seo', name: 'AI SEO (GEO)', icon: 'SIGNAL', price: '$1,000 one-time', desc: 'Get recommended by ChatGPT, Google AI, and every AI assistant in your area.', tiers: ['growth','partner'] },
-    { id: 'growth-intel', name: 'Growth Intelligence', icon: 'ORACLE', price: '$3,000 setup + $1,000/mo', desc: 'Weekly data-driven strategy: what\'s working, what\'s not, and what to do next.', tiers: ['partner'] },
+    { id: 'growth-intel', name: 'Growth Intelligence', icon: 'ORACLE', price: '$3,000 setup + $2,000/mo', desc: 'Weekly data-driven strategy: what\'s working, what\'s not, and what to do next.', tiers: ['partner'] },
     { id: 'custom', name: 'Custom Automation', icon: 'FLUX', price: 'From $1,000', desc: 'Got a specific problem? We\'ll build the AI solution for it.', tiers: ['partner'] }
   ];
 
   // Per-agent pricing — source of truth for all calculations
   var agentPrices = {
-    'receptionist':  { setup: 1500, monthly: 450  },
-    'lead-response': { setup: 2000, monthly: 650  },
-    'reactivation':  { setup: 2500, monthly: 800  },
-    'lead-gen':      { setup: 2500, monthly: 1000 },
+    'receptionist':  { setup: 2000, monthly: 1000 },
+    'lead-response': { setup: 2500, monthly: 1500 },
+    'reactivation':  { setup: 2500, monthly: 1500 },
+    'lead-gen':      { setup: 3000, monthly: 2000 },
     'website':       { setup: 1250, monthly: 200  },
     'seo':           { setup: 1000, monthly: 0    },
-    'growth-intel':  { setup: 3000, monthly: 1000 },
+    'growth-intel':  { setup: 3000, monthly: 2000 },
     'custom':        { setup: 1000, monthly: 0    }
   };
 
@@ -1925,18 +1925,21 @@ if (!canvas) { /* no-op */ } else if (reduced) {
         name: payload.contact_name || ''
       })
     })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+    .then(function(res) { return res.json().then(function(d) { return { ok: res.ok, data: d }; }); })
+    .then(function(result) {
+      if (result.data.checkout_url) {
+        window.location.href = result.data.checkout_url;
       } else {
-        // Fallback: go to auth signup if checkout session fails
-        window.location.href = 'auth.html?tab=signup&tier=' + currentTier;
+        if (getStartedBtn) { getStartedBtn.textContent = 'Get Started Now'; getStartedBtn.style.pointerEvents = ''; }
+        var errMsg = (result.data && result.data.error) ? result.data.error : 'Something went wrong starting checkout. Please try again or contact us.';
+        alert('Checkout error: ' + errMsg);
+        console.error('[checkout]', result.data);
       }
     })
-    .catch(function() {
-      // Fallback on network error
-      window.location.href = 'auth.html?tab=signup&tier=' + currentTier;
+    .catch(function(err) {
+      if (getStartedBtn) { getStartedBtn.textContent = 'Get Started Now'; getStartedBtn.style.pointerEvents = ''; }
+      alert('Network error. Please check your connection and try again.');
+      console.error('[checkout network error]', err);
     });
 
     return false;

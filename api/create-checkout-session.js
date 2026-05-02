@@ -86,18 +86,22 @@ module.exports = async function createCheckoutSession(req, res) {
     });
   }
 
-  // Build line items
+  // Build line items.
+  // Stripe subscription mode only accepts recurring prices in line_items.
+  // One-time setup fees must go in subscription_data.add_invoice_items so they
+  // appear on the first invoice. For payment (no recurring) mode, setup fees
+  // go directly in line_items as normal.
   const lineItems = [];
+  const setupInvoiceItems = []; // one-time fees charged on first subscription invoice
   let hasRecurring = false;
   for (const code of normalized) {
     const a = AGENTS[code];
-    lineItems.push({ price: process.env[a.stripeSetupPriceEnv], quantity: 1 });
     if (a.monthlyFeeCents > 0 && a.stripeMonthlyPriceEnv) {
-      lineItems.push({
-        price: process.env[a.stripeMonthlyPriceEnv],
-        quantity: 1,
-      });
+      lineItems.push({ price: process.env[a.stripeMonthlyPriceEnv], quantity: 1 });
+      setupInvoiceItems.push({ price: process.env[a.stripeSetupPriceEnv], quantity: 1 });
       hasRecurring = true;
+    } else {
+      lineItems.push({ price: process.env[a.stripeSetupPriceEnv], quantity: 1 });
     }
   }
 
@@ -113,6 +117,15 @@ module.exports = async function createCheckoutSession(req, res) {
     source: 'stilo-ai-site',
   };
 
+  const successUrl = (function() {
+    var base = (origin || '') + '/auth.html?welcome=1&session_id={CHECKOUT_SESSION_ID}';
+    if (body.email) base += '&email=' + encodeURIComponent(body.email);
+    if (body.name) base += '&name=' + encodeURIComponent(body.name);
+    if (body.business_name) base += '&business=' + encodeURIComponent(body.business_name);
+    if (body.phone) base += '&phone=' + encodeURIComponent(body.phone);
+    return base;
+  })();
+
   try {
     const session = await stripe.checkout.sessions.create(
       Object.assign(
@@ -122,19 +135,12 @@ module.exports = async function createCheckoutSession(req, res) {
           line_items: lineItems,
           customer_email: body.email || undefined,
           allow_promotion_codes: true,
-          success_url: (function() {
-            var base = (origin || '') + '/auth.html?welcome=1&session_id={CHECKOUT_SESSION_ID}';
-            if (body.email) base += '&email=' + encodeURIComponent(body.email);
-            if (body.name) base += '&name=' + encodeURIComponent(body.name);
-            if (body.business_name) base += '&business=' + encodeURIComponent(body.business_name);
-            if (body.phone) base += '&phone=' + encodeURIComponent(body.phone);
-            return base;
-          })(),
+          success_url: successUrl,
           cancel_url: (origin || '') + '/index.html#contact',
           metadata: metadata,
         },
         hasRecurring
-          ? { subscription_data: { metadata: metadata } }
+          ? { subscription_data: { metadata: metadata, add_invoice_items: setupInvoiceItems } }
           : { payment_intent_data: { receipt_email: body.email || undefined } }
       )
     );

@@ -145,7 +145,7 @@ async function handleCheckoutComplete(session) {
     const { data: invite, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(
       customerEmail,
       {
-        redirectTo: siteUrl + '/dashboard.html',
+        redirectTo: siteUrl + '/app/',
         data: {
           business_name: md.business_name || '',
           contact_name: md.contact_name || '',
