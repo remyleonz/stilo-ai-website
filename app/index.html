@@ -2201,7 +2201,7 @@
         // Schema-driven field renderer. Used when api/_agents.js defines an
         // onboardingSchema for the current agent. Falls back to the legacy
         // type-inferred renderer (above) when there is no schema.
-        function renderWizardFieldFromSchema(field, val) {
+        function renderWizardFieldFromSchema(field, val, allData) {
             var key = field.key;
             var name = escapeHtml(key);
             var control;
@@ -2276,6 +2276,23 @@
                         + '</div>';
                     break;
                 }
+                case 'webhook-url': {
+                    var bname = (allData && allData.business_name) || '';
+                    var slug = bname.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'your-business';
+                    var webhookUrl = 'https://api.stiloaipartners.com/webhook/lead/' + slug;
+                    control = '<div style="background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">'
+                        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+                        + '<code style="flex:1;font-size:12px;color:var(--blue);word-break:break-all;">' + escapeHtml(webhookUrl) + '</code>'
+                        + '<button type="button" onclick="navigator.clipboard.writeText(\'' + escapeHtml(webhookUrl) + '\').then(function(){this.textContent=\'Copied!\';setTimeout(function(){document.querySelectorAll(\'[data-copy-btn]\').forEach(function(b){b.textContent=\'Copy URL\';})},1500)}.bind(this))" data-copy-btn style="white-space:nowrap;padding:5px 10px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Copy URL</button>'
+                        + '</div>'
+                        + '<div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">'
+                        + '<strong style="color:var(--text-primary);">GoHighLevel:</strong> Automation &rarr; Webhook &rarr; paste URL above<br>'
+                        + '<strong style="color:var(--text-primary);">Website form:</strong> Add as a webhook/notification URL in your form settings<br>'
+                        + '<strong style="color:var(--text-primary);">Zapier / Make:</strong> Use a Webhook action, POST to the URL above'
+                        + '</div>'
+                        + '</div>';
+                    break;
+                }
                 case 'text':
                 default:
                     control = '<input type="text" class="form-input" data-wizard-key="' + name + '" data-wizard-type="string"' + requiredAttr + ' value="' + escapeHtml(v) + '" />';
@@ -2333,8 +2350,15 @@
             }
 
             if (schemaStep && Array.isArray(schemaStep.fields) && schemaStep.fields.length > 0) {
+                // Merge all steps' saved data so webhook-url fields can read business_name from step 1.
+                var allStepsData = {};
+                for (var si = 0; si < steps.length; si++) {
+                    var sp = (steps[si].data && steps[si].data.response_data) ? steps[si].data.response_data : {};
+                    Object.assign(allStepsData, sp);
+                }
+                Object.assign(allStepsData, payload);
                 fieldsHtml = schemaStep.fields.map(function(f) {
-                    return renderWizardFieldFromSchema(f, payload[f.key]);
+                    return renderWizardFieldFromSchema(f, payload[f.key], allStepsData);
                 }).join('');
             } else {
                 // Fallback: legacy JSON-textarea path. Used for agents that don't
