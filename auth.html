@@ -380,12 +380,29 @@
             var email = document.getElementById('signin-email').value.trim();
             if (!email) { showError('Enter your email first.'); return; }
 
+            // Admins can self-provision. Clients can only sign in if they have
+            // an existing account (created by the Stripe webhook on purchase).
+            var isAdmin = ADMIN_EMAILS_AUTH.indexOf(email.toLowerCase()) !== -1;
+
             try {
                 const { error } = await sb.auth.signInWithOtp({
                     email: email,
-                    options: { emailRedirectTo: window.location.origin + '/app/' }
+                    options: {
+                        emailRedirectTo: window.location.origin + '/app/',
+                        shouldCreateUser: isAdmin
+                    }
                 });
-                if (error) { showError(error.message); return; }
+                if (error) {
+                    // Supabase returns "Signups not allowed for otp" when the
+                    // email has no auth.users row and shouldCreateUser is false.
+                    var msg = (error.message || '').toLowerCase();
+                    if (msg.indexOf('signups not allowed') !== -1 || msg.indexOf('user not found') !== -1) {
+                        showError('We don\'t have an account for that email. Make sure you\'re using the email from your purchase, or get a free audit to get started.');
+                    } else {
+                        showError(error.message);
+                    }
+                    return;
+                }
                 showSuccess('Login link sent. Click it in your inbox and you\'ll land straight in your dashboard.');
             } catch (err) {
                 showError('Something went wrong. Please try again.');
@@ -413,10 +430,18 @@
             try {
                 const { error } = await sb.auth.signInWithOtp({
                     email: email,
-                    options: { emailRedirectTo: window.location.origin + '/app/' }
+                    options: {
+                        emailRedirectTo: window.location.origin + '/app/',
+                        shouldCreateUser: false
+                    }
                 });
                 if (error) {
-                    errEl.textContent = error.message;
+                    var msg = (error.message || '').toLowerCase();
+                    if (msg.indexOf('signups not allowed') !== -1 || msg.indexOf('user not found') !== -1) {
+                        errEl.textContent = 'Still setting up your account from your purchase. Give it 30 seconds and try again.';
+                    } else {
+                        errEl.textContent = error.message;
+                    }
                     errEl.style.display = 'block';
                     btn.disabled = false;
                     btn.textContent = 'Send My Login Link';
