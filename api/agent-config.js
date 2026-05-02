@@ -35,7 +35,7 @@ const fs = require('fs');
 const path = require('path');
 const { AGENTS } = require('./_agents');
 
-const ADMIN_EMAILS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com'];
+const ADMIN_EMAILS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
 
 function admin() {
   return createClient(

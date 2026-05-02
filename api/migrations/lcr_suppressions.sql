@@ -47,17 +47,17 @@ alter table public.lcr_suppressions enable row level security;
 
 create policy "Admins can read suppressions" on public.lcr_suppressions
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 create policy "Admins can write suppressions" on public.lcr_suppressions
   for insert with check (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 create policy "Admins can update suppressions" on public.lcr_suppressions
   for update using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 -- ============================================

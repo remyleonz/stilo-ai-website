@@ -35,7 +35,7 @@ alter table public.impersonation_audit enable row level security;
 
 create policy "Admins view audit" on public.impersonation_audit
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 -- Inserts only via service role. The /api/admin/impersonate endpoint and

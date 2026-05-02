@@ -50,7 +50,7 @@ alter table public.leads enable row level security;
 -- Only admins can read leads. No public read/write (API uses service role).
 create policy "Admins can view all leads" on public.leads
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 -- Users table (extends Supabase auth.users)
@@ -160,45 +160,45 @@ alter table public.clients add column if not exists is_admin boolean default fal
 -- the policy lives on, causing infinite recursion and returning null.
 create policy "Admins can view all clients" on public.clients
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
     or auth.uid() = id
   );
 
 create policy "Admins can view all agents" on public.client_agents
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
     or client_id = auth.uid()
   );
 
 create policy "Admins can view all onboarding" on public.onboarding_steps
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
     or client_agent_id in (select id from public.client_agents where client_id = auth.uid())
   );
 
 create policy "Admins can view all metrics" on public.agent_metrics
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
     or client_agent_id in (select id from public.client_agents where client_id = auth.uid())
   );
 
 create policy "Admins can view all contracts" on public.contracts
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
     or client_id = auth.uid()
   );
 
 -- Admins can also update any client_agents (pause, activate, configure)
 create policy "Admins can update all agents" on public.client_agents
   for update using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
     or client_id = auth.uid()
   );
 
 -- Admins can insert new client_agents (deploy agents for clients)
 create policy "Admins can insert agents" on public.client_agents
   for insert with check (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 -- ============================================

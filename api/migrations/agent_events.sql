@@ -48,7 +48,7 @@ create policy "Clients view own events" on public.agent_events
 
 create policy "Admins view all events" on public.agent_events
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 -- Inserts only via service role (the Python metrics_sync writer). No

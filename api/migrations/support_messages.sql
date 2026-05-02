@@ -62,12 +62,12 @@ create policy "Clients update own threads" on public.support_threads
 
 create policy "Admins view all threads" on public.support_threads
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 create policy "Admins update all threads" on public.support_threads
   for update using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 create policy "Clients view own messages" on public.support_messages
@@ -83,12 +83,12 @@ create policy "Clients append own messages" on public.support_messages
 
 create policy "Admins view all messages" on public.support_messages
   for select using (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 create policy "Admins append messages" on public.support_messages
   for insert with check (
-    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com')
+    auth.jwt()->>'email' in ('remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com')
   );
 
 -- Bump last_message_at on the parent thread whenever a new message lands,

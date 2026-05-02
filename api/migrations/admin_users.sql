@@ -31,7 +31,9 @@ create table if not exists public.admin_users (
 insert into public.admin_users (email, display_name, added_by)
 values
   ('remyleon11@gmail.com', 'Remy Leon', 'system'),
-  ('stiloaiconsulting@gmail.com', 'Stilo AI Consulting', 'system')
+  ('stiloaiconsulting@gmail.com', 'Stilo AI Consulting', 'system'),
+  ('remyleon@stiloaipartners.com', 'Remy Leon', 'system'),
+  ('davidcoira@stiloaipartners.com', 'David Coira', 'system')
 on conflict (email) do nothing;
 
 alter table public.admin_users enable row level security;
