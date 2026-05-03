@@ -45,6 +45,8 @@
             --red-bg: rgba(239,68,68,0.1);
             --blue: #3b82f6;
             --blue-bg: rgba(59,130,246,0.1);
+            --orange: #f97316;
+            --orange-bg: rgba(249,115,22,0.1);
             --radius-sm: 6px;
             --radius-md: 10px;
             --radius-lg: 14px;
@@ -852,6 +854,12 @@
                     </svg>
                     Clients
                 </button>
+                <button class="nav-item" data-page="prospecting" onclick="switchPage('prospecting')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/>
+                    </svg>
+                    Prospecting
+                </button>
                 <button class="nav-item" data-page="agents" onclick="switchPage('agents')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
@@ -1066,6 +1074,81 @@
                 <div id="drawerContent"></div>
             </div>
             <div id="drawerOverlay" onclick="closeDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
+
+            <!-- Prospect drawer (call-log / email-log) -->
+            <div id="prospectDrawer" style="position:fixed;top:0;right:-780px;width:780px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 36px;">
+                <button onclick="closeProspectDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;line-height:1;">&times;</button>
+                <div id="prospectDrawerContent"></div>
+            </div>
+            <div id="prospectDrawerOverlay" onclick="closeProspectDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
+
+            <!-- ============================================================
+                 Prospecting (cold-call list, cold-email list, dead pool)
+                 Backed by /api/prospects/* proxy → David's prospecting backend
+                 ============================================================ -->
+            <div class="page-content" id="page-prospecting" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">Prospecting</h2>
+                        <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:4px;">Daily call list, cold email queue, and archive. Click a row to log an outcome.</p>
+                    </div>
+                </div>
+
+                <!-- Stats bar: 4 tier cards + 2 small badges. Click a card to scope to that tier. -->
+                <div id="prospectStatsBar" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
+                    <div data-tier="HOT" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--red);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Hot</div>
+                        <div id="prospectStatHot" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                    </div>
+                    <div data-tier="WARM" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--orange);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Warm</div>
+                        <div id="prospectStatWarm" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                    </div>
+                    <div data-tier="COOL" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--yellow);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Cool</div>
+                        <div id="prospectStatCool" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                    </div>
+                    <div data-tier="DEAD" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--text-tertiary);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Dead</div>
+                        <div id="prospectStatDead" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);">
+                    <span style="background:var(--blue-bg);color:var(--blue);border:1px solid rgba(59,130,246,0.25);padding:4px 10px;border-radius:999px;"><strong id="prospectStatStrictPhone">—</strong> strict-pass phones</span>
+                    <span style="background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,0.25);padding:4px 10px;border-radius:999px;"><strong id="prospectStatOwnerEmail">—</strong> owner emails</span>
+                </div>
+
+                <!-- Sub-tab strip -->
+                <div id="prospectSubtabs" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:16px;">
+                    <button class="prospect-subtab active" data-subtab="callable" onclick="switchProspectTab('callable')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:2px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;">Cold Call Ready</button>
+                    <button class="prospect-subtab" data-subtab="emailable" onclick="switchProspectTab('emailable')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Cold Email Ready</button>
+                    <button class="prospect-subtab" data-subtab="dead" onclick="switchProspectTab('dead')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Dead Pool</button>
+                </div>
+
+                <!-- Filter bar (visible for callable + emailable, hidden for dead) -->
+                <div id="prospectFilterBar" style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+                    <input id="prospectSearch" type="search" placeholder="Search business or owner..." oninput="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;width:240px;">
+                    <select id="prospectTierFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">
+                        <option value="">All tiers</option>
+                        <option value="HOT">Hot</option>
+                        <option value="WARM" selected>Warm</option>
+                        <option value="COOL">Cool</option>
+                    </select>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);">
+                        Min score
+                        <input id="prospectMinScore" type="range" min="0" max="100" value="0" oninput="onProspectMinScoreInput(this.value)" style="accent-color:var(--blue);">
+                        <span id="prospectMinScoreVal" style="font-family:var(--font-mono);min-width:24px;color:var(--text-primary);">0</span>
+                    </label>
+                    <div id="prospectNicheChips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                </div>
+
+                <!-- Three table containers, only one visible at a time -->
+                <div id="prospectTableCallable" class="prospect-table-host" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
+                    <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>
+                </div>
+                <div id="prospectTableEmailable" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
+                <div id="prospectTableDead" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
+            </div>
 
             <!-- Agents tab: cross-cutting list of every deployment -->
             <div class="page-content" id="page-agents" style="display:none;">
@@ -1285,6 +1368,7 @@
             var titles = {
                 dashboard: 'Dashboard',
                 clients: 'Clients',
+                prospecting: 'Prospecting',
                 agents: 'Agents',
                 revenue: 'Revenue',
                 support: 'Support',
@@ -1314,6 +1398,7 @@
             else if (page === 'revenue') loadRevenue();
             else if (page === 'support') adminLoadSupportThreads();
             else if (page === 'settings') loadSettings();
+            else if (page === 'prospecting') loadProspectingPage();
 
             // Close sidebar on mobile after selection
             closeSidebar();
@@ -1618,6 +1703,69 @@
             }
 
             content.innerHTML = buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap);
+
+            // Best-effort: if this client has a matching prospect record (by phone or
+            // business_name), append a Prospecting card + Call History timeline.
+            // Silently no-ops if the prospecting backend doesn't have them or
+            // doesn't support these lookup keys yet.
+            try {
+                var prospectHost = document.createElement('div');
+                prospectHost.id = 'clientProspectingHost';
+                prospectHost.style.marginTop = '24px';
+                content.appendChild(prospectHost);
+                renderClientProspectingCard(c, prospectHost);
+            } catch (e) { console.warn('[client-prospecting]', e); }
+        }
+
+        async function renderClientProspectingCard(c, host) {
+            if (!c || !host) return;
+            // Try phone first (most reliable), then business_name as fallback.
+            var data = null;
+            var attempts = [];
+            if (c.phone)         attempts.push('phone=' + encodeURIComponent(c.phone));
+            if (c.business_name) attempts.push('business_name=' + encodeURIComponent(c.business_name));
+            for (var i = 0; i < attempts.length; i++) {
+                try {
+                    data = await prospectFetchJSON('/api/prospects/detail?' + attempts[i]);
+                    if (data && (data.id != null || data.lead_id != null)) break;
+                    data = null;
+                } catch (e) {
+                    if (e.status && e.status !== 404) console.warn('[client-prospecting/lookup]', e);
+                    data = null;
+                }
+            }
+            if (!data) { host.innerHTML = ''; return; }
+
+            var score = data.prospect_score != null ? data.prospect_score : (data.score != null ? data.score : '—');
+            var reasoning = data.prospecting_reasoning || data.reasoning || data.talk_track || '';
+            var recProduct = data.recommended_product || data.recommendation || '';
+            var lastCalled = data.last_called_at || data.last_contacted_at;
+            var history = data.call_history || data.calls || [];
+
+            var historyHtml = history.length ? history.map(function(h){
+                var at = h.called_at || h.timestamp || h.created_at;
+                var atStr = at ? new Date(at).toLocaleString() : '';
+                return '<div style="padding:10px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
+                    + '<div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-weight:600;color:var(--text-primary);">' + esc(h.outcome || '—') + '</span><span style="color:var(--text-muted);">' + atStr + '</span></div>'
+                    + (h.notes ? '<div style="margin-top:4px;color:var(--text-secondary);">' + esc(h.notes) + '</div>' : '')
+                    + '</div>';
+            }).join('') : '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No prior contacts.</div>';
+
+            host.innerHTML = ''
+                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin:0 0 10px 0;">Prospecting</h3>'
+                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:14px 16px;margin-bottom:14px;">'
+                + '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">'
+                + '<div style="font-family:var(--font-mono);font-weight:700;font-size:1.6rem;color:var(--text-primary);">' + esc(score) + '</div>'
+                + '<div>' + tierBadge(data.tier) + '</div>'
+                + (recProduct ? '<div style="font-size:12px;color:var(--text-secondary);">Recommended: <strong style="color:var(--text-primary);">' + esc(recProduct) + '</strong></div>' : '')
+                + (lastCalled ? '<div style="font-size:12px;color:var(--text-muted);">Last called ' + new Date(lastCalled).toLocaleDateString() + '</div>' : '')
+                + '</div>'
+                + (reasoning ? '<div style="margin-top:12px;font-size:13px;color:var(--text-secondary);line-height:1.5;border-left:2px solid var(--blue);padding-left:10px;">' + esc(reasoning) + '</div>' : '')
+                + '</div>'
+                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin:0 0 10px 0;">Call history</h3>'
+                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:14px 16px;">'
+                + historyHtml
+                + '</div>';
         }
 
         function closeDrawer() {
@@ -2589,6 +2737,449 @@
                 msgEl.textContent = e.message || 'Failed';
             }
             return false;
+        }
+
+        /* ============================================================
+           Prospecting tab
+           Backed by /api/prospects/* (Vercel proxy → David's backend).
+           Response shapes are defensive: FRONTEND_BRIEF.md not yet
+           received, so safe-accessors throughout. Reconcile field
+           names against David's brief once delivered.
+           ============================================================ */
+        var prospectState = {
+            tab: 'callable',
+            filters: { tier: 'WARM', q: '', minScore: 0, niches: [] },
+            rows: [],
+            currentLeadId: null,
+            deadPage: 1,
+            searchDebounce: null,
+            statsCache: null,
+            loaded: false
+        };
+
+        var PROSPECT_OUTCOMES = [
+            { value: 'booked_meeting',     label: 'Booked closing meeting', followUp: false },
+            { value: 'interested_followup',label: 'Interested, follow up',  followUp: true  },
+            { value: 'not_now',            label: 'Not now, callback later',followUp: true  },
+            { value: 'wrong_number',       label: 'Wrong number',            followUp: false },
+            { value: 'wrong_person',       label: 'Decision-maker unavailable', followUp: true },
+            { value: 'voicemail',          label: 'Voicemail',               followUp: true  },
+            { value: 'no_answer',          label: 'No answer',               followUp: true  },
+            { value: 'not_interested',     label: 'Not interested (soft no)',followUp: false },
+            { value: 'dnc_request',        label: 'Do-not-call requested',   followUp: false },
+            { value: 'disconnected',       label: 'Number disconnected',     followUp: false }
+        ];
+
+        async function prospectAuthHeaders(extra) {
+            var session = (await sb.auth.getSession()).data.session;
+            var h = { 'Authorization': 'Bearer ' + (session && session.access_token || '') };
+            if (extra) for (var k in extra) h[k] = extra[k];
+            return h;
+        }
+
+        async function prospectFetchJSON(path, opts) {
+            opts = opts || {};
+            var headers = await prospectAuthHeaders(opts.headers || {});
+            if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+            var res = await fetch(path, { method: opts.method || 'GET', headers: headers, body: opts.body });
+            var text = await res.text();
+            var data; try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { raw: text }; }
+            if (!res.ok) {
+                var err = new Error((data && data.error) || ('HTTP ' + res.status));
+                err.status = res.status;
+                err.body = data;
+                throw err;
+            }
+            return data;
+        }
+
+        function tierBadge(tier) {
+            var t = (tier || '').toUpperCase();
+            var color = 'var(--text-tertiary)';
+            if (t === 'HOT')  color = 'var(--red)';
+            else if (t === 'WARM') color = 'var(--orange)';
+            else if (t === 'COOL') color = 'var(--yellow)';
+            return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid ' + color + ';color:' + color + ';font-size:11px;font-weight:600;letter-spacing:0.04em;">' + escapeAdminHtml(t || '—') + '</span>';
+        }
+
+        function loadProspectingPage() {
+            // First entry only does the heavy load; subsequent visits keep cached state.
+            if (!prospectState.loaded) {
+                prospectState.loaded = true;
+                loadProspectStats();
+                loadProspectCallable();
+            } else {
+                // Quick refresh of stats so counts stay current.
+                loadProspectStats();
+            }
+        }
+
+        async function loadProspectStats() {
+            try {
+                var data = await prospectFetchJSON('/api/prospects/stats');
+                prospectState.statsCache = data;
+                var counts = data.tier_counts || data.counts || {};
+                document.getElementById('prospectStatHot').textContent  = counts.HOT  != null ? counts.HOT  : '0';
+                document.getElementById('prospectStatWarm').textContent = counts.WARM != null ? counts.WARM : '0';
+                document.getElementById('prospectStatCool').textContent = counts.COOL != null ? counts.COOL : '0';
+                document.getElementById('prospectStatDead').textContent = counts.DEAD != null ? counts.DEAD : '0';
+                document.getElementById('prospectStatStrictPhone').textContent = data.owner_phone_strict_count != null ? data.owner_phone_strict_count : (data.strict_phone_count != null ? data.strict_phone_count : '—');
+                document.getElementById('prospectStatOwnerEmail').textContent = data.owner_email_count != null ? data.owner_email_count : '—';
+
+                // Niche chips
+                var byNiche = data.by_niche || data.niches || {};
+                var chipsEl = document.getElementById('prospectNicheChips');
+                if (chipsEl) {
+                    var keys = Object.keys(byNiche).sort();
+                    chipsEl.innerHTML = keys.map(function(n){
+                        var on = prospectState.filters.niches.indexOf(n) !== -1;
+                        return '<button onclick="toggleProspectNiche(\'' + n.replace(/'/g, "\\'") + '\')" style="padding:5px 10px;border-radius:999px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--border-medium)') + ';background:' + (on ? 'var(--blue-bg)' : 'transparent') + ';color:' + (on ? 'var(--blue)' : 'var(--text-secondary)') + ';font-size:11px;cursor:pointer;">' + escapeAdminHtml(n) + ' (' + byNiche[n] + ')</button>';
+                    }).join('');
+                }
+            } catch (e) {
+                console.error('[prospects/stats]', e);
+                document.getElementById('prospectStatHot').textContent = '?';
+                document.getElementById('prospectStatWarm').textContent = '?';
+                document.getElementById('prospectStatCool').textContent = '?';
+                document.getElementById('prospectStatDead').textContent = '?';
+            }
+        }
+
+        function buildProspectQuery() {
+            var f = prospectState.filters;
+            var qs = [];
+            if (f.tier) qs.push('tier=' + encodeURIComponent(f.tier));
+            if (f.q) qs.push('q=' + encodeURIComponent(f.q));
+            if (f.minScore > 0) qs.push('min_score=' + f.minScore);
+            if (f.niches && f.niches.length) qs.push('niche=' + encodeURIComponent(f.niches.join(',')));
+            qs.push('limit=200');
+            return qs.length ? '?' + qs.join('&') : '';
+        }
+
+        async function loadProspectCallable() {
+            var host = document.getElementById('prospectTableCallable');
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>';
+            try {
+                var data = await prospectFetchJSON('/api/prospects/callable' + buildProspectQuery());
+                var rows = data.results || data.leads || data.prospects || data || [];
+                prospectState.rows = rows;
+                host.innerHTML = renderProspectTable(rows, 'callable');
+            } catch (e) {
+                console.error('[prospects/callable]', e);
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + (e.status === 401 ? ' — sign in as an admin.' : (e.status === 502 ? ' — prospecting backend unreachable.' : '')) + '</div>';
+            }
+        }
+
+        async function loadProspectEmailable() {
+            var host = document.getElementById('prospectTableEmailable');
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
+            try {
+                var data = await prospectFetchJSON('/api/prospects/emailable' + buildProspectQuery());
+                var rows = data.results || data.leads || data.prospects || data || [];
+                prospectState.rows = rows;
+                host.innerHTML = renderProspectTable(rows, 'emailable');
+            } catch (e) {
+                console.error('[prospects/emailable]', e);
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + '</div>';
+            }
+        }
+
+        async function loadProspectDead(page) {
+            page = page || 1;
+            prospectState.deadPage = page;
+            var host = document.getElementById('prospectTableDead');
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
+            try {
+                var data = await prospectFetchJSON('/api/prospects/dead?page=' + page + '&limit=50');
+                var rows = data.results || data.leads || data.prospects || [];
+                var totalPages = data.total_pages || 1;
+                host.innerHTML = renderProspectTable(rows, 'dead') +
+                    '<div style="display:flex;justify-content:center;gap:8px;padding:14px;border-top:1px solid var(--border-subtle);">' +
+                    '<button onclick="loadProspectDead(' + Math.max(1, page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;cursor:pointer;' + (page <= 1 ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Prev</button>' +
+                    '<span style="font-size:12px;color:var(--text-secondary);align-self:center;">Page ' + page + ' / ' + totalPages + '</span>' +
+                    '<button onclick="loadProspectDead(' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;cursor:pointer;' + (page >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Next</button>' +
+                    '</div>';
+            } catch (e) {
+                console.error('[prospects/dead]', e);
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + '</div>';
+            }
+        }
+
+        function renderProspectTable(rows, mode) {
+            if (!rows || !rows.length) {
+                return '<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px;">No prospects in this view.</div>';
+            }
+            var th = 'text-align:left;padding:10px 14px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);background:rgba(37,99,235,0.04);';
+            var head;
+            if (mode === 'emailable') {
+                head = '<tr><th style="' + th + '">Score</th><th style="' + th + '">Tier</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Email</th><th style="' + th + '">Niche</th><th style="' + th + '">Last contacted</th></tr>';
+            } else {
+                head = '<tr><th style="' + th + '">Score</th><th style="' + th + '">Tier</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Phone</th><th style="' + th + '">Niche</th><th style="' + th + '">Last called</th></tr>';
+            }
+            var body = rows.map(function(r) {
+                var id = r.id != null ? r.id : r.lead_id;
+                var business = r.business_name || r.business || r.name || '—';
+                var owner = r.owner_name || r.contact_name || '—';
+                var phone = r.owner_phone || r.phone || '';
+                var email = r.owner_email || r.email || '';
+                var niche = r.niche || r.category || '—';
+                var lastCalled = r.last_called_at || r.last_contacted_at || r.last_emailed_at;
+                var lastStr = lastCalled ? new Date(lastCalled).toLocaleDateString() : '—';
+                var score = r.prospect_score != null ? r.prospect_score : (r.score != null ? r.score : '—');
+                var strictBadge = r.owner_phone_strict ? ' <span title="Strict-pass owner phone" style="display:inline-block;padding:1px 6px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;letter-spacing:0.04em;">STRICT</span>' : '';
+                var contactCol = mode === 'emailable'
+                    ? '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;">' + escapeAdminHtml(email) + '</td>'
+                    : '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + strictBadge + '</td>';
+                return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
+                    + '<td style="padding:10px 14px;font-family:var(--font-mono);font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(score) + '</td>'
+                    + '<td style="padding:10px 14px;">' + tierBadge(r.tier) + '</td>'
+                    + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
+                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
+                    + contactCol
+                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
+                    + '<td style="padding:10px 14px;color:var(--text-muted);font-size:12px;">' + lastStr + '</td>'
+                    + '</tr>';
+            }).join('');
+            return '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+        }
+
+        function switchProspectTab(name) {
+            prospectState.tab = name;
+            // Update sub-tab buttons
+            document.querySelectorAll('.prospect-subtab').forEach(function(btn){
+                var on = btn.getAttribute('data-subtab') === name;
+                btn.classList.toggle('active', on);
+                btn.style.color = on ? 'var(--text-primary)' : 'var(--text-secondary)';
+                btn.style.borderBottomColor = on ? 'var(--blue)' : 'transparent';
+            });
+            // Show/hide tables
+            document.getElementById('prospectTableCallable').style.display  = name === 'callable'  ? '' : 'none';
+            document.getElementById('prospectTableEmailable').style.display = name === 'emailable' ? '' : 'none';
+            document.getElementById('prospectTableDead').style.display      = name === 'dead'      ? '' : 'none';
+            // Filter bar visible only for callable/emailable
+            document.getElementById('prospectFilterBar').style.display = name === 'dead' ? 'none' : 'flex';
+            // Lazy-load the chosen view
+            if (name === 'callable')  loadProspectCallable();
+            else if (name === 'emailable') loadProspectEmailable();
+            else if (name === 'dead') loadProspectDead(1);
+        }
+
+        function onProspectFilterChange() {
+            var f = prospectState.filters;
+            f.q = document.getElementById('prospectSearch').value.trim();
+            f.tier = document.getElementById('prospectTierFilter').value;
+            // Debounce 250ms so typing doesn't hammer the API.
+            clearTimeout(prospectState.searchDebounce);
+            prospectState.searchDebounce = setTimeout(function(){
+                if (prospectState.tab === 'callable') loadProspectCallable();
+                else if (prospectState.tab === 'emailable') loadProspectEmailable();
+            }, 250);
+        }
+
+        function onProspectMinScoreInput(val) {
+            document.getElementById('prospectMinScoreVal').textContent = val;
+            prospectState.filters.minScore = parseInt(val, 10) || 0;
+            clearTimeout(prospectState.searchDebounce);
+            prospectState.searchDebounce = setTimeout(function(){
+                if (prospectState.tab === 'callable') loadProspectCallable();
+                else if (prospectState.tab === 'emailable') loadProspectEmailable();
+            }, 300);
+        }
+
+        function toggleProspectNiche(niche) {
+            var arr = prospectState.filters.niches;
+            var idx = arr.indexOf(niche);
+            if (idx >= 0) arr.splice(idx, 1); else arr.push(niche);
+            loadProspectStats(); // re-render chips with updated active state
+            if (prospectState.tab === 'callable') loadProspectCallable();
+            else if (prospectState.tab === 'emailable') loadProspectEmailable();
+        }
+
+        // Click a stats card to scope to that tier.
+        document.addEventListener('click', function(ev){
+            var card = ev.target.closest && ev.target.closest('.prospect-stat-card');
+            if (!card) return;
+            var tier = card.getAttribute('data-tier');
+            if (!tier) return;
+            prospectState.filters.tier = tier;
+            var sel = document.getElementById('prospectTierFilter');
+            if (sel) sel.value = tier;
+            if (prospectState.tab !== 'callable' && prospectState.tab !== 'emailable') {
+                switchProspectTab('callable');
+            } else {
+                if (prospectState.tab === 'callable') loadProspectCallable();
+                else loadProspectEmailable();
+            }
+        });
+
+        async function openProspectDrawer(leadId, mode) {
+            mode = mode || 'callable';
+            prospectState.currentLeadId = leadId;
+            var drawer = document.getElementById('prospectDrawer');
+            var overlay = document.getElementById('prospectDrawerOverlay');
+            var content = document.getElementById('prospectDrawerContent');
+            content.innerHTML = '<div style="color:var(--text-muted);padding:20px 0;font-size:14px;">Loading prospect...</div>';
+            drawer.style.right = '0';
+            overlay.style.display = 'block';
+
+            try {
+                var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(leadId));
+                content.innerHTML = renderProspectDrawer(data, mode);
+            } catch (e) {
+                content.innerHTML = '<div style="color:var(--red);padding:20px 0;font-size:14px;">Could not load lead: ' + escapeAdminHtml(e.message) + '</div>';
+            }
+        }
+
+        function renderProspectDrawer(data, mode) {
+            var d = data || {};
+            var business = d.business_name || d.business || d.name || '—';
+            var owner    = d.owner_name || d.contact_name || '—';
+            var phone    = d.owner_phone || d.phone || '';
+            var email    = d.owner_email || d.email || '';
+            var niche    = d.niche || d.category || '';
+            var score    = d.prospect_score != null ? d.prospect_score : (d.score != null ? d.score : '—');
+            var reasoning = d.prospecting_reasoning || d.reasoning || d.talk_track || '';
+            var recProduct = d.recommended_product || d.recommendation || '';
+            var history = d.call_history || d.calls || [];
+
+            var outcomes = PROSPECT_OUTCOMES.map(function(o){
+                return '<option value="' + o.value + '">' + o.label + '</option>';
+            }).join('');
+
+            var historyHtml = history.length ? history.map(function(h){
+                var at = h.called_at || h.timestamp || h.created_at;
+                var atStr = at ? new Date(at).toLocaleString() : '';
+                return '<div style="padding:10px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
+                    + '<div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(h.outcome || '—') + '</span><span style="color:var(--text-muted);">' + atStr + '</span></div>'
+                    + (h.notes ? '<div style="margin-top:4px;color:var(--text-secondary);">' + escapeAdminHtml(h.notes) + '</div>' : '')
+                    + '</div>';
+            }).join('') : '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No prior contacts.</div>';
+
+            var contactBlock = mode === 'emailable'
+                ? (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);font-size:14px;">' + escapeAdminHtml(email) + '</a>' : '<span style="color:var(--text-muted);font-size:13px;">No owner email on file.</span>')
+                : (phone ? '<a href="tel:' + escapeAdminHtml(phone) + '" style="color:var(--blue);font-size:18px;font-family:var(--font-mono);font-weight:600;">' + escapeAdminHtml(phone) + '</a>' : '<span style="color:var(--text-muted);font-size:13px;">No phone on file.</span>');
+
+            var formId = mode === 'emailable' ? 'prospectEmailForm' : 'prospectCallForm';
+            var submitFn = mode === 'emailable' ? 'submitEmailLog()' : 'submitCallLog()';
+            var submitLabel = mode === 'emailable' ? 'Log email and next' : 'Log call and next';
+
+            return ''
+                + '<div style="margin-bottom:20px;">'
+                + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
+                + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;margin:0;">' + escapeAdminHtml(business) + '</h2>'
+                + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.tier) + '</div>'
+                + '</div>'
+
+                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
+                + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">' + (mode === 'emailable' ? 'Owner email' : 'Direct line') + (d.owner_phone_strict && mode !== 'emailable' ? ' <span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-size:10px;">STRICT</span>' : '') + '</div>'
+                + contactBlock
+                + (recProduct ? '<div style="margin-top:14px;font-size:12px;"><span style="color:var(--text-secondary);">Recommended: </span><span style="color:var(--text-primary);font-weight:600;">' + escapeAdminHtml(recProduct) + '</span></div>' : '')
+                + (reasoning ? '<div style="margin-top:10px;font-size:13px;color:var(--text-secondary);line-height:1.5;border-left:2px solid var(--blue);padding-left:10px;">' + escapeAdminHtml(reasoning) + '</div>' : '')
+                + '</div>'
+
+                + '<form id="' + formId + '" onsubmit="event.preventDefault();' + submitFn + ';return false;" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
+                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px;">' + (mode === 'emailable' ? 'Log email' : 'Log call') + '</h3>'
+                + (mode === 'emailable'
+                    ? ''
+                    : '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Outcome</label>'
+                      + '<select id="prospectOutcome" onchange="onOutcomeChange()" required style="width:100%;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;margin-bottom:12px;">' + outcomes + '</select>')
+                + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Notes</label>'
+                + '<textarea id="prospectNotes" rows="3" placeholder="What was said, who answered, next move..." style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;margin-bottom:12px;font-family:inherit;"></textarea>'
+                + (mode === 'emailable'
+                    ? ''
+                    : '<div id="prospectFollowupRow" style="display:none;">'
+                      + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Next callback</label>'
+                      + '<input id="prospectNextCallback" type="datetime-local" style="width:100%;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;margin-bottom:12px;">'
+                      + '</div>')
+                + '<button type="submit" style="width:100%;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">' + submitLabel + '</button>'
+                + '<div id="prospectFormMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);"></div>'
+                + '</form>'
+
+                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;">'
+                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Call history</h3>'
+                + historyHtml
+                + '</div>';
+        }
+
+        function onOutcomeChange() {
+            var sel = document.getElementById('prospectOutcome');
+            var row = document.getElementById('prospectFollowupRow');
+            if (!sel || !row) return;
+            var match = PROSPECT_OUTCOMES.find(function(o){ return o.value === sel.value; });
+            row.style.display = (match && match.followUp) ? 'block' : 'none';
+        }
+
+        function closeProspectDrawer() {
+            var drawer = document.getElementById('prospectDrawer');
+            var overlay = document.getElementById('prospectDrawerOverlay');
+            if (drawer)  drawer.style.right  = '-780px';
+            if (overlay) overlay.style.display = 'none';
+            prospectState.currentLeadId = null;
+        }
+
+        async function submitCallLog() {
+            var leadId = prospectState.currentLeadId;
+            if (!leadId) return;
+            var outcomeEl = document.getElementById('prospectOutcome');
+            var notesEl   = document.getElementById('prospectNotes');
+            var nextEl    = document.getElementById('prospectNextCallback');
+            var msgEl     = document.getElementById('prospectFormMsg');
+            var outcome = outcomeEl ? outcomeEl.value : '';
+            var notes   = notesEl ? notesEl.value : '';
+            var nextAt  = nextEl ? nextEl.value : '';
+            if (!outcome) return;
+
+            msgEl.textContent = 'Saving...';
+            msgEl.style.color = 'var(--text-muted)';
+            try {
+                var body = { id: leadId, outcome: outcome, notes: notes };
+                if (nextAt) body.next_callback_at = new Date(nextAt).toISOString();
+                await prospectFetchJSON('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(body) });
+                if (outcome === 'dnc_request') {
+                    try { await prospectFetchJSON('/api/prospects/dnc', { method: 'POST', body: JSON.stringify({ id: leadId }) }); }
+                    catch (e) { console.warn('[prospects/dnc]', e); }
+                }
+                advanceToNextProspect(leadId);
+            } catch (e) {
+                msgEl.style.color = 'var(--red)';
+                msgEl.textContent = 'Failed: ' + (e.message || 'unknown');
+            }
+        }
+
+        async function submitEmailLog() {
+            var leadId = prospectState.currentLeadId;
+            if (!leadId) return;
+            var notesEl = document.getElementById('prospectNotes');
+            var msgEl   = document.getElementById('prospectFormMsg');
+            var notes = notesEl ? notesEl.value : '';
+            msgEl.textContent = 'Saving...';
+            msgEl.style.color = 'var(--text-muted)';
+            try {
+                await prospectFetchJSON('/api/prospects/log-email', { method: 'POST', body: JSON.stringify({ id: leadId, notes: notes }) });
+                advanceToNextProspect(leadId);
+            } catch (e) {
+                msgEl.style.color = 'var(--red)';
+                msgEl.textContent = 'Failed: ' + (e.message || 'unknown');
+            }
+        }
+
+        function advanceToNextProspect(currentId) {
+            var rows = prospectState.rows || [];
+            var idx = rows.findIndex(function(r){ var rid = r.id != null ? r.id : r.lead_id; return String(rid) === String(currentId); });
+            // Optimistically drop the row.
+            if (idx >= 0) rows.splice(idx, 1);
+            // Re-render the visible table so the row disappears.
+            var hostId = prospectState.tab === 'emailable' ? 'prospectTableEmailable' : 'prospectTableCallable';
+            document.getElementById(hostId).innerHTML = renderProspectTable(rows, prospectState.tab);
+            closeProspectDrawer();
+            // Refresh stats counts in the background.
+            loadProspectStats();
+            // Auto-open next row for rapid-fire mode.
+            var next = rows[idx] || rows[0];
+            if (next) {
+                var nid = next.id != null ? next.id : next.lead_id;
+                setTimeout(function(){ openProspectDrawer(nid, prospectState.tab); }, 200);
+            }
         }
     </script>
 </body>
