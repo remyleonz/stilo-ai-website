@@ -49,9 +49,6 @@
             grid-template-columns: 1fr;
             min-height: 100vh;
         }
-        @media (min-width: 960px) {
-            .auth-shell { grid-template-columns: 1.1fr 0.9fr; }
-        }
 
         /* Form column */
         .auth-form-col {
@@ -318,19 +315,6 @@
         </p>
       </div>
     </div>
-    <aside class="auth-hero-col" aria-hidden="true">
-      <video autoplay muted loop playsinline>
-        <source src="https://cdn.pixabay.com/video/2024/02/08/199935-911082180_large.mp4" type="video/mp4">
-      </video>
-      <div class="auth-hero-overlay"></div>
-      <div class="auth-hero-content">
-        <div class="auth-hero-tag">STILO AI PARTNERS</div>
-        <blockquote class="auth-hero-quotes" id="heroQuote">
-          "Our ECHO agent booked 47 appointments in its first month. We didn't hire anyone. We just stopped missing calls."
-          <span class="quote-author">Miami dental practice, 6 months in</span>
-        </blockquote>
-      </div>
-    </aside>
   </div>
 
     <!--
@@ -515,24 +499,6 @@
             }
         })();
 
-        // Rotating hero quotes
-        var heroQuotes = [
-          { q: '"Our ECHO agent booked 47 appointments in its first month. We didn\u2019t hire anyone. We just stopped missing calls."', a: 'Miami dental practice, 6 months in' },
-          { q: '"IGNITE responds to leads in 4 seconds. Our close rate went from 11 to 28 percent."', a: 'Roofing contractor, Broward County' },
-          { q: '"REVIVE brought back $38k in dormant customers the first quarter. That paid for every agent we run."', a: 'Wellness salon, Coral Gables' }
-        ];
-        var qIdx = 0;
-        setInterval(function(){
-          qIdx = (qIdx + 1) % heroQuotes.length;
-          var el = document.getElementById('heroQuote');
-          if (!el) return;
-          el.style.opacity = 0;
-          setTimeout(function(){
-            el.innerHTML = heroQuotes[qIdx].q + '<span class="quote-author">' + heroQuotes[qIdx].a + '</span>';
-            el.style.transition = 'opacity 0.4s ease';
-            el.style.opacity = 1;
-          }, 400);
-        }, 6000);
     </script>
 </body>
 </html>
