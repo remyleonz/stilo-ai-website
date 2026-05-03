@@ -1397,6 +1397,13 @@ if (!canvas) { /* no-op */ } else if (reduced) {
       scrollTrigger: { trigger: h2, start: 'top 82%' },
       duration: 0
     });
+    // Fail-open: if the ScrollTrigger never fires (race conditions on
+    // first paint, layout shifts, etc.) the title would stay hidden
+    // forever because the reveal-line spans default to translateY(110%).
+    // Force-reveal after 1.2s so titles are never permanently invisible.
+    setTimeout(function(){
+      h2.querySelectorAll('.reveal-line:not(.in)').forEach(function(el){ el.classList.add('in'); });
+    }, 1200);
   });
 
   // --- Agent cards: cinematic stagger via batched ScrollTrigger ---
