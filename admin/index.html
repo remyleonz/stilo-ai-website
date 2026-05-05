@@ -3033,7 +3033,7 @@
                 }
                 return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
                     + '<td style="padding:10px 14px;font-family:var(--font-mono);font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(score) + '</td>'
-                    + '<td style="padding:10px 14px;">' + tierBadge(r.tier) + '</td>'
+                    + '<td style="padding:10px 14px;">' + tierBadge(r.tier || r.prospect_tier) + '</td>'
                     + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                     + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
                     + contactCol
@@ -3337,7 +3337,7 @@
                 + '<div style="margin-bottom:20px;">'
                 + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
                 + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;margin:0;">' + escapeAdminHtml(business) + '</h2>'
-                + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.tier) + '</div>'
+                + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.tier || d.prospect_tier) + '</div>'
                 + '</div>'
 
                 + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'

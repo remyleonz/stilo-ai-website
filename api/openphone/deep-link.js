@@ -26,16 +26,17 @@ module.exports = async function handler(req, res) {
     const prospectId = safeNumberId(q.prospect_id);
     if (prospectId == null) return res.status(400).json({ error: 'missing_prospect_id' });
 
-    const sb = serviceClient();
-    const { data: prospect, error } = await sb
-        .from('prospects')
-        .select('id, owner_phone')
+    const sb = serviceClient(); // prospecting schema
+    const { data: lead, error } = await sb
+        .from('leads')
+        .select('id, owner_phone, phone')
         .eq('id', prospectId)
         .maybeSingle();
-    if (error) return res.status(500).json({ error: 'prospect_lookup_failed', detail: error.message });
-    if (!prospect || !prospect.owner_phone) return res.status(404).json({ error: 'prospect_not_found_or_no_phone' });
+    if (error) return res.status(500).json({ error: 'lead_lookup_failed', detail: error.message });
+    const phoneRaw = lead && (lead.owner_phone || lead.phone);
+    if (!lead || !phoneRaw) return res.status(404).json({ error: 'lead_not_found_or_no_phone' });
 
-    const to = normalizePhone(prospect.owner_phone);
+    const to = normalizePhone(phoneRaw);
     const enc = encodeURIComponent(to);
 
     // Quo (formerly OpenPhone) keeps the legacy openphone:// scheme registered

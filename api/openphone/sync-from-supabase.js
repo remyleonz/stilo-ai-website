@@ -1,41 +1,54 @@
 /**
  * POST /api/openphone/sync-from-supabase
  *
- * Auto-sync receiver: a Postgres trigger on public.prospects calls this URL
- * via pg_net whenever a HOT prospect is INSERTed or a row is UPDATEd into
- * the HOT tier. The body is a Supabase-style record payload:
- *   { type: 'INSERT'|'UPDATE', record: {...prospect}, old_record?: {...} }
+ * Auto-sync receiver: a Postgres trigger on prospecting.leads calls this URL
+ * via pg_net whenever a HOT lead is INSERTed or a row is UPDATEd into the
+ * HOT tier. The body is a record payload:
+ *   { type: 'INSERT'|'UPDATE', record: {...lead}, old_record?: {...} }
  *
- * Auth: shared bearer secret in `Authorization: Bearer <SUPABASE_TRIGGER_SECRET>`
- * (set on the database via `alter database ... set app.trigger_secret = '...'`
- * and read in the trigger via current_setting).
+ * Auth: shared bearer secret matched against SUPABASE_TRIGGER_SECRET.
  *
- * Effect: creates the contact in Quo (or updates if quo_contact_id is set on
- * the prospect row), then writes back the new quo_contact_id so future
- * updates patch instead of duplicate-create.
- *
- * Public endpoint, gated only by the bearer header — no admin JWT, since
- * Postgres triggers don't have user sessions.
+ * Effect: creates a contact in Quo (or PATCHes if quo_contact_id is already
+ * set on the lead row), then writes the contact id back so future updates
+ * patch instead of duplicate-create. Lead's outreach script + business
+ * profile go in the contact's role field so when Remy taps the contact in
+ * the iPhone Quo app he sees what to say before dialing.
  */
 
 const { serviceClient, openphoneFetch } = require('./_shared');
 
-function buildContactBody(p) {
-    const parts = (p.owner_name || '').trim().split(/\s+/);
+function buildContactBody(lead) {
+    // Map David's column names — `name`=business name, owner_name=person,
+    // tier=lowercase hot/warm/cold, prospect_tier sometimes as alias.
+    const businessName = lead.name || lead.business_name || '(no business name)';
+    const tier = (lead.prospect_tier || lead.tier || 'warm').toUpperCase();
+    const score = lead.prospect_score != null ? lead.prospect_score : (lead.score != null ? lead.score : '?');
+    const niche = lead.category || lead.niche || '';
+    const ownerNameParts = (lead.owner_name || '').trim().split(/\s+/);
+    const ownerPhone = lead.owner_phone || lead.phone || null;
+    const ownerEmail = lead.owner_email || lead.email || null;
+
     const lines = [];
-    lines.push((p.tier || 'WARM') + ' lead · score ' + (p.prospect_score != null ? p.prospect_score : '?') + (p.niche ? ' · ' + p.niche : ''));
-    if (p.recommended_product) lines.push('PRODUCT: ' + p.recommended_product);
-    if (p.talk_track) lines.push('SCRIPT: ' + p.talk_track);
-    if (p.next_callback_at) lines.push('CALLBACK DUE: ' + p.next_callback_at);
+    lines.push(tier + ' lead · score ' + score + (niche ? ' · ' + niche : ''));
+    if (lead.matched_product_name) lines.push('PRODUCT: ' + lead.matched_product_name);
+    if (lead.outreach_angle)       lines.push('ANGLE: ' + lead.outreach_angle);
+    if (lead.problem_identified)   lines.push('PROBLEM: ' + lead.problem_identified);
+    if (lead.business_profile)     lines.push('ABOUT: ' + (typeof lead.business_profile === 'string' ? lead.business_profile.slice(0, 400) : ''));
+    if (lead.outreach_draft && typeof lead.outreach_draft === 'string') {
+        // outreach_draft is JSON of email variants; not useful in role. Skip.
+    }
+    if (lead.scoring_reasoning)    lines.push('WHY: ' + lead.scoring_reasoning);
+    if (lead.next_action_due_at)   lines.push('NEXT: ' + lead.next_action_due_at);
+
     return {
-        externalId: 'stilo_prospect_' + p.id,
+        externalId: 'stilo_lead_' + lead.id,
         defaultFields: {
-            firstName: parts[0] || p.business_name,
-            lastName: parts.slice(1).join(' ') || '',
-            company: p.business_name,
+            firstName: ownerNameParts[0] || businessName,
+            lastName: ownerNameParts.slice(1).join(' ') || '',
+            company: businessName,
             role: lines.join('\n'),
-            phoneNumbers: p.owner_phone ? [{ name: 'Owner', value: p.owner_phone }] : [],
-            emails: p.owner_email ? [{ name: 'Work', value: p.owner_email }] : []
+            phoneNumbers: ownerPhone ? [{ name: 'Owner', value: ownerPhone }] : [],
+            emails: ownerEmail ? [{ name: 'Work', value: ownerEmail }] : []
         }
     };
 }
@@ -60,30 +73,30 @@ module.exports = async function handler(req, res) {
         } catch { return res.status(400).json({ error: 'invalid_json' }); }
     }
 
-    const p = body.record || body.new_record || body.new;
-    if (!p || !p.id) return res.status(400).json({ error: 'no_record' });
-    if (p.tier !== 'HOT') return res.status(200).json({ ok: true, skipped: 'not_hot' });
-    if (!p.owner_phone) return res.status(200).json({ ok: true, skipped: 'no_phone' });
+    const lead = body.record || body.new_record || body.new;
+    if (!lead || lead.id == null) return res.status(400).json({ error: 'no_record' });
+    const tierLc = String(lead.prospect_tier || lead.tier || '').toLowerCase();
+    if (tierLc !== 'hot') return res.status(200).json({ ok: true, skipped: 'not_hot' });
+    const phone = lead.owner_phone || lead.phone;
+    if (!phone) return res.status(200).json({ ok: true, skipped: 'no_phone' });
 
-    const sb = serviceClient();
-    const contactBody = buildContactBody(p);
+    const sb = serviceClient(); // points at prospecting schema
+    const contactBody = buildContactBody(lead);
 
     let action, contactId;
-    if (p.quo_contact_id) {
-        // Existing contact — patch it
+    if (lead.quo_contact_id) {
         const r = await openphoneFetch({
             method: 'PATCH',
-            path: '/contacts/' + encodeURIComponent(p.quo_contact_id),
+            path: '/contacts/' + encodeURIComponent(lead.quo_contact_id),
             body: contactBody
         });
         if (r.status >= 400) {
-            // Maybe it was deleted on Quo side — try create as fallback
             const c = await openphoneFetch({ method: 'POST', path: '/contacts', body: contactBody });
             if (c.status >= 400) return res.status(c.status).json({ error: 'quo_create_failed', detail: c.json });
             contactId = c.json && c.json.data && c.json.data.id;
             action = 'recreated';
         } else {
-            contactId = p.quo_contact_id;
+            contactId = lead.quo_contact_id;
             action = 'updated';
         }
     } else {
@@ -93,8 +106,8 @@ module.exports = async function handler(req, res) {
         action = 'created';
     }
 
-    if (contactId && contactId !== p.quo_contact_id) {
-        await sb.from('prospects').update({ quo_contact_id: contactId }).eq('id', p.id);
+    if (contactId && contactId !== lead.quo_contact_id) {
+        await sb.from('leads').update({ quo_contact_id: contactId }).eq('id', lead.id);
     }
-    return res.status(200).json({ ok: true, action, prospect_id: p.id, quo_contact_id: contactId });
+    return res.status(200).json({ ok: true, action, lead_id: lead.id, quo_contact_id: contactId });
 };

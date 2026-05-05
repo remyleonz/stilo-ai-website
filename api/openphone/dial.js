@@ -32,22 +32,23 @@ module.exports = async function handler(req, res) {
     }
 
     const body = await readJsonBody(req);
-    const prospectId = safeNumberId(body.prospect_id);
+    const prospectId = safeNumberId(body.lead_id || body.prospect_id);
     const fromNumberId = body.from_number_id || null;
 
-    if (prospectId == null) return res.status(400).json({ error: 'missing_prospect_id' });
+    if (prospectId == null) return res.status(400).json({ error: 'missing_lead_id' });
 
-    const sb = serviceClient();
-    const { data: prospect, error } = await sb
-        .from('prospects')
-        .select('id, business_name, owner_phone, owner_name')
+    const sb = serviceClient(); // prospecting schema
+    const { data: lead, error } = await sb
+        .from('leads')
+        .select('id, name, owner_phone, phone, owner_name')
         .eq('id', prospectId)
         .maybeSingle();
-    if (error) return res.status(500).json({ error: 'prospect_lookup_failed', detail: error.message });
-    if (!prospect) return res.status(404).json({ error: 'prospect_not_found' });
-    if (!prospect.owner_phone) return res.status(400).json({ error: 'prospect_has_no_phone' });
+    if (error) return res.status(500).json({ error: 'lead_lookup_failed', detail: error.message });
+    if (!lead) return res.status(404).json({ error: 'lead_not_found' });
+    const phoneRaw = lead.owner_phone || lead.phone;
+    if (!phoneRaw) return res.status(400).json({ error: 'lead_has_no_phone' });
 
-    const toNumber = normalizePhone(prospect.owner_phone);
+    const toNumber = normalizePhone(phoneRaw);
     const fromNumber = fromNumberId
         || process.env.OPENPHONE_NUMBER_PRIMARY
         || null;
@@ -62,6 +63,7 @@ module.exports = async function handler(req, res) {
             to: [toNumber],
             userId: process.env.OPENPHONE_USER_ID,
             metadata: {
+                lead_id: String(prospectId),
                 prospect_id: String(prospectId),
                 logged_by: gate.email
             }
@@ -75,9 +77,9 @@ module.exports = async function handler(req, res) {
     const openphoneCallId = (dial.json && (dial.json.id || dial.json.callId || (dial.json.data && dial.json.data.id))) || null;
 
     if (openphoneCallId) {
-        await sb.from('prospect_calls').upsert({
+        await sb.from('lead_calls').upsert({
             openphone_call_id: openphoneCallId,
-            prospect_id: prospectId,
+            lead_id: prospectId,
             direction: 'outbound',
             from_number: fromNumber,
             to_number: toNumber,
@@ -92,6 +94,6 @@ module.exports = async function handler(req, res) {
         call_id: openphoneCallId,
         from: fromNumber,
         to: toNumber,
-        prospect_id: prospectId
+        lead_id: prospectId
     });
 };

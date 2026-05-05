@@ -19,8 +19,12 @@ const { createClient } = require('@supabase/supabase-js');
 const OPENPHONE_API_BASE = 'https://api.openphone.com/v1';
 
 function serviceClient() {
+    // The openphone routes read/write the prospecting schema (David's lead
+    // pipeline tables). Default schema is set explicitly so we don't rely on
+    // the role's search_path.
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
-        auth: { persistSession: false }
+        auth: { persistSession: false },
+        db: { schema: 'prospecting' }
     });
 }
 

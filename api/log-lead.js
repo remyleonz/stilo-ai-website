@@ -96,7 +96,7 @@ module.exports = async function handleLogLead(req, res) {
 
   try {
     const { data, error } = await supabase
-      .from('leads')
+      .from('quiz_submissions')
       .insert(row)
       .select('id')
       .single();

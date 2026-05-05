@@ -69,21 +69,10 @@ async function assertAdmin(req, res) {
     return { ok: true, email: email };
 }
 
-function shouldUseShim() {
-    const base = process.env.PROSPECTING_API_URL;
-    if (!base) return true;
-    const lower = String(base).toLowerCase().trim();
-    return lower === 'local' || lower === 'shim' || lower === 'supabase';
-}
-
 /**
- * Forward a request to PROSPECTING_API_URL.
- *
- * If PROSPECTING_API_URL is missing or set to "local"/"shim"/"supabase", the
- * call is dispatched to the in-process Supabase shim instead (see
- * shim_dispatcher.js). The shim mimics David's API contract one-for-one so
- * the existing route files don't need to know whether they're hitting the
- * real upstream or the local shim.
+ * Forward a request to PROSPECTING_API_URL (David's FastAPI Cloud Run service
+ * at stilo-api-...run.app). The shim_dispatcher fallback was removed when
+ * David's service went live — there's no in-process stand-in anymore.
  *
  * @param {object} opts
  * @param {string} opts.method   'GET' | 'POST' (others rejected upstream)
@@ -93,14 +82,6 @@ function shouldUseShim() {
  * @returns {Promise<{status:number, json:any}>}
  */
 async function forwardToProspecting(opts) {
-    if (shouldUseShim()) {
-        try {
-            const dispatcher = require('./shim_dispatcher');
-            return await dispatcher.dispatch(opts);
-        } catch (e) {
-            return { status: 500, json: { error: 'shim_dispatch_failed', detail: String(e.message || e) } };
-        }
-    }
     const base = process.env.PROSPECTING_API_URL;
     const token = process.env.PROSPECTING_API_TOKEN;
     if (!base) {

@@ -1,16 +1,17 @@
 /**
  * POST /api/openphone/webhook
  *
- * OpenPhone delivers post-call events here:
+ * OpenPhone (now Quo) delivers post-call events here:
  *   - call.completed                (final outcome, duration, participants)
  *   - call.recording.completed      (recording_url ready)
  *   - call.transcript.completed     (transcript text ready)
  *   - call.summary.completed        (AI summary ready)
  *
- * Each fires independently. We upsert into public.prospect_calls keyed on
- * `openphone_call_id` so the row gets enriched as each piece lands. After
- * call.completed we also stamp the parent prospect's status + last_called_at
- * so the row drops out of "Cold Call Ready" and into the right bucket.
+ * Each fires independently. We upsert into prospecting.lead_calls keyed on
+ * openphone_call_id so the row gets enriched as each piece lands. After
+ * call.completed we also stamp the parent lead's last_called_at +
+ * last_called_outcome (David's column names) so the row drops out of "Cold
+ * Call Ready" and into the right bucket.
  *
  * Public endpoint — admin gate would block OpenPhone. Auth is the HMAC
  * signature on the body; reject anything that doesn't verify.
@@ -30,28 +31,32 @@ function deriveOutcome(callPayload) {
     return 'answered';
 }
 
-async function findOrStubProspect(sb, phone) {
+async function findOrStubLead(sb, phone) {
     if (!phone) return null;
     const norm = normalizePhone(phone);
+    // David's leads table uses both `owner_phone` and `phone` (business line).
+    // Match on either.
     const { data: existing } = await sb
-        .from('prospects')
+        .from('leads')
         .select('id')
-        .eq('owner_phone', norm)
+        .or('owner_phone.eq.' + norm + ',phone.eq.' + norm)
         .maybeSingle();
     if (existing && existing.id) return existing.id;
+    // Stub a minimal lead row so inbound missed calls don't get dropped.
     const { data: created, error } = await sb
-        .from('prospects')
+        .from('leads')
         .insert({
-            business_name: 'Unknown caller (' + norm + ')',
+            name: 'Unknown caller (' + norm + ')',
             owner_phone: norm,
-            status: 'callback',
-            tier: 'COOL',
-            callback_reason: 'inbound_unknown'
+            phone: norm,
+            tier: 'cold',
+            outreach_status: 'not_contacted',
+            pipeline_status: 'inbound_unknown'
         })
         .select('id')
         .single();
     if (error) {
-        console.error('[openphone/webhook] failed to stub prospect:', error);
+        console.error('[openphone/webhook] failed to stub lead:', error);
         return null;
     }
     return created.id;
@@ -59,9 +64,9 @@ async function findOrStubProspect(sb, phone) {
 
 async function upsertCall(sb, fields) {
     const { data, error } = await sb
-        .from('prospect_calls')
+        .from('lead_calls')
         .upsert(fields, { onConflict: 'openphone_call_id' })
-        .select('id, prospect_id, outcome, called_at')
+        .select('id, lead_id, outcome, called_at')
         .single();
     if (error) throw error;
     return data;
@@ -118,33 +123,34 @@ module.exports = async function handler(req, res) {
     }
 
     const { data: existingRow } = await sb
-        .from('prospect_calls')
-        .select('id, prospect_id')
+        .from('lead_calls')
+        .select('id, lead_id')
         .eq('openphone_call_id', openphoneCallId)
         .maybeSingle();
 
-    let prospectId = existingRow && existingRow.prospect_id;
-    if (!prospectId) {
+    let leadId = existingRow && existingRow.lead_id;
+    if (!leadId) {
         // Resolution order:
-        //  1. metadata.prospect_id  (set when admin-side dial.js eventually triggers a call)
-        //  2. contact.externalId    (set when sync-contacts.js pushed this prospect to Quo as a contact —
-        //                            tag is "stilo_prospect_<id>". Reliable across Mac/iPhone/web clients.)
-        //  3. phone-number match    (fallback — works for inbound from un-synced numbers)
-        const metaProspectId = (call.metadata && (call.metadata.prospect_id || call.metadata.prospectId)) || null;
-        if (metaProspectId) {
-            prospectId = Number(metaProspectId) || null;
+        //  1. metadata.lead_id / prospect_id (when an admin-side flow eventually triggers a call)
+        //  2. contact.externalId tag "stilo_lead_<id>" (set by the autosync trigger when pushing
+        //     HOT leads to Quo as contacts — reliable across Mac/iPhone/web clients)
+        //  3. phone-number match against owner_phone or business phone
+        const metaLeadId = (call.metadata && (call.metadata.lead_id || call.metadata.leadId
+            || call.metadata.prospect_id || call.metadata.prospectId)) || null;
+        if (metaLeadId) {
+            leadId = Number(metaLeadId) || null;
         }
-        if (!prospectId) {
+        if (!leadId) {
             const contact = call.contact || (data && data.contact) || null;
             const externalId = contact && (contact.externalId || (contact.externalIds && contact.externalIds[0])) || '';
-            const m = String(externalId).match(/^stilo_prospect_(\d+)$/);
-            if (m) prospectId = Number(m[1]) || null;
+            const m = String(externalId).match(/^stilo_(?:lead|prospect)_(\d+)$/);
+            if (m) leadId = Number(m[1]) || null;
         }
-        if (!prospectId && counterparty) {
-            prospectId = await findOrStubProspect(sb, counterparty);
+        if (!leadId && counterparty) {
+            leadId = await findOrStubLead(sb, counterparty);
         }
     }
-    if (prospectId) baseFields.prospect_id = prospectId;
+    if (leadId) baseFields.lead_id = leadId;
 
     try {
         if (type === 'call.completed' || type === 'call.ended' || type === 'call.summary.completed') {
@@ -169,25 +175,26 @@ module.exports = async function handler(req, res) {
 
         const callRow = await upsertCall(sb, baseFields);
 
-        if (baseFields.outcome) {
-            const updates = { last_called_at: baseFields.called_at, updated_at: new Date().toISOString() };
+        if (baseFields.outcome && callRow.lead_id) {
+            // David's leads table tracks last_called_at + last_called_outcome
+            // + call_attempts + next_action_due_at directly on the row.
+            const updates = {
+                last_called_at: baseFields.called_at,
+                last_called_outcome: baseFields.outcome,
+                call_attempts: 1, // backend will increment via its own logic; use 1 as a floor
+                updated_at: new Date().toISOString()
+            };
             if (baseFields.outcome === 'missed_inbound') {
-                updates.status = 'callback';
-                updates.callback_reason = 'missed_inbound';
-                updates.next_callback_at = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+                updates.next_action_type = 'callback';
+                updates.next_action_due_at = new Date(Date.now() + 60 * 60 * 1000).toISOString();
             } else if (baseFields.outcome === 'voicemail' || baseFields.outcome === 'no_answer') {
-                updates.status = 'callback';
-                updates.callback_reason = baseFields.outcome;
-                updates.next_callback_at = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
-            } else if (baseFields.outcome === 'answered') {
-                updates.status = 'called';
+                updates.next_action_type = 'callback';
+                updates.next_action_due_at = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
             }
-            if (callRow.prospect_id) {
-                await sb.from('prospects').update(updates).eq('id', callRow.prospect_id);
-            }
+            await sb.from('leads').update(updates).eq('id', callRow.lead_id);
         }
 
-        return res.status(200).json({ ok: true, call_id: openphoneCallId, prospect_id: callRow.prospect_id });
+        return res.status(200).json({ ok: true, call_id: openphoneCallId, lead_id: callRow.lead_id });
     } catch (e) {
         console.error('[openphone/webhook] processing error:', e);
         return res.status(500).json({ error: 'webhook_processing_failed', detail: String(e.message || e) });
