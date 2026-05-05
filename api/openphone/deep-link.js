@@ -47,6 +47,7 @@ module.exports = async function handler(req, res) {
         to: to,
         desktop: 'openphone://call?to=' + enc,
         desktop_alt: 'quo://call?to=' + enc,
-        web: 'https://my.openphone.com/calls/new?to=' + enc
+        web: 'https://app.quo.com/calls/new?to=' + enc,
+        web_legacy: 'https://my.openphone.com/calls/new?to=' + enc
     });
 };
