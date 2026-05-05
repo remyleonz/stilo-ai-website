@@ -3116,40 +3116,19 @@
             return openProspectInOpenPhoneApp(prospectId);
         }
 
-        async function openProspectInOpenPhoneApp(prospectId) {
-            var msgEl = document.getElementById('prospectDialerMsg');
+        // Anchor click handler: copy phone to clipboard SYNCHRONOUSLY (clipboard
+        // API requires user-gesture context, can't be async-await before write),
+        // then let the anchor's default action open the URL in a new tab.
+        function onCallButtonClick(ev, phone) {
             try {
-                var data = await prospectFetchJSON('/api/openphone/deep-link?prospect_id=' + encodeURIComponent(prospectId));
+                navigator.clipboard.writeText(phone);
+                var msgEl = document.getElementById('prospectDialerMsg');
                 if (msgEl) {
-                    msgEl.style.color = 'var(--text-muted)';
-                    msgEl.textContent = 'Opening Quo with ' + data.to + ' pre-filled… if the desktop app doesn\'t come up, click "Open in Quo web" below.';
+                    msgEl.style.color = 'var(--blue)';
+                    msgEl.innerHTML = '<strong>' + escapeAdminHtml(phone) + ' copied to clipboard.</strong> Paste with Cmd+V into Quo\'s dialer and hit call. Transcript lands here in ~1s after hangup.';
                 }
-                // Try the modern Quo scheme first via a hidden iframe (avoids
-                // a navigation error page if no handler is registered).
-                var f = document.createElement('iframe');
-                f.style.display = 'none';
-                f.src = data.desktop;
-                document.body.appendChild(f);
-                // Fall back to the legacy openphone:// scheme after 400ms.
-                setTimeout(function () {
-                    var f2 = document.createElement('iframe');
-                    f2.style.display = 'none';
-                    f2.src = data.desktop_legacy || 'openphone://call?to=' + encodeURIComponent(data.to);
-                    document.body.appendChild(f2);
-                }, 400);
-                // Surface manual fallback links so the user can pick whichever path works.
-                if (msgEl) {
-                    msgEl.innerHTML = 'Opening Quo with ' + escapeAdminHtml(data.to) + ' pre-filled. If the app didn\'t open, click here:'
-                        + ' <a href="' + escapeAdminHtml(data.web) + '" target="_blank" style="color:var(--blue);text-decoration:underline;">Open in Quo web</a>'
-                        + ' &middot; <a href="tel:' + escapeAdminHtml(data.to) + '" style="color:var(--blue);text-decoration:underline;">Use system phone (no transcript)</a>';
-                }
-                // No more polling — Supabase Realtime push handles the refresh.
-            } catch (e) {
-                if (msgEl) {
-                    msgEl.style.color = 'var(--red)';
-                    msgEl.textContent = 'Could not build deep-link: ' + (e.message || 'unknown');
-                }
-            }
+            } catch (e) { console.warn('clipboard write failed:', e); }
+            // Don't preventDefault — the anchor opens its href naturally.
         }
 
         async function copyProspectPhone(phone) {
@@ -3157,10 +3136,21 @@
                 await navigator.clipboard.writeText(phone);
                 var msgEl = document.getElementById('prospectDialerMsg');
                 if (msgEl) {
-                    msgEl.style.color = 'var(--text-muted)';
-                    msgEl.textContent = 'Copied ' + phone + ' to clipboard.';
+                    msgEl.style.color = 'var(--blue)';
+                    msgEl.textContent = phone + ' copied to clipboard.';
                 }
             } catch (_) {}
+        }
+
+        // Legacy stub — anything still calling this just defers to the
+        // primary button's click handler. Kept so Callbacks-tab "Call now"
+        // row buttons still resolve.
+        async function openProspectInOpenPhoneApp(prospectId) {
+            try {
+                var data = await prospectFetchJSON('/api/openphone/deep-link?prospect_id=' + encodeURIComponent(prospectId));
+                navigator.clipboard.writeText(data.to).catch(function(){});
+                window.open(data.web, '_blank');
+            } catch (e) { console.error('dial deep-link failed:', e); }
         }
 
         async function addProspectToCallbackList(prospectId) {
@@ -3307,6 +3297,11 @@
                     var sel = String(n.id) === String(prospectState.openphoneSelectedId) ? ' selected' : '';
                     return '<option value="' + escapeAdminHtml(n.id) + '"' + sel + '>' + escapeAdminHtml(n.name || n.number) + '</option>';
                 }).join('');
+                var encPhone = encodeURIComponent(phone);
+                // Two real anchor links — Chrome lets these launch protocol/universal-link handlers reliably,
+                // unlike the iframe approach which was silently blocked.
+                var appUrl = 'https://my.openphone.com/calls/new?to=' + encPhone; // universal link → opens Quo Mac/iPhone app on the user's machine
+                var webUrl = 'https://my.openphone.com/calls/new?to=' + encPhone; // same URL — Quo's web app fallback
                 dialerBlock = ''
                     + '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">'
                       + (lineOptions
@@ -3314,10 +3309,20 @@
                           : '<span style="font-size:11px;color:var(--text-muted);">OpenPhone lines not loaded</span>')
                     + '</div>'
                     + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'
-                      + '<button id="prospectRingBtn" type="button" onclick="openProspectInOpenPhoneApp(' + JSON.stringify(d.id) + ')" style="flex:2;min-width:200px;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">Call in Quo</button>'
-                      + '<button type="button" onclick="copyProspectPhone(' + JSON.stringify(phone) + ')" title="Copy phone to clipboard" style="flex:1;min-width:80px;padding:10px 14px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;">Copy</button>'
+                      // Primary: anchor styled as button. Click copies phone, then the browser opens the
+                      // universal link → macOS hands it to Quo app (tested working with this same URL).
+                      + '<a href="' + escapeAdminHtml(appUrl) + '" target="_blank" rel="noopener" '
+                        + 'onclick="onCallButtonClick(event, ' + JSON.stringify(phone) + ')" '
+                        + 'style="flex:2;min-width:200px;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:inline-block;">Call in Quo (app)</a>'
+                      + '<a href="' + escapeAdminHtml(webUrl) + '" target="_blank" rel="noopener" '
+                        + 'onclick="onCallButtonClick(event, ' + JSON.stringify(phone) + ')" '
+                        + 'style="flex:1;min-width:140px;padding:10px 14px;background:transparent;border:1px solid var(--blue);border-radius:8px;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:inline-block;">Call in Quo (web)</a>'
                     + '</div>'
-                    + '<div id="prospectDialerMsg" style="margin-top:8px;font-size:12px;color:var(--text-muted);min-height:16px;">Pick the line to dial from above, click Call in Quo, then tap the green call button in the Quo app. Transcript lands here automatically after hangup.</div>';
+                    + '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">'
+                      + '<button type="button" onclick="copyProspectPhone(' + JSON.stringify(phone) + ')" title="Copy phone to clipboard" style="flex:1;min-width:80px;padding:6px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">Copy phone</button>'
+                      + '<a href="tel:' + escapeAdminHtml(phone) + '" style="flex:1;min-width:160px;padding:6px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:inline-block;">Use system phone (no transcript)</a>'
+                    + '</div>'
+                    + '<div id="prospectDialerMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);min-height:16px;">Click Call in Quo. Phone number gets copied to your clipboard automatically — paste it into Quo\'s dialer with Cmd+V, then hit call. Transcript lands here in ~1s after hangup (no need to keep this tab open).</div>';
             }
 
             var contactBlock = mode === 'emailable'
