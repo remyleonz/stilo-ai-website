@@ -125,9 +125,20 @@ module.exports = async function handler(req, res) {
 
     let prospectId = existingRow && existingRow.prospect_id;
     if (!prospectId) {
+        // Resolution order:
+        //  1. metadata.prospect_id  (set when admin-side dial.js eventually triggers a call)
+        //  2. contact.externalId    (set when sync-contacts.js pushed this prospect to Quo as a contact —
+        //                            tag is "stilo_prospect_<id>". Reliable across Mac/iPhone/web clients.)
+        //  3. phone-number match    (fallback — works for inbound from un-synced numbers)
         const metaProspectId = (call.metadata && (call.metadata.prospect_id || call.metadata.prospectId)) || null;
         if (metaProspectId) {
             prospectId = Number(metaProspectId) || null;
+        }
+        if (!prospectId) {
+            const contact = call.contact || (data && data.contact) || null;
+            const externalId = contact && (contact.externalId || (contact.externalIds && contact.externalIds[0])) || '';
+            const m = String(externalId).match(/^stilo_prospect_(\d+)$/);
+            if (m) prospectId = Number(m[1]) || null;
         }
         if (!prospectId && counterparty) {
             prospectId = await findOrStubProspect(sb, counterparty);
