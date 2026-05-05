@@ -75,14 +75,45 @@ module.exports = async function handler(req, res) {
 
     const lead = body.record || body.new_record || body.new;
     if (!lead || lead.id == null) return res.status(400).json({ error: 'no_record' });
-    const tierLc = String(lead.prospect_tier || lead.tier || '').toLowerCase();
-    if (tierLc !== 'hot') return res.status(200).json({ ok: true, skipped: 'not_hot' });
-    const phone = lead.owner_phone || lead.phone;
-    if (!phone) return res.status(200).json({ ok: true, skipped: 'no_phone' });
-
     const sb = serviceClient(); // points at prospecting schema
-    const contactBody = buildContactBody(lead);
 
+    // Compute "should this lead be in Quo Contacts right now?" — the SAME
+    // predicate the trigger uses, computed here too so we don't trust the
+    // payload's `eligible_now` flag in case schema drift sneaks in.
+    const tierLc = String(lead.prospect_tier || lead.tier || '').toLowerCase();
+    const phone = lead.owner_phone || lead.phone;
+    const eligibleNow = (
+        tierLc === 'hot'
+        && lead.do_not_call !== true
+        && (lead.last_called_outcome || '') !== 'booked_meeting'
+        && !!phone
+    );
+
+    // ---- DELETE PATH: lead is no longer eligible but has a Quo contact ----
+    if (!eligibleNow) {
+        if (!lead.quo_contact_id) {
+            return res.status(200).json({ ok: true, action: 'noop_not_eligible' });
+        }
+        const reason = lead.do_not_call === true
+            ? 'do_not_call'
+            : (lead.last_called_outcome === 'booked_meeting'
+                ? 'booked_meeting'
+                : (tierLc !== 'hot' ? 'tier_demoted_to_' + (tierLc || 'unknown') : 'no_phone'));
+        const del = await openphoneFetch({
+            method: 'DELETE',
+            path: '/contacts/' + encodeURIComponent(lead.quo_contact_id)
+        });
+        // 404 means it was already deleted on Quo side — treat as success.
+        const ok = del.status < 400 || del.status === 404;
+        if (ok) {
+            await sb.from('leads').update({ quo_contact_id: null }).eq('id', lead.id);
+            return res.status(200).json({ ok: true, action: 'deleted', reason: reason, lead_id: lead.id });
+        }
+        return res.status(del.status).json({ error: 'quo_delete_failed', detail: del.json, reason: reason });
+    }
+
+    // ---- UPSERT PATH: lead IS eligible, ensure Quo contact reflects state ----
+    const contactBody = buildContactBody(lead);
     let action, contactId;
     if (lead.quo_contact_id) {
         const r = await openphoneFetch({
@@ -91,6 +122,7 @@ module.exports = async function handler(req, res) {
             body: contactBody
         });
         if (r.status >= 400) {
+            // Maybe it was deleted on Quo side — fall through to create.
             const c = await openphoneFetch({ method: 'POST', path: '/contacts', body: contactBody });
             if (c.status >= 400) return res.status(c.status).json({ error: 'quo_create_failed', detail: c.json });
             contactId = c.json && c.json.data && c.json.data.id;
