@@ -2759,9 +2759,7 @@
             loaded: false,
             openphoneNumbers: [],
             openphoneSelectedId: null,
-            transcriptPoll: null,
-            transcriptPollExpectedCallId: null,
-            transcriptPollLastCount: 0
+            realtimeChannel: null
         };
 
         var PROSPECT_OUTCOMES = [
@@ -2817,11 +2815,75 @@
                 loadProspectCallable();
                 loadOpenPhoneNumbers();
                 loadProspectCallbackBadge();
+                subscribeToProspectRealtime();
             } else {
                 // Quick refresh of stats so counts stay current.
                 loadProspectStats();
                 loadProspectCallbackBadge();
             }
+        }
+
+        // Push-based update path: Supabase Realtime over WebSocket. Whenever
+        // the OpenPhone webhook writes to public.prospects or
+        // public.prospect_calls, a postgres_changes event fires here — no
+        // polling, no missed updates if the tab was closed during the call.
+        function subscribeToProspectRealtime() {
+            if (prospectState.realtimeChannel) return; // already subscribed
+            try {
+                var channel = sb.channel('prospect-events')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prospect_calls' }, function (payload) {
+                        onRealtimeCallInsert(payload.new);
+                    })
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'prospect_calls' }, function (payload) {
+                        onRealtimeCallInsert(payload.new); // same handler — drawer + toast
+                    })
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'prospects' }, function (payload) {
+                        onRealtimeProspectChange(payload.new, payload.old);
+                    })
+                    .subscribe(function (status) {
+                        if (status === 'SUBSCRIBED') console.log('[realtime] subscribed to prospect events');
+                        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[realtime] subscribe status:', status);
+                    });
+                prospectState.realtimeChannel = channel;
+            } catch (e) {
+                console.warn('[realtime] could not subscribe:', e);
+            }
+        }
+
+        function onRealtimeCallInsert(callRow) {
+            if (!callRow) return;
+            // If the open drawer is for this prospect, refresh it immediately.
+            if (prospectState.currentLeadId && String(prospectState.currentLeadId) === String(callRow.prospect_id)) {
+                refreshOpenDrawer(callRow.prospect_id);
+            }
+            // Toast for transcripts specifically (the satisfying one).
+            if (callRow.transcript) {
+                showTranscriptToast(callRow.prospect_id);
+            }
+        }
+
+        function onRealtimeProspectChange(newRow, oldRow) {
+            if (!newRow) return;
+            // Status change → row should leave/join visible tables. Refresh
+            // the active list and the callback badge.
+            if (oldRow && oldRow.status !== newRow.status) {
+                if (prospectState.tab === 'callable')   loadProspectCallable();
+                else if (prospectState.tab === 'callbacks') loadProspectCallbacks();
+                loadProspectStats();
+                loadProspectCallbackBadge();
+            }
+            if (prospectState.currentLeadId && String(prospectState.currentLeadId) === String(newRow.id)) {
+                refreshOpenDrawer(newRow.id);
+            }
+        }
+
+        async function refreshOpenDrawer(prospectId) {
+            var content = document.getElementById('prospectDrawerContent');
+            if (!content || prospectState.currentLeadId !== prospectId && String(prospectState.currentLeadId) !== String(prospectId)) return;
+            try {
+                var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(prospectId));
+                content.innerHTML = renderProspectDrawer(data, prospectState.tab === 'emailable' ? 'emailable' : 'callable');
+            } catch (_) { /* swallow — next event will retry */ }
         }
 
         async function loadProspectCallbackBadge() {
@@ -3058,16 +3120,30 @@
             var msgEl = document.getElementById('prospectDialerMsg');
             try {
                 var data = await prospectFetchJSON('/api/openphone/deep-link?prospect_id=' + encodeURIComponent(prospectId));
-                // Try the desktop scheme first; fall back to the web URL if no
-                // handler is registered. Then start the transcript poll so the
-                // drawer auto-refreshes when the call ends.
-                window.location.href = data.desktop;
-                setTimeout(function(){ window.open(data.web, '_blank'); }, 1000);
                 if (msgEl) {
                     msgEl.style.color = 'var(--text-muted)';
-                    msgEl.textContent = 'Quo opening with ' + data.to + ' pre-filled. Tap call inside the app, then come back — transcript will land here after hangup.';
+                    msgEl.textContent = 'Opening Quo with ' + data.to + ' pre-filled… if the desktop app doesn\'t come up, click "Open in Quo web" below.';
                 }
-                startTranscriptPoll(prospectId, null);
+                // Try the modern Quo scheme first via a hidden iframe (avoids
+                // a navigation error page if no handler is registered).
+                var f = document.createElement('iframe');
+                f.style.display = 'none';
+                f.src = data.desktop;
+                document.body.appendChild(f);
+                // Fall back to the legacy openphone:// scheme after 400ms.
+                setTimeout(function () {
+                    var f2 = document.createElement('iframe');
+                    f2.style.display = 'none';
+                    f2.src = data.desktop_legacy || 'openphone://call?to=' + encodeURIComponent(data.to);
+                    document.body.appendChild(f2);
+                }, 400);
+                // Surface manual fallback links so the user can pick whichever path works.
+                if (msgEl) {
+                    msgEl.innerHTML = 'Opening Quo with ' + escapeAdminHtml(data.to) + ' pre-filled. If the app didn\'t open, click here:'
+                        + ' <a href="' + escapeAdminHtml(data.web) + '" target="_blank" style="color:var(--blue);text-decoration:underline;">Open in Quo web</a>'
+                        + ' &middot; <a href="tel:' + escapeAdminHtml(data.to) + '" style="color:var(--blue);text-decoration:underline;">Use system phone (no transcript)</a>';
+                }
+                // No more polling — Supabase Realtime push handles the refresh.
             } catch (e) {
                 if (msgEl) {
                     msgEl.style.color = 'var(--red)';
@@ -3118,52 +3194,20 @@
             }
         }
 
-        function startTranscriptPoll(prospectId, expectedCallId) {
-            stopTranscriptPoll();
-            prospectState.transcriptPollExpectedCallId = expectedCallId || null;
-            prospectState.transcriptPollLastCount = -1;
-            var attempts = 0;
-            prospectState.transcriptPoll = setInterval(async function () {
-                attempts++;
-                if (attempts > 24) { stopTranscriptPoll(); return; } // 2 min max
-                try {
-                    var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(prospectId));
-                    var history = data.call_history || data.calls || [];
-                    if (prospectState.transcriptPollLastCount === -1) {
-                        prospectState.transcriptPollLastCount = history.length;
-                        return;
-                    }
-                    var hasTranscript = history.some(function (h) {
-                        if (expectedCallId) return h.openphone_call_id === expectedCallId && h.transcript;
-                        return h.transcript;
-                    });
-                    if (hasTranscript || history.length > prospectState.transcriptPollLastCount) {
-                        var content = document.getElementById('prospectDrawerContent');
-                        if (content) content.innerHTML = renderProspectDrawer(data, prospectState.tab === 'emailable' ? 'emailable' : 'callable');
-                        showTranscriptToast();
-                        stopTranscriptPoll();
-                    }
-                } catch (e) { /* swallow */ }
-            }, 5000);
-        }
-
-        function stopTranscriptPoll() {
-            if (prospectState.transcriptPoll) {
-                clearInterval(prospectState.transcriptPoll);
-                prospectState.transcriptPoll = null;
-            }
-        }
-
-        function showTranscriptToast() {
+        // Toast fired by the realtime subscription when a transcript lands.
+        // Clicking the toast jumps to the prospect's drawer so the user can
+        // read the transcript even if the page was closed during the call.
+        function showTranscriptToast(prospectId) {
             var existing = document.getElementById('transcriptToast');
             if (existing) existing.remove();
             var t = document.createElement('div');
             t.id = 'transcriptToast';
-            t.textContent = 'Transcript saved';
-            t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--blue);color:white;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--blue);color:white;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.4);cursor:pointer;display:flex;align-items:center;gap:10px;';
+            t.innerHTML = '<span>Transcript saved</span>' + (prospectId ? '<span style="opacity:0.8;font-size:11px;text-decoration:underline;">view</span>' : '');
+            t.onclick = function () { if (prospectId) openProspectDrawer(prospectId, 'callable'); t.remove(); };
             document.body.appendChild(t);
-            setTimeout(function(){ t.style.opacity = '0'; t.style.transition = 'opacity 300ms'; }, 2400);
-            setTimeout(function(){ t.remove(); }, 2900);
+            setTimeout(function(){ t.style.opacity = '0'; t.style.transition = 'opacity 300ms'; }, 4000);
+            setTimeout(function(){ t.remove(); }, 4500);
         }
 
         function onProspectFilterChange() {
