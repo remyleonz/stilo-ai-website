@@ -1098,6 +1098,23 @@
                     </button>
                 </div>
 
+                <!-- Activity intelligence strip — counts of today's work + queue size.
+                     Pulses yellow + surfaces a "Generate more leads" prompt when the
+                     callable queue runs low. Driven by Supabase Realtime (no polling). -->
+                <div id="prospectActivityStrip" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px;padding:12px 18px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary);">
+                        <span><strong id="activityCallsToday" style="color:var(--text-primary);font-family:var(--font-mono);">—</strong> calls today</span>
+                        <span style="color:var(--border-medium);">·</span>
+                        <span><strong id="activityBookedWeek" style="color:var(--green,#10b981);font-family:var(--font-mono);">—</strong> booked this week</span>
+                        <span style="color:var(--border-medium);">·</span>
+                        <span><strong id="activityCallbacksDue" style="color:var(--blue);font-family:var(--font-mono);">—</strong> callbacks due today</span>
+                    </div>
+                    <div id="activityQueue" style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-secondary);">
+                        <span>Cold call queue: <strong id="activityQueueSize" style="color:var(--text-primary);font-family:var(--font-mono);">—</strong></span>
+                        <button id="activityLowLeadsBtn" onclick="openLeadGenModal()" style="display:none;padding:5px 12px;background:rgba(234,179,8,0.15);border:1px solid var(--yellow,#eab308);border-radius:6px;color:var(--yellow,#eab308);font-size:11px;font-weight:700;cursor:pointer;animation:pulse 2s ease-in-out infinite;">⚠ Run low — generate more</button>
+                    </div>
+                </div>
+
                 <!-- Live progress bar: visible only while a pipeline is queued or running.
                      Auto-hides on completion. Bar is indeterminate during scrape, becomes
                      determinate once total_leads is known. -->
@@ -2880,10 +2897,56 @@
                 subscribeToProspectRealtime();
                 refreshActivePipeline();
                 subscribeToPipelineRunsRealtime();
+                loadActivityStrip();
             } else {
                 loadProspectStats();
                 refreshTabBadges();
                 refreshActivePipeline();
+                loadActivityStrip();
+            }
+        }
+
+        // ─── Activity intelligence strip ────────────────────────────────────────
+        // Live counts of today's work + cold-call queue size. Driven by Supabase
+        // Realtime (the existing prospect-events channel) so it updates as the
+        // user logs calls + books meetings without a refresh.
+
+        async function loadActivityStrip() {
+            try {
+                var startOfDayLocal = new Date();
+                startOfDayLocal.setHours(0, 0, 0, 0);
+                var startOfWeekLocal = new Date(startOfDayLocal);
+                startOfWeekLocal.setDate(startOfWeekLocal.getDate() - startOfWeekLocal.getDay()); // Sunday-week
+                var endOfDayLocal = new Date(startOfDayLocal);
+                endOfDayLocal.setDate(endOfDayLocal.getDate() + 1);
+
+                var [callsTodayRes, bookedWeekRes, callbacksDueRes, statsRes] = await Promise.all([
+                    leadsFromProspecting().select('id', { count: 'exact', head: true })
+                        .gte('last_called_at', startOfDayLocal.toISOString()),
+                    leadsFromProspecting().select('id', { count: 'exact', head: true })
+                        .eq('last_called_outcome', 'booked_meeting')
+                        .gte('last_called_at', startOfWeekLocal.toISOString()),
+                    leadsFromProspecting().select('id', { count: 'exact', head: true })
+                        .eq('next_action_type', 'callback')
+                        .lte('next_action_due_at', endOfDayLocal.toISOString()),
+                    prospectFetchJSON('/api/prospects/stats').catch(function(){return null;})
+                ]);
+
+                var callsToday = callsTodayRes.count || 0;
+                var bookedWeek = bookedWeekRes.count || 0;
+                var callbacksDue = callbacksDueRes.count || 0;
+                var queueSize = statsRes && statsRes.callable_ready != null ? statsRes.callable_ready : null;
+
+                document.getElementById('activityCallsToday').textContent = callsToday;
+                document.getElementById('activityBookedWeek').textContent = bookedWeek;
+                document.getElementById('activityCallbacksDue').textContent = callbacksDue;
+                document.getElementById('activityQueueSize').textContent = queueSize != null ? queueSize.toLocaleString() : '—';
+
+                // Low-leads warning: pulse yellow + reveal Generate-more button.
+                var lowBtn = document.getElementById('activityLowLeadsBtn');
+                if (lowBtn) lowBtn.style.display = (queueSize != null && queueSize < 500) ? 'inline-block' : 'none';
+            } catch (e) {
+                console.warn('[activity-strip]', e);
             }
         }
 
@@ -3118,6 +3181,7 @@
                 || oldRow.next_action_type !== newRow.next_action_type
                 || oldRow.do_not_call !== newRow.do_not_call
                 || oldRow.prospect_tier !== newRow.prospect_tier
+                || oldRow.last_called_at !== newRow.last_called_at
             );
             if (lifecycleChanged) {
                 if (prospectState.tab === 'callable')        loadProspectCallable();
@@ -3126,6 +3190,7 @@
                 else if (prospectState.tab === 'booked')     loadProspectBooked();
                 loadProspectStats();
                 refreshTabBadges();
+                loadActivityStrip();
             }
             if (prospectState.currentLeadId && String(prospectState.currentLeadId) === String(newRow.id)) {
                 refreshOpenDrawer(newRow.id);
@@ -3201,19 +3266,49 @@
             return qs.length ? '?' + qs.join('&') : '';
         }
 
-        // Client-side post-filter (so toggles like "has phone" feel instant
-        // without round-tripping to the backend) + sort by prospect_score desc
-        // by default. Backend already filters by tier/niche/q.
+        // Cold-call lifecycle helpers — pure functions used by both the post-filter
+        // and the row renderer so the rules stay in one place.
+        function dialedWithin24h(row) {
+            if (!row || !row.last_called_at) return false;
+            var t = new Date(row.last_called_at).getTime();
+            if (isNaN(t)) return false;
+            return (Date.now() - t) < 24 * 60 * 60 * 1000;
+        }
+        function isDialOnly(row) {
+            // "Dial-only" means call_attempts > 0 but no logged outcome yet —
+            // the lead has been dialed but the user hasn't submitted the
+            // outcome form. Lead stays in Cold Call but gets demoted.
+            if (!row || !row.last_called_at) return false;
+            var noOutcome = !row.last_called_outcome || row.last_called_outcome === '';
+            return noOutcome && (row.call_attempts || 0) > 0;
+        }
+        function isExhausted(row) {
+            // 3+ dial attempts without ever logging an outcome → drop from
+            // Cold Call (auto-decay). Surfaces in Dead Pool with a special
+            // "exhausted" indicator so the user can re-prospect later.
+            if (!row) return false;
+            var noOutcome = !row.last_called_outcome || row.last_called_outcome === '';
+            return noOutcome && (row.call_attempts || 0) >= 3;
+        }
+
+        // Client-side post-filter + sort. Used by every list loader after fetch.
         function applyClientFilters(rows) {
             var f = prospectState.filters;
-            if (f.hasPhone) {
-                rows = rows.filter(function (r) { return r.owner_phone || r.phone; });
+            if (f.hasPhone) rows = rows.filter(function (r) { return r.owner_phone || r.phone; });
+            if (f.hasEmail) rows = rows.filter(function (r) { return r.owner_email || r.email; });
+
+            // Cold Call only: drop exhausted rows (3 attempts, no outcome) so the
+            // list actually decreases. They surface in Dead Pool instead.
+            if (prospectState.tab === 'callable') {
+                rows = rows.filter(function (r) { return !isExhausted(r); });
             }
-            if (f.hasEmail) {
-                rows = rows.filter(function (r) { return r.owner_email || r.email; });
-            }
-            // Default: sort by score descending. Most-promising leads first.
+
+            // Default sort: dial-only-today rows sink to the bottom (preserved
+            // as a soft demotion); within each group, score descending.
             rows = rows.slice().sort(function (a, b) {
+                var ad = (dialedWithin24h(a) && isDialOnly(a)) ? 1 : 0;
+                var bd = (dialedWithin24h(b) && isDialOnly(b)) ? 1 : 0;
+                if (ad !== bd) return ad - bd;
                 var sa = a.prospect_score != null ? a.prospect_score : (a.score != null ? a.score : -1);
                 var sb = b.prospect_score != null ? b.prospect_score : (b.score != null ? b.score : -1);
                 return sb - sa;
@@ -3258,13 +3353,33 @@
             var host = document.getElementById('prospectTableDead');
             host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
             try {
-                var data = await prospectFetchJSON('/api/prospects/dead?page=' + page + '&limit=50');
-                var rows = data.results || data.leads || data.prospects || [];
-                var totalPages = data.total_pages || 1;
-                host.innerHTML = renderProspectTable(rows, 'dead') +
+                var deadResp = await prospectFetchJSON('/api/prospects/dead?page=' + page + '&limit=50');
+                var deadRows = deadResp.results || deadResp.leads || deadResp.prospects || [];
+                // Also surface "exhausted" leads — 3+ dial attempts with no logged
+                // outcome — pulled directly from prospecting.leads (David's API
+                // doesn't filter by call_attempts). Stamp them with a synthetic
+                // last_called_outcome label so they're distinguishable in the table.
+                var exhaustedRows = [];
+                try {
+                    var resp = await leadsFromProspecting()
+                        .select('id,name,owner_name,owner_phone,phone,owner_email,email,category,prospect_tier,prospect_score,score,last_called_at,last_called_outcome,call_attempts')
+                        .gte('call_attempts', 3)
+                        .is('last_called_outcome', null)
+                        .order('last_called_at', { ascending: false, nullsFirst: false })
+                        .limit(200);
+                    if (!resp.error) {
+                        exhaustedRows = (resp.data || []).map(function (r) {
+                            return Object.assign({}, r, { _exhausted: true });
+                        });
+                    }
+                } catch (_) { /* schema may not be exposed yet */ }
+
+                var combined = exhaustedRows.concat(deadRows);
+                var totalPages = deadResp.total_pages || 1;
+                host.innerHTML = renderProspectTable(combined, 'dead') +
                     '<div style="display:flex;justify-content:center;gap:8px;padding:14px;border-top:1px solid var(--border-subtle);">' +
                     '<button onclick="loadProspectDead(' + Math.max(1, page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;cursor:pointer;' + (page <= 1 ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Prev</button>' +
-                    '<span style="font-size:12px;color:var(--text-secondary);align-self:center;">Page ' + page + ' / ' + totalPages + '</span>' +
+                    '<span style="font-size:12px;color:var(--text-secondary);align-self:center;">Page ' + page + ' / ' + totalPages + ' · ' + exhaustedRows.length + ' exhausted (3+ attempts)</span>' +
                     '<button onclick="loadProspectDead(' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;cursor:pointer;' + (page >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Next</button>' +
                     '</div>';
             } catch (e) {
@@ -3330,8 +3445,16 @@
                         + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
                         + '</tr>';
                 }
-                return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
-                    + '<td style="padding:10px 14px;font-family:var(--font-mono);font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(score) + '</td>'
+                // Cold Call: if the lead's been dialed in last 24h with no logged
+                // outcome, dim the row + show a "Dialed Nx · today" badge in the
+                // score column. This is the visual demotion described in the plan.
+                var dialedToday = mode === 'callable' && dialedWithin24h(r) && isDialOnly(r);
+                var rowStyle = dialedToday ? 'opacity:0.55;' : '';
+                var dialedBadge = dialedToday
+                    ? ' <span title="You\'ve dialed this lead today, no outcome logged yet" style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;background:rgba(234,179,8,0.15);color:var(--yellow,#eab308);font-size:10px;font-weight:700;letter-spacing:0.04em;">DIALED ×' + (r.call_attempts || 1) + '</span>'
+                    : '';
+                return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
+                    + '<td style="padding:10px 14px;font-family:var(--font-mono);font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(score) + dialedBadge + '</td>'
                     + '<td style="padding:10px 14px;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
                     + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                     + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
@@ -3469,19 +3592,53 @@
             return openProspectInOpenPhoneApp(prospectId);
         }
 
-        // Anchor click handler: copy phone to clipboard SYNCHRONOUSLY (clipboard
-        // API requires user-gesture context, can't be async-await before write),
-        // then let the anchor's default action open the URL in a new tab.
+        // Anchor click handler: (1) copy phone to clipboard synchronously
+        // (clipboard API requires user-gesture context), (2) fire a dial-stamp
+        // POST to /api/prospects/log-dial so the lead's call_attempts +
+        // last_called_at update in the DB, (3) let the anchor's default action
+        // open the Quo universal-link in a new tab. The dial stamp drives the
+        // "Dialed today" badge + grays-and-bottoms behavior + 3-attempt auto-decay.
         function onCallButtonClick(ev, phone) {
-            try {
-                navigator.clipboard.writeText(phone);
-                var msgEl = document.getElementById('prospectDialerMsg');
-                if (msgEl) {
-                    msgEl.style.color = 'var(--blue)';
-                    msgEl.innerHTML = '<strong>' + escapeAdminHtml(phone) + ' copied to clipboard.</strong> Paste with Cmd+V into Quo\'s dialer and hit call. Transcript lands here in ~1s after hangup.';
-                }
-            } catch (e) { console.warn('clipboard write failed:', e); }
-            // Don't preventDefault — the anchor opens its href naturally.
+            try { navigator.clipboard.writeText(phone); }
+            catch (e) { console.warn('clipboard write failed:', e); }
+
+            var leadId = prospectState.currentLeadId;
+            if (leadId) {
+                prospectFetchJSON('/api/prospects/log-dial', {
+                    method: 'POST',
+                    body: JSON.stringify({ lead_id: leadId })
+                }).then(function (resp) {
+                    markRowDialedNow(leadId, resp && resp.call_attempts);
+                    if (resp && resp.exhausted && prospectState.tab === 'callable') {
+                        setTimeout(loadProspectCallable, 200);
+                    }
+                }).catch(function (e) { console.warn('[log-dial]', e); });
+            }
+
+            var msgEl = document.getElementById('prospectDialerMsg');
+            if (msgEl) {
+                msgEl.style.color = 'var(--blue)';
+                msgEl.innerHTML = '<strong>' + escapeAdminHtml(phone) + ' copied.</strong> Paste in Quo with Cmd+V, hit call. Lead is dimmed in your Cold Call list — log the outcome when done.';
+            }
+            // Don't preventDefault — the anchor still opens Quo.
+        }
+
+        // Optimistic visual update: demote the row in-place so the user sees
+        // it dim before the Realtime postgres_changes event arrives.
+        function markRowDialedNow(leadId, attempts) {
+            var rows = prospectState.rows || [];
+            var row = rows.find(function (r) { return String(r.id) === String(leadId); });
+            if (row) {
+                row.last_called_at = new Date().toISOString();
+                row.call_attempts = attempts != null ? attempts : ((row.call_attempts || 0) + 1);
+                row._dialedNow = true;
+            }
+            if (prospectState.tab === 'callable') {
+                var rerendered = applyClientFilters(rows);
+                prospectState.rows = rerendered;
+                var host = document.getElementById('prospectTableCallable');
+                if (host) host.innerHTML = renderProspectTable(rerendered, 'callable');
+            }
         }
 
         async function copyProspectPhone(phone) {
@@ -3704,6 +3861,12 @@
                 + '<textarea id="prospectNotes" rows="3" placeholder="What was said, who answered, next move..." style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;margin-bottom:12px;font-family:inherit;"></textarea>'
                 + (mode === 'emailable'
                     ? ''
+                    : '<div id="prospectBookingPicker" style="display:none;margin-bottom:12px;padding:12px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.18);border-radius:8px;">'
+                      + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Pick a 30-minute slot from your calendar</label>'
+                      + '<div id="prospectBookingSlots"></div>'
+                      + '</div>')
+                + (mode === 'emailable'
+                    ? ''
                     : '<div id="prospectFollowupRow" style="display:none;">'
                       + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">When should we call them back?</label>'
                       + '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
@@ -3731,9 +3894,77 @@
         function onOutcomeChange() {
             var sel = document.getElementById('prospectOutcome');
             var row = document.getElementById('prospectFollowupRow');
-            if (!sel || !row) return;
+            var pickerHost = document.getElementById('prospectBookingPicker');
+            var submitBtn = document.querySelector('#prospectCallForm button[type="submit"]');
+            if (!sel) return;
             var match = PROSPECT_OUTCOMES.find(function(o){ return o.value === sel.value; });
-            row.style.display = (match && match.followUp) ? 'block' : 'none';
+            if (row) row.style.display = (match && match.followUp) ? 'block' : 'none';
+            // booked_meeting → render Google Calendar slot picker; submit becomes "Book + send invite"
+            if (sel.value === 'booked_meeting') {
+                if (pickerHost) { pickerHost.style.display = 'block'; loadBookingSlots(); }
+                if (submitBtn) submitBtn.textContent = 'Book + send invite';
+            } else {
+                if (pickerHost) pickerHost.style.display = 'none';
+                if (submitBtn) submitBtn.textContent = 'Log call and next';
+            }
+        }
+
+        // ─── Booking slot picker (Google Calendar free/busy) ───────────────────
+        var bookingState = { slots: [], selectedIso: null, configured: null };
+
+        async function loadBookingSlots() {
+            var host = document.getElementById('prospectBookingSlots');
+            if (!host) return;
+            host.innerHTML = '<div style="padding:18px;color:var(--text-muted);font-size:12px;">Loading available slots…</div>';
+            try {
+                var data = await prospectFetchJSON('/api/prospects/calendar-availability?days=7');
+                bookingState.configured = data.configured !== false;
+                bookingState.slots = data.slots || [];
+                bookingState.selectedIso = null;
+                renderBookingSlots();
+            } catch (e) {
+                if (e.status === 503) {
+                    bookingState.configured = false;
+                    host.innerHTML = '<div style="padding:14px;background:rgba(234,179,8,0.1);border:1px solid var(--yellow,#eab308);border-radius:8px;color:var(--yellow,#eab308);font-size:12px;">Google Calendar is not connected yet. Add OAuth credentials to Vercel env to enable the slot picker. Until then, log this manually with date + time fields below if you want, or come back after configuring.</div>';
+                    return;
+                }
+                host.innerHTML = '<div style="color:var(--red);font-size:12px;padding:12px;">Could not load slots: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+        function renderBookingSlots() {
+            var host = document.getElementById('prospectBookingSlots');
+            if (!host) return;
+            if (!bookingState.slots.length) { host.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;">No open slots in the next 7 business days. Pick a manual date+time below.</div>'; return; }
+            // Group by day
+            var byDay = {};
+            bookingState.slots.forEach(function (s) {
+                var d = new Date(s.start);
+                var key = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+                if (!byDay[key]) byDay[key] = [];
+                byDay[key].push(s);
+            });
+            var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;max-height:280px;overflow-y:auto;">';
+            Object.keys(byDay).forEach(function (day) {
+                html += '<div><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + escapeAdminHtml(day) + '</div>';
+                byDay[day].slice(0, 12).forEach(function (s) {
+                    var time = new Date(s.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+                    var sel = bookingState.selectedIso === s.start;
+                    html += '<button type="button" onclick="selectBookingSlot(' + JSON.stringify(s.start) + ')" style="display:block;width:100%;margin-bottom:4px;padding:6px 8px;background:' + (sel ? 'var(--blue)' : 'var(--bg-input)') + ';border:1px solid ' + (sel ? 'var(--blue)' : 'var(--border-medium)') + ';border-radius:6px;color:' + (sel ? 'white' : 'var(--text-primary)') + ';font-size:12px;font-weight:600;cursor:pointer;text-align:center;">' + escapeAdminHtml(time) + '</button>';
+                });
+                html += '</div>';
+            });
+            html += '</div>';
+            host.innerHTML = html;
+        }
+        function selectBookingSlot(iso) {
+            bookingState.selectedIso = iso;
+            renderBookingSlots();
+            var msgEl = document.getElementById('prospectFormMsg');
+            if (msgEl) {
+                msgEl.style.color = 'var(--blue)';
+                var t = new Date(iso).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+                msgEl.textContent = 'Slot selected: ' + t + ' ET. Click "Book + send invite" to confirm.';
+            }
         }
 
         function closeProspectDrawer() {
@@ -3786,10 +4017,35 @@
             var nextAt  = readCallbackDateTime();
             if (!outcome) return;
 
-            // For "interested, follow up" require a callback time.
             if (outcome === 'interested_followup' && !nextAt) {
                 msgEl.style.color = 'var(--red)';
                 msgEl.textContent = 'Pick a callback date and time before saving.';
+                return;
+            }
+
+            // Booked meeting → run the full booking flow (calendar event + email + log-call).
+            if (outcome === 'booked_meeting') {
+                if (!bookingState.selectedIso) {
+                    msgEl.style.color = 'var(--red)';
+                    msgEl.textContent = 'Pick a slot from your calendar above before booking.';
+                    return;
+                }
+                msgEl.textContent = 'Booking on Google Calendar + sending email…';
+                msgEl.style.color = 'var(--text-muted)';
+                try {
+                    var resp = await prospectFetchJSON('/api/prospects/book-meeting', {
+                        method: 'POST',
+                        body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 30 })
+                    });
+                    msgEl.style.color = 'var(--green,#10b981)';
+                    msgEl.innerHTML = 'Booked. <a href="' + escapeAdminHtml(resp.event_link || '#') + '" target="_blank" style="color:var(--blue);">Open in Google Calendar</a>'
+                        + (resp.meet_link ? ' · <a href="' + escapeAdminHtml(resp.meet_link) + '" target="_blank" style="color:var(--blue);">Meet link</a>' : '')
+                        + (resp.email && resp.email.id ? ' · email sent' : (resp.email && resp.email.skipped ? ' · email skipped (' + resp.email.skipped + ')' : ''));
+                    setTimeout(function () { advanceToNextProspect(leadId); }, 1800);
+                } catch (e) {
+                    msgEl.style.color = 'var(--red)';
+                    msgEl.textContent = 'Booking failed: ' + (e.message || 'unknown');
+                }
                 return;
             }
 
