@@ -1092,6 +1092,44 @@
                         <h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">Prospecting</h2>
                         <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:4px;">Daily call list, cold email queue, and archive. Click a row to log an outcome.</p>
                     </div>
+                    <button onclick="openLeadGenModal()" style="padding:10px 16px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Generate Leads
+                    </button>
+                </div>
+
+                <!-- Recent pipeline runs strip — populated from /api/prospects/recent-runs -->
+                <div id="pipelineRunsStrip" style="display:none;margin-bottom:18px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;padding:12px 16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);font-weight:600;">Recent generations</div>
+                        <button onclick="togglePipelineRunsStrip(false)" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;">hide</button>
+                    </div>
+                    <div id="pipelineRunsList" style="display:flex;flex-direction:column;gap:6px;font-size:12px;"></div>
+                </div>
+                <button id="pipelineRunsToggle" onclick="togglePipelineRunsStrip(true)" style="display:none;margin-bottom:14px;padding:6px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;">Show recent generations</button>
+
+                <!-- Generate Leads modal -->
+                <div id="leadGenOverlay" onclick="closeLeadGenModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:90;"></div>
+                <div id="leadGenModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:560px;max-width:calc(100vw - 32px);max-height:calc(100vh - 64px);background:#0a0a0f;border:1px solid rgba(37,99,235,0.25);border-radius:14px;z-index:100;overflow-y:auto;padding:28px 32px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+                        <div>
+                            <h2 style="font-family:var(--font-display);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;margin:0;">Generate Leads</h2>
+                            <p style="color:var(--text-secondary);font-size:13px;margin-top:6px;line-height:1.5;">Spin up the lead-gen pipeline. Each target scrapes Google Maps, researches sites, scores tier, drafts outreach. Runs ~1-2 min per lead. New HOT leads auto-sync to your Quo iPhone Contacts.</p>
+                        </div>
+                        <button onclick="closeLeadGenModal()" style="background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;line-height:1;margin-left:12px;">&times;</button>
+                    </div>
+
+                    <div id="leadGenTargets" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+                    <button type="button" onclick="addLeadGenTarget()" style="margin-bottom:18px;padding:6px 12px;background:transparent;border:1px dashed var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;width:100%;">+ Add another niche</button>
+
+                    <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Default target lead count per niche</label>
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:18px;">
+                        <input id="leadGenDefaultCount" type="number" value="50" min="10" max="500" step="10" style="width:120px;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">
+                        <span style="font-size:11px;color:var(--text-muted);">per niche · cumulative cap (re-runs are no-ops once hit)</span>
+                    </div>
+
+                    <button id="leadGenSubmit" onclick="submitLeadGen()" style="width:100%;padding:12px 16px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:14px;font-weight:700;cursor:pointer;">Start pipeline</button>
+                    <div id="leadGenMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);min-height:16px;"></div>
                 </div>
 
                 <!-- Stats bar: 4 tier cards + 2 small badges. Click a card to scope to that tier. -->
@@ -2759,7 +2797,8 @@
             loaded: false,
             openphoneNumbers: [],
             openphoneSelectedId: null,
-            realtimeChannel: null
+            realtimeChannel: null,
+            pipelineRunsChannel: null
         };
 
         var PROSPECT_OUTCOMES = [
@@ -2816,11 +2855,162 @@
                 loadOpenPhoneNumbers();
                 loadProspectCallbackBadge();
                 subscribeToProspectRealtime();
+                loadRecentPipelineRuns();
+                subscribeToPipelineRunsRealtime();
             } else {
                 // Quick refresh of stats so counts stay current.
                 loadProspectStats();
                 loadProspectCallbackBadge();
+                loadRecentPipelineRuns();
             }
+        }
+
+        // ─── Lead generator modal ──────────────────────────────────────────────
+
+        var NICHE_PRESETS = [
+            'dental clinic', 'med spa', 'auto detailing', 'auto repair', 'restaurant',
+            'pizza shop', 'yoga studio', 'gym', 'HVAC', 'plumber', 'electrician',
+            'roofing contractor', 'tax preparer', 'accountant', 'law firm',
+            'real estate brokerage', 'hair salon', 'barber shop', 'nail salon',
+            'pet groomer', 'dry cleaner', 'tattoo studio', 'photographer'
+        ];
+
+        function openLeadGenModal() {
+            document.getElementById('leadGenOverlay').style.display = 'block';
+            document.getElementById('leadGenModal').style.display = 'block';
+            // Populate one default target row
+            var host = document.getElementById('leadGenTargets');
+            host.innerHTML = '';
+            addLeadGenTarget();
+            document.getElementById('leadGenMsg').textContent = '';
+        }
+
+        function closeLeadGenModal() {
+            document.getElementById('leadGenOverlay').style.display = 'none';
+            document.getElementById('leadGenModal').style.display = 'none';
+        }
+
+        function addLeadGenTarget() {
+            var host = document.getElementById('leadGenTargets');
+            var idx = host.children.length;
+            var row = document.createElement('div');
+            row.className = 'leadgen-target-row';
+            row.style.cssText = 'display:grid;grid-template-columns:1.4fr 1fr auto;gap:8px;align-items:center;';
+            var listId = 'nicheList' + idx;
+            var datalist = '<datalist id="' + listId + '">' + NICHE_PRESETS.map(function (n) { return '<option value="' + n + '">'; }).join('') + '</datalist>';
+            row.innerHTML = ''
+                + '<input type="text" class="leadgen-niche" placeholder="Niche (e.g. dental clinic)" list="' + listId + '" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">'
+                + datalist
+                + '<input type="text" class="leadgen-location" placeholder="City, state (e.g. Miami FL)" value="Miami FL" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">'
+                + (idx === 0
+                    ? '<span style="width:32px;"></span>'
+                    : '<button type="button" onclick="this.closest(\'.leadgen-target-row\').remove()" style="width:32px;height:32px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-muted);cursor:pointer;font-size:16px;line-height:1;">&times;</button>');
+            host.appendChild(row);
+        }
+
+        async function submitLeadGen() {
+            var btn = document.getElementById('leadGenSubmit');
+            var msgEl = document.getElementById('leadGenMsg');
+            var rows = document.querySelectorAll('#leadGenTargets .leadgen-target-row');
+            var targets = [];
+            for (var i = 0; i < rows.length; i++) {
+                var niche = rows[i].querySelector('.leadgen-niche').value.trim();
+                var location = rows[i].querySelector('.leadgen-location').value.trim();
+                if (!niche || !location) {
+                    msgEl.style.color = 'var(--red)';
+                    msgEl.textContent = 'Row ' + (i + 1) + ': both niche and city are required.';
+                    return;
+                }
+                targets.push({ niche: niche, location: location });
+            }
+            var defaultCount = parseInt(document.getElementById('leadGenDefaultCount').value, 10) || 50;
+            btn.disabled = true; btn.textContent = 'Starting…';
+            msgEl.style.color = 'var(--text-muted)';
+            msgEl.textContent = 'Queuing ' + targets.length + ' target' + (targets.length > 1 ? 's' : '') + '…';
+            try {
+                var resp = await prospectFetchJSON('/api/prospects/run-pipeline', {
+                    method: 'POST',
+                    body: JSON.stringify({ targets: targets, target_count: defaultCount })
+                });
+                msgEl.style.color = 'var(--green, #10b981)';
+                var summary = resp.run_id
+                    ? ('Pipeline started · run ' + resp.run_id.slice(0, 8))
+                    : (resp.run_ids
+                        ? ('Pipeline started · ' + resp.count + ' runs queued (' + (resp.message || '') + ')')
+                        : ('Pipeline started · ' + JSON.stringify(resp).slice(0, 200)));
+                msgEl.textContent = summary;
+                togglePipelineRunsStrip(true);
+                loadRecentPipelineRuns();
+                setTimeout(closeLeadGenModal, 2000);
+            } catch (e) {
+                msgEl.style.color = 'var(--red)';
+                msgEl.textContent = 'Failed: ' + (e.message || 'unknown');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Start pipeline';
+            }
+        }
+
+        // ─── Recent pipeline runs strip ────────────────────────────────────────
+
+        async function loadRecentPipelineRuns() {
+            try {
+                var data = await prospectFetchJSON('/api/prospects/recent-runs?limit=10');
+                var runs = (data && (data.runs || data.results || data)) || [];
+                if (!Array.isArray(runs)) runs = [];
+                renderPipelineRuns(runs);
+                // Auto-show strip when there are active runs
+                var hasActive = runs.some(function (r) {
+                    var s = (r.status || '').toLowerCase();
+                    return s === 'queued' || s === 'running';
+                });
+                if (hasActive) togglePipelineRunsStrip(true);
+                else if (runs.length === 0) togglePipelineRunsStrip(false);
+            } catch (e) { /* swallow — not all backends have this endpoint yet */ }
+        }
+
+        function renderPipelineRuns(runs) {
+            var host = document.getElementById('pipelineRunsList');
+            if (!runs.length) { host.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:6px 0;">No runs yet.</div>'; return; }
+            host.innerHTML = runs.slice(0, 8).map(function (r) {
+                var status = (r.status || '').toLowerCase();
+                var color = status === 'completed' ? 'var(--green, #10b981)'
+                    : status === 'running' ? 'var(--blue)'
+                    : status === 'failed' ? 'var(--red)'
+                    : status === 'queued' ? 'var(--yellow, #eab308)'
+                    : 'var(--text-muted)';
+                var targets = r.scrape_targets ? (function () {
+                    try { var t = typeof r.scrape_targets === 'string' ? JSON.parse(r.scrape_targets) : r.scrape_targets; return t.map(function (x) { return x.niche + ' · ' + x.location; }).join(', '); }
+                    catch (_) { return r.scrape_targets; }
+                })() : '—';
+                var startedAt = r.started_at ? new Date(r.started_at).toLocaleTimeString() : '—';
+                var counts = 'leads ' + (r.total_leads || 0) + ' · hot ' + (r.hot_leads || 0) + ' · warm ' + (r.warm_leads || 0);
+                return '<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--border-subtle);align-items:center;">'
+                    + '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">'
+                      + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>'
+                      + '<span style="color:var(--text-primary);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:0.05em;width:80px;">' + escapeAdminHtml(status || '?') + '</span>'
+                      + '<span style="color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(targets) + '</span>'
+                    + '</div>'
+                    + '<span style="color:var(--text-muted);font-family:var(--font-mono);font-size:11px;flex-shrink:0;">' + escapeAdminHtml(counts) + ' · ' + startedAt + '</span>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function togglePipelineRunsStrip(show) {
+            document.getElementById('pipelineRunsStrip').style.display = show ? 'block' : 'none';
+            document.getElementById('pipelineRunsToggle').style.display = show ? 'none' : 'inline-block';
+        }
+
+        function subscribeToPipelineRunsRealtime() {
+            if (prospectState.pipelineRunsChannel) return;
+            try {
+                var channel = sb.channel('pipeline-runs')
+                    .on('postgres_changes', { event: '*', schema: 'prospecting', table: 'pipeline_runs' }, function () {
+                        loadRecentPipelineRuns();
+                        loadProspectStats();
+                    })
+                    .subscribe();
+                prospectState.pipelineRunsChannel = channel;
+            } catch (_) { /* swallow */ }
         }
 
         // Push-based update path: Supabase Realtime over WebSocket. Whenever
