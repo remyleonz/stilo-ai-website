@@ -113,23 +113,37 @@ module.exports = async function handler(req, res) {
     }
 
     // ---- UPSERT PATH: lead IS eligible, ensure Quo contact reflects state ----
+    // Receiver is self-healing: if quo_contact_id is missing on the row (e.g.
+    // because the prior back-write failed silently when PostgREST hadn't yet
+    // exposed the prospecting schema), look the contact up by externalId
+    // first, then PATCH. Avoids creating duplicates on retry.
     const contactBody = buildContactBody(lead);
-    let action, contactId;
-    if (lead.quo_contact_id) {
+    let action, contactId = lead.quo_contact_id || null;
+
+    if (!contactId) {
+        const ext = 'stilo_lead_' + lead.id;
+        const lookup = await openphoneFetch({
+            method: 'GET',
+            path: '/contacts?externalIds=' + encodeURIComponent(ext)
+        });
+        const existing = lookup.json && (lookup.json.data || []).find(function (c) { return c.externalId === ext; });
+        if (existing) contactId = existing.id;
+    }
+
+    if (contactId) {
         const r = await openphoneFetch({
             method: 'PATCH',
-            path: '/contacts/' + encodeURIComponent(lead.quo_contact_id),
+            path: '/contacts/' + encodeURIComponent(contactId),
             body: contactBody
         });
         if (r.status >= 400) {
-            // Maybe it was deleted on Quo side — fall through to create.
+            // Contact was deleted Quo-side — recreate.
             const c = await openphoneFetch({ method: 'POST', path: '/contacts', body: contactBody });
             if (c.status >= 400) return res.status(c.status).json({ error: 'quo_create_failed', detail: c.json });
             contactId = c.json && c.json.data && c.json.data.id;
             action = 'recreated';
         } else {
-            contactId = lead.quo_contact_id;
-            action = 'updated';
+            action = lead.quo_contact_id ? 'updated' : 'patched_via_external_id';
         }
     } else {
         const c = await openphoneFetch({ method: 'POST', path: '/contacts', body: contactBody });
@@ -139,7 +153,12 @@ module.exports = async function handler(req, res) {
     }
 
     if (contactId && contactId !== lead.quo_contact_id) {
-        await sb.from('leads').update({ quo_contact_id: contactId }).eq('id', lead.id);
+        // Best-effort back-write. Silently no-ops if PostgREST hasn't exposed
+        // the prospecting schema (toggle in Supabase dashboard → Data API).
+        // Without it, every sync does the externalId lookup; harmless but +1 API call.
+        try {
+            await sb.from('leads').update({ quo_contact_id: contactId }).eq('id', lead.id);
+        } catch (_) { /* swallow */ }
     }
     return res.status(200).json({ ok: true, action, lead_id: lead.id, quo_contact_id: contactId });
 };
