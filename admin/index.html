@@ -1121,6 +1121,7 @@
                 <!-- Sub-tab strip -->
                 <div id="prospectSubtabs" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:16px;">
                     <button class="prospect-subtab active" data-subtab="callable" onclick="switchProspectTab('callable')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:2px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;">Cold Call Ready</button>
+                    <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Callbacks <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="emailable" onclick="switchProspectTab('emailable')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Cold Email Ready</button>
                     <button class="prospect-subtab" data-subtab="dead" onclick="switchProspectTab('dead')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Dead Pool</button>
                 </div>
@@ -1146,6 +1147,7 @@
                 <div id="prospectTableCallable" class="prospect-table-host" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
                     <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>
                 </div>
+                <div id="prospectTableCallbacks" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
                 <div id="prospectTableEmailable" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
                 <div id="prospectTableDead" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
             </div>
@@ -2754,7 +2756,12 @@
             deadPage: 1,
             searchDebounce: null,
             statsCache: null,
-            loaded: false
+            loaded: false,
+            openphoneNumbers: [],
+            openphoneSelectedId: null,
+            transcriptPoll: null,
+            transcriptPollExpectedCallId: null,
+            transcriptPollLastCount: 0
         };
 
         var PROSPECT_OUTCOMES = [
@@ -2808,10 +2815,25 @@
                 prospectState.loaded = true;
                 loadProspectStats();
                 loadProspectCallable();
+                loadOpenPhoneNumbers();
+                loadProspectCallbackBadge();
             } else {
                 // Quick refresh of stats so counts stay current.
                 loadProspectStats();
+                loadProspectCallbackBadge();
             }
+        }
+
+        async function loadProspectCallbackBadge() {
+            try {
+                var data = await prospectFetchJSON('/api/prospects/callbacks?limit=200');
+                var rows = data.results || data.leads || [];
+                var badge = document.getElementById('prospectCallbackBadge');
+                if (badge) {
+                    badge.textContent = String(rows.length);
+                    badge.style.display = rows.length ? 'inline-block' : 'none';
+                }
+            } catch (_) { /* swallow */ }
         }
 
         async function loadProspectStats() {
@@ -2913,6 +2935,8 @@
             var head;
             if (mode === 'emailable') {
                 head = '<tr><th style="' + th + '">Score</th><th style="' + th + '">Tier</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Email</th><th style="' + th + '">Niche</th><th style="' + th + '">Last contacted</th></tr>';
+            } else if (mode === 'callbacks') {
+                head = '<tr><th style="' + th + '">Due</th><th style="' + th + '">Reason</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Phone</th><th style="' + th + '">Niche</th><th style="' + th + '">Action</th></tr>';
             } else {
                 head = '<tr><th style="' + th + '">Score</th><th style="' + th + '">Tier</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Phone</th><th style="' + th + '">Niche</th><th style="' + th + '">Last called</th></tr>';
             }
@@ -2930,6 +2954,21 @@
                 var contactCol = mode === 'emailable'
                     ? '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;">' + escapeAdminHtml(email) + '</td>'
                     : '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + strictBadge + '</td>';
+                if (mode === 'callbacks') {
+                    var due = r.next_callback_at ? new Date(r.next_callback_at) : null;
+                    var dueStr = due ? due.toLocaleString() : '—';
+                    var overdue = due && due.getTime() < Date.now();
+                    var reasonLabel = (r.callback_reason || 'manual').replace(/_/g, ' ');
+                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
+                        + '<td style="padding:10px 14px;font-size:12px;color:' + (overdue ? 'var(--red)' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + escapeAdminHtml(dueStr) + (overdue ? ' (overdue)' : '') + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;text-transform:capitalize;">' + escapeAdminHtml(reasonLabel) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
+                        + '<td style="padding:10px 14px;"><button onclick="event.stopPropagation();dialProspect(' + JSON.stringify(id) + ')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;">Call now</button></td>'
+                        + '</tr>';
+                }
                 return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
                     + '<td style="padding:10px 14px;font-family:var(--font-mono);font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(score) + '</td>'
                     + '<td style="padding:10px 14px;">' + tierBadge(r.tier) + '</td>'
@@ -2954,14 +2993,177 @@
             });
             // Show/hide tables
             document.getElementById('prospectTableCallable').style.display  = name === 'callable'  ? '' : 'none';
+            document.getElementById('prospectTableCallbacks').style.display = name === 'callbacks' ? '' : 'none';
             document.getElementById('prospectTableEmailable').style.display = name === 'emailable' ? '' : 'none';
             document.getElementById('prospectTableDead').style.display      = name === 'dead'      ? '' : 'none';
             // Filter bar visible only for callable/emailable
-            document.getElementById('prospectFilterBar').style.display = name === 'dead' ? 'none' : 'flex';
+            document.getElementById('prospectFilterBar').style.display = (name === 'dead' || name === 'callbacks') ? 'none' : 'flex';
             // Lazy-load the chosen view
-            if (name === 'callable')  loadProspectCallable();
+            if (name === 'callable')       loadProspectCallable();
+            else if (name === 'callbacks') loadProspectCallbacks();
             else if (name === 'emailable') loadProspectEmailable();
-            else if (name === 'dead') loadProspectDead(1);
+            else if (name === 'dead')      loadProspectDead(1);
+        }
+
+        async function loadProspectCallbacks() {
+            var host = document.getElementById('prospectTableCallbacks');
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading callbacks...</div>';
+            try {
+                var data = await prospectFetchJSON('/api/prospects/callbacks?limit=200');
+                var rows = data.results || data.leads || data.prospects || data || [];
+                prospectState.rows = rows;
+                host.innerHTML = renderProspectTable(rows, 'callbacks');
+                var badge = document.getElementById('prospectCallbackBadge');
+                if (badge) {
+                    badge.textContent = String(rows.length);
+                    badge.style.display = rows.length ? 'inline-block' : 'none';
+                }
+            } catch (e) {
+                console.error('[prospects/callbacks]', e);
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + '</div>';
+            }
+        }
+
+        async function loadOpenPhoneNumbers() {
+            try {
+                var data = await prospectFetchJSON('/api/openphone/numbers');
+                prospectState.openphoneNumbers = data.numbers || [];
+                if (!prospectState.openphoneSelectedId && prospectState.openphoneNumbers[0]) {
+                    var saved = null;
+                    try { saved = localStorage.getItem('openphoneLineId'); } catch (_) {}
+                    var match = saved && prospectState.openphoneNumbers.find(function(n){ return String(n.id) === String(saved); });
+                    prospectState.openphoneSelectedId = match ? match.id : prospectState.openphoneNumbers[0].id;
+                }
+            } catch (e) {
+                console.warn('[openphone/numbers]', e);
+                prospectState.openphoneNumbers = [];
+            }
+        }
+
+        function selectOpenPhoneLine(id) {
+            prospectState.openphoneSelectedId = id;
+            try { localStorage.setItem('openphoneLineId', id); } catch (_) {}
+            var picker = document.getElementById('openphoneLinePicker');
+            if (picker) picker.value = id;
+        }
+
+        // Legacy stub. Quo (formerly OpenPhone) doesn't expose programmatic
+        // dial — primary path is openProspectInOpenPhoneApp() (deep-link).
+        // Kept so the Callbacks-tab "Call now" row buttons still resolve.
+        async function dialProspect(prospectId) {
+            return openProspectInOpenPhoneApp(prospectId);
+        }
+
+        async function openProspectInOpenPhoneApp(prospectId) {
+            var msgEl = document.getElementById('prospectDialerMsg');
+            try {
+                var data = await prospectFetchJSON('/api/openphone/deep-link?prospect_id=' + encodeURIComponent(prospectId));
+                // Try the desktop scheme first; fall back to the web URL if no
+                // handler is registered. Then start the transcript poll so the
+                // drawer auto-refreshes when the call ends.
+                window.location.href = data.desktop;
+                setTimeout(function(){ window.open(data.web, '_blank'); }, 1000);
+                if (msgEl) {
+                    msgEl.style.color = 'var(--text-muted)';
+                    msgEl.textContent = 'Quo opening with ' + data.to + ' pre-filled. Tap call inside the app, then come back — transcript will land here after hangup.';
+                }
+                startTranscriptPoll(prospectId, null);
+            } catch (e) {
+                if (msgEl) {
+                    msgEl.style.color = 'var(--red)';
+                    msgEl.textContent = 'Could not build deep-link: ' + (e.message || 'unknown');
+                }
+            }
+        }
+
+        async function copyProspectPhone(phone) {
+            try {
+                await navigator.clipboard.writeText(phone);
+                var msgEl = document.getElementById('prospectDialerMsg');
+                if (msgEl) {
+                    msgEl.style.color = 'var(--text-muted)';
+                    msgEl.textContent = 'Copied ' + phone + ' to clipboard.';
+                }
+            } catch (_) {}
+        }
+
+        async function addProspectToCallbackList(prospectId) {
+            var when = prompt('Callback when? (ISO date or e.g. "+4h")');
+            if (when == null) return;
+            var iso = null;
+            var rel = when.match(/^\+(\d+)([hd])$/);
+            if (rel) {
+                var amount = parseInt(rel[1], 10);
+                var ms = rel[2] === 'd' ? amount * 86400000 : amount * 3600000;
+                iso = new Date(Date.now() + ms).toISOString();
+            } else if (when.trim() === '') {
+                iso = new Date(Date.now() + 4 * 3600 * 1000).toISOString();
+            } else {
+                var d = new Date(when);
+                if (isNaN(d.getTime())) { alert('Could not parse "' + when + '"'); return; }
+                iso = d.toISOString();
+            }
+            try {
+                await prospectFetchJSON('/api/prospects/add-callback', {
+                    method: 'POST',
+                    body: JSON.stringify({ id: prospectId, when: iso, reason: 'manual' })
+                });
+                var msgEl = document.getElementById('prospectFormMsg');
+                if (msgEl) {
+                    msgEl.style.color = 'var(--green, #10b981)';
+                    msgEl.textContent = 'Added to callback list for ' + new Date(iso).toLocaleString();
+                }
+            } catch (e) {
+                alert('Could not add callback: ' + (e.message || 'unknown'));
+            }
+        }
+
+        function startTranscriptPoll(prospectId, expectedCallId) {
+            stopTranscriptPoll();
+            prospectState.transcriptPollExpectedCallId = expectedCallId || null;
+            prospectState.transcriptPollLastCount = -1;
+            var attempts = 0;
+            prospectState.transcriptPoll = setInterval(async function () {
+                attempts++;
+                if (attempts > 24) { stopTranscriptPoll(); return; } // 2 min max
+                try {
+                    var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(prospectId));
+                    var history = data.call_history || data.calls || [];
+                    if (prospectState.transcriptPollLastCount === -1) {
+                        prospectState.transcriptPollLastCount = history.length;
+                        return;
+                    }
+                    var hasTranscript = history.some(function (h) {
+                        if (expectedCallId) return h.openphone_call_id === expectedCallId && h.transcript;
+                        return h.transcript;
+                    });
+                    if (hasTranscript || history.length > prospectState.transcriptPollLastCount) {
+                        var content = document.getElementById('prospectDrawerContent');
+                        if (content) content.innerHTML = renderProspectDrawer(data, prospectState.tab === 'emailable' ? 'emailable' : 'callable');
+                        showTranscriptToast();
+                        stopTranscriptPoll();
+                    }
+                } catch (e) { /* swallow */ }
+            }, 5000);
+        }
+
+        function stopTranscriptPoll() {
+            if (prospectState.transcriptPoll) {
+                clearInterval(prospectState.transcriptPoll);
+                prospectState.transcriptPoll = null;
+            }
+        }
+
+        function showTranscriptToast() {
+            var existing = document.getElementById('transcriptToast');
+            if (existing) existing.remove();
+            var t = document.createElement('div');
+            t.id = 'transcriptToast';
+            t.textContent = 'Transcript saved';
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--blue);color:white;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+            document.body.appendChild(t);
+            setTimeout(function(){ t.style.opacity = '0'; t.style.transition = 'opacity 300ms'; }, 2400);
+            setTimeout(function(){ t.remove(); }, 2900);
         }
 
         function onProspectFilterChange() {
@@ -3055,9 +3257,28 @@
                     + '</div>';
             }).join('') : '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No prior contacts.</div>';
 
+            var dialerBlock = '';
+            if (mode !== 'emailable' && phone) {
+                var lineOptions = (prospectState.openphoneNumbers || []).map(function (n) {
+                    var sel = String(n.id) === String(prospectState.openphoneSelectedId) ? ' selected' : '';
+                    return '<option value="' + escapeAdminHtml(n.id) + '"' + sel + '>' + escapeAdminHtml(n.name || n.number) + '</option>';
+                }).join('');
+                dialerBlock = ''
+                    + '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">'
+                      + (lineOptions
+                          ? '<label style="font-size:11px;color:var(--text-secondary);">From <select id="openphoneLinePicker" onchange="selectOpenPhoneLine(this.value)" style="margin-left:6px;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;">' + lineOptions + '</select></label>'
+                          : '<span style="font-size:11px;color:var(--text-muted);">OpenPhone lines not loaded</span>')
+                    + '</div>'
+                    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'
+                      + '<button id="prospectRingBtn" type="button" onclick="openProspectInOpenPhoneApp(' + JSON.stringify(d.id) + ')" style="flex:2;min-width:200px;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">Call in Quo</button>'
+                      + '<button type="button" onclick="copyProspectPhone(' + JSON.stringify(phone) + ')" title="Copy phone to clipboard" style="flex:1;min-width:80px;padding:10px 14px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;">Copy</button>'
+                    + '</div>'
+                    + '<div id="prospectDialerMsg" style="margin-top:8px;font-size:12px;color:var(--text-muted);min-height:16px;">Pick the line to dial from above, click Call in Quo, then tap the green call button in the Quo app. Transcript lands here automatically after hangup.</div>';
+            }
+
             var contactBlock = mode === 'emailable'
                 ? (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);font-size:14px;">' + escapeAdminHtml(email) + '</a>' : '<span style="color:var(--text-muted);font-size:13px;">No owner email on file.</span>')
-                : (phone ? '<a href="tel:' + escapeAdminHtml(phone) + '" style="color:var(--blue);font-size:18px;font-family:var(--font-mono);font-weight:600;">' + escapeAdminHtml(phone) + '</a>' : '<span style="color:var(--text-muted);font-size:13px;">No phone on file.</span>');
+                : (phone ? '<div style="color:var(--text-primary);font-size:18px;font-family:var(--font-mono);font-weight:600;">' + escapeAdminHtml(phone) + '</div>' + dialerBlock : '<span style="color:var(--text-muted);font-size:13px;">No phone on file.</span>');
 
             var formId = mode === 'emailable' ? 'prospectEmailForm' : 'prospectCallForm';
             var submitFn = mode === 'emailable' ? 'submitEmailLog()' : 'submitCallLog()';
@@ -3092,6 +3313,7 @@
                       + '<input id="prospectNextCallback" type="datetime-local" style="width:100%;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;margin-bottom:12px;">'
                       + '</div>')
                 + '<button type="submit" style="width:100%;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">' + submitLabel + '</button>'
+                + (mode === 'emailable' ? '' : '<button type="button" onclick="addProspectToCallbackList(' + JSON.stringify(d.id) + ')" style="width:100%;margin-top:8px;padding:8px 14px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">Add to callback list</button>')
                 + '<div id="prospectFormMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);"></div>'
                 + '</form>'
 
