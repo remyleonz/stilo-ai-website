@@ -3394,16 +3394,34 @@
             try {
                 var data = await prospectFetchJSON('/api/prospects/callable' + buildProspectQuery());
                 var raw = data.results || data.leads || data.prospects || data || [];
+
+                // Re-inject leads dialed today with no outcome — David's callable
+                // API filters them out (recently-called), but we want them dimmed
+                // at the bottom so they're never lost across page refreshes.
+                try {
+                    var dialedData = await prospectFetchJSON('/api/prospects/dialed-today');
+                    var dialedRaw = dialedData.results || [];
+                    if (dialedRaw.length) {
+                        var callableIds = new Set(raw.map(function(r) {
+                            return String(r.id != null ? r.id : r.lead_id);
+                        }));
+                        dialedRaw.forEach(function(r) {
+                            if (!callableIds.has(String(r.id != null ? r.id : r.lead_id))) {
+                                r._dialedNow = true;
+                                raw.push(r);
+                            }
+                        });
+                    }
+                } catch (_) {}
+
                 prospectState.cache.callable = raw;
                 var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'callable');
                 populateNicheFilter();
-                // Tier badges off the callable pool itself, not the upstream
-                // /stats by_tier (which counts ~5k unenriched/dead-archive
-                // leads we'll never call). Sums to the visible queue by
-                // construction.
-                applyTierBadgesFromRows(raw);
+                // Tier badges from callable pool only — exclude the dialed-today
+                // re-injected rows since they're already counted in the main pool.
+                applyTierBadgesFromRows(raw.filter(function(r) { return !r._dialedNow; }));
             } catch (e) {
                 console.error('[prospects/callable]', e);
                 if (!cached) {
