@@ -34,12 +34,21 @@ function deriveOutcome(callPayload) {
 async function findOrStubLead(sb, phone) {
     if (!phone) return null;
     const norm = normalizePhone(phone);
-    // David's leads table uses both `owner_phone` and `phone` (business line).
-    // Match on either.
+    if (!norm) return null;
+    // David's pipeline stores phones as (XXX) XXX-XXXX; also query E.164.
+    // JSON.stringify produces the double-quoted form PostgREST needs for values
+    // containing special chars like parentheses and spaces.
+    const digits10 = norm.startsWith('+1') ? norm.slice(2) : null;
+    const fmt = digits10 && digits10.length === 10
+        ? '(' + digits10.slice(0, 3) + ') ' + digits10.slice(3, 6) + '-' + digits10.slice(6)
+        : null;
+    const fmtCond = fmt
+        ? ',owner_phone.eq.' + JSON.stringify(fmt) + ',phone.eq.' + JSON.stringify(fmt)
+        : '';
     const { data: existing } = await sb
         .from('leads')
         .select('id')
-        .or('owner_phone.eq.' + norm + ',phone.eq.' + norm)
+        .or('owner_phone.eq.' + norm + ',phone.eq.' + norm + fmtCond)
         .maybeSingle();
     if (existing && existing.id) return existing.id;
     // Stub a minimal lead row so inbound missed calls don't get dropped.
@@ -105,7 +114,7 @@ module.exports = async function handler(req, res) {
     const type = evt.type || evt.event || '';
     const data = evt.data || evt.payload || evt.object || evt;
     const call = data.object || data.call || data;
-    const openphoneCallId = call.id || call.callId || call.call_id;
+    const openphoneCallId = call.callId || call.call_id || call.id;
 
     if (!openphoneCallId) {
         console.warn('[openphone/webhook] no call id in event:', type);
@@ -116,7 +125,12 @@ module.exports = async function handler(req, res) {
     const direction = call.direction || 'outbound';
     const fromNumber = call.from || (call.participants && call.participants[0]) || null;
     const toNumber = call.to || (call.participants && call.participants[1]) || null;
-    const counterparty = direction === 'inbound' ? fromNumber : toNumber;
+    let counterparty = direction === 'inbound' ? fromNumber : toNumber;
+    // Transcript events have no from/to — fall back to dialogue identifier
+    if (!counterparty && Array.isArray(call.dialogue)) {
+        const ext = call.dialogue.find(function(t) { return t.userId == null && t.identifier; });
+        if (ext) counterparty = ext.identifier;
+    }
 
     const baseFields = {
         openphone_call_id: openphoneCallId,
@@ -165,8 +179,20 @@ module.exports = async function handler(req, res) {
         if (type === 'call.completed' || type === 'call.ended' || type === 'call.summary.completed') {
             baseFields.duration_seconds = call.duration || call.durationSeconds || null;
             baseFields.outcome = deriveOutcome(call);
-            if (data.summary || (call.summary && call.summary.text)) {
-                baseFields.transcript_summary = data.summary || call.summary.text;
+            // summary may be a string, .text, or an array (Quo v3 sends array)
+            const rawSummary = data.summary || call.summary || null;
+            if (rawSummary) {
+                if (typeof rawSummary === 'string') baseFields.transcript_summary = rawSummary;
+                else if (rawSummary.text) baseFields.transcript_summary = rawSummary.text;
+                else if (Array.isArray(rawSummary)) baseFields.transcript_summary = rawSummary.join('\n');
+            }
+            // Quo v3 call.summary.completed also includes nextSteps array
+            const rawNextSteps = call.nextSteps || data.nextSteps || null;
+            if (Array.isArray(rawNextSteps) && rawNextSteps.length) {
+                const nextStr = 'Next steps:\n' + rawNextSteps.map(function(s) { return '- ' + s; }).join('\n');
+                baseFields.transcript_summary = baseFields.transcript_summary
+                    ? baseFields.transcript_summary + '\n\n' + nextStr
+                    : nextStr;
             }
         } else if (type === 'call.recording.completed' || (call.recording && call.recording.url)) {
             baseFields.recording_url = (data.recording && data.recording.url)
@@ -178,6 +204,12 @@ module.exports = async function handler(req, res) {
             else if (Array.isArray(transcript)) {
                 baseFields.transcript = transcript.map(function (seg) {
                     return (seg.speaker || seg.user || '?') + ': ' + (seg.text || seg.content || '');
+                }).join('\n');
+            }
+            // Quo v3: transcript lives in call.dialogue as [{userId, identifier, content}]
+            if (!baseFields.transcript && Array.isArray(call.dialogue)) {
+                baseFields.transcript = call.dialogue.map(function(t) {
+                    return (t.identifier || t.userId || '?') + ': ' + (t.content || '');
                 }).join('\n');
             }
         }

@@ -4320,7 +4320,19 @@
                         body: JSON.stringify({ lead_id: leadId, notes: notes || null })
                     });
                     markRowDialedNow(leadId, dialResp && dialResp.call_attempts);
-                    advanceToNextProspect(leadId);
+                    // dialOnly: lead stays in the list, dimmed at bottom.
+                    // Do NOT splice it out (advanceToNextProspect would remove it).
+                    closeProspectDrawer();
+                    prospectState.cache.callable = null;
+                    loadProspectStats();
+                    var nextRows = prospectState.rows || [];
+                    var nextLead = nextRows.find(function(r) {
+                        return String(r.id != null ? r.id : r.lead_id) !== String(leadId);
+                    });
+                    if (nextLead) {
+                        var nid = nextLead.id != null ? nextLead.id : nextLead.lead_id;
+                        setTimeout(function(){ openProspectDrawer(nid, 'callable'); }, 200);
+                    }
                 } catch (e) {
                     msgEl.style.color = 'var(--red)';
                     msgEl.textContent = 'Failed: ' + (e.message || 'unknown');
