@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await sb.from('leads')
-        .select('id, name, owner_name, owner_phone, owner_email, phone, prospect_tier, prospect_score, niche, last_called_at, call_attempts, last_called_outcome, prospect_reasoning, matched_product_name')
+        .select('*')
         .gte('last_called_at', since)
         .is('last_called_outcome', null)
         .not('call_attempts', 'is', null)

@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
     startOfDay.setUTCHours(0, 0, 0, 0);
 
     const { data, error } = await sb.from('leads')
-        .select('id, name, owner_name, owner_phone, owner_email, phone, prospect_tier, prospect_score, niche, last_called_at, last_called_outcome, call_attempts')
+        .select('*')
         .gte('last_called_at', startOfDay.toISOString())
         .order('last_called_at', { ascending: false })
         .limit(200);
