@@ -3276,19 +3276,14 @@
         function buildProspectQuery() {
             var f = prospectState.filters;
             var qs = [];
-            // David's API filters by `tier_min` (this tier and above), not
-            // an exact match. We send the selected tier as the minimum, then
-            // applyClientFilters narrows to the exact tier afterward. When
-            // the user filters to COOL we bump the limit so all callable cool
-            // leads come back instead of getting truncated at 150.
+            // Cloud Run stilo-api hangs on requests > 150 rows (query timeout
+            // in David's backend). 150 is the safe ceiling regardless of
+            // filter. The full pool is 187 leads; callers that want all
+            // results beyond 150 need David to fix the backend first.
             if (f.tier) {
                 qs.push('tier_min=' + encodeURIComponent(String(f.tier).toLowerCase()));
-                qs.push('limit=1000');
-            } else {
-                // 500 leaves headroom over typical callable_ready (~200). Edge
-                // cache on /api/prospects/callable absorbs the larger payload.
-                qs.push('limit=500');
             }
+            qs.push('limit=150');
             if (f.q) qs.push('q=' + encodeURIComponent(f.q));
             if (f.niche) qs.push('niche=' + encodeURIComponent(f.niche));
             return qs.length ? '?' + qs.join('&') : '';
