@@ -1190,6 +1190,7 @@
                     <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Call Back <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="booked" onclick="switchProspectTab('booked')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Booked Meeting <span id="prospectBookedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,0.18);color:var(--green,#10b981);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="dead" onclick="switchProspectTab('dead')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Dead Pool</button>
+                    <button class="prospect-subtab" data-subtab="calls-today" onclick="switchProspectTab('calls-today')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Calls Today <span id="prospectCallsTodayBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(37,99,235,0.15);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
                 </div>
 
                 <!-- Filter bar: search · tier · niche · has phone · has email -->
@@ -1218,6 +1219,7 @@
                 <div id="prospectTableCallbacks" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
                 <div id="prospectTableBooked" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
                 <div id="prospectTableDead" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
+                <div id="prospectTableCallsToday" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
             </div>
 
             <!-- Agents tab: cross-cutting list of every deployment -->
@@ -3489,7 +3491,9 @@
             var th = 'text-align:left;padding:10px 14px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);background:rgba(37,99,235,0.04);white-space:nowrap;';
             var thNarrow = th + 'width:1px;';
             var head;
-            if (mode === 'emailable') {
+            if (mode === 'calls-today') {
+                head = '<tr><th style="' + thNarrow + '">Time</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Outcome</th><th style="' + thNarrow + '">Niche</th></tr>';
+            } else if (mode === 'emailable') {
                 head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last contacted</th></tr>';
             } else if (mode === 'callbacks') {
                 head = '<tr><th style="' + thNarrow + '">Due</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last call</th><th style="' + thNarrow + '">Action</th></tr>';
@@ -3515,6 +3519,22 @@
                 var contactCol = mode === 'emailable'
                     ? '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
                     : '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div>' + emailSub + '</td>';
+                if (mode === 'calls-today') {
+                    var calledTime = r.last_called_at ? new Date(r.last_called_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
+                    var outcome = r.last_called_outcome || '';
+                    var outcomeColors = { answered:'var(--green,#10b981)', voicemail:'var(--yellow,#eab308)', no_answer:'var(--text-muted)', missed_inbound:'var(--blue)', booked_meeting:'var(--green,#10b981)', not_interested:'var(--red)', callback_requested:'var(--blue)', interested_followup:'var(--green,#10b981)' };
+                    var outcomeColor = outcomeColors[outcome] || 'var(--text-muted)';
+                    var outcomeLabel = outcome ? outcome.replace(/_/g, ' ') : 'no outcome';
+                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
+                        + '<td style="padding:10px 14px;font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(calledTime) + '</td>'
+                        + '<td style="padding:10px 14px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
+                        + '<td style="padding:10px 14px;font-size:12px;font-weight:600;color:' + outcomeColor + ';white-space:nowrap;">' + escapeAdminHtml(outcomeLabel) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                        + '</tr>';
+                }
                 if (mode === 'callbacks') {
                     var due = r.next_action_due_at || r.next_callback_at;
                     var dueDate = due ? new Date(due) : null;
@@ -3571,19 +3591,21 @@
                 btn.style.color = on ? 'var(--text-primary)' : 'var(--text-secondary)';
                 btn.style.borderBottomColor = on ? 'var(--blue)' : 'transparent';
             });
-            document.getElementById('prospectTableCallable').style.display  = name === 'callable'  ? '' : 'none';
-            document.getElementById('prospectTableEmailable').style.display = name === 'emailable' ? '' : 'none';
-            document.getElementById('prospectTableCallbacks').style.display = name === 'callbacks' ? '' : 'none';
-            document.getElementById('prospectTableBooked').style.display    = name === 'booked'    ? '' : 'none';
-            document.getElementById('prospectTableDead').style.display      = name === 'dead'      ? '' : 'none';
+            document.getElementById('prospectTableCallable').style.display    = name === 'callable'     ? '' : 'none';
+            document.getElementById('prospectTableEmailable').style.display   = name === 'emailable'    ? '' : 'none';
+            document.getElementById('prospectTableCallbacks').style.display   = name === 'callbacks'    ? '' : 'none';
+            document.getElementById('prospectTableBooked').style.display      = name === 'booked'       ? '' : 'none';
+            document.getElementById('prospectTableDead').style.display        = name === 'dead'         ? '' : 'none';
+            document.getElementById('prospectTableCallsToday').style.display  = name === 'calls-today'  ? '' : 'none';
             // Filter bar useful only for the broad inbound lists; hide on cold-call lifecycle stages.
-            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked');
+            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today');
             document.getElementById('prospectFilterBar').style.display = hideFilter ? 'none' : 'flex';
-            if (name === 'callable')       loadProspectCallable();
-            else if (name === 'emailable') loadProspectEmailable();
-            else if (name === 'callbacks') loadProspectCallbacks();
-            else if (name === 'booked')    loadProspectBooked();
-            else if (name === 'dead')      loadProspectDead(1);
+            if (name === 'callable')          loadProspectCallable();
+            else if (name === 'emailable')    loadProspectEmailable();
+            else if (name === 'callbacks')    loadProspectCallbacks();
+            else if (name === 'booked')       loadProspectBooked();
+            else if (name === 'dead')         loadProspectDead(1);
+            else if (name === 'calls-today')  loadCallsToday();
         }
 
         // Call Back / Booked Meeting are queried directly against
@@ -3592,6 +3614,28 @@
         // RLS lets admins read.
         function leadsFromProspecting() {
             return sb.schema('prospecting').from('leads');
+        }
+
+        async function loadCallsToday(opts) {
+            opts = opts || {};
+            var host = document.getElementById('prospectTableCallsToday');
+            var cached = !opts.force && prospectState.cache.callsToday;
+            if (cached) {
+                host.innerHTML = renderProspectTable(cached, 'calls-today');
+            } else {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading today\'s calls...</div>';
+            }
+            try {
+                var data = await prospectFetchJSON('/api/prospects/calls-today');
+                var raw = data.results || [];
+                prospectState.cache.callsToday = raw;
+                host.innerHTML = renderProspectTable(raw, 'calls-today');
+                var badge = document.getElementById('prospectCallsTodayBadge');
+                if (badge) { badge.textContent = String(raw.length); badge.style.display = raw.length ? 'inline-block' : 'none'; }
+            } catch (e) {
+                console.error('[calls-today]', e);
+                if (!cached) host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
         }
 
         async function loadProspectCallbacks(opts) {
