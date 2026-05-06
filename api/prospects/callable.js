@@ -22,5 +22,11 @@ module.exports = async function handler(req, res) {
             q: q.q
         }
     });
+    if (status === 200) {
+        // Match lifecycle-stats: 30s edge cache, 60s SWR. Leads only change
+        // when a call lands or the hourly pipeline runs, so a brief stale
+        // window is fine and saves a Cloud Run cold hit on every paint.
+        res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
+    }
     return res.status(status).json(json);
 };

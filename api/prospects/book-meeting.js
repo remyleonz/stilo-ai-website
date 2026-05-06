@@ -46,7 +46,7 @@ function buildEmailHtml(opts) {
         '<p>Hi ' + escapeHtml(opts.firstName || 'there') + ',</p>',
         '<p>Quick confirmation. Our call is locked in for <strong>' + escapeHtml(whenStr) + '</strong>.</p>',
         '<p>Google Meet link: <a href="' + escapeHtml(opts.meetLink) + '" style="color:#2563EB;">' + escapeHtml(opts.meetLink) + '</a></p>',
-        '<p>What we will cover in 30 minutes:</p>',
+        '<p>What we will cover in 15 minutes:</p>',
         '<ul style="padding-left:20px;margin:8px 0 16px;">',
         '<li>What ' + escapeHtml(opts.businessName || 'your business') + ' is doing today vs where the AI agents fit</li>',
         '<li>The two or three highest-ROI use cases for your specific setup</li>',
@@ -96,7 +96,7 @@ module.exports = async function handler(req, res) {
     const body = await readJsonBody(req);
     const leadId = safeNumberId(body.lead_id);
     const whenIso = body.when_iso;
-    const durationMin = Math.min(Math.max(Number(body.duration_min) || 30, 15), 120);
+    const durationMin = Math.min(Math.max(Number(body.duration_min) || 15, 15), 120);
     if (leadId == null) return res.status(400).json({ error: 'missing_lead_id' });
     if (!whenIso) return res.status(400).json({ error: 'missing_when_iso' });
 

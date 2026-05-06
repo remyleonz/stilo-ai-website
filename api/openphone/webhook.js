@@ -85,7 +85,16 @@ module.exports = async function handler(req, res) {
         || '';
 
     if (!verifySignature(sigHeader, raw)) {
-        console.warn('[openphone/webhook] signature verification failed');
+        console.warn('[openphone/webhook] signature verification failed', {
+            has_secret: !!process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET,
+            secret_tail: (process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET || '').slice(-4),
+            sig_header_present: !!sigHeader,
+            sig_header_format: sigHeader
+                ? (sigHeader.indexOf(';') !== -1 ? 'semicolon'
+                    : (sigHeader.indexOf('=') !== -1 ? 'kv' : 'raw'))
+                : 'none',
+            body_len: raw.length
+        });
         return res.status(401).json({ error: 'invalid_signature' });
     }
 

@@ -38,26 +38,40 @@ async function readRawBody(req) {
 }
 
 /**
- * Verify the HMAC-SHA256 signature header that OpenPhone attaches to webhook
- * deliveries. OpenPhone sends `openphone-signature` of the form
- *   `hmac;1;<timestamp>;<base64(hmac_sha256(secret, timestamp + ":" + body))>`
- * (their docs use a semicolon-delimited scheme — we tolerate either that or a
- * plain `t=...,v1=...` style, since both have shipped). Returns true on match.
+ * Verify the HMAC-SHA256 signature header that OpenPhone (now Quo) attaches
+ * to webhook deliveries. Canonical scheme per their reference impl:
+ *
+ *   header  = `openphone-signature: hmac;1;<timestamp>;<base64sig>`
+ *   sig     = base64( HMAC_SHA256( base64decode(secret), `${ts}.${rawBody}` ) )
+ *
+ * Two non-obvious bits that we used to get wrong:
+ *   1. The signing secret value Quo gives you is itself base64 — it must be
+ *      base64-decoded before being used as the HMAC key. Using the raw string
+ *      (which is what we did originally) silently produced a different MAC
+ *      and 401'd every event.
+ *   2. The separator between timestamp and body is `.`, not `:`.
+ *
+ * Returns true on match.
  */
 function verifySignature(headerValue, rawBody) {
     const secret = process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET;
     if (!secret) return false;
     if (!headerValue) return false;
 
+    const keyBinary = Buffer.from(secret, 'base64');
+    const bodyStr = rawBody.toString('utf8');
+
     const tryHmac = function (timestamp, expectedB64) {
-        const payload = (timestamp ? timestamp + ':' : '') + rawBody.toString('utf8');
-        const computed = crypto.createHmac('sha256', secret).update(payload).digest('base64');
+        if (!expectedB64) return false;
+        const payload = (timestamp ? timestamp + '.' : '') + bodyStr;
+        const computed = crypto.createHmac('sha256', keyBinary).update(payload).digest('base64');
         if (computed.length !== expectedB64.length) return false;
         try {
             return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(expectedB64));
         } catch (_) { return false; }
     };
 
+    // Canonical: hmac;1;<ts>;<sig>
     if (headerValue.indexOf(';') !== -1) {
         const parts = headerValue.split(';').map(function (s) { return s.trim(); });
         if (parts.length >= 4) {
@@ -66,6 +80,7 @@ function verifySignature(headerValue, rawBody) {
             if (tryHmac(ts, sig)) return true;
         }
     }
+    // Stripe-style fallback: t=<ts>,v1=<sig>
     if (headerValue.indexOf('=') !== -1) {
         const fields = {};
         headerValue.split(',').forEach(function (chunk) {
@@ -77,6 +92,7 @@ function verifySignature(headerValue, rawBody) {
             if (tryHmac(fields.t, fields.v1)) return true;
         }
     }
+    // Last resort: raw signature only, no timestamp prefix.
     return tryHmac('', headerValue);
 }
 

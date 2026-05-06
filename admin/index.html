@@ -1092,10 +1092,11 @@
                         <h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">Prospecting</h2>
                         <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:4px;">Daily call list, cold email queue, and archive. Click a row to log an outcome.</p>
                     </div>
-                    <button onclick="openLeadGenModal()" style="padding:10px 16px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        Generate Leads
-                    </button>
+                    <!-- "Generate Leads" button removed: David runs the
+                         scrape locally on his Mac and pushes via the
+                         nightly Cloud Workflow. The operator never needs
+                         to trigger a fresh scrape from the admin UI. -->
+                    <span></span>
                 </div>
 
                 <!-- Activity intelligence strip — counts of today's work + queue size.
@@ -1110,8 +1111,7 @@
                         <span><strong id="activityCallbacksDue" style="color:var(--blue);font-family:var(--font-mono);">—</strong> callbacks due today</span>
                     </div>
                     <div id="activityQueue" style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-secondary);">
-                        <span>Cold call queue: <strong id="activityQueueSize" style="color:var(--text-primary);font-family:var(--font-mono);">—</strong></span>
-                        <button id="activityLowLeadsBtn" onclick="openLeadGenModal()" style="display:none;padding:5px 12px;background:rgba(234,179,8,0.15);border:1px solid var(--yellow,#eab308);border-radius:6px;color:var(--yellow,#eab308);font-size:11px;font-weight:700;cursor:pointer;animation:pulse 2s ease-in-out infinite;">⚠ Run low — generate more</button>
+                        <span title="Leads ready to call today. Excludes leads called in the last 14 days, on DNC, or already booked. Differs from total HOT+WARM in the pipeline.">Ready to call today: <strong id="activityQueueSize" style="color:var(--text-primary);font-family:var(--font-mono);">—</strong></span>
                     </div>
                 </div>
 
@@ -1180,10 +1180,7 @@
                         <div id="prospectStatDead" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
                     </div>
                 </div>
-                <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);">
-                    <span style="background:var(--blue-bg);color:var(--blue);border:1px solid rgba(59,130,246,0.25);padding:4px 10px;border-radius:999px;"><strong id="prospectStatStrictPhone">—</strong> strict-pass phones</span>
-                    <span style="background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,0.25);padding:4px 10px;border-radius:999px;"><strong id="prospectStatOwnerEmail">—</strong> owner emails</span>
-                </div>
+                <div style="margin-bottom:18px;"></div>
 
                 <!-- Sub-tab strip — order matches the cold-call lifecycle:
                      Cold Call → Cold Email → Call Back → Booked Meeting → Dead Pool -->
@@ -1207,10 +1204,6 @@
                     <select id="prospectNicheFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:160px;">
                         <option value="">All niches</option>
                     </select>
-                    <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
-                        <input id="prospectHasPhone" type="checkbox" checked onchange="onProspectFilterChange()" style="accent-color:var(--blue);">
-                        Has phone
-                    </label>
                     <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
                         <input id="prospectHasEmail" type="checkbox" onchange="onProspectFilterChange()" style="accent-color:var(--blue);">
                         Has email
@@ -2825,7 +2818,7 @@
            ============================================================ */
         var prospectState = {
             tab: 'callable',
-            filters: { tier: '', q: '', niche: '', hasPhone: true, hasEmail: false },
+            filters: { tier: '', q: '', niche: '', hasEmail: false },
             rows: [],
             currentLeadId: null,
             deadPage: 1,
@@ -2836,23 +2829,42 @@
             openphoneSelectedId: null,
             realtimeChannel: null,
             pipelineRunsChannel: null,
-            activeRunId: null
+            activeRunId: null,
+            // Per-tab row cache. Tab switches render from cache immediately
+            // (no spinner) and fire a background refresh. Logging a call
+            // invalidates the relevant tabs so the next open re-fetches.
+            cache: { callable: null, emailable: null, callbacks: null, booked: null, dead: null }
         };
 
-        // Pruned outcome list — only the moves that actually shift the lead's lifecycle:
-        //   booked_meeting       → Booked Meeting tab
-        //   interested_followup  → Call Back tab (with date + time picker)
-        //   not_interested       → stays in Cold Call (soft no, just logs the attempt)
-        //   wrong_number / disconnected / dnc_request → Dead Pool
-        // No-answer / voicemail / decision-maker-unavailable removed: those don't
-        // need a logged outcome — the lead stays in Cold Call rotation.
+        // Pruned outcome list. Lifecycle moves:
+        //   booked_meeting      → Booked Meeting tab + calendar event + email
+        //   interested_followup → Call Back tab (with date + time picker)
+        //   not_interested      → stays in Cold Call (soft no, logs the attempt)
+        //   wrong_number        → DNC list + Dead Pool (treated as do-not-call;
+        //                         covers the old "Number disconnected" case too)
+        //   dnc_request         → DNC list + Dead Pool (explicit do-not-call)
+        // dncOnSubmit flags an outcome that should also POST /api/prospects/dnc
+        // so the lead lands on David's do-not-call list and surfaces in Dead Pool.
+        // Outcome values match David's ALLOWED_CALL_OUTCOMES so the backend's
+        // lifecycle automation fires correctly (e.g., do_not_call=true on
+        // wrong_number / do_not_call, +2 day callback scheduling on
+        // callback_requested, +90 day long-followup on owner_uninterested).
+        // dncOnSubmit re-POSTs to /api/prospects/dnc as a belt-and-suspenders
+        // safety net — David's backend already sets do_not_call=true server-
+        // side for these outcomes, but the explicit POST keeps the DNC list
+        // populated even if the upstream contract changes.
+        // dialOnly outcomes don't write last_called_outcome — they POST to
+        // log-dial instead, stamping last_called_at + call_attempts. The lead
+        // stays in Cold Call but gets dimmed and sunk to the bottom (existing
+        // dialedWithin24h + isDialOnly demotion path) and David's strict
+        // callable filter excludes it from today's queue.
         var PROSPECT_OUTCOMES = [
-            { value: 'booked_meeting',     label: 'Booked closing meeting',  followUp: false },
-            { value: 'interested_followup',label: 'Interested, follow up',   followUp: true  },
-            { value: 'not_interested',     label: 'Not interested (soft no)',followUp: false },
-            { value: 'wrong_number',       label: 'Wrong number',            followUp: false },
-            { value: 'disconnected',       label: 'Number disconnected',     followUp: false },
-            { value: 'dnc_request',        label: 'Do-not-call requested',   followUp: false }
+            { value: 'called',              label: 'Called (no outcome yet)',  followUp: false, dialOnly: true },
+            { value: 'booked_meeting',      label: 'Booked closing meeting',   followUp: false },
+            { value: 'callback_requested',  label: 'Interested, follow up',    followUp: true  },
+            { value: 'owner_uninterested',  label: 'Not interested (soft no)', followUp: false },
+            { value: 'wrong_number',        label: 'Wrong number / disconnected', followUp: false, dncOnSubmit: true },
+            { value: 'do_not_call',         label: 'Do Not Call',              followUp: false, dncOnSubmit: true }
         ];
 
         async function prospectAuthHeaders(extra) {
@@ -2911,43 +2923,12 @@
         // Realtime (the existing prospect-events channel) so it updates as the
         // user logs calls + books meetings without a refresh.
 
+        // Activity strip is now driven by the same lifecycle-stats response
+        // that fills the tier cards (loadProspectStats above). Kept as a thin
+        // alias so existing call sites still work without refactoring all of
+        // them to call loadProspectStats directly.
         async function loadActivityStrip() {
-            try {
-                var startOfDayLocal = new Date();
-                startOfDayLocal.setHours(0, 0, 0, 0);
-                var startOfWeekLocal = new Date(startOfDayLocal);
-                startOfWeekLocal.setDate(startOfWeekLocal.getDate() - startOfWeekLocal.getDay()); // Sunday-week
-                var endOfDayLocal = new Date(startOfDayLocal);
-                endOfDayLocal.setDate(endOfDayLocal.getDate() + 1);
-
-                var [callsTodayRes, bookedWeekRes, callbacksDueRes, statsRes] = await Promise.all([
-                    leadsFromProspecting().select('id', { count: 'exact', head: true })
-                        .gte('last_called_at', startOfDayLocal.toISOString()),
-                    leadsFromProspecting().select('id', { count: 'exact', head: true })
-                        .eq('last_called_outcome', 'booked_meeting')
-                        .gte('last_called_at', startOfWeekLocal.toISOString()),
-                    leadsFromProspecting().select('id', { count: 'exact', head: true })
-                        .eq('next_action_type', 'callback')
-                        .lte('next_action_due_at', endOfDayLocal.toISOString()),
-                    prospectFetchJSON('/api/prospects/stats').catch(function(){return null;})
-                ]);
-
-                var callsToday = callsTodayRes.count || 0;
-                var bookedWeek = bookedWeekRes.count || 0;
-                var callbacksDue = callbacksDueRes.count || 0;
-                var queueSize = statsRes && statsRes.callable_ready != null ? statsRes.callable_ready : null;
-
-                document.getElementById('activityCallsToday').textContent = callsToday;
-                document.getElementById('activityBookedWeek').textContent = bookedWeek;
-                document.getElementById('activityCallbacksDue').textContent = callbacksDue;
-                document.getElementById('activityQueueSize').textContent = queueSize != null ? queueSize.toLocaleString() : '—';
-
-                // Low-leads warning: pulse yellow + reveal Generate-more button.
-                var lowBtn = document.getElementById('activityLowLeadsBtn');
-                if (lowBtn) lowBtn.style.display = (queueSize != null && queueSize < 500) ? 'inline-block' : 'none';
-            } catch (e) {
-                console.warn('[activity-strip]', e);
-            }
+            return loadProspectStats();
         }
 
         // ─── Lead generator modal ──────────────────────────────────────────────
@@ -3207,32 +3188,70 @@
         }
 
 
+        // All counts in one roundtrip: tier cards, tab badges, activity strip.
+        // Backed by /api/prospects/lifecycle-stats (service-role server-side
+        // query against the prospecting schema, sidesteps PostgREST schema
+        // exposure issues). Cached for 30s at the edge so rapid tab switches
+        // don't pound the DB.
+        // Tier badges from the callable pool. Skips the upstream by_tier
+        // (which lumps in David's 4.7k auto-classified-dead archive — never
+        // called by us) so badges reconcile with the visible queue.
+        function applyTierBadgesFromRows(rows) {
+            var tc = { hot: 0, warm: 0, cool: 0, dead: 0 };
+            (rows || []).forEach(function (r) {
+                var t = String(r.prospect_tier || r.tier || '').toLowerCase();
+                if (tc[t] != null) tc[t]++;
+            });
+            var hot = document.getElementById('prospectStatHot');
+            var warm = document.getElementById('prospectStatWarm');
+            var cool = document.getElementById('prospectStatCool');
+            var dead = document.getElementById('prospectStatDead');
+            if (hot)  hot.textContent  = tc.hot.toLocaleString();
+            if (warm) warm.textContent = tc.warm.toLocaleString();
+            if (cool) cool.textContent = tc.cool.toLocaleString();
+            if (dead) dead.textContent = tc.dead.toLocaleString();
+        }
+
         async function loadProspectStats() {
             try {
-                var data = await prospectFetchJSON('/api/prospects/stats');
+                var data = await prospectFetchJSON('/api/prospects/lifecycle-stats');
                 prospectState.statsCache = data;
-                // David's API returns by_tier with lowercase keys: { hot, warm, cool, dead }.
-                // Older shape (tier_counts.HOT etc.) kept as fallback.
-                var byTier = data.by_tier || {};
-                var legacy = data.tier_counts || data.counts || {};
-                var pick = function (lc, uc) {
-                    if (byTier[lc] != null) return byTier[lc];
-                    if (legacy[uc] != null) return legacy[uc];
-                    return 0;
-                };
-                document.getElementById('prospectStatHot').textContent  = pick('hot',  'HOT');
-                document.getElementById('prospectStatWarm').textContent = pick('warm', 'WARM');
-                document.getElementById('prospectStatCool').textContent = pick('cool', 'COOL');
-                document.getElementById('prospectStatDead').textContent = pick('dead', 'DEAD');
-                document.getElementById('prospectStatStrictPhone').textContent = data.owner_phone_strict_count != null ? data.owner_phone_strict_count : (data.strict_phone_count != null ? data.strict_phone_count : (data.by_reachability && (data.by_reachability.callable + (data.by_reachability.both || 0)) || '—'));
-                document.getElementById('prospectStatOwnerEmail').textContent = data.owner_email_count != null ? data.owner_email_count : ((data.by_reachability && data.by_reachability.emailable + (data.by_reachability.both || 0)) || '—');
+                // NOTE: we no longer paint the tier badges from
+                // data.tier_counts — see applyTierBadgesFromRows() (called
+                // after the callable fetch lands). data.tier_counts is kept
+                // around in statsCache for diagnostics only.
 
-                // Niche chips removed in favor of dropdown filter — populate the niche <select>.
-                populateNicheFilter(data);
+                // Tab badges + activity strip filled from the same payload —
+                // saves another 4-5 roundtrips on page load.
+                var tb = data.tab_badges || {};
+                var cbBadge = document.getElementById('prospectCallbackBadge');
+                if (cbBadge) {
+                    cbBadge.textContent = String(tb.callbacks || 0);
+                    cbBadge.style.display = tb.callbacks ? 'inline-block' : 'none';
+                }
+                var bkBadge = document.getElementById('prospectBookedBadge');
+                if (bkBadge) {
+                    bkBadge.textContent = String(tb.booked || 0);
+                    bkBadge.style.display = tb.booked ? 'inline-block' : 'none';
+                }
+                var act = data.activity || {};
+                var t = function (id) { return document.getElementById(id); };
+                if (t('activityCallsToday'))   t('activityCallsToday').textContent   = act.calls_today || 0;
+                if (t('activityBookedWeek'))   t('activityBookedWeek').textContent   = act.booked_this_week || 0;
+                if (t('activityCallbacksDue')) t('activityCallbacksDue').textContent = act.callbacks_due_today || 0;
+                // Queue counter = David's `callable_ready` (strict-default).
+                // Decrements naturally after each call log because the lead
+                // gets `last_called_at = now()`, which kicks it out of the
+                // strict <14d filter on David's side.
+                var queueSize = data.callable_ready != null ? data.callable_ready : null;
+                if (t('activityQueueSize')) t('activityQueueSize').textContent = queueSize != null ? queueSize.toLocaleString() : '—';
+
+                populateNicheFilter();
             } catch (e) {
-                console.error('[prospects/stats]', e);
+                console.error('[lifecycle-stats]', e);
                 ['Hot','Warm','Cool','Dead'].forEach(function (k) {
-                    document.getElementById('prospectStat' + k).textContent = '?';
+                    var el = document.getElementById('prospectStat' + k);
+                    if (el) el.textContent = '?';
                 });
             }
         }
@@ -3257,12 +3276,21 @@
         function buildProspectQuery() {
             var f = prospectState.filters;
             var qs = [];
-            // David's backend stores tiers as lowercase ('hot','warm','cool','dead').
-            // Pass lowercase so the query actually matches.
-            if (f.tier) qs.push('tier=' + encodeURIComponent(String(f.tier).toLowerCase()));
+            // David's API filters by `tier_min` (this tier and above), not
+            // an exact match. We send the selected tier as the minimum, then
+            // applyClientFilters narrows to the exact tier afterward. When
+            // the user filters to COOL we bump the limit so all callable cool
+            // leads come back instead of getting truncated at 150.
+            if (f.tier) {
+                qs.push('tier_min=' + encodeURIComponent(String(f.tier).toLowerCase()));
+                qs.push('limit=1000');
+            } else {
+                // 500 leaves headroom over typical callable_ready (~200). Edge
+                // cache on /api/prospects/callable absorbs the larger payload.
+                qs.push('limit=500');
+            }
             if (f.q) qs.push('q=' + encodeURIComponent(f.q));
             if (f.niche) qs.push('niche=' + encodeURIComponent(f.niche));
-            qs.push('limit=400');
             return qs.length ? '?' + qs.join('&') : '';
         }
 
@@ -3292,10 +3320,38 @@
         }
 
         // Client-side post-filter + sort. Used by every list loader after fetch.
+        // Hard rule: every row in the CRM must have an owner name AND a phone
+        // (the "callable" definition). Leads from David's dump that haven't
+        // been enriched yet stay invisible until they have both fields.
         function applyClientFilters(rows) {
             var f = prospectState.filters;
-            if (f.hasPhone) rows = rows.filter(function (r) { return r.owner_phone || r.phone; });
+            rows = rows.filter(function (r) {
+                var hasOwner = (r.owner_name && String(r.owner_name).trim()) || (r.contact_name && String(r.contact_name).trim());
+                var hasPhone = (r.owner_phone && String(r.owner_phone).trim()) || (r.phone && String(r.phone).trim());
+                return hasOwner && hasPhone;
+            });
+            // Search across business name + owner name. Belt-and-suspenders:
+            // we also pass q= to the upstream, but if the upstream doesn't
+            // honor it we still filter locally.
+            if (f.q) {
+                var qLower = String(f.q).toLowerCase();
+                rows = rows.filter(function (r) {
+                    var bn = String(r.business_name || r.business || r.name || '').toLowerCase();
+                    var on = String(r.owner_name || r.contact_name || '').toLowerCase();
+                    return bn.indexOf(qLower) !== -1 || on.indexOf(qLower) !== -1;
+                });
+            }
             if (f.hasEmail) rows = rows.filter(function (r) { return r.owner_email || r.email; });
+
+            // Tier filter (client-side fallback in case David's API doesn't
+            // honor the ?tier= query param). Compares lowercase.
+            if (f.tier) {
+                var want = String(f.tier).toLowerCase();
+                rows = rows.filter(function (r) {
+                    var t = String(r.prospect_tier || r.tier || '').toLowerCase();
+                    return t === want;
+                });
+            }
 
             // Cold Call only: drop exhausted rows (3 attempts, no outcome) so the
             // list actually decreases. They surface in Dead Pool instead.
@@ -3303,8 +3359,9 @@
                 rows = rows.filter(function (r) { return !isExhausted(r); });
             }
 
-            // Default sort: dial-only-today rows sink to the bottom (preserved
-            // as a soft demotion); within each group, score descending.
+            // Default sort: dial-only-today rows sink to the bottom (soft
+            // demotion); within each group, prospect_score descending so the
+            // best leads bubble to the top of each tier.
             rows = rows.slice().sort(function (a, b) {
                 var ad = (dialedWithin24h(a) && isDialOnly(a)) ? 1 : 0;
                 var bd = (dialedWithin24h(b) && isDialOnly(b)) ? 1 : 0;
@@ -3316,75 +3373,92 @@
             return rows;
         }
 
-        async function loadProspectCallable() {
+        // Renders cached rows synchronously if we have them, then fetches
+        // fresh data in the background. Big perf win on tab switches: the
+        // user sees the list instantly instead of a spinner. `cacheKey`
+        // matches the tab name; pass `force: true` to skip the cache.
+        async function loadProspectCallable(opts) {
+            opts = opts || {};
             var host = document.getElementById('prospectTableCallable');
-            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>';
+            var cached = !opts.force && prospectState.cache.callable;
+            if (cached) {
+                prospectState.rows = applyClientFilters(cached);
+                host.innerHTML = renderProspectTable(prospectState.rows, 'callable');
+                populateNicheFilter();
+            } else {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>';
+            }
             try {
                 var data = await prospectFetchJSON('/api/prospects/callable' + buildProspectQuery());
-                var rows = data.results || data.leads || data.prospects || data || [];
-                rows = applyClientFilters(rows);
+                var raw = data.results || data.leads || data.prospects || data || [];
+                prospectState.cache.callable = raw;
+                var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'callable');
                 populateNicheFilter();
+                // Tier badges off the callable pool itself, not the upstream
+                // /stats by_tier (which counts ~5k unenriched/dead-archive
+                // leads we'll never call). Sums to the visible queue by
+                // construction.
+                applyTierBadgesFromRows(raw);
             } catch (e) {
                 console.error('[prospects/callable]', e);
-                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + (e.status === 401 ? ' — sign in as an admin.' : (e.status === 502 ? ' — prospecting backend unreachable.' : '')) + '</div>';
+                if (!cached) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + (e.status === 401 ? ' — sign in as an admin.' : (e.status === 502 ? ' — prospecting backend unreachable.' : '')) + '</div>';
+                }
             }
         }
 
-        async function loadProspectEmailable() {
+        async function loadProspectEmailable(opts) {
+            opts = opts || {};
             var host = document.getElementById('prospectTableEmailable');
-            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
+            var cached = !opts.force && prospectState.cache.emailable;
+            if (cached) {
+                prospectState.rows = applyClientFilters(cached);
+                host.innerHTML = renderProspectTable(prospectState.rows, 'emailable');
+            } else {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
+            }
             try {
                 var data = await prospectFetchJSON('/api/prospects/emailable' + buildProspectQuery());
-                var rows = data.results || data.leads || data.prospects || data || [];
-                rows = applyClientFilters(rows);
+                var raw = data.results || data.leads || data.prospects || data || [];
+                prospectState.cache.emailable = raw;
+                var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'emailable');
             } catch (e) {
                 console.error('[prospects/emailable]', e);
-                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + '</div>';
+                if (!cached) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + '</div>';
+                }
             }
         }
 
+        // Dead Pool = "operator-dead" only: leads with a terminal call
+        // outcome (DNC, wrong number, disconnected, do-not-call) OR 3+ dial
+        // attempts with no logged outcome. David's auto-classified
+        // prospect_tier='dead' archive (low-fit / unreachable, never called)
+        // is intentionally excluded.
         async function loadProspectDead(page) {
             page = page || 1;
             prospectState.deadPage = page;
             var host = document.getElementById('prospectTableDead');
-            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
+            var cached = prospectState.cache.dead;
+            if (cached) {
+                host.innerHTML = renderProspectTable(cached, 'dead');
+            } else {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
+            }
             try {
-                var deadResp = await prospectFetchJSON('/api/prospects/dead?page=' + page + '&limit=50');
-                var deadRows = deadResp.results || deadResp.leads || deadResp.prospects || [];
-                // Also surface "exhausted" leads — 3+ dial attempts with no logged
-                // outcome — pulled directly from prospecting.leads (David's API
-                // doesn't filter by call_attempts). Stamp them with a synthetic
-                // last_called_outcome label so they're distinguishable in the table.
-                var exhaustedRows = [];
-                try {
-                    var resp = await leadsFromProspecting()
-                        .select('id,name,owner_name,owner_phone,phone,owner_email,email,category,prospect_tier,prospect_score,score,last_called_at,last_called_outcome,call_attempts')
-                        .gte('call_attempts', 3)
-                        .is('last_called_outcome', null)
-                        .order('last_called_at', { ascending: false, nullsFirst: false })
-                        .limit(200);
-                    if (!resp.error) {
-                        exhaustedRows = (resp.data || []).map(function (r) {
-                            return Object.assign({}, r, { _exhausted: true });
-                        });
-                    }
-                } catch (_) { /* schema may not be exposed yet */ }
-
-                var combined = exhaustedRows.concat(deadRows);
-                var totalPages = deadResp.total_pages || 1;
-                host.innerHTML = renderProspectTable(combined, 'dead') +
-                    '<div style="display:flex;justify-content:center;gap:8px;padding:14px;border-top:1px solid var(--border-subtle);">' +
-                    '<button onclick="loadProspectDead(' + Math.max(1, page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;cursor:pointer;' + (page <= 1 ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Prev</button>' +
-                    '<span style="font-size:12px;color:var(--text-secondary);align-self:center;">Page ' + page + ' / ' + totalPages + ' · ' + exhaustedRows.length + ' exhausted (3+ attempts)</span>' +
-                    '<button onclick="loadProspectDead(' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;cursor:pointer;' + (page >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Next</button>' +
-                    '</div>';
+                var exResp = await prospectFetchJSON('/api/prospects/list-exhausted?limit=400');
+                var rows = exResp.results || [];
+                prospectState.cache.dead = rows;
+                host.innerHTML = renderProspectTable(rows, 'dead');
             } catch (e) {
                 console.error('[prospects/dead]', e);
-                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + '</div>';
+                if (!cached) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message) + '</div>';
+                }
             }
         }
 
@@ -3392,16 +3466,17 @@
             if (!rows || !rows.length) {
                 return '<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px;">No prospects in this view.</div>';
             }
-            var th = 'text-align:left;padding:10px 14px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);background:rgba(37,99,235,0.04);';
+            var th = 'text-align:left;padding:10px 14px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);background:rgba(37,99,235,0.04);white-space:nowrap;';
+            var thNarrow = th + 'width:1px;';
             var head;
             if (mode === 'emailable') {
-                head = '<tr><th style="' + th + '">Score</th><th style="' + th + '">Tier</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Email</th><th style="' + th + '">Niche</th><th style="' + th + '">Last contacted</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last contacted</th></tr>';
             } else if (mode === 'callbacks') {
-                head = '<tr><th style="' + th + '">Due</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Phone</th><th style="' + th + '">Niche</th><th style="' + th + '">Last call</th><th style="' + th + '">Action</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Due</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last call</th><th style="' + thNarrow + '">Action</th></tr>';
             } else if (mode === 'booked') {
-                head = '<tr><th style="' + th + '">Booked</th><th style="' + th + '">Score</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Phone</th><th style="' + th + '">Email</th><th style="' + th + '">Niche</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Booked</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th></tr>';
             } else {
-                head = '<tr><th style="' + th + '">Score</th><th style="' + th + '">Tier</th><th style="' + th + '">Business</th><th style="' + th + '">Owner</th><th style="' + th + '">Phone</th><th style="' + th + '">Niche</th><th style="' + th + '">Last called</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last called</th></tr>';
             }
             var body = rows.map(function(r) {
                 var id = r.id != null ? r.id : r.lead_id;
@@ -3414,9 +3489,12 @@
                 var lastStr = lastCalled ? new Date(lastCalled).toLocaleDateString() : '—';
                 var score = r.prospect_score != null ? r.prospect_score : (r.score != null ? r.score : '—');
                 var strictBadge = r.owner_phone_strict ? ' <span title="Strict-pass owner phone" style="display:inline-block;padding:1px 6px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;letter-spacing:0.04em;">STRICT</span>' : '';
+                var emailSub = email
+                    ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-sans,inherit);word-break:break-all;white-space:normal;">' + escapeAdminHtml(email) + '</div>'
+                    : '';
                 var contactCol = mode === 'emailable'
-                    ? '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;">' + escapeAdminHtml(email) + '</td>'
-                    : '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + strictBadge + '</td>';
+                    ? '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
+                    : '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div>' + emailSub + '</td>';
                 if (mode === 'callbacks') {
                     var due = r.next_action_due_at || r.next_callback_at;
                     var dueDate = due ? new Date(due) : null;
@@ -3436,31 +3514,30 @@
                 if (mode === 'booked') {
                     var bookedAtStr = r.last_called_at ? new Date(r.last_called_at).toLocaleString() : '—';
                     return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
-                        + '<td style="padding:10px 14px;font-size:12px;color:var(--green,#10b981);font-weight:600;">' + escapeAdminHtml(bookedAtStr) + '</td>'
-                        + '<td style="padding:10px 14px;font-family:var(--font-mono);font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(score) + '</td>'
+                        + '<td style="padding:10px 14px;font-size:12px;color:var(--green,#10b981);font-weight:600;white-space:nowrap;">' + escapeAdminHtml(bookedAtStr) + '</td>'
+                        + '<td style="padding:10px 14px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
                         + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(email) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
+                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
                         + '</tr>';
                 }
                 // Cold Call: if the lead's been dialed in last 24h with no logged
                 // outcome, dim the row + show a "Dialed Nx · today" badge in the
-                // score column. This is the visual demotion described in the plan.
+                // tier column. This is the visual demotion described in the plan.
                 var dialedToday = mode === 'callable' && dialedWithin24h(r) && isDialOnly(r);
                 var rowStyle = dialedToday ? 'opacity:0.55;' : '';
                 var dialedBadge = dialedToday
                     ? ' <span title="You\'ve dialed this lead today, no outcome logged yet" style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;background:rgba(234,179,8,0.15);color:var(--yellow,#eab308);font-size:10px;font-weight:700;letter-spacing:0.04em;">DIALED ×' + (r.call_attempts || 1) + '</span>'
                     : '';
                 return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
-                    + '<td style="padding:10px 14px;font-family:var(--font-mono);font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(score) + dialedBadge + '</td>'
-                    + '<td style="padding:10px 14px;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
+                    + '<td style="padding:10px 14px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + dialedBadge + '</td>'
                     + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
+                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
                     + contactCol
-                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
-                    + '<td style="padding:10px 14px;color:var(--text-muted);font-size:12px;">' + lastStr + '</td>'
+                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                    + '<td style="padding:10px 14px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastStr + '</td>'
                     + '</tr>';
             }).join('');
             return '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
@@ -3497,69 +3574,65 @@
             return sb.schema('prospecting').from('leads');
         }
 
-        async function loadProspectCallbacks() {
+        async function loadProspectCallbacks(opts) {
+            opts = opts || {};
             var host = document.getElementById('prospectTableCallbacks');
-            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading callbacks...</div>';
+            var cached = !opts.force && prospectState.cache.callbacks;
+            if (cached) {
+                prospectState.rows = applyClientFilters(cached);
+                host.innerHTML = renderProspectTable(prospectState.rows, 'callbacks');
+            } else {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading callbacks...</div>';
+            }
             try {
-                var resp = await leadsFromProspecting()
-                    .select('id,name,owner_name,owner_phone,phone,owner_email,email,category,prospect_tier,prospect_score,score,last_called_at,last_called_outcome,call_attempts,call_notes,next_action_due_at,next_action_type,owner_phone_strict_pass')
-                    .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
-                    .neq('do_not_call', true)
-                    .order('next_action_due_at', { ascending: true, nullsFirst: false })
-                    .limit(400);
-                if (resp.error) throw resp.error;
-                var rows = applyClientFilters(resp.data || []);
+                var data = await prospectFetchJSON('/api/prospects/list-callbacks?limit=400');
+                var raw = data.results || [];
+                prospectState.cache.callbacks = raw;
+                var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'callbacks');
                 var badge = document.getElementById('prospectCallbackBadge');
                 if (badge) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
             } catch (e) {
                 console.error('[callbacks]', e);
-                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                if (!cached) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                }
             }
         }
 
-        async function loadProspectBooked() {
+        async function loadProspectBooked(opts) {
+            opts = opts || {};
             var host = document.getElementById('prospectTableBooked');
-            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading booked meetings...</div>';
+            var cached = !opts.force && prospectState.cache.booked;
+            if (cached) {
+                prospectState.rows = applyClientFilters(cached);
+                host.innerHTML = renderProspectTable(prospectState.rows, 'booked');
+            } else {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading booked meetings...</div>';
+            }
             try {
-                var resp = await leadsFromProspecting()
-                    .select('id,name,owner_name,owner_phone,phone,owner_email,email,category,prospect_tier,prospect_score,score,last_called_at,last_called_outcome,call_attempts,call_notes,next_action_due_at,owner_phone_strict_pass')
-                    .eq('last_called_outcome', 'booked_meeting')
-                    .order('last_called_at', { ascending: false, nullsFirst: false })
-                    .limit(400);
-                if (resp.error) throw resp.error;
-                var rows = applyClientFilters(resp.data || []);
+                var data = await prospectFetchJSON('/api/prospects/list-booked?limit=400');
+                var raw = data.results || [];
+                prospectState.cache.booked = raw;
+                var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'booked');
                 var badge = document.getElementById('prospectBookedBadge');
                 if (badge) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
             } catch (e) {
                 console.error('[booked]', e);
-                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                if (!cached) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                }
             }
         }
 
+        // Tab badges are now seeded from /api/prospects/lifecycle-stats inside
+        // loadProspectStats. This thin wrapper keeps the existing call sites
+        // working without rewiring every initializer.
         async function refreshTabBadges() {
-            try {
-                var [cbRes, bookedRes] = await Promise.all([
-                    leadsFromProspecting().select('id', { count: 'exact', head: true })
-                        .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
-                        .neq('do_not_call', true),
-                    leadsFromProspecting().select('id', { count: 'exact', head: true })
-                        .eq('last_called_outcome', 'booked_meeting')
-                ]);
-                var cbBadge = document.getElementById('prospectCallbackBadge');
-                if (cbBadge && cbRes.count != null) {
-                    cbBadge.textContent = String(cbRes.count);
-                    cbBadge.style.display = cbRes.count ? 'inline-block' : 'none';
-                }
-                var bkBadge = document.getElementById('prospectBookedBadge');
-                if (bkBadge && bookedRes.count != null) {
-                    bkBadge.textContent = String(bookedRes.count);
-                    bkBadge.style.display = bookedRes.count ? 'inline-block' : 'none';
-                }
-            } catch (_) { /* swallow — supabase-js may not be ready before sign-in */ }
+            return loadProspectStats();
         }
 
         async function loadOpenPhoneNumbers() {
@@ -3729,13 +3802,12 @@
             var search = document.getElementById('prospectSearch');
             var tier = document.getElementById('prospectTierFilter');
             var niche = document.getElementById('prospectNicheFilter');
-            var hasPhone = document.getElementById('prospectHasPhone');
             var hasEmail = document.getElementById('prospectHasEmail');
             f.q = search ? search.value.trim() : '';
             f.tier = tier ? tier.value : '';
             f.niche = niche ? niche.value : '';
-            f.hasPhone = hasPhone ? hasPhone.checked : false;
             f.hasEmail = hasEmail ? hasEmail.checked : false;
+            highlightActiveTierCard();
             clearTimeout(prospectState.searchDebounce);
             prospectState.searchDebounce = setTimeout(function(){
                 if (prospectState.tab === 'callable') loadProspectCallable();
@@ -3743,16 +3815,35 @@
             }, 200);
         }
 
-        // Click a stats card to scope to that tier. Lowercase the value (David's
-        // backend stores lowercase) so the filter actually matches.
+        // Visual feedback for which tier card is the active filter. Clicking
+        // the same card again clears the filter (handled in the click listener).
+        function highlightActiveTierCard() {
+            var active = String(prospectState.filters.tier || '').toUpperCase();
+            document.querySelectorAll('.prospect-stat-card').forEach(function (card) {
+                var t = card.getAttribute('data-tier') || '';
+                var on = active && t === active;
+                card.style.background = on ? 'rgba(37,99,235,0.10)' : 'var(--bg-card)';
+                card.style.boxShadow = on ? 'inset 0 0 0 1px var(--blue)' : 'none';
+            });
+        }
+
+        // Click a stats card to scope to that tier. Click the active card again
+        // to clear. Lowercase the value (David's backend stores lowercase).
+        // Clicking DEAD jumps straight to the Dead Pool tab.
         document.addEventListener('click', function(ev){
             var card = ev.target.closest && ev.target.closest('.prospect-stat-card');
             if (!card) return;
             var tier = (card.getAttribute('data-tier') || '').toLowerCase();
             if (!tier) return;
-            prospectState.filters.tier = tier;
+            if (tier === 'dead') {
+                switchProspectTab('dead');
+                return;
+            }
+            var current = String(prospectState.filters.tier || '').toLowerCase();
+            prospectState.filters.tier = (current === tier) ? '' : tier;
             var sel = document.getElementById('prospectTierFilter');
-            if (sel) sel.value = tier;
+            if (sel) sel.value = prospectState.filters.tier;
+            highlightActiveTierCard();
             if (prospectState.tab !== 'callable' && prospectState.tab !== 'emailable') {
                 switchProspectTab('callable');
             } else {
@@ -3774,8 +3865,96 @@
             try {
                 var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(leadId));
                 content.innerHTML = renderProspectDrawer(data, mode);
+                // Trigger the outcome handler once the drawer is in the DOM so
+                // the slot picker renders immediately for the default outcome
+                // (booked_meeting). Without this it only appears after the user
+                // toggles the dropdown to a different value and back.
+                if (mode !== 'emailable') {
+                    try { onOutcomeChange(); } catch (_) {}
+                    // Fetch the per-lead cold-call script from David's GCS
+                    // bucket. Async — drawer is already painted; this just
+                    // upgrades the script panel content when ready.
+                    loadColdCallScript(data || {});
+                }
             } catch (e) {
                 content.innerHTML = '<div style="color:var(--red);padding:20px 0;font-size:14px;">Could not load lead: ' + escapeAdminHtml(e.message) + '</div>';
+            }
+        }
+
+        // Tiny markdown → HTML renderer scoped to what David's scripts use:
+        // headings (#, ##, ###), bold (**x**), italic (*x*), bulleted lists
+        // (- or *), numbered lists, inline code (`x`), paragraphs, hr (---).
+        // Deliberately small — no full markdown lib needed for cold-call scripts
+        // and pulling one in just bloats the bundle.
+        function renderScriptMarkdown(md) {
+            if (!md) return '';
+            // Escape HTML first so user content can't break out.
+            var s = String(md).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // Headings
+            s = s.replace(/^###\s+(.+)$/gm, '<h4 style="font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--text-primary);letter-spacing:0.02em;">$1</h4>');
+            s = s.replace(/^##\s+(.+)$/gm,  '<h3 style="font-size:14px;font-weight:800;margin:18px 0 8px;color:var(--text-primary);letter-spacing:0.01em;">$1</h3>');
+            s = s.replace(/^#\s+(.+)$/gm,   '<h2 style="font-size:16px;font-weight:800;margin:20px 0 10px;color:var(--text-primary);">$1</h2>');
+            // Horizontal rule
+            s = s.replace(/^---+\s*$/gm, '<hr style="border:none;border-top:1px solid var(--border-subtle);margin:14px 0;"/>');
+            // Bold + italic + inline code
+            s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+            s = s.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.06);border:1px solid var(--border-subtle);padding:1px 5px;border-radius:4px;font-size:0.92em;">$1</code>');
+            // Bulleted lists (one level)
+            s = s.replace(/(?:^|\n)((?:[ \t]*[-*]\s.+\n?)+)/g, function (m, block) {
+                var items = block.trim().split(/\n/).map(function (line) {
+                    return '<li style="margin:3px 0;">' + line.replace(/^[ \t]*[-*]\s+/, '') + '</li>';
+                }).join('');
+                return '\n<ul style="margin:6px 0 10px 20px;padding:0;">' + items + '</ul>';
+            });
+            // Numbered lists (one level)
+            s = s.replace(/(?:^|\n)((?:[ \t]*\d+\.\s.+\n?)+)/g, function (m, block) {
+                var items = block.trim().split(/\n/).map(function (line) {
+                    return '<li style="margin:3px 0;">' + line.replace(/^[ \t]*\d+\.\s+/, '') + '</li>';
+                }).join('');
+                return '\n<ol style="margin:6px 0 10px 22px;padding:0;">' + items + '</ol>';
+            });
+            // Paragraphs from remaining double-newline blocks
+            s = s.split(/\n{2,}/).map(function (block) {
+                if (/^\s*<(h\d|ul|ol|hr|p|div|li|strong|em)/i.test(block.trim())) return block;
+                return '<p style="margin:6px 0;">' + block.replace(/\n/g, '<br/>') + '</p>';
+            }).join('\n');
+            return s;
+        }
+
+        async function loadColdCallScript(lead) {
+            var body = document.getElementById('prospectScriptBody');
+            var meta = document.getElementById('prospectScriptMeta');
+            if (!body) return;
+            var businessName = lead.business_name || lead.business || lead.name || '';
+            if (!businessName) {
+                body.innerHTML = '<div style="color:var(--text-muted);">No business name on this lead.</div>';
+                return;
+            }
+            var url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(businessName);
+            try {
+                var data = await prospectFetchJSON(url);
+                if (!data || !data.content_md) {
+                    body.innerHTML = '<div style="color:var(--text-muted);">No script returned for this lead.</div>';
+                    return;
+                }
+                body.innerHTML = renderScriptMarkdown(data.content_md);
+                if (meta) {
+                    var when = data.generated_at ? new Date(data.generated_at).toLocaleDateString() : '';
+                    meta.textContent = 'Script: ' + (data.filename || '').split('/').pop() + (when ? ' · generated ' + when : '');
+                }
+            } catch (e) {
+                // Friendly empty states. Never surface the raw scoring text
+                // (prospect_reasoning) — that's internal debug, not for the
+                // operator's call screen.
+                if (e.status === 404) {
+                    body.innerHTML = '<div style="color:var(--text-muted);">No cold-call script for this lead yet. The nightly run at 02:00 UTC generates new scripts hourly thereafter.</div>';
+                } else if (e.status === 503) {
+                    body.innerHTML = '<div style="color:var(--text-muted);">Cold-call scripts not connected yet — David needs to grant the service account access to the GCS bucket.</div>';
+                } else {
+                    body.innerHTML = '<div style="color:var(--red);font-size:12px;">Could not load script: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                    console.warn('[cold-call-script]', e);
+                }
             }
         }
 
@@ -3787,20 +3966,49 @@
             var email    = d.owner_email || d.email || '';
             var niche    = d.niche || d.category || '';
             var score    = d.prospect_score != null ? d.prospect_score : (d.score != null ? d.score : '—');
-            var reasoning = d.prospecting_reasoning || d.reasoning || d.talk_track || '';
-            var recProduct = d.recommended_product || d.recommendation || '';
+            // Field names per David's FRONTEND_BRIEF.md: prospect_reasoning is
+            // the AI-generated talk track (why this lead scored what it did
+            // and what to pitch); matched_product_name is the STILO product
+            // that fits this business. Fallbacks kept for legacy data.
+            var reasoning  = d.prospect_reasoning || d.prospecting_reasoning || d.reasoning || d.talk_track || '';
+            var recProduct = d.matched_product_name || d.recommended_product || d.recommendation || '';
             var history = d.call_history || d.calls || [];
 
             var outcomes = PROSPECT_OUTCOMES.map(function(o){
                 return '<option value="' + o.value + '">' + o.label + '</option>';
             }).join('');
 
+            // Each history row is one OpenPhone call event from
+            // prospecting.lead_calls. The webhook upserts as transcript +
+            // recording + summary land independently, so any combination of
+            // those fields can be present. Render them all cleanly.
             var historyHtml = history.length ? history.map(function(h){
                 var at = h.called_at || h.timestamp || h.created_at;
                 var atStr = at ? new Date(at).toLocaleString() : '';
-                return '<div style="padding:10px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
-                    + '<div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(h.outcome || '—') + '</span><span style="color:var(--text-muted);">' + atStr + '</span></div>'
-                    + (h.notes ? '<div style="margin-top:4px;color:var(--text-secondary);">' + escapeAdminHtml(h.notes) + '</div>' : '')
+                var dur = h.duration_seconds ? Math.floor(h.duration_seconds / 60) + 'm ' + (h.duration_seconds % 60) + 's' : '';
+                var dirArrow = h.direction === 'inbound' ? '↓ in' : (h.direction === 'outbound' ? '↑ out' : '');
+                var outcome = h.outcome || h.notes || '—';
+                var rec = h.recording_url
+                    ? '<a href="' + escapeAdminHtml(h.recording_url) + '" target="_blank" rel="noopener" style="color:var(--blue);font-size:11px;text-decoration:underline;">▶ recording</a>'
+                    : '';
+                var summary = h.transcript_summary
+                    ? '<div style="margin-top:6px;padding:8px 10px;background:rgba(37,99,235,0.06);border-left:2px solid var(--blue);border-radius:4px;color:var(--text-primary);font-size:12px;line-height:1.45;">' + escapeAdminHtml(h.transcript_summary) + '</div>'
+                    : '';
+                var transcript = h.transcript
+                    ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:11px;color:var(--blue);user-select:none;">View full transcript</summary>'
+                      + '<div style="margin-top:6px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:4px;color:var(--text-secondary);font-size:11px;line-height:1.5;white-space:pre-wrap;font-family:var(--font-mono);max-height:240px;overflow-y:auto;">' + escapeAdminHtml(h.transcript) + '</div>'
+                      + '</details>'
+                    : '';
+                var headerMeta = [dirArrow, dur, rec].filter(function (x) { return x; }).join(' · ');
+                return '<div style="padding:12px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
+                    + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
+                      + '<span style="font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(outcome) + '</span>'
+                      + '<span style="color:var(--text-muted);font-size:11px;">' + atStr + '</span>'
+                    + '</div>'
+                    + (headerMeta ? '<div style="margin-top:3px;font-size:11px;color:var(--text-muted);">' + headerMeta + '</div>' : '')
+                    + summary
+                    + transcript
+                    + (h.notes ? '<div style="margin-top:6px;color:var(--text-secondary);">' + escapeAdminHtml(h.notes) + '</div>' : '')
                     + '</div>';
             }).join('') : '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No prior contacts.</div>';
 
@@ -3853,6 +4061,30 @@
 
                 + '<form id="' + formId + '" onsubmit="event.preventDefault();' + submitFn + ';return false;" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
                 + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px;">' + (mode === 'emailable' ? 'Log email' : 'Log call') + '</h3>'
+
+                // Sales script block — pulls David's per-lead cold-call script
+                // from the GCS bucket via /api/prospects/cold-call-script.
+                // Falls back to prospect_reasoning + matched_product_name when
+                // no script exists yet for this business. Loaded async so the
+                // drawer paints fast; loadColdCallScript fills it in.
+                // Sales script panel — shows only David's per-lead cold-call
+                // script from the GCS bucket. The old prospect_reasoning text
+                // (e.g. "reach=both(1.00) | product=LCR(28) | pain=23: ...")
+                // is internal scoring debug and not for the operator, so it's
+                // not surfaced anymore.
+                + ((mode !== 'emailable')
+                    ? '<div id="prospectScriptCard" style="margin-bottom:14px;padding:12px 14px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.22);border-radius:8px;">'
+                        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">'
+                          + '<span style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);">Sales script</span>'
+                          + (recProduct ? '<span id="prospectScriptPitch" style="font-size:11px;font-weight:700;color:var(--text-primary);background:rgba(255,255,255,0.06);border:1px solid var(--border-subtle);padding:2px 8px;border-radius:999px;">Pitch: ' + escapeAdminHtml(recProduct) + '</span>' : '<span id="prospectScriptPitch"></span>')
+                        + '</div>'
+                        + '<div id="prospectScriptBody" style="font-size:13px;color:var(--text-primary);line-height:1.55;">'
+                          + '<div style="color:var(--text-muted);">Loading script…</div>'
+                        + '</div>'
+                        + '<div id="prospectScriptMeta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>'
+                      + '</div>'
+                    : '')
+
                 + (mode === 'emailable'
                     ? ''
                     : '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Outcome</label>'
@@ -3862,7 +4094,7 @@
                 + (mode === 'emailable'
                     ? ''
                     : '<div id="prospectBookingPicker" style="display:none;margin-bottom:12px;padding:12px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.18);border-radius:8px;">'
-                      + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Pick a 30-minute slot from your calendar</label>'
+                      + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Pick a 15-minute slot from your calendar</label>'
                       + '<div id="prospectBookingSlots"></div>'
                       + '</div>')
                 + (mode === 'emailable'
@@ -3905,12 +4137,14 @@
                 if (submitBtn) submitBtn.textContent = 'Book + send invite';
             } else {
                 if (pickerHost) pickerHost.style.display = 'none';
-                if (submitBtn) submitBtn.textContent = 'Log call and next';
+                if (submitBtn) submitBtn.textContent = (match && match.dialOnly) ? 'Mark as called and next' : 'Log call and next';
             }
         }
 
         // ─── Booking slot picker (Google Calendar free/busy) ───────────────────
-        var bookingState = { slots: [], selectedIso: null, configured: null };
+        // Two-step UI: day cards first, then time slots for the selected day.
+        // Old all-days-x-all-hours grid was too cluttered.
+        var bookingState = { slots: [], selectedIso: null, expandedDay: null, configured: null };
 
         async function loadBookingSlots() {
             var host = document.getElementById('prospectBookingSlots');
@@ -3921,43 +4155,97 @@
                 bookingState.configured = data.configured !== false;
                 bookingState.slots = data.slots || [];
                 bookingState.selectedIso = null;
+                // Auto-expand the first day with slots so the picker isn't
+                // a wall of empty buttons on first render.
+                bookingState.expandedDay = null;
+                var firstDayKey = bookingState.slots.length ? bookingDayKey(bookingState.slots[0].start) : null;
+                bookingState.expandedDay = firstDayKey;
                 renderBookingSlots();
             } catch (e) {
                 if (e.status === 503) {
                     bookingState.configured = false;
-                    host.innerHTML = '<div style="padding:14px;background:rgba(234,179,8,0.1);border:1px solid var(--yellow,#eab308);border-radius:8px;color:var(--yellow,#eab308);font-size:12px;">Google Calendar is not connected yet. Add OAuth credentials to Vercel env to enable the slot picker. Until then, log this manually with date + time fields below if you want, or come back after configuring.</div>';
+                    host.innerHTML = '<div style="padding:14px;background:rgba(234,179,8,0.1);border:1px solid var(--yellow,#eab308);border-radius:8px;color:var(--yellow,#eab308);font-size:12px;">Google Calendar is not connected yet. Add OAuth credentials to Vercel env to enable the slot picker.</div>';
                     return;
                 }
-                host.innerHTML = '<div style="color:var(--red);font-size:12px;padding:12px;">Could not load slots: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                var detail = (e.body && e.body.detail) ? String(e.body.detail) : '';
+                host.innerHTML = '<div style="color:var(--red);font-size:12px;padding:12px;line-height:1.5;">'
+                    + 'Could not load slots: <strong>' + escapeAdminHtml(e.message || 'unknown') + '</strong>'
+                    + (detail ? '<div style="margin-top:6px;color:var(--text-muted);font-size:11px;font-family:var(--font-mono);white-space:pre-wrap;">' + escapeAdminHtml(detail.slice(0, 500)) + '</div>' : '')
+                    + '</div>';
             }
         }
+
+        function bookingDayKey(iso) {
+            return new Date(iso).toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York'
+            });
+        }
+
         function renderBookingSlots() {
             var host = document.getElementById('prospectBookingSlots');
             if (!host) return;
-            if (!bookingState.slots.length) { host.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;">No open slots in the next 7 business days. Pick a manual date+time below.</div>'; return; }
-            // Group by day
+            if (!bookingState.slots.length) {
+                host.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;">No open slots in the next 7 business days.</div>';
+                return;
+            }
+
+            // Group slots by day (preserves insertion order from the API).
             var byDay = {};
+            var dayOrder = [];
             bookingState.slots.forEach(function (s) {
-                var d = new Date(s.start);
-                var key = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' });
-                if (!byDay[key]) byDay[key] = [];
+                var key = bookingDayKey(s.start);
+                if (!byDay[key]) { byDay[key] = []; dayOrder.push(key); }
                 byDay[key].push(s);
             });
-            var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;max-height:280px;overflow-y:auto;">';
-            Object.keys(byDay).forEach(function (day) {
-                html += '<div><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + escapeAdminHtml(day) + '</div>';
-                byDay[day].slice(0, 12).forEach(function (s) {
+
+            // Day cards row.
+            var dayCards = dayOrder.map(function (day) {
+                var isOpen = bookingState.expandedDay === day;
+                var hasSelection = bookingState.selectedIso && byDay[day].some(function (s) { return s.start === bookingState.selectedIso; });
+                var bg = isOpen ? 'var(--blue)' : (hasSelection ? 'rgba(37,99,235,0.18)' : 'var(--bg-input)');
+                var border = (isOpen || hasSelection) ? 'var(--blue)' : 'var(--border-medium)';
+                var color = isOpen ? 'white' : 'var(--text-primary)';
+                return '<button type="button" onclick="selectBookingDay(' + JSON.stringify(day) + ')" '
+                    + 'style="flex:1;min-width:110px;padding:10px 8px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;color:' + color + ';font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3;letter-spacing:0.02em;transition:all 120ms;">'
+                    + '<div>' + escapeAdminHtml(day) + '</div>'
+                    + '<div style="font-size:10px;font-weight:500;opacity:0.75;margin-top:2px;">' + byDay[day].length + ' slots</div>'
+                    + '</button>';
+            }).join('');
+
+            var html = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + dayCards + '</div>';
+
+            // Time grid for the expanded day.
+            if (bookingState.expandedDay && byDay[bookingState.expandedDay]) {
+                var timeButtons = byDay[bookingState.expandedDay].map(function (s) {
                     var time = new Date(s.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
                     var sel = bookingState.selectedIso === s.start;
-                    html += '<button type="button" onclick="selectBookingSlot(' + JSON.stringify(s.start) + ')" style="display:block;width:100%;margin-bottom:4px;padding:6px 8px;background:' + (sel ? 'var(--blue)' : 'var(--bg-input)') + ';border:1px solid ' + (sel ? 'var(--blue)' : 'var(--border-medium)') + ';border-radius:6px;color:' + (sel ? 'white' : 'var(--text-primary)') + ';font-size:12px;font-weight:600;cursor:pointer;text-align:center;">' + escapeAdminHtml(time) + '</button>';
-                });
-                html += '</div>';
-            });
-            html += '</div>';
+                    var bg = sel ? 'var(--blue)' : 'var(--bg-input)';
+                    var border = sel ? 'var(--blue)' : 'var(--border-medium)';
+                    var color = sel ? 'white' : 'var(--text-primary)';
+                    var shadow = sel ? 'box-shadow:0 0 0 2px rgba(37,99,235,0.35);' : '';
+                    return '<button type="button" onclick="selectBookingSlot(' + JSON.stringify(s.start) + ')" '
+                        + 'style="padding:8px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:6px;color:' + color + ';font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all 100ms;' + shadow + '">'
+                        + escapeAdminHtml(time) + '</button>';
+                }).join('');
+                html += '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + escapeAdminHtml(bookingState.expandedDay) + ' · open times</div>'
+                    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;max-height:240px;overflow-y:auto;padding:2px;">' + timeButtons + '</div>';
+            } else {
+                html += '<div style="padding:14px;color:var(--text-muted);font-size:12px;text-align:center;">Pick a day above to see open times.</div>';
+            }
+
             host.innerHTML = html;
         }
+
+        function selectBookingDay(day) {
+            // Toggle: click the same day to collapse, click a different day to switch.
+            bookingState.expandedDay = (bookingState.expandedDay === day) ? null : day;
+            renderBookingSlots();
+        }
+
         function selectBookingSlot(iso) {
             bookingState.selectedIso = iso;
+            // Make sure the day containing this slot stays open.
+            bookingState.expandedDay = bookingDayKey(iso);
             renderBookingSlots();
             var msgEl = document.getElementById('prospectFormMsg');
             if (msgEl) {
@@ -4023,6 +4311,28 @@
                 return;
             }
 
+            // dialOnly outcomes ("Called (no outcome yet)") just stamp the
+            // dial — same path as the Quo "Call now" button. No outcome is
+            // written, so the lead stays in Cold Call but gets dimmed + sunk
+            // and drops out of today's strict callable count.
+            var matchedOutcome = PROSPECT_OUTCOMES.find(function (o) { return o.value === outcome; });
+            if (matchedOutcome && matchedOutcome.dialOnly) {
+                msgEl.textContent = 'Marking as called…';
+                msgEl.style.color = 'var(--text-muted)';
+                try {
+                    var dialResp = await prospectFetchJSON('/api/prospects/log-dial', {
+                        method: 'POST',
+                        body: JSON.stringify({ lead_id: leadId, notes: notes || null })
+                    });
+                    markRowDialedNow(leadId, dialResp && dialResp.call_attempts);
+                    advanceToNextProspect(leadId);
+                } catch (e) {
+                    msgEl.style.color = 'var(--red)';
+                    msgEl.textContent = 'Failed: ' + (e.message || 'unknown');
+                }
+                return;
+            }
+
             // Booked meeting → run the full booking flow (calendar event + email + log-call).
             if (outcome === 'booked_meeting') {
                 if (!bookingState.selectedIso) {
@@ -4035,7 +4345,7 @@
                 try {
                     var resp = await prospectFetchJSON('/api/prospects/book-meeting', {
                         method: 'POST',
-                        body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 30 })
+                        body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 })
                     });
                     msgEl.style.color = 'var(--green,#10b981)';
                     msgEl.innerHTML = 'Booked. <a href="' + escapeAdminHtml(resp.event_link || '#') + '" target="_blank" style="color:var(--blue);">Open in Google Calendar</a>'
@@ -4055,7 +4365,11 @@
                 var body = { id: leadId, outcome: outcome, notes: notes };
                 if (nextAt) body.next_callback_at = nextAt;
                 await prospectFetchJSON('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(body) });
-                if (outcome === 'dnc_request') {
+                // Any outcome flagged dncOnSubmit also goes through David's
+                // /dnc endpoint so the lead lands on the do-not-call list and
+                // surfaces in Dead Pool. Covers wrong_number + dnc_request.
+                var matched = PROSPECT_OUTCOMES.find(function (o) { return o.value === outcome; });
+                if (matched && matched.dncOnSubmit) {
                     try { await prospectFetchJSON('/api/prospects/dnc', { method: 'POST', body: JSON.stringify({ id: leadId }) }); }
                     catch (e) { console.warn('[prospects/dnc]', e); }
                 }
@@ -4092,7 +4406,13 @@
             var hostId = prospectState.tab === 'emailable' ? 'prospectTableEmailable' : 'prospectTableCallable';
             document.getElementById(hostId).innerHTML = renderProspectTable(rows, prospectState.tab);
             closeProspectDrawer();
-            // Refresh stats counts in the background.
+            // The lead just moved lifecycle stages. Bust every per-tab cache
+            // so the next switch fetches fresh, and refresh the queue
+            // counter so it decrements live.
+            prospectState.cache.callable = null;
+            prospectState.cache.emailable = null;
+            prospectState.cache.callbacks = null;
+            prospectState.cache.booked = null;
             loadProspectStats();
             // Auto-open next row for rapid-fire mode.
             var next = rows[idx] || rows[0];

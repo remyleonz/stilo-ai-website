@@ -14,7 +14,7 @@
  */
 const { assertAdmin, methodNotAllowed } = require('./_shared');
 
-const SLOT_MIN = 30;
+const SLOT_MIN = 15;
 const BIZ_START_HOUR = 9;   // 9am ET
 const BIZ_END_HOUR = 18;    // 6pm ET
 const TZ_OFFSET_HOURS = 4;  // ET = UTC-4 (DST), -5 in winter; close enough for slot generation
