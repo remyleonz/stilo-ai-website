@@ -3519,7 +3519,7 @@
                     ? '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
                     : '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div>' + emailSub + '</td>';
                 if (mode === 'calls-today') {
-                    var calledTime = r.last_called_at ? new Date(r.last_called_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
+                    var calledTime = r.last_called_at ? new Date(r.last_called_at).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', timeZone:'America/New_York'}) : '—';
                     var outcome = r.last_called_outcome || '';
                     var outcomeColors = { answered:'var(--green,#10b981)', voicemail:'var(--yellow,#eab308)', no_answer:'var(--text-muted)', missed_inbound:'var(--blue)', booked_meeting:'var(--green,#10b981)', not_interested:'var(--red)', callback_requested:'var(--blue)', interested_followup:'var(--green,#10b981)' };
                     var outcomeColor = outcomeColors[outcome] || 'var(--text-muted)';
