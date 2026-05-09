@@ -18,11 +18,14 @@ Deps: fonttools, headless Chrome at standard macOS path.
 """
 
 import subprocess
+import datetime
+import shutil
 from pathlib import Path
 from fontTools.ttLib import TTCollection
 from fontTools.pens.svgPathPen import SVGPathPen
 
 REPO_ROOT = Path("/Users/remyleon/Desktop/AI Agency")
+ARCHIVE = REPO_ROOT / "Archive" / "logo-history"
 FONT_PATH = Path("/System/Library/Fonts/Supplemental/Bodoni 72.ttc")  # serif, used for wordmark + og-image
 MONOGRAM_FONT_PATH = Path("/System/Library/Fonts/Avenir Next.ttc")    # modern sans, used for S monogram
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
@@ -203,7 +206,38 @@ def build_pngs():
     render_png(OUT_OG_SVG, OUT_OG_PNG, 1200, 630)
 
 
+def archive_current():
+    """Snapshot the current favicon + wordmark to Archive/logo-history/ before
+    overwriting. Runs once at the top of every build so we never lose a version.
+    Uses date-prefixed filenames; if a snapshot for today already exists with
+    identical bytes, skip (avoid duplicates on same-day re-runs).
+    """
+    ARCHIVE.mkdir(parents=True, exist_ok=True)
+    today = datetime.date.today().isoformat()
+    targets = [
+        (OUT_FAVICON, f"{today} pre-build favicon.svg"),
+        (OUT_WORDMARK, f"{today} pre-build wordmark.svg"),
+    ]
+    for src, archive_name in targets:
+        if not src.exists():
+            continue
+        dst = ARCHIVE / archive_name
+        # If today's snapshot already matches, skip (no churn on re-runs).
+        if dst.exists() and dst.read_bytes() == src.read_bytes():
+            continue
+        # If today's snapshot exists but differs, suffix with a counter so we
+        # keep the earlier one too.
+        if dst.exists():
+            n = 2
+            while (ARCHIVE / f"{today}-{n} pre-build {src.name}").exists():
+                n += 1
+            dst = ARCHIVE / f"{today}-{n} pre-build {src.name}"
+        shutil.copy2(src, dst)
+        print(f"archived {src.name} → {dst.name}")
+
+
 if __name__ == "__main__":
+    archive_current()
     build_compact_square()
     build_wordmark()
     build_og_svg()
