@@ -104,15 +104,13 @@ def line_group(glyphs, scale, total_units, viewbox_width, baseline_y_px, fill):
 
 
 def build_compact_square():
-    """Single-letter 'S' monogram in Avenir Next Bold on the dark plate.
+    """Single-letter 'S' monogram in Bodoni 72 Bold on the dark plate.
 
-    Avenir Next gives a modern geometric-humanist S — clean curves, slightly
-    warmer than Helvetica or Futura. Airbnb / Whole Foods territory.
+    High-contrast serif — the ball terminals on the S top and bottom give it
+    that Vogue / Sotheby's / luxury house energy.
     """
-    ttc = TTCollection(str(MONOGRAM_FONT_PATH))
-    font = ttc.fonts[0]  # index 0 = Avenir Next Bold (verified via name table)
+    font = load_face("Bold")  # Bodoni 72 Bold
     # Cap-height 144 fills the 256 plate generously (~56% of plate height).
-    # Avenir's S advance is narrower than Bodoni's so this stays well-padded.
     glyphs, total_units, scale = render_line(font, "S", cap_height_px=144, spacing_ratio=0.0)
     # Center vertically by cap-block: cap-top at (256-144)/2 = 56, baseline at 56+144 = 200.
     baseline_y = (256 + 144) / 2
@@ -131,15 +129,14 @@ def build_compact_square():
 
 
 def build_wordmark():
-    """Full STILO + AI PARTNERS wordmark in Avenir Next Bold, transparent bg."""
-    ttc = TTCollection(str(MONOGRAM_FONT_PATH))
-    font = ttc.fonts[0]  # Avenir Next Bold
-    big_glyphs, big_units, big_scale = render_line(font, "STILO", cap_height_px=180, spacing_ratio=0.0)
-    small_glyphs, small_units, small_scale = render_line(font, "AI PARTNERS", cap_height_px=44, spacing_ratio=0.30)
+    """Full STILO + AI PARTNERS wordmark in Bodoni 72 Book, transparent bg."""
+    font = load_face("Book")  # Bodoni 72 Book — thin verticals, Vogue masthead
+    big_glyphs, big_units, big_scale = render_line(font, "STILO", cap_height_px=200, spacing_ratio=0.04)
+    small_glyphs, small_units, small_scale = render_line(font, "AI PARTNERS", cap_height_px=56, spacing_ratio=0.30)
 
-    # Stack centered: STILO cap=180 + gap=40 + AI PARTNERS cap=44 = 264px content. Top pad (400-264)/2 = 68.
-    big_baseline = 68 + 180          # 248
-    small_baseline = big_baseline + 40 + 44  # 332
+    # Stack centered: STILO cap=200 + gap=40 + AI PARTNERS cap=56 = 296px content. Top pad (400-296)/2 = 52.
+    big_baseline = 52 + 200          # 252
+    small_baseline = big_baseline + 40 + 56  # 348
     big_block = line_group(big_glyphs, big_scale, big_units, viewbox_width=1200, baseline_y_px=big_baseline, fill=COLOR_FG)
     small_block = line_group(small_glyphs, small_scale, small_units, viewbox_width=1200, baseline_y_px=small_baseline, fill=COLOR_FG)
 
@@ -154,17 +151,16 @@ def build_wordmark():
 
 
 def build_og_svg():
-    """1200x630 OG share image: dark plate, centered wordmark in Avenir Next Bold."""
-    ttc = TTCollection(str(MONOGRAM_FONT_PATH))
-    font = ttc.fonts[0]  # Avenir Next Bold
-    big_glyphs, big_units, big_scale = render_line(font, "STILO", cap_height_px=160, spacing_ratio=0.0)
-    small_glyphs, small_units, small_scale = render_line(font, "AI PARTNERS", cap_height_px=40, spacing_ratio=0.34)
+    """1200x630 OG share image: dark plate, centered wordmark in Bodoni 72 Book."""
+    font = load_face("Book")
+    big_glyphs, big_units, big_scale = render_line(font, "STILO", cap_height_px=180, spacing_ratio=0.04)
+    small_glyphs, small_units, small_scale = render_line(font, "AI PARTNERS", cap_height_px=44, spacing_ratio=0.34)
 
     # Vertical stack centered in 630px frame.
-    # Content block: STILO cap=160, gap 36, AI PARTNERS cap=40 → total 236px.
-    top_pad = (630 - 236) / 2  # = 197
-    big_baseline = top_pad + 160             # 357
-    small_baseline = big_baseline + 36 + 40  # 433
+    # Content block: STILO cap=180, gap 36, AI PARTNERS cap=44 → total 260px.
+    top_pad = (630 - 260) / 2  # = 185
+    big_baseline = top_pad + 180             # 365
+    small_baseline = big_baseline + 36 + 44  # 445
 
     big_block = line_group(big_glyphs, big_scale, big_units, viewbox_width=1200, baseline_y_px=big_baseline, fill=COLOR_FG)
     small_block = line_group(small_glyphs, small_scale, small_units, viewbox_width=1200, baseline_y_px=small_baseline, fill=COLOR_FG)
