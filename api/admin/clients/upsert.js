@@ -76,19 +76,79 @@ module.exports = async function handler(req, res) {
             client = existing;
         }
     } else {
-        // Strip null fields the schema may not accept — some Supabase tables
-        // reject explicit nulls on NOT NULL columns even if you have a default.
+        // Strip null fields the schema may not accept.
         const insertPayload = {};
         for (const k in clientPayload) {
             if (clientPayload[k] != null) insertPayload[k] = clientPayload[k];
         }
-        // `clients.id` has no default in this schema (verified via PostgREST
-        // "null value in column 'id' violates not-null constraint"). Mint a
-        // UUID ourselves. Stripe webhook path likely sets this from the
-        // Stripe customer id, which is why it only fails for our seed flow.
-        if (!insertPayload.id) {
-            insertPayload.id = crypto.randomUUID();
+
+        // clients.id has a FK to auth.users.id (verified via PostgREST error
+        // "violates foreign key constraint clients_id_fkey"). So a client row
+        // IS a Supabase auth user. We must mint the auth user first, then use
+        // that user's id as clients.id. The Stripe webhook does the same thing
+        // implicitly when it provisions the auth account at purchase time.
+        //
+        // Strategy:
+        //   1. Look up existing auth user by email (via admin listUsers, no
+        //      direct getUserByEmail in the JS SDK). If found, reuse their id.
+        //   2. Otherwise inviteUserByEmail — sends a magic-link signup email
+        //      and creates the auth row. Returns the new user.
+        //   3. Insert clients with id = auth_user_id.
+        let authUserId = null;
+        try {
+            // Page through admin.listUsers (no direct email filter in JS SDK).
+            // The expected universe is small (single-digit thousands at most),
+            // so paging until we find the email is fine.
+            let page = 1;
+            const perPage = 1000;
+            while (page < 20) {
+                const { data: listed, error: listErr } = await sb.auth.admin.listUsers({ page, perPage });
+                if (listErr) {
+                    return res.status(500).json({ error: 'auth_list_failed', detail: listErr.message });
+                }
+                const match = (listed && listed.users || []).find(u => (u.email || '').toLowerCase() === body.email.toLowerCase());
+                if (match) { authUserId = match.id; break; }
+                if (!listed || !listed.users || listed.users.length < perPage) break;
+                page++;
+            }
+        } catch (e) {
+            return res.status(500).json({ error: 'auth_lookup_threw', detail: String(e.message || e) });
         }
+
+        if (!authUserId) {
+            try {
+                // inviteUserByEmail sends a magic-link signup. Friendly for
+                // friends-and-family onboarding. If you'd rather not send the
+                // invite email (e.g. you'll hand over credentials manually),
+                // switch to createUser({ email, email_confirm: true }).
+                const { data: invite, error: invErr } = await sb.auth.admin.inviteUserByEmail(body.email, {
+                    data: { business_name: body.business_name, source: 'admin_upsert' }
+                });
+                if (invErr) {
+                    // Fall back to createUser if invite path is blocked (some
+                    // Supabase projects disable invites for security).
+                    const { data: created, error: createErr } = await sb.auth.admin.createUser({
+                        email: body.email,
+                        email_confirm: true,
+                        user_metadata: { business_name: body.business_name, source: 'admin_upsert' }
+                    });
+                    if (createErr) {
+                        return res.status(500).json({ error: 'auth_create_failed', detail: createErr.message + ' | invite_error: ' + invErr.message });
+                    }
+                    authUserId = created.user && created.user.id;
+                } else {
+                    authUserId = invite && invite.user && invite.user.id;
+                }
+            } catch (e) {
+                return res.status(500).json({ error: 'auth_create_threw', detail: String(e.message || e) });
+            }
+        }
+
+        if (!authUserId) {
+            return res.status(500).json({ error: 'auth_no_user_id', detail: 'Created or found auth user but no id returned' });
+        }
+
+        insertPayload.id = authUserId;
         const { data: ins, error: insErr } = await sb.from('clients')
             .insert(insertPayload).select().maybeSingle();
         if (insErr) {
