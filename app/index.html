@@ -1938,11 +1938,20 @@
                 var pauseBtn = isPaused
                     ? '<button class="btn btn-ghost btn-sm" onclick="agentStatusAction(\'' + agent.id + '\', \'resume\', this)">Resume</button>'
                     : '<button class="btn btn-ghost btn-sm" onclick="agentStatusAction(\'' + agent.id + '\', \'pause\', this)">Pause</button>';
+                // SCOUT (Lead Generator) has its own dedicated leads dashboard
+                // at /app/leads.html — that's the actual product, not the
+                // generic /app/agents/?agent=scout config page.
+                var primaryHref = (agent.agent_type === 'scout' || agent.agent_type === 'lead_generator')
+                    ? '/app/leads.html'
+                    : '/app/agents/?agent=' + agent.agent_type;
+                var primaryLabel = (agent.agent_type === 'scout' || agent.agent_type === 'lead_generator')
+                    ? 'Open lead dashboard'
+                    : 'Configure';
                 body = '<div class="agent-stats">'
                     + '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats appear once this agent has handled events.</div>'
                 + '</div>'
                 + '<div class="agent-actions">'
-                    + '<a class="btn btn-primary btn-sm" href="/app/agents/?agent=' + agent.agent_type + '">Configure</a>'
+                    + '<a class="btn btn-primary btn-sm" href="' + primaryHref + '">' + primaryLabel + '</a>'
                     + '<a class="btn btn-ghost btn-sm" href="/app/agents/?agent=' + agent.agent_type + '">View Agent →</a>'
                     + pauseBtn
                     + '<button class="btn btn-ghost btn-sm" onclick="openSupportForAgent(\'' + agent.id + '\', \'' + agent.agent_type + '\')">Message support</button>'

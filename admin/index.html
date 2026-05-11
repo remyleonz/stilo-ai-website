@@ -1076,7 +1076,7 @@
             <div id="drawerOverlay" onclick="closeDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
 
             <!-- Prospect drawer (call-log / email-log) -->
-            <div id="prospectDrawer" style="position:fixed;top:0;right:-780px;width:780px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 36px;">
+            <div id="prospectDrawer" style="position:fixed;top:0;right:-920px;width:920px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 40px;">
                 <button onclick="closeProspectDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;line-height:1;">&times;</button>
                 <div id="prospectDrawerContent"></div>
             </div>
@@ -1183,14 +1183,14 @@
                 <div style="margin-bottom:18px;"></div>
 
                 <!-- Sub-tab strip — order matches the cold-call lifecycle:
-                     Cold Call → Cold Email → Call Back → Booked Meeting → Dead Pool -->
+                     Cold Call → Cold Email → Call Back → Booked Meeting → Calls Today → My Call History -->
                 <div id="prospectSubtabs" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:16px;flex-wrap:wrap;">
-                    <button class="prospect-subtab active" data-subtab="callable" onclick="switchProspectTab('callable')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:2px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;">Cold Call</button>
-                    <button class="prospect-subtab" data-subtab="emailable" onclick="switchProspectTab('emailable')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Cold Email</button>
-                    <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Call Back <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
-                    <button class="prospect-subtab" data-subtab="booked" onclick="switchProspectTab('booked')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Booked Meeting <span id="prospectBookedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,0.18);color:var(--green,#10b981);font-size:10px;font-weight:700;">0</span></button>
-                    <button class="prospect-subtab" data-subtab="calls-today" onclick="switchProspectTab('calls-today')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Calls Today <span id="prospectCallsTodayBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(37,99,235,0.15);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
-                    <button class="prospect-subtab" data-subtab="my-history" onclick="switchProspectTab('my-history')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">My Call History</button>
+                    <button class="prospect-subtab active" data-subtab="callable" onclick="switchProspectTab('callable')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;transition:opacity 150ms;">Cold Call</button>
+                    <button class="prospect-subtab" data-subtab="emailable" onclick="switchProspectTab('emailable')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Cold Email</button>
+                    <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Call Back <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
+                    <button class="prospect-subtab" data-subtab="booked" onclick="switchProspectTab('booked')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Booked Meeting <span id="prospectBookedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,0.18);color:var(--green,#10b981);font-size:10px;font-weight:700;">0</span></button>
+                    <button class="prospect-subtab" data-subtab="calls-today" onclick="switchProspectTab('calls-today')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Calls Today <span id="prospectCallsTodayBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(37,99,235,0.15);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
+                    <button class="prospect-subtab" data-subtab="my-history" onclick="switchProspectTab('my-history')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">My Call History</button>
                 </div>
 
                 <!-- Filter bar: search · tier · niche · has phone · has email -->
@@ -3656,22 +3656,22 @@
                     ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-sans,inherit);word-break:break-all;white-space:normal;">' + escapeAdminHtml(email) + '</div>'
                     : '';
                 var contactCol = mode === 'emailable'
-                    ? '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
-                    : '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div>' + emailSub + '</td>';
+                    ? '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
+                    : '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div>' + emailSub + '</td>';
                 if (mode === 'calls-today') {
                     var calledTime = r.last_called_at ? new Date(r.last_called_at).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', timeZone:'America/New_York'}) : '—';
                     var outcome = r.last_called_outcome || '';
                     var outcomeColors = { answered:'var(--green,#10b981)', voicemail:'var(--yellow,#eab308)', no_answer:'var(--text-muted)', missed_inbound:'var(--blue)', booked_meeting:'var(--green,#10b981)', not_interested:'var(--red)', callback_requested:'var(--blue)', interested_followup:'var(--green,#10b981)' };
                     var outcomeColor = outcomeColors[outcome] || 'var(--text-muted)';
                     var outcomeLabel = outcome ? outcome.replace(/_/g, ' ') : 'no outcome';
-                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
+                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                         + '<td style="padding:10px 14px;font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(calledTime) + '</td>'
-                        + '<td style="padding:10px 14px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
+                        + '<td style="padding:14px 16px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
                         + '<td style="padding:10px 14px;font-size:12px;font-weight:600;color:' + outcomeColor + ';white-space:nowrap;">' + escapeAdminHtml(outcomeLabel) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
                         + '</tr>';
                 }
                 if (mode === 'callbacks') {
@@ -3680,26 +3680,26 @@
                     var dueStr = dueDate ? dueDate.toLocaleString() : '—';
                     var overdue = dueDate && dueDate.getTime() < Date.now();
                     var lastCallStr = r.last_called_at ? new Date(r.last_called_at).toLocaleDateString() : '—';
-                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
+                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                         + '<td style="padding:10px 14px;font-size:12px;color:' + (overdue ? 'var(--red)' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + escapeAdminHtml(dueStr) + (overdue ? ' (overdue)' : '') + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-muted);font-size:12px;">' + lastCallStr + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-muted);font-size:12px;">' + lastCallStr + '</td>'
                         + '<td style="padding:10px 14px;"><button onclick="event.stopPropagation();dialProspect(' + JSON.stringify(id) + ')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;">Call now</button></td>'
                         + '</tr>';
                 }
                 if (mode === 'booked') {
                     var bookedAtStr = r.last_called_at ? new Date(r.last_called_at).toLocaleString() : '—';
-                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
+                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                         + '<td style="padding:10px 14px;font-size:12px;color:var(--green,#10b981);font-weight:600;white-space:nowrap;">' + escapeAdminHtml(bookedAtStr) + '</td>'
-                        + '<td style="padding:10px 14px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
-                        + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                        + '<td style="padding:14px 16px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
+                        + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
                         + '</tr>';
                 }
                 // Cold Call: if the lead's been dialed in last 24h with no logged
@@ -3710,13 +3710,13 @@
                 var dialedBadge = dialedToday
                     ? ' <span title="You\'ve dialed this lead today, no outcome logged yet" style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;background:rgba(234,179,8,0.15);color:var(--yellow,#eab308);font-size:10px;font-weight:700;letter-spacing:0.04em;">DIALED ×' + (r.call_attempts || 1) + '</span>'
                     : '';
-                return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseleave="this.style.background=\'transparent\'">'
-                    + '<td style="padding:10px 14px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + dialedBadge + '</td>'
-                    + '<td style="padding:10px 14px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
+                    + '<td style="padding:14px 16px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + dialedBadge + '</td>'
+                    + '<td style="padding:14px 16px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
+                    + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
                     + contactCol
-                    + '<td style="padding:10px 14px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
-                    + '<td style="padding:10px 14px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastStr + '</td>'
+                    + '<td style="padding:14px 16px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                    + '<td style="padding:14px 16px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastStr + '</td>'
                     + '</tr>';
             }).join('');
             return '<table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
@@ -3727,7 +3727,8 @@
             document.querySelectorAll('.prospect-subtab').forEach(function(btn){
                 var on = btn.getAttribute('data-subtab') === name;
                 btn.classList.toggle('active', on);
-                btn.style.color = on ? 'var(--text-primary)' : 'var(--text-secondary)';
+                btn.style.color = 'var(--text-primary)';
+                btn.style.opacity = on ? '1' : '0.55';
                 btn.style.borderBottomColor = on ? 'var(--blue)' : 'transparent';
             });
             document.getElementById('prospectTableCallable').style.display    = name === 'callable'     ? '' : 'none';
@@ -3736,8 +3737,10 @@
             document.getElementById('prospectTableBooked').style.display      = name === 'booked'       ? '' : 'none';
             document.getElementById('prospectTableDead').style.display        = name === 'dead'         ? '' : 'none';
             document.getElementById('prospectTableCallsToday').style.display  = name === 'calls-today'  ? '' : 'none';
+            var myHistoryHost = document.getElementById('prospectTableMyHistory');
+            if (myHistoryHost) myHistoryHost.style.display                    = name === 'my-history'   ? '' : 'none';
             // Filter bar useful only for the broad inbound lists; hide on cold-call lifecycle stages.
-            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today');
+            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today' || name === 'my-history');
             document.getElementById('prospectFilterBar').style.display = hideFilter ? 'none' : 'flex';
             if (name === 'callable')          loadProspectCallable();
             else if (name === 'emailable')    loadProspectEmailable();
@@ -3745,6 +3748,38 @@
             else if (name === 'booked')       loadProspectBooked();
             else if (name === 'dead')         loadProspectDead(1);
             else if (name === 'calls-today')  loadCallsToday();
+            else if (name === 'my-history')   loadMyHistory();
+        }
+
+        // Durable per-SDR call history. Distinct from Calls Today (today only)
+        // and Dead Pool (do_not_call). Backed by /api/prospects/my-history which
+        // filters by the JWT email, so signing in as Remy vs David yields
+        // different lists automatically.
+        async function loadMyHistory(opts) {
+            opts = opts || {};
+            var host = document.getElementById('prospectTableMyHistory');
+            if (!host) return;
+            var cached = !opts.force && prospectState.cache.myHistory;
+            if (cached) {
+                host.innerHTML = renderProspectTable(cached, 'calls-today');
+            } else {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading your call history...</div>';
+            }
+            try {
+                var data = await prospectFetchJSON('/api/prospects/my-history?limit=200');
+                var raw = data.results || [];
+                prospectState.cache.myHistory = raw;
+                if (raw.length === 0 && data.note) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No call history yet for ' + escapeAdminHtml(CURRENT_USER.displayName || 'this account') + '. Log a call to see it here.<br/><span style="font-size:11px;color:var(--text-muted);">' + escapeAdminHtml(data.note) + '</span></div>';
+                } else if (raw.length === 0) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No call history yet for ' + escapeAdminHtml(CURRENT_USER.displayName || 'this account') + '. Log a call to see it here.</div>';
+                } else {
+                    host.innerHTML = renderProspectTable(raw, 'calls-today');
+                }
+            } catch (e) {
+                console.error('[my-history]', e);
+                if (!cached) host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
         }
 
         // Call Back / Booked Meeting are queried directly against
@@ -4232,9 +4267,16 @@
                       + '</details>'
                     : '';
                 var headerMeta = [dirArrow, dur, rec].filter(function (x) { return x; }).join(' · ');
+                // Attribute every history entry. If logged_by missing (legacy
+                // rows before David shipped the column), fall back to nothing.
+                var loggedByEmail = h.logged_by || h.logged_by_email || '';
+                var loggedByName = loggedByEmail ? sdrFromEmail(loggedByEmail).displayName : '';
+                var loggedByPill = loggedByName
+                    ? '<span style="margin-left:8px;padding:1px 7px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);color:var(--text-secondary);font-size:10px;font-weight:600;letter-spacing:0.03em;">by ' + escapeAdminHtml(loggedByName) + '</span>'
+                    : '';
                 return '<div style="padding:12px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
                     + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
-                      + '<span style="font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(outcome) + '</span>'
+                      + '<span style="font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(outcome) + loggedByPill + '</span>'
                       + '<span style="color:var(--text-muted);font-size:11px;">' + atStr + '</span>'
                     + '</div>'
                     + (headerMeta ? '<div style="margin-top:3px;font-size:11px;color:var(--text-muted);">' + headerMeta + '</div>' : '')
@@ -4280,7 +4322,7 @@
             return ''
                 + '<div style="margin-bottom:20px;">'
                 + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
-                + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;margin:0;">' + escapeAdminHtml(business) + '</h2>'
+                + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.85rem;letter-spacing:-0.02em;margin:0;line-height:1.15;">' + escapeAdminHtml(business) + '</h2>'
                 + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier || d.tier) + '</div>'
                 + '</div>'
 
@@ -4343,6 +4385,21 @@
                       + '<button type="button" onclick="setCallbackPreset(0,7,10,0)" style="padding:5px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:11px;cursor:pointer;">Next week</button>'
                       + '</div>'
                       + '</div>')
+                // SDR attribution. Defaults to whoever's signed in. Overrideable
+                // for the rare case one of us is logging the other's call (e.g.
+                // David steps away and Remy writes up his last conversation).
+                + (function () {
+                    var meEmail = CURRENT_USER.email || '';
+                    var meKey = CURRENT_USER.sdrKey || '';
+                    var remySel = meKey === 'remy'  ? ' selected' : '';
+                    var davidSel = meKey === 'david' ? ' selected' : '';
+                    var meLabel = CURRENT_USER.displayName ? ' (you)' : '';
+                    return '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Logged by</label>'
+                        + '<select id="prospectLoggedBy" style="width:100%;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;margin-bottom:12px;">'
+                          + '<option value="remyleon@stiloaipartners.com"' + remySel + '>Remy Leon' + (meKey === 'remy' ? meLabel : '') + '</option>'
+                          + '<option value="davidcoira@stiloaipartners.com"' + davidSel + '>David Coira' + (meKey === 'david' ? meLabel : '') + '</option>'
+                        + '</select>';
+                })()
                 + '<button type="submit" style="width:100%;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">' + submitLabel + '</button>'
                 + (mode === 'emailable' ? '' : '<button type="button" onclick="addProspectToCallbackList(' + JSON.stringify(d.id) + ')" style="width:100%;margin-top:8px;padding:8px 14px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">Add to callback list</button>')
                 + '<div id="prospectFormMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);"></div>'
@@ -4608,6 +4665,8 @@
             try {
                 var body = { id: leadId, outcome: outcome, notes: notes };
                 if (nextAt) body.next_callback_at = nextAt;
+                var loggedByEl = document.getElementById('prospectLoggedBy');
+                if (loggedByEl && loggedByEl.value) body.logged_by_override = loggedByEl.value;
                 await prospectFetchJSON('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(body) });
                 // Any outcome flagged dncOnSubmit also goes through David's
                 // /dnc endpoint so the lead lands on the do-not-call list and
@@ -4633,7 +4692,10 @@
             msgEl.textContent = 'Saving...';
             msgEl.style.color = 'var(--text-muted)';
             try {
-                await prospectFetchJSON('/api/prospects/log-email', { method: 'POST', body: JSON.stringify({ id: leadId, notes: notes }) });
+                var emailBody = { id: leadId, notes: notes };
+                var emailLoggedByEl = document.getElementById('prospectLoggedBy');
+                if (emailLoggedByEl && emailLoggedByEl.value) emailBody.logged_by_override = emailLoggedByEl.value;
+                await prospectFetchJSON('/api/prospects/log-email', { method: 'POST', body: JSON.stringify(emailBody) });
                 advanceToNextProspect(leadId);
             } catch (e) {
                 msgEl.style.color = 'var(--red)';

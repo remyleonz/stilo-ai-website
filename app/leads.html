@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-05-05">
+    <title>STILO AI PARTNERS | Leads</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-body: 'Geist', system-ui, sans-serif;
+            --font-mono: 'Geist Mono', ui-monospace, monospace;
+            --bg-primary: #0a0a0f;
+            --bg-card: #16161f;
+            --bg-elevated: #1e1e2a;
+            --bg-input: #12121a;
+            --border-subtle: rgba(255,255,255,0.06);
+            --border-medium: rgba(255,255,255,0.1);
+            --text-primary: #f0f0f5;
+            --text-secondary: #9898a8;
+            --text-muted: #4a4a5c;
+            --blue: #3b82f6;
+            --blue-strong: #2563eb;
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+        h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.15; }
+        a { color: var(--blue); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 32px; border-bottom: 1px solid var(--border-subtle);
+            background: rgba(10,10,15,0.85); backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 20;
+        }
+        .brand { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.04em; }
+        .brand-sub { font-size: 11px; color: var(--text-secondary); letter-spacing: 0.12em; text-transform: uppercase; }
+        .back-link { font-size: 13px; color: var(--text-secondary); }
+
+        main { max-width: 1400px; margin: 0 auto; padding: 32px 36px 80px; }
+        .header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .header h1 { font-size: 30px; letter-spacing: -0.02em; }
+        .header p { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+
+        .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+        @media (max-width: 800px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border-subtle);
+            border-radius: 12px; padding: 18px 20px;
+        }
+        .stat-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
+        .stat-value { font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--text-primary); }
+        .stat-hint { margin-top: 4px; font-size: 11px; color: var(--text-muted); }
+
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 16px; flex-wrap: wrap; }
+        .tab {
+            padding: 11px 18px; background: none; color: var(--text-primary);
+            border: none; border-bottom: 3px solid transparent;
+            font-size: 13px; font-weight: 600; cursor: pointer; opacity: 0.55;
+            transition: opacity 150ms;
+        }
+        .tab.active { border-bottom-color: var(--blue-strong); opacity: 1; }
+
+        .panel { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; overflow-x: auto; }
+        .empty-state {
+            padding: 64px 32px; text-align: center;
+        }
+        .empty-state .icon {
+            width: 56px; height: 56px; margin: 0 auto 18px; display: flex;
+            align-items: center; justify-content: center; border-radius: 14px;
+            background: rgba(37,99,235,0.1); border: 1px solid rgba(37,99,235,0.25);
+            color: var(--blue);
+        }
+        .empty-state h2 { font-size: 20px; margin-bottom: 8px; }
+        .empty-state p { color: var(--text-secondary); font-size: 14px; max-width: 480px; margin: 0 auto; }
+        .empty-state ul { color: var(--text-secondary); font-size: 13px; text-align: left; max-width: 480px; margin: 18px auto 0; padding-left: 20px; line-height: 1.7; }
+
+        .auth-gate {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 24px;
+        }
+        .auth-gate-card {
+            background: var(--bg-card); border: 1px solid var(--border-subtle);
+            border-radius: 14px; padding: 28px 32px; max-width: 420px; text-align: center;
+        }
+
+        table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            text-align: left; padding: 12px 16px; color: var(--text-secondary);
+            font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+            border-bottom: 1px solid var(--border-subtle); background: rgba(255,255,255,0.02);
+        }
+        tbody tr { border-top: 1px solid var(--border-subtle); cursor: pointer; transition: background 100ms; }
+        tbody tr:hover { background: rgba(37,99,235,0.06); }
+        tbody td { padding: 14px 16px; white-space: nowrap; }
+        .tier-pill {
+            display: inline-block; padding: 2px 8px; border-radius: 999px;
+            font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+        }
+        .tier-hot   { background: rgba(239,68,68,0.15);  color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+        .tier-warm  { background: rgba(234,179,8,0.15);  color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+        .tier-cool  { background: rgba(59,130,246,0.15); color: var(--blue);   border: 1px solid rgba(59,130,246,0.3); }
+        .tier-dead  { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-subtle); }
+    </style>
+</head>
+<body>
+    <div id="authGate" class="auth-gate" style="display:none;">
+        <div class="auth-gate-card">
+            <h1 style="font-size:20px;margin-bottom:8px;">Sign in to view your leads</h1>
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:18px;">You'll be redirected back here after signing in.</p>
+            <a href="/auth.html" style="display:inline-block;padding:10px 18px;background:var(--blue-strong);color:white;border-radius:8px;font-size:13px;font-weight:600;">Sign in</a>
+        </div>
+    </div>
+
+    <div id="appShell" style="display:none;">
+        <div class="topbar">
+            <div>
+                <div class="brand">STILO AI PARTNERS</div>
+                <div class="brand-sub">Lead Dashboard</div>
+            </div>
+            <div>
+                <a class="back-link" href="/app/">← Back to agents</a>
+                <span style="margin:0 12px;color:var(--text-muted);">·</span>
+                <a class="back-link" href="#" id="signOutLink">Sign out</a>
+            </div>
+        </div>
+
+        <main>
+            <div class="header">
+                <div>
+                    <h1>Your leads</h1>
+                    <p id="headerSub">Loading...</p>
+                </div>
+                <div style="color:var(--text-muted);font-size:12px;font-family:var(--font-mono);" id="lastUpdated"></div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-card">
+                    <div class="stat-label">Hot</div>
+                    <div class="stat-value" id="statHot">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Warm</div>
+                    <div class="stat-value" id="statWarm">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Calls Today</div>
+                    <div class="stat-value" id="statCallsToday">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Booked Meetings</div>
+                    <div class="stat-value" id="statBooked">—</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="callable">Cold Call</button>
+                <button class="tab" data-tab="emailable">Cold Email</button>
+                <button class="tab" data-tab="callbacks">Call Back</button>
+                <button class="tab" data-tab="booked">Booked</button>
+                <button class="tab" data-tab="dead">Dead Pool</button>
+            </div>
+
+            <div id="leadsPanel" class="panel">
+                <!-- Empty state until David seeds the first lead batch for this tenant -->
+                <div class="empty-state" id="emptyState">
+                    <div class="icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+                    <h2>Your leads are being generated</h2>
+                    <p id="emptyStateBody">First batch lands within 48 hours of onboarding. Once they're in, this view fills up with everything you need to start dialing.</p>
+                    <ul>
+                        <li>Business name, owner, direct phone, email</li>
+                        <li>A scored tier (Hot / Warm / Cool) so you call the best leads first</li>
+                        <li>A per-lead sales script written for your service offering</li>
+                        <li>One-click call logging — outcomes, callbacks, booked meetings</li>
+                    </ul>
+                </div>
+                <div id="leadsTable" style="display:none;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Supabase init -----------------------------------------------
+        // Mirror the existing app/index.html init. URL + anon key are public.
+        const SUPABASE_URL = 'https://zsrskphpvgautfgklgxf.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_exRKfUY8b_1Dj5GaQsSwdA_KJG_ZtT3';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        var clientState = {
+            session: null,
+            clientId: null,
+            companyName: null,
+            agents: [],
+            scoutActive: false,
+            currentTab: 'callable'
+        };
+
+        async function init() {
+            var { data: { session } } = await sb.auth.getSession();
+            if (!session) {
+                localStorage.setItem('auth_redirect', '/app/leads.html');
+                document.getElementById('authGate').style.display = 'flex';
+                return;
+            }
+            clientState.session = session;
+            document.getElementById('appShell').style.display = 'block';
+            document.getElementById('signOutLink').addEventListener('click', function (e) {
+                e.preventDefault();
+                sb.auth.signOut().then(function () { window.location.href = '/auth.html'; });
+            });
+
+            // Look up the client row + their agents. The clients table has
+            // `auth_user_id` (or `user_id`) linking to Supabase auth. Fall back
+            // through a couple of column names to be tolerant of schema drift.
+            await loadClientContext(session.user);
+
+            // Tab switching (purely visual until data lands)
+            document.querySelectorAll('.tab').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.tab').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    clientState.currentTab = btn.getAttribute('data-tab');
+                    refreshLeadsView();
+                });
+            });
+
+            refreshLeadsView();
+        }
+
+        async function loadClientContext(user) {
+            // Tolerate either auth_user_id or user_id depending on which column
+            // David ended up landing on.
+            var client = null;
+            for (var col of ['auth_user_id', 'user_id', 'owner_id']) {
+                try {
+                    var r = await sb.from('clients').select('*').eq(col, user.id).maybeSingle();
+                    if (r.data) { client = r.data; break; }
+                } catch (_) {}
+            }
+            if (!client) {
+                // Fall back to matching by email so onboarding works even
+                // before the auth_user_id column is wired up.
+                try {
+                    var r2 = await sb.from('clients').select('*').eq('email', user.email).maybeSingle();
+                    if (r2.data) client = r2.data;
+                } catch (_) {}
+            }
+            if (!client) {
+                document.getElementById('headerSub').textContent = 'No client record found for ' + user.email + '. Contact STILO support.';
+                return;
+            }
+            clientState.clientId = client.id;
+            clientState.companyName = client.name || client.company_name || 'Your business';
+            document.getElementById('headerSub').textContent = clientState.companyName + ' · Jacksonville';
+
+            // Pull agent status to check if SCOUT (Lead Generator) is active.
+            try {
+                var ar = await sb.from('client_agents').select('agent_type,status').eq('tenant_id', client.id);
+                clientState.agents = ar.data || [];
+                var scout = clientState.agents.find(function (a) {
+                    return a.agent_type === 'lead_generator' || a.agent_type === 'scout';
+                });
+                clientState.scoutActive = !!(scout && scout.status === 'active');
+            } catch (_) { clientState.scoutActive = false; }
+
+            // Render empty-state copy that reflects current onboarding state.
+            var body = document.getElementById('emptyStateBody');
+            if (!clientState.scoutActive) {
+                body.textContent = 'Your Lead Generator is in setup. We\'re sourcing the first 200 leads — Jacksonville offices that match your service area. This page goes live within 48 hours.';
+            }
+        }
+
+        async function refreshLeadsView() {
+            // Until David ships tenant-scoped /api/client/prospects/*
+            // endpoints, this is purely the empty state. The fetch path below
+            // is the integration seam: when the endpoints land, swap the URL
+            // and remove the early return.
+            var hasData = false;
+            if (hasData) {
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('leadsTable').style.display = 'block';
+                // TODO: render leads table from /api/client/prospects/{tab}
+            } else {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('leadsTable').style.display = 'none';
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
