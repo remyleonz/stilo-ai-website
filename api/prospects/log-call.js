@@ -19,6 +19,12 @@ module.exports = async function handler(req, res) {
     if (id == null) return res.status(400).json({ error: 'missing_id' });
     if (!body.outcome) return res.status(400).json({ error: 'missing_outcome' });
     const callbackAt = body.callback_at || body.next_callback_at || null;
+    // Default to the caller's email. Allow override only between admin SDRs
+    // (Remy logging David's call or vice versa). Any other override falls back
+    // to the JWT email so we never trust an arbitrary client value.
+    const ADMIN_SDRS = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
+    const override = body.logged_by_override && String(body.logged_by_override).trim().toLowerCase();
+    const loggedBy = (override && ADMIN_SDRS.includes(override)) ? override : gate.email;
     const { status, json } = await forwardToProspecting({
         method: 'POST',
         path: '/api/prospects/' + id + '/log-call',
@@ -26,7 +32,7 @@ module.exports = async function handler(req, res) {
             outcome: body.outcome,
             notes: body.notes || '',
             callback_at: callbackAt,
-            logged_by: gate.email
+            logged_by: loggedBy
         }
     });
     return res.status(status).json(json);

@@ -1,11 +1,14 @@
 /**
  * GET /api/prospects/calls-today
  *
- * All leads with last_called_at >= start of today (UTC), any outcome.
- * Powers the "Calls Today" tab — a permanent record of every lead
- * touched today regardless of what happened on the call.
+ * All leads with last_called_at >= start of today (America/New_York),
+ * any outcome. Powers the "Calls Today" tab — a permanent record of
+ * every lead touched today regardless of what happened on the call.
+ *
+ * Day boundary is ET (Miami), not UTC, so an 8pm call doesn't roll
+ * out of the tab at 7-8pm local. DST handled by startOfDayET().
  */
-const { assertAdmin, methodNotAllowed } = require('./_shared');
+const { assertAdmin, methodNotAllowed, startOfDayET } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
@@ -22,8 +25,7 @@ module.exports = async function handler(req, res) {
         db: { schema: 'prospecting' }
     });
 
-    const startOfDay = new Date();
-    startOfDay.setUTCHours(0, 0, 0, 0);
+    const startOfDay = startOfDayET();
 
     const { data, error } = await sb.from('leads')
         .select('*')

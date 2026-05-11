@@ -19,7 +19,8 @@ module.exports = async function handler(req, res) {
             niche: q.niche,
             tier: q.tier,
             min_score: q.min_score,
-            q: q.q
+            q: q.q,
+            assigned_to: q.assigned_to
         }
     });
     if (status === 200) {

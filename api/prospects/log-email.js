@@ -13,12 +13,15 @@ module.exports = async function handler(req, res) {
     const body = await readJsonBody(req);
     const id = safeNumberId(body.id);
     if (id == null) return res.status(400).json({ error: 'missing_id' });
+    const ADMIN_SDRS = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
+    const override = body.logged_by_override && String(body.logged_by_override).trim().toLowerCase();
+    const loggedBy = (override && ADMIN_SDRS.includes(override)) ? override : gate.email;
     const { status, json } = await forwardToProspecting({
         method: 'POST',
         path: '/api/prospects/' + id + '/log-email',
         body: {
             notes: body.notes || '',
-            logged_by: gate.email
+            logged_by: loggedBy
         }
     });
     return res.status(status).json(json);

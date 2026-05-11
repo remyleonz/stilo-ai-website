@@ -132,6 +132,22 @@ function safeNumberId(raw) {
     return n;
 }
 
+// Start of "today" in America/New_York, returned as a Date (UTC instant).
+// We're on ET (Miami) and the calling day should end at midnight ET, not UTC,
+// so an evening call doesn't roll out of "Calls Today" at 7pm. DST-aware via
+// Intl.DateTimeFormat — no extra dependency.
+function startOfDayET() {
+    const now = new Date();
+    const etDateStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+    const utcWall = now.toLocaleString('sv-SE', { timeZone: 'UTC' });                    // YYYY-MM-DD HH:mm:ss
+    const etWall  = now.toLocaleString('sv-SE', { timeZone: 'America/New_York' });
+    const utcMs = new Date(utcWall.replace(' ', 'T') + 'Z').getTime();
+    const etMs  = new Date(etWall.replace(' ', 'T') + 'Z').getTime();
+    const offsetMs = utcMs - etMs; // positive in ET (UTC-5 / UTC-4)
+    const etMidnightUtc = new Date(etDateStr + 'T00:00:00Z').getTime();
+    return new Date(etMidnightUtc + offsetMs);
+}
+
 module.exports = async function (req, res) {
     res.status(405).json({ error: 'not_a_handler' });
 };
@@ -141,3 +157,4 @@ module.exports.forwardToProspecting = forwardToProspecting;
 module.exports.readJsonBody = readJsonBody;
 module.exports.methodNotAllowed = methodNotAllowed;
 module.exports.safeNumberId = safeNumberId;
+module.exports.startOfDayET = startOfDayET;
