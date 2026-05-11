@@ -19,6 +19,7 @@
  */
 const { assertAdmin, methodNotAllowed, readJsonBody } = require('../../prospects/_shared');
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
@@ -80,6 +81,13 @@ module.exports = async function handler(req, res) {
         const insertPayload = {};
         for (const k in clientPayload) {
             if (clientPayload[k] != null) insertPayload[k] = clientPayload[k];
+        }
+        // `clients.id` has no default in this schema (verified via PostgREST
+        // "null value in column 'id' violates not-null constraint"). Mint a
+        // UUID ourselves. Stripe webhook path likely sets this from the
+        // Stripe customer id, which is why it only fails for our seed flow.
+        if (!insertPayload.id) {
+            insertPayload.id = crypto.randomUUID();
         }
         const { data: ins, error: insErr } = await sb.from('clients')
             .insert(insertPayload).select().maybeSingle();
