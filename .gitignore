@@ -1,6 +1,9 @@
 .DS_Store
 .vercel
-.env*.local
+.env
+.env.*
+!.env.example
 node_modules/
 package-lock.json
 .claude/
+scripts/secrets.json
