@@ -1448,9 +1448,13 @@
         // v2 flag: column names corrected to match the actual schema
         // (business_name/contact_name/business_type, not name/tier).
         async function ensureFriendsAndFamilyClients() {
-            var seedFlag = 'stilo:client_seed:v2';
-            // Clear out the v1 flag so users on the v1 wrong-schema run get retried.
+            var seedFlag = 'stilo:client_seed:v3';
+            // Clear out earlier flags so anyone who hit a previous broken cut
+            // (v1 had wrong column names; v2 included `city` which doesn't
+            // exist on the clients table) gets retried with the corrected
+            // payload. v3 = no city, schema-matched columns only.
             localStorage.removeItem('stilo:client_seed:v1');
+            localStorage.removeItem('stilo:client_seed:v2');
             if (localStorage.getItem(seedFlag) === 'done') return;
             var roster = [
                 {
@@ -1458,7 +1462,6 @@
                     email: 'marcuslindsey8@gmail.com',
                     contact_name: 'Marcus Lindsey',
                     business_type: 'commercial cleaning',
-                    city: 'Jacksonville, FL',
                     status: 'active',
                     agent_type: 'lead_generator',
                     agent_status: 'pending'

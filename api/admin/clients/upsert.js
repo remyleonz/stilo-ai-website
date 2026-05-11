@@ -41,15 +41,15 @@ module.exports = async function handler(req, res) {
     });
 
     // 1. UPSERT into clients keyed by email. Column names match the
-    //    production schema (business_name, contact_name, business_type) —
-    //    NOT the generic name/city/tier my first cut wrongly used.
+    //    production schema verified 2026-05-11 via PostgREST error:
+    //    business_name, contact_name, email, phone, business_type, status.
+    //    NO `city` column — caller can pass it but we drop it before insert.
     const clientPayload = {
         business_name: body.business_name,
         email: body.email,
         contact_name: body.contact_name || null,
         phone: body.phone || null,
         business_type: body.business_type || null,
-        city: body.city || null,
         status: body.status || 'active'
     };
     const { data: existing, error: lookupErr } = await sb.from('clients')
@@ -63,7 +63,7 @@ module.exports = async function handler(req, res) {
         // Patch any new fields the caller supplied but don't blow away
         // existing values they didn't pass.
         const patch = {};
-        for (const k of ['business_name', 'contact_name', 'phone', 'business_type', 'city', 'status']) {
+        for (const k of ['business_name', 'contact_name', 'phone', 'business_type', 'status']) {
             if (clientPayload[k] != null && clientPayload[k] !== existing[k]) patch[k] = clientPayload[k];
         }
         if (Object.keys(patch).length) {
