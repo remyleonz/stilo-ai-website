@@ -9,6 +9,33 @@
  * (next_action_due_at, next_action_type) kicks in for callback_requested.
  */
 const { assertAdmin, forwardToProspecting, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
+const { createClient } = require('@supabase/supabase-js');
+
+// Direct dual-write to prospecting.leads.call_history so we own the SDR
+// attribution end-to-end. David's backend may or may not persist the
+// logged_by field we send him; this write guarantees the entry lands
+// in the leads.call_history JSONB array regardless. My Call History
+// reads from this same array, so the loop is closed without depending
+// on David.
+async function appendCallHistory(id, entry) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return { skipped: 'no_service_key' };
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false },
+        db: { schema: 'prospecting' }
+    });
+    // Read-modify-write. Cheap because we own the call. Avoids needing a
+    // Postgres function we can't deploy ourselves.
+    const { data: lead, error: rdErr } = await sb.from('leads')
+        .select('id, call_history').eq('id', id).maybeSingle();
+    if (rdErr) return { error: 'read_failed', detail: rdErr.message };
+    if (!lead) return { error: 'lead_not_found' };
+    const history = Array.isArray(lead.call_history) ? lead.call_history.slice() : [];
+    history.unshift(entry);
+    const { error: upErr } = await sb.from('leads')
+        .update({ call_history: history }).eq('id', id);
+    if (upErr) return { error: 'write_failed', detail: upErr.message };
+    return { ok: true, count: history.length };
+}
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
@@ -25,7 +52,8 @@ module.exports = async function handler(req, res) {
     const ADMIN_SDRS = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
     const override = body.logged_by_override && String(body.logged_by_override).trim().toLowerCase();
     const loggedBy = (override && ADMIN_SDRS.includes(override)) ? override : gate.email;
-    const { status, json } = await forwardToProspecting({
+
+    const upstream = await forwardToProspecting({
         method: 'POST',
         path: '/api/prospects/' + id + '/log-call',
         body: {
@@ -35,5 +63,21 @@ module.exports = async function handler(req, res) {
             logged_by: loggedBy
         }
     });
-    return res.status(status).json(json);
+
+    // Dual-write to leads.call_history with our own attribution row. This
+    // is what My Call History queries against, so we don't have to wait
+    // on David to add a column. Best-effort — the upstream forward is the
+    // source of truth for lifecycle state.
+    const historyResult = await appendCallHistory(id, {
+        called_at: new Date().toISOString(),
+        outcome: body.outcome,
+        notes: body.notes || '',
+        logged_by: loggedBy,
+        source: 'stilo_admin'
+    });
+
+    return res.status(upstream.status).json({
+        ...(upstream.json || {}),
+        _stilo_history: historyResult
+    });
 };

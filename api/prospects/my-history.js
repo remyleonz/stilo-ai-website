@@ -8,6 +8,12 @@
  * Returns leads whose call_history JSONB array contains at least one entry
  * with logged_by = the caller's admin email, ordered by most recent call.
  *
+ * We own the write side too: api/prospects/log-call.js appends a row with
+ * { logged_by, called_at, outcome, notes, source: 'stilo_admin' } directly
+ * into leads.call_history every time a call is logged from the admin UI.
+ * So this query always reflects reality regardless of whether David's
+ * upstream backend also persists logged_by.
+ *
  * The ?email= override lets one SDR look at the other's history (e.g. Remy
  * wants to see what David already worked). Admin-only.
  */
@@ -33,10 +39,8 @@ module.exports = async function handler(req, res) {
         db: { schema: 'prospecting' }
     });
 
-    // Strategy 1: JSONB array contains match. Works if call_history is JSONB
-    // and each entry has a logged_by string. If the column doesn't exist yet
-    // (David hasn't shipped the schema change), Strategy 1 errors and we fall
-    // back to Strategy 2.
+    // Primary: JSONB array contains match against entries we write from
+    // log-call.js. Works as soon as the first call is logged.
     let data, error;
     try {
         const r = await sb.from('leads')
@@ -51,27 +55,11 @@ module.exports = async function handler(req, res) {
     }
 
     if (error) {
-        // Strategy 2 fallback: query last_logged_by scalar column. If that
-        // doesn't exist either, return empty with a hint so the UI can show
-        // a "schema not ready" placeholder instead of crashing.
-        try {
-            const r2 = await sb.from('leads')
-                .select('*')
-                .eq('last_logged_by', targetEmail)
-                .order('last_called_at', { ascending: false })
-                .range(offset, offset + limit - 1);
-            if (r2.error) {
-                console.error('[my-history] both strategies failed', error, r2.error);
-                return res.status(200).json({
-                    results: [],
-                    note: 'schema_not_ready: David needs to expose call_history.logged_by or last_logged_by on prospecting.leads'
-                });
-            }
-            data = r2.data;
-        } catch (e2) {
-            console.error('[my-history] fallback threw', e2);
-            return res.status(200).json({ results: [], note: 'schema_not_ready' });
-        }
+        console.error('[my-history] query failed', error);
+        return res.status(200).json({
+            results: [],
+            note: 'No call history yet. Log a call from the lead drawer to populate this list.'
+        });
     }
 
     res.setHeader('Cache-Control', 'no-store');

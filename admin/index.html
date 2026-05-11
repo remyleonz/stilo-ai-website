@@ -1413,6 +1413,63 @@
             // Update the Pending Review nav badge so admins notice queued submissions
             // even before they navigate to the tab.
             refreshPendingReviewBadge();
+            // Pre-warm the Leads tab so it's instant on click instead of
+            // spinning while it fetches. Lifecycle stats + the callable
+            // list cover the default "Cold Call" subtab; the other subtabs
+            // load on demand from their cache.
+            try {
+                if (typeof loadProspectStats === 'function') loadProspectStats();
+                if (typeof loadProspectCallable === 'function') loadProspectCallable();
+                if (typeof loadActivityStrip === 'function') loadActivityStrip();
+                if (typeof loadOpenPhoneNumbers === 'function') loadOpenPhoneNumbers();
+            } catch (e) {
+                console.warn('[grantAdminAccess] prospect prefetch failed', e);
+            }
+            // One-time idempotent backfill: ensure Marcus Lindsey Cleaning
+            // is in Supabase so he shows up in the Clients grid. He didn't
+            // come through the Stripe paid flow (friends-and-family), so
+            // there's no other path that inserts him today. The endpoint
+            // is idempotent server-side — re-runs are no-ops once he exists.
+            try {
+                ensureFriendsAndFamilyClients();
+            } catch (e) { console.warn('[ensureFriendsAndFamilyClients]', e); }
+        }
+
+        // Hardcoded roster of clients we onboard outside Stripe. On admin
+        // sign-in we POST each one through /api/admin/clients/upsert so the
+        // Clients grid reflects reality. The endpoint dedupes by email.
+        async function ensureFriendsAndFamilyClients() {
+            var seedFlag = 'stilo:client_seed:v1';
+            if (localStorage.getItem(seedFlag) === 'done') return;
+            var roster = [
+                {
+                    name: 'Marcus Lindsey Cleaning',
+                    email: 'marcuslindsey8@gmail.com',
+                    city: 'Jacksonville, FL',
+                    tier: 'standard',
+                    status: 'active',
+                    agent_type: 'lead_generator',
+                    agent_status: 'pending'
+                }
+            ];
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var token = session && session.access_token;
+                if (!token) return;
+                for (var entry of roster) {
+                    try {
+                        var resp = await fetch('/api/admin/clients/upsert', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify(entry)
+                        });
+                        var json = await resp.json().catch(function () { return {}; });
+                        console.info('[client-seed]', entry.email, resp.status, json.client ? 'ok' : json);
+                    } catch (e) { console.warn('[client-seed]', entry.email, e); }
+                }
+                localStorage.setItem(seedFlag, 'done');
+                if (typeof loadClientsGrid === 'function') loadClientsGrid();
+            } catch (e) { console.warn('[client-seed] outer', e); }
         }
 
         async function refreshPendingReviewBadge() {
@@ -3673,7 +3730,7 @@
                 var score = r.prospect_score != null ? r.prospect_score : (r.score != null ? r.score : '—');
                 var strictBadge = r.owner_phone_strict ? ' <span title="Strict-pass owner phone" style="display:inline-block;padding:1px 6px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;letter-spacing:0.04em;">STRICT</span>' : '';
                 var emailSub = email
-                    ? '<div title="' + escapeAdminHtml(email) + '" style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-sans,inherit);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(email) + '</div>'
+                    ? '<div title="' + escapeAdminHtml(email) + '" style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-sans,inherit);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(email) + '</div>'
                     : '';
                 var contactCol = mode === 'emailable'
                     ? '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
@@ -3733,17 +3790,19 @@
                 return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                     + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + dialedBadge + '</td>'
                     + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                    + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                    + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
                     + contactCol
-                    + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                    + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
                     + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastStr + '</td>'
                     + '</tr>';
             }).join('');
-            // width:auto packs columns to their natural width starting from the
-            // left edge of the container. Combined with overflow-x:auto on the
-            // host div, it means: small tables don't have giant gaps on the
-            // right (content sits left), and wide tables scroll inside the
-            // card instead of clipping at the page edge.
+            // Intrinsic-width table (no width:100%) so columns sit packed at
+            // the left of the host. The host has overflow-x:auto, so if a row
+            // ends up wider than the viewport (rare with the niche/owner wrap
+            // + 170px email cap) the user can scroll inside the card. With
+            // width:auto, content columns never get artificially expanded to
+            // fill leftover space, so there's no "gap" between business and
+            // owner columns.
             return '<table style="border-collapse:collapse;font-size:13px;table-layout:auto;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
         }
 
