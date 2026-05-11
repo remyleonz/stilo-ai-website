@@ -165,7 +165,48 @@ async function handleCheckoutComplete(session) {
     console.log('[stripe-webhook] Invited new user %s (id=%s) for session %s', customerEmail, linkedClientId, session.id);
   }
 
-  // Create one client_agents row per agent
+  // Make sure the Business Profile pseudo-agent exists for this client BEFORE
+  // we seed paid agents. The dashboard auto-creates it on first login too,
+  // but seeding it here means the gate is in place even if the client gets
+  // their welcome email and clicks straight to a paid agent's setup.
+  try {
+    const { data: existingProfile } = await supabase
+      .from('client_agents')
+      .select('id')
+      .eq('client_id', linkedClientId)
+      .eq('agent_type', 'business_profile')
+      .maybeSingle();
+    if (!existingProfile) {
+      const profileMeta = AGENTS.business_profile;
+      const { data: bp } = await supabase
+        .from('client_agents')
+        .insert({
+          client_id: linkedClientId,
+          agent_type: 'business_profile',
+          status: 'onboarding',
+          stripe_subscription_id: null,
+          config: {},
+        })
+        .select('id')
+        .single();
+      if (bp && profileMeta && profileMeta.onboardingSteps) {
+        const profileSteps = profileMeta.onboardingSteps.map(function (name, idx) {
+          return {
+            client_agent_id: bp.id,
+            step_number: idx + 1,
+            step_name: name,
+            status: idx === 0 ? 'in_progress' : 'pending',
+            data: { response_data: {} },
+          };
+        });
+        await supabase.from('onboarding_steps').insert(profileSteps);
+      }
+    }
+  } catch (e) {
+    console.warn('[stripe-webhook] could not seed business_profile:', e.message);
+  }
+
+  // Create one client_agents row per paid agent
   const rows = agentCodes.map(function (code) {
     return {
       client_id: linkedClientId,
