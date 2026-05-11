@@ -437,6 +437,18 @@
             border-collapse: collapse;
         }
 
+        /* Leads tab: intrinsic-width table, columns sit packed at the left of
+           the card. Overrides the global `table { width:100% }` so business
+           name and owner column aren't separated by a giant flex gap.
+           Cells default to normal wrap (overrideable per cell). */
+        .prospect-table-host table {
+            width: auto;
+        }
+        .prospect-table-host td,
+        .prospect-table-host th {
+            white-space: normal;
+        }
+
         thead th {
             font-size: 0.6875rem;
             font-weight: 600;
@@ -1087,16 +1099,11 @@
                  Backed by /api/prospects/* proxy → David's prospecting backend
                  ============================================================ -->
             <div class="page-content" id="page-prospecting" style="display:none;">
+                <!-- Page title is already shown by main-header (pageTitle h1
+                     = "Leads"). The duplicate "Leads" subhead + subtitle that
+                     used to live here was removed per Remy 2026-05-11. -->
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:12px;flex-wrap:wrap;">
-                    <div>
-                        <h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">Leads</h2>
-                        <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:4px;">Daily call list, cold email queue, and archive. Click a row to log an outcome.</p>
-                    </div>
-                    <!-- "Generate Leads" button removed: David runs the
-                         scrape locally on his Mac and pushes via the
-                         nightly Cloud Workflow. The operator never needs
-                         to trigger a fresh scrape from the admin UI. -->
-                    <span></span>
+                    <p style="color:var(--text-secondary);font-size:0.875rem;margin:0;">Daily call list, cold email queue, and archive. Click a row to log an outcome.</p>
                 </div>
 
                 <!-- Activity intelligence strip — counts of today's work + queue size.
@@ -1438,20 +1445,26 @@
         // Hardcoded roster of clients we onboard outside Stripe. On admin
         // sign-in we POST each one through /api/admin/clients/upsert so the
         // Clients grid reflects reality. The endpoint dedupes by email.
+        // v2 flag: column names corrected to match the actual schema
+        // (business_name/contact_name/business_type, not name/tier).
         async function ensureFriendsAndFamilyClients() {
-            var seedFlag = 'stilo:client_seed:v1';
+            var seedFlag = 'stilo:client_seed:v2';
+            // Clear out the v1 flag so users on the v1 wrong-schema run get retried.
+            localStorage.removeItem('stilo:client_seed:v1');
             if (localStorage.getItem(seedFlag) === 'done') return;
             var roster = [
                 {
-                    name: 'Marcus Lindsey Cleaning',
+                    business_name: 'Marcus Lindsey Cleaning',
                     email: 'marcuslindsey8@gmail.com',
+                    contact_name: 'Marcus Lindsey',
+                    business_type: 'commercial cleaning',
                     city: 'Jacksonville, FL',
-                    tier: 'standard',
                     status: 'active',
                     agent_type: 'lead_generator',
                     agent_status: 'pending'
                 }
             ];
+            var failures = [];
             try {
                 var { data: { session } } = await sb.auth.getSession();
                 var token = session && session.access_token;
@@ -1464,10 +1477,26 @@
                             body: JSON.stringify(entry)
                         });
                         var json = await resp.json().catch(function () { return {}; });
-                        console.info('[client-seed]', entry.email, resp.status, json.client ? 'ok' : json);
-                    } catch (e) { console.warn('[client-seed]', entry.email, e); }
+                        if (!resp.ok || !json.client) {
+                            failures.push({ entry: entry.email, status: resp.status, detail: json });
+                            console.warn('[client-seed FAIL]', entry.email, resp.status, json);
+                        } else {
+                            console.info('[client-seed OK]', entry.email, 'client.id=' + (json.client && json.client.id), 'agent_error=' + (json.agent_error || 'none'));
+                        }
+                    } catch (e) {
+                        failures.push({ entry: entry.email, error: String(e.message || e) });
+                        console.warn('[client-seed THROW]', entry.email, e);
+                    }
                 }
-                localStorage.setItem(seedFlag, 'done');
+                if (failures.length === 0) {
+                    localStorage.setItem(seedFlag, 'done');
+                } else {
+                    // Surface failures in the UI so we don't ship silently. The
+                    // sidebar gets a small red dot + the Clients grid will
+                    // show the failure in a toast on next load.
+                    window.__clientSeedFailures = failures;
+                    console.error('[client-seed] failures:', JSON.stringify(failures, null, 2));
+                }
                 if (typeof loadClientsGrid === 'function') loadClientsGrid();
             } catch (e) { console.warn('[client-seed] outer', e); }
         }
@@ -1532,7 +1561,7 @@
             var titles = {
                 dashboard: 'Dashboard',
                 clients: 'Clients',
-                prospecting: 'Prospecting',
+                prospecting: 'Leads',
                 agents: 'Agents',
                 revenue: 'Revenue',
                 support: 'Support',
@@ -2914,52 +2943,80 @@
            Settings tab
            ============================================================ */
         async function loadSettings() {
-            // Admin team
-            try {
-                var { data, error } = await sb.from('admin_users').select('email, display_name, added_by, added_at, active').order('added_at', { ascending: true });
-                if (error) throw error;
-                var listEl = document.getElementById('adminTeamList');
-                if (listEl) {
-                    listEl.innerHTML = (data || []).map(function(u){
-                        var statusDot = u.active
-                            ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:8px;"></span>'
-                            : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#5a5a75;margin-right:8px;"></span>';
-                        var added = u.added_at ? new Date(u.added_at).toLocaleDateString() : '';
-                        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.02);border-radius:8px;font-size:13px;">'
-                            + '<div>' + statusDot + '<strong>' + escapeAdminHtml(u.email) + '</strong>'
-                            + (u.display_name ? ' <span style="color:var(--text-secondary);">— ' + escapeAdminHtml(u.display_name) + '</span>' : '')
-                            + '</div>'
-                            + '<div style="color:var(--text-muted);font-size:11px;">added ' + added + '</div>'
-                            + '</div>';
-                    }).join('');
-                }
-            } catch (e) {
-                console.error('[loadSettings/team]', e);
-                var listEl = document.getElementById('adminTeamList');
-                if (listEl) listEl.innerHTML = '<div style="color:#ef4444;font-size:12px;">Could not load team. Make sure the admin_users migration is applied.</div>';
+            // Admin team. The admin_users table migration was never applied,
+            // so we render the hardcoded ADMIN_EMAILS list directly — that's
+            // what auth actually gates against anyway. If the table ever
+            // lands later we can flip back to the DB query.
+            var listEl = document.getElementById('adminTeamList');
+            if (listEl) {
+                var displayMap = {
+                    'remyleon@stiloaipartners.com': 'Remy Leon',
+                    'davidcoira@stiloaipartners.com': 'David Coira',
+                    'remyleon11@gmail.com': 'Remy Leon (personal)',
+                    'stiloaiconsulting@gmail.com': 'STILO AI Consulting'
+                };
+                listEl.innerHTML = ADMIN_EMAILS.map(function(email){
+                    var name = displayMap[email] || '';
+                    var statusDot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:8px;"></span>';
+                    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.02);border-radius:8px;font-size:13px;">'
+                        + '<div>' + statusDot + '<strong>' + escapeAdminHtml(email) + '</strong>'
+                        + (name ? ' <span style="color:var(--text-secondary);">— ' + escapeAdminHtml(name) + '</span>' : '')
+                        + '</div>'
+                        + '<div style="color:var(--text-muted);font-size:11px;">hardcoded</div>'
+                        + '</div>';
+                }).join('');
             }
 
-            // Integrations health (best-effort, soft probes)
+            // Integrations health. Real probes via /api/admin/integrations-health
+            // — Stripe /balance, Retell /list-phone-numbers, Resend /domains,
+            // Supabase /clients. Each probe returns ok+detail, so the UI
+            // surfaces specific error messages (e.g. "Auth rejected — check
+            // Retell API key", "0 domain(s) registered").
             var ih = document.getElementById('integrationsHealth');
             if (ih) {
                 ih.innerHTML = ['supabase', 'stripe', 'retell', 'resend'].map(function(name){
-                    return '<div data-integration="' + name + '" style="padding:12px;background:rgba(255,255,255,0.02);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
-                        + '<span style="font-size:13px;font-weight:600;text-transform:capitalize;">' + name + '</span>'
-                        + '<span style="font-size:11px;color:var(--text-secondary);">checking...</span>'
+                    return '<div data-integration="' + name + '" style="padding:12px 14px;background:rgba(255,255,255,0.02);border-radius:8px;display:flex;flex-direction:column;gap:4px;">'
+                        + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                          + '<span style="font-size:13px;font-weight:600;text-transform:capitalize;">' + name + '</span>'
+                          + '<span class="probe-status" style="font-size:11px;color:var(--text-secondary);">checking...</span>'
+                        + '</div>'
+                        + '<div class="probe-detail" style="font-size:11px;color:var(--text-muted);"></div>'
                         + '</div>';
                 }).join('');
 
-                // Supabase: ping the clients table (already authenticated).
-                sb.from('clients').select('id', { head: true, count: 'exact' }).limit(1).then(function(r){
-                    var el = ih.querySelector('[data-integration="supabase"] span:last-child');
-                    if (el) el.innerHTML = r.error ? '<span style="color:#ef4444;">down</span>' : '<span style="color:#22c55e;">connected</span>';
-                });
-                // Other probes happen via /api/admin/integrations-health (todo for next batch);
-                // for now mark them as unknown so the UI is honest.
-                ['stripe', 'retell', 'resend'].forEach(function(name){
-                    var el = ih.querySelector('[data-integration="' + name + '"] span:last-child');
-                    if (el) el.innerHTML = '<span style="color:var(--text-muted);">probe pending</span>';
-                });
+                (async function () {
+                    try {
+                        var { data: { session } } = await sb.auth.getSession();
+                        if (!session) return;
+                        var resp = await fetch('/api/admin/integrations-health', {
+                            headers: { 'Authorization': 'Bearer ' + session.access_token }
+                        });
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                        var data = await resp.json();
+                        ['supabase', 'stripe', 'retell', 'resend'].forEach(function(name){
+                            var row = ih.querySelector('[data-integration="' + name + '"]');
+                            if (!row) return;
+                            var statusEl = row.querySelector('.probe-status');
+                            var detailEl = row.querySelector('.probe-detail');
+                            var p = data[name] || { ok: false, detail: 'no response' };
+                            if (p.ok) {
+                                statusEl.innerHTML = '<span style="color:#22c55e;">connected</span>';
+                            } else {
+                                statusEl.innerHTML = '<span style="color:#ef4444;">error</span>';
+                            }
+                            if (detailEl) detailEl.textContent = p.detail || '';
+                        });
+                    } catch (e) {
+                        ['supabase', 'stripe', 'retell', 'resend'].forEach(function(name){
+                            var row = ih.querySelector('[data-integration="' + name + '"]');
+                            if (!row) return;
+                            var statusEl = row.querySelector('.probe-status');
+                            if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">probe failed</span>';
+                            var detailEl = row.querySelector('.probe-detail');
+                            if (detailEl) detailEl.textContent = e.message || 'unknown';
+                        });
+                    }
+                })();
             }
 
             // About

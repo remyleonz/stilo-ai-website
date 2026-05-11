@@ -1,15 +1,21 @@
 /**
  * POST /api/admin/clients/upsert
- * Body: { name, email, city?, tier?, agent_type, agent_status? }
+ * Body: { business_name, contact_name?, email, phone?, business_type?, city?,
+ *         status?, agent_type, agent_status? }
  *
  * Idempotent admin-only insert for the clients + client_agents tables.
  * Needed because there's no UI "Create client" flow today — clients
  * normally land via the Stripe webhook on first paid purchase. Friends-
  * and-family clients (Marcus) come in through here instead.
  *
+ * Schema (verified 2026-05-11 against loadClientsGrid in admin/index.html):
+ *   clients: { id, business_name, contact_name, email, phone, business_type,
+ *              status, created_at }
+ *   client_agents: { client_id, agent_type, status, ... }
+ *
  * Returns:
- *   { ok: true, client: {...}, agent: {...} }
- *   { ok: false, error: '...' } on failure
+ *   { ok: true, client: {...}, agent: {...} } on success
+ *   400/500 with explicit error + the payload we attempted on failure
  */
 const { assertAdmin, methodNotAllowed, readJsonBody } = require('../../prospects/_shared');
 const { createClient } = require('@supabase/supabase-js');
@@ -24,8 +30,8 @@ module.exports = async function handler(req, res) {
     }
 
     const body = await readJsonBody(req);
-    if (!body || !body.email || !body.name) {
-        return res.status(400).json({ error: 'missing_fields', detail: 'email and name are required' });
+    if (!body || !body.email || !body.business_name) {
+        return res.status(400).json({ error: 'missing_fields', detail: 'email and business_name are required' });
     }
     const agentType = body.agent_type || 'lead_generator';
     const agentStatus = body.agent_status || 'pending';
@@ -34,14 +40,16 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }
     });
 
-    // 1. UPSERT into clients keyed by email. We use email as the natural
-    //    dedup key because two friends-and-family clients with the same
-    //    name would be a collision, but two with the same email never are.
+    // 1. UPSERT into clients keyed by email. Column names match the
+    //    production schema (business_name, contact_name, business_type) —
+    //    NOT the generic name/city/tier my first cut wrongly used.
     const clientPayload = {
-        name: body.name,
+        business_name: body.business_name,
         email: body.email,
+        contact_name: body.contact_name || null,
+        phone: body.phone || null,
+        business_type: body.business_type || null,
         city: body.city || null,
-        tier: body.tier || 'standard',
         status: body.status || 'active'
     };
     const { data: existing, error: lookupErr } = await sb.from('clients')
@@ -52,65 +60,65 @@ module.exports = async function handler(req, res) {
 
     let client;
     if (existing) {
-        // Patch in any new fields the caller supplied but don't blow away
+        // Patch any new fields the caller supplied but don't blow away
         // existing values they didn't pass.
         const patch = {};
-        for (const k of ['name', 'city', 'tier', 'status']) {
-            if (body[k] != null && body[k] !== existing[k]) patch[k] = body[k];
+        for (const k of ['business_name', 'contact_name', 'phone', 'business_type', 'city', 'status']) {
+            if (clientPayload[k] != null && clientPayload[k] !== existing[k]) patch[k] = clientPayload[k];
         }
         if (Object.keys(patch).length) {
             const { data: upd, error: upErr } = await sb.from('clients')
                 .update(patch).eq('id', existing.id).select().maybeSingle();
-            if (upErr) return res.status(500).json({ error: 'client_update_failed', detail: upErr.message });
+            if (upErr) return res.status(500).json({ error: 'client_update_failed', detail: upErr.message, attempted: patch });
             client = upd;
         } else {
             client = existing;
         }
     } else {
+        // Strip null fields the schema may not accept — some Supabase tables
+        // reject explicit nulls on NOT NULL columns even if you have a default.
+        const insertPayload = {};
+        for (const k in clientPayload) {
+            if (clientPayload[k] != null) insertPayload[k] = clientPayload[k];
+        }
         const { data: ins, error: insErr } = await sb.from('clients')
-            .insert(clientPayload).select().maybeSingle();
+            .insert(insertPayload).select().maybeSingle();
         if (insErr) {
-            return res.status(500).json({ error: 'client_insert_failed', detail: insErr.message, attempted: clientPayload });
+            return res.status(500).json({ error: 'client_insert_failed', detail: insErr.message, attempted: insertPayload });
         }
         client = ins;
     }
 
-    // 2. UPSERT client_agents row keyed by (tenant_id, agent_type).
-    //    Tolerate column-name drift: David's schema may use `tenant_id` or `client_id`.
+    // 2. UPSERT client_agents row keyed by (client_id, agent_type).
     let agent = null;
     let agentError = null;
-    for (const tenantCol of ['tenant_id', 'client_id']) {
-        try {
-            const filter = {};
-            filter[tenantCol] = client.id;
-            filter.agent_type = agentType;
-            const { data: ex, error: lookErr } = await sb.from('client_agents')
-                .select('*').match(filter).maybeSingle();
-            if (lookErr) { agentError = lookErr.message; continue; }
-            if (ex) {
-                agent = ex;
-                if (agentStatus && ex.status !== agentStatus) {
-                    const { data: upd, error: upErr } = await sb.from('client_agents')
-                        .update({ status: agentStatus }).eq('id', ex.id).select().maybeSingle();
-                    if (!upErr) agent = upd;
-                }
-                break;
+    try {
+        const { data: ex, error: lookErr } = await sb.from('client_agents')
+            .select('*').eq('client_id', client.id).eq('agent_type', agentType).maybeSingle();
+        if (lookErr) {
+            agentError = lookErr.message;
+        } else if (ex) {
+            agent = ex;
+            if (agentStatus && ex.status !== agentStatus) {
+                const { data: upd, error: upErr } = await sb.from('client_agents')
+                    .update({ status: agentStatus }).eq('id', ex.id).select().maybeSingle();
+                if (!upErr) agent = upd;
+                else agentError = upErr.message;
             }
-            const insertPayload = { agent_type: agentType, status: agentStatus };
-            insertPayload[tenantCol] = client.id;
+        } else {
             const { data: ins, error: insErr } = await sb.from('client_agents')
-                .insert(insertPayload).select().maybeSingle();
-            if (insErr) { agentError = insErr.message; continue; }
-            agent = ins;
-            break;
-        } catch (e) { agentError = String(e.message || e); }
-    }
+                .insert({ client_id: client.id, agent_type: agentType, status: agentStatus })
+                .select().maybeSingle();
+            if (insErr) agentError = insErr.message;
+            else agent = ins;
+        }
+    } catch (e) { agentError = String(e.message || e); }
 
     return res.status(200).json({
         ok: true,
         client: client,
         agent: agent,
-        agent_error: agent ? null : agentError,
+        agent_error: agentError,
         notes: 'Idempotent — safe to re-run.'
     });
 };
