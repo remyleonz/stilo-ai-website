@@ -203,19 +203,28 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_exRKfUY8b_1Dj5GaQsSwdA_KJG_ZtT3';
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // Mirror admin's ADMIN_EMAILS so an admin can impersonate a client.
+        // Anyone outside this list with ?impersonate= in the URL gets bounced
+        // to /admin/ (which itself redirects non-admins to /app/), so the
+        // impersonation surface is locked to actual signed-in admins.
+        var ADMIN_EMAILS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
+
         var clientState = {
             session: null,
             clientId: null,
             companyName: null,
             agents: [],
             scoutActive: false,
-            currentTab: 'callable'
+            currentTab: 'callable',
+            impersonating: false,
+            impersonationSessionId: null,
+            adminEmail: null
         };
 
         async function init() {
             var { data: { session } } = await sb.auth.getSession();
             if (!session) {
-                localStorage.setItem('auth_redirect', '/app/leads.html');
+                localStorage.setItem('auth_redirect', window.location.pathname + window.location.search);
                 document.getElementById('authGate').style.display = 'flex';
                 return;
             }
@@ -226,10 +235,57 @@
                 sb.auth.signOut().then(function () { window.location.href = '/auth.html'; });
             });
 
-            // Look up the client row + their agents. The clients table has
-            // `auth_user_id` (or `user_id`) linking to Supabase auth. Fall back
-            // through a couple of column names to be tolerant of schema drift.
-            await loadClientContext(session.user);
+            // Impersonation: admin can hit /app/leads.html?impersonate=<client_id>
+            // to preview the client's dashboard without the client having
+            // signed up yet. Logs to impersonation_audit via the existing
+            // /api/admin/impersonate endpoint.
+            var url = new URL(window.location.href);
+            var impersonateId = url.searchParams.get('impersonate') || url.searchParams.get('as');
+            var signedInEmail = (session.user.email || '').toLowerCase();
+            var isAdminViewer = ADMIN_EMAILS.indexOf(signedInEmail) !== -1;
+
+            if (impersonateId) {
+                if (!isAdminViewer) {
+                    // Non-admin trying to use ?impersonate=. Drop the param and
+                    // bounce to their own dashboard.
+                    url.searchParams.delete('impersonate');
+                    url.searchParams.delete('as');
+                    window.location.replace(url.toString());
+                    return;
+                }
+                try {
+                    var resp = await fetch('/api/admin/impersonate', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + session.access_token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ client_id: impersonateId })
+                    });
+                    var payload = await resp.json().catch(function () { return {}; });
+                    if (!resp.ok) {
+                        console.error('[impersonate]', payload);
+                        document.getElementById('headerSub').textContent = 'Impersonation failed: ' + (payload.error || resp.status);
+                        return;
+                    }
+                    clientState.impersonating = true;
+                    clientState.impersonationSessionId = payload.session_id;
+                    clientState.adminEmail = signedInEmail;
+                    renderImpersonationBanner(payload.client);
+                    await loadClientContextById(impersonateId);
+                } catch (e) {
+                    console.error('[impersonate]', e);
+                    document.getElementById('headerSub').textContent = 'Impersonation error: ' + (e.message || 'unknown');
+                    return;
+                }
+            } else if (isAdminViewer) {
+                // Admin without ?impersonate=: redirect to /admin/ instead of
+                // showing them an empty client view.
+                window.location.replace('/admin/');
+                return;
+            } else {
+                await loadClientContext(session.user);
+            }
 
             // Tab switching (purely visual until data lands)
             document.querySelectorAll('.tab').forEach(function (btn) {
@@ -244,19 +300,40 @@
             refreshLeadsView();
         }
 
+        // Big red bar across the top so impersonation is always obvious.
+        // Mirrors the pattern in /app/index.html.
+        function renderImpersonationBanner(client) {
+            var existing = document.getElementById('impersonationBanner');
+            if (existing) existing.remove();
+            var bar = document.createElement('div');
+            bar.id = 'impersonationBanner';
+            bar.style.cssText = 'position:sticky;top:0;z-index:50;background:#ef4444;color:white;padding:10px 20px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+            bar.innerHTML = '<span>VIEWING AS ' + escapeHtml((client && client.business_name) || 'CLIENT') + ' (impersonating · all actions audited)</span>'
+                + '<button onclick="exitImpersonation()" style="background:white;color:#ef4444;border:0;padding:6px 14px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;">Exit impersonation</button>';
+            document.getElementById('appShell').prepend(bar);
+        }
+
+        function exitImpersonation() {
+            // Drop the URL param and send the admin back to /admin/.
+            window.location.href = '/admin/';
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        // Client-self path: look up the row that belongs to the signed-in
+        // auth user. clients.id has a FK to auth.users.id, so the row's id
+        // IS the auth user id. Falls back to email match for legacy rows.
         async function loadClientContext(user) {
-            // Tolerate either auth_user_id or user_id depending on which column
-            // David ended up landing on.
             var client = null;
-            for (var col of ['auth_user_id', 'user_id', 'owner_id']) {
-                try {
-                    var r = await sb.from('clients').select('*').eq(col, user.id).maybeSingle();
-                    if (r.data) { client = r.data; break; }
-                } catch (_) {}
-            }
+            try {
+                var r = await sb.from('clients').select('*').eq('id', user.id).maybeSingle();
+                if (r.data) client = r.data;
+            } catch (_) {}
             if (!client) {
-                // Fall back to matching by email so onboarding works even
-                // before the auth_user_id column is wired up.
                 try {
                     var r2 = await sb.from('clients').select('*').eq('email', user.email).maybeSingle();
                     if (r2.data) client = r2.data;
@@ -266,25 +343,42 @@
                 document.getElementById('headerSub').textContent = 'No client record found for ' + user.email + '. Contact STILO support.';
                 return;
             }
+            fillClientContext(client);
+        }
+
+        // Admin-impersonate path: look up by explicit id.
+        async function loadClientContextById(clientId) {
+            try {
+                var r = await sb.from('clients').select('*').eq('id', clientId).maybeSingle();
+                if (r.data) {
+                    fillClientContext(r.data);
+                } else {
+                    document.getElementById('headerSub').textContent = 'Client not found in clients table.';
+                }
+            } catch (e) {
+                document.getElementById('headerSub').textContent = 'Failed to load client: ' + (e.message || 'unknown');
+            }
+        }
+
+        function fillClientContext(client) {
             clientState.clientId = client.id;
-            clientState.companyName = client.name || client.company_name || 'Your business';
-            document.getElementById('headerSub').textContent = clientState.companyName + ' · Jacksonville';
+            clientState.companyName = client.business_name || client.name || 'Your business';
+            var sub = clientState.companyName + (client.business_type ? ' · ' + client.business_type : '');
+            document.getElementById('headerSub').textContent = sub;
 
             // Pull agent status to check if SCOUT (Lead Generator) is active.
-            try {
-                var ar = await sb.from('client_agents').select('agent_type,status').eq('tenant_id', client.id);
-                clientState.agents = ar.data || [];
+            // client_agents uses client_id (not tenant_id) in this schema.
+            sb.from('client_agents').select('agent_type,status').eq('client_id', client.id).then(function (ar) {
+                clientState.agents = (ar && ar.data) || [];
                 var scout = clientState.agents.find(function (a) {
                     return a.agent_type === 'lead_generator' || a.agent_type === 'scout';
                 });
                 clientState.scoutActive = !!(scout && scout.status === 'active');
-            } catch (_) { clientState.scoutActive = false; }
-
-            // Render empty-state copy that reflects current onboarding state.
-            var body = document.getElementById('emptyStateBody');
-            if (!clientState.scoutActive) {
-                body.textContent = 'Your Lead Generator is in setup. We\'re sourcing the first 200 leads — Jacksonville offices that match your service area. This page goes live within 48 hours.';
-            }
+                var body = document.getElementById('emptyStateBody');
+                if (!clientState.scoutActive && body) {
+                    body.textContent = 'Lead Generator is in setup. Your first lead batch lands within 48 hours of onboarding. This page goes live the moment leads start arriving.';
+                }
+            }).catch(function () {});
         }
 
         async function refreshLeadsView() {

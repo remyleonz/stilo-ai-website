@@ -1796,6 +1796,31 @@
             }
         }
 
+        // Open the client's own dashboard in a new tab, with your admin
+        // session impersonating them. /app/index.html supports
+        // ?impersonate=<client_id> end-to-end: admin gate, audit-log start,
+        // banner "VIEWING AS <name> — Exit impersonation", and every
+        // mutation gets dropped into impersonation_audit via
+        // /api/admin/impersonate-action. Security: only ADMIN_EMAILS pass
+        // the in-app gate; non-admins with the URL get redirected to /admin/.
+        function openClientDashboardAsAdmin(clientId, btnEl) {
+            if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Opening…'; }
+            try {
+                // Open the Leads dashboard directly (what most friends-and-
+                // family clients buy first). /app/leads.html reads
+                // ?impersonate=, gates by ADMIN_EMAILS, calls
+                // /api/admin/impersonate to log the session_start row in
+                // impersonation_audit, and shows a red banner with an Exit
+                // button so impersonation is always obvious.
+                window.open('/app/leads.html?impersonate=' + encodeURIComponent(clientId), '_blank', 'noopener');
+            } catch (e) {
+                console.warn('[openClientDashboardAsAdmin]', e);
+            }
+            if (btnEl) {
+                setTimeout(function () { btnEl.disabled = false; btnEl.textContent = 'Dashboard'; }, 800);
+            }
+        }
+
         function renderClientsGrid() {
             var search = (document.getElementById('clientSearch').value || '').toLowerCase();
             var filter = document.getElementById('clientFilter').value;
@@ -1828,6 +1853,7 @@
                   '<td style="padding:14px 16px;text-align:right;white-space:nowrap;">' +
                     '<a href="mailto:'+emailSafe+'?subject=STILO%20AI%20Partners" title="Email" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Email</a>' +
                     (c.phone ? '<a href="tel:'+phoneSafe+'" title="Call" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Call</a>' : '<button onclick="showToast(\'No phone on file\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.1);border-radius:6px;font-size:12px;color:var(--text-muted,#5a5a75);background:transparent;cursor:pointer;margin-right:4px;">Call</button>') +
+                    '<button onclick="openClientDashboardAsAdmin(\''+c.id+'\', this)" title="View this client\'s dashboard as them (logged in impersonation_audit)" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.35);border-radius:6px;font-size:12px;color:var(--blue);background:rgba(37,99,235,0.06);cursor:pointer;margin-right:4px;">Dashboard</button>' +
                     '<button onclick="openClientDrawer(\''+c.id+'\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;background:transparent;cursor:pointer;">View</button>' +
                   '</td></tr>';
             }).join('');
