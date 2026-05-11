@@ -1190,6 +1190,7 @@
                     <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Call Back <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="booked" onclick="switchProspectTab('booked')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Booked Meeting <span id="prospectBookedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,0.18);color:var(--green,#10b981);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="calls-today" onclick="switchProspectTab('calls-today')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">Calls Today <span id="prospectCallsTodayBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(37,99,235,0.15);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
+                    <button class="prospect-subtab" data-subtab="my-history" onclick="switchProspectTab('my-history')" style="padding:10px 16px;background:none;color:var(--text-secondary);border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;cursor:pointer;">My Call History</button>
                 </div>
 
                 <!-- Filter bar: search · tier · niche · has phone · has email -->
@@ -1204,21 +1205,28 @@
                     <select id="prospectNicheFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:160px;">
                         <option value="">All niches</option>
                     </select>
+                    <select id="prospectSdrFilter" onchange="onProspectFilterChange()" title="Filter by SDR. Defaults to whoever's signed in." style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:150px;">
+                        <option value="">All SDRs</option>
+                        <option value="remy">Remy Leon</option>
+                        <option value="david">David Coira</option>
+                        <option value="unassigned">Unassigned</option>
+                    </select>
                     <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
                         <input id="prospectHasEmail" type="checkbox" onchange="onProspectFilterChange()" style="accent-color:var(--blue);">
                         Has email
                     </label>
                 </div>
 
-                <!-- Five table containers, only one visible at a time -->
-                <div id="prospectTableCallable" class="prospect-table-host" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
+                <!-- Six table containers, only one visible at a time. overflow-x:auto so wide tables scroll within the card instead of clipping at the page edge. -->
+                <div id="prospectTableCallable" class="prospect-table-host" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
                     <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>
                 </div>
-                <div id="prospectTableEmailable" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
-                <div id="prospectTableCallbacks" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
-                <div id="prospectTableBooked" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
-                <div id="prospectTableDead" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
-                <div id="prospectTableCallsToday" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;"></div>
+                <div id="prospectTableEmailable" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="prospectTableCallbacks" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="prospectTableBooked" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="prospectTableDead" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="prospectTableCallsToday" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="prospectTableMyHistory" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
             </div>
 
             <!-- Agents tab: cross-cutting list of every deployment -->
@@ -1369,9 +1377,37 @@
         var ADMIN_EMAILS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
         var adminReady = false;
 
+        // Who's signed in right now. Populated by grantAdminAccess(). Drives:
+        // 1. SDR filter default on the prospecting tab (Remy sees his leads first)
+        // 2. logged_by_override defaulting in the lead drawer
+        // 3. "My Call History" tab scope
+        var CURRENT_USER = { email: null, sdrKey: null, displayName: null };
+
+        function sdrFromEmail(email) {
+            var e = String(email || '').trim().toLowerCase();
+            if (e === 'remyleon@stiloaipartners.com' || e === 'remyleon11@gmail.com') {
+                return { sdrKey: 'remy', displayName: 'Remy Leon' };
+            }
+            if (e === 'davidcoira@stiloaipartners.com') {
+                return { sdrKey: 'david', displayName: 'David Coira' };
+            }
+            return { sdrKey: null, displayName: e || 'Unknown' };
+        }
+
         function grantAdminAccess(session) {
             if (adminReady) return;
             adminReady = true;
+            // Snapshot the signed-in admin so the rest of the page can default
+            // SDR controls to them. Falls back gracefully if email is missing.
+            var email = session && session.user && session.user.email || null;
+            var info = sdrFromEmail(email);
+            CURRENT_USER = { email: email, sdrKey: info.sdrKey, displayName: info.displayName };
+            // Default the prospecting SDR filter to "me" so Remy lands on his leads.
+            if (typeof prospectState !== 'undefined' && info.sdrKey) {
+                prospectState.filters.sdr = info.sdrKey;
+                var sdrSel = document.getElementById('prospectSdrFilter');
+                if (sdrSel) sdrSel.value = info.sdrKey;
+            }
             // Kick off data load now that we know the user is an admin
             loadClientsGrid();
             // Update the Pending Review nav badge so admins notice queued submissions
@@ -2321,6 +2357,19 @@
                     + '<div class="preflight-log" style="margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>'
                 + '</div>';
 
+            // Readiness panel: lazy-loaded once per card from /api/agent-readiness-score
+            // so the card paints fast and the score appears as soon as it computes.
+            var readinessHtml = ''
+                + '<div data-readiness-block style="padding:14px 20px;border-top:1px solid rgba(37,99,235,0.08);background:rgba(37,99,235,0.04);">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">'
+                        + '<div>'
+                            + '<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);">Readiness</div>'
+                            + '<div data-readiness-score style="font-size:24px;font-weight:700;color:var(--text-primary);margin-top:2px;">…</div>'
+                        + '</div>'
+                        + '<div data-readiness-flags style="flex:1;font-size:12px;color:var(--text-secondary);max-height:88px;overflow-y:auto;"></div>'
+                    + '</div>'
+                + '</div>';
+
             return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.20);border-radius:12px;overflow:hidden;" data-pending-id="' + escapeAdminHtml(item.client_agent_id) + '">'
                 + '<div style="padding:16px 20px;border-bottom:1px solid rgba(37,99,235,0.14);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
                     + '<div>'
@@ -2329,14 +2378,86 @@
                     + '</div>'
                     + '<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;max-width:320px;">' + checkChips + '</div>'
                 + '</div>'
+                + readinessHtml
                 + '<div style="padding:16px 20px 8px 20px;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">' + rowsHtml + '</div>'
                 + preflightHtml
                 + '<div style="padding:14px 20px;display:flex;gap:10px;align-items:center;border-top:1px solid rgba(37,99,235,0.08);">'
                     + '<button class="quick-action-btn" onclick="approvePendingAgent(this, \'' + escapeAdminHtml(item.client_agent_id) + '\')" style="background:var(--purple-primary);color:#fff;font-weight:600;">Approve & Provision</button>'
+                    + '<button class="quick-action-btn" onclick="rejectPendingAgent(this, \'' + escapeAdminHtml(item.client_agent_id) + '\')" style="background:rgba(239,68,68,0.10);color:#ef4444;">Reject with comments</button>'
                     + '<button class="quick-action-btn" onclick="openClientForReview(\'' + escapeAdminHtml(item.client_agent_id) + '\')">View full config</button>'
                     + '<div class="approve-status" style="margin-left:auto;font-size:13px;color:var(--text-secondary);"></div>'
                 + '</div>'
             + '</div>';
+        }
+
+        // Lazy-load readiness score for each card. Runs after loadPendingReview
+        // populates the wrap so the score chips appear ~1 second later without
+        // blocking the initial render.
+        async function loadReadinessForVisibleCards() {
+            var wrap = document.getElementById('pendingReviewWrap');
+            if (!wrap) return;
+            var cards = wrap.querySelectorAll('[data-pending-id]');
+            for (var i = 0; i < cards.length; i++) {
+                (function(card) {
+                    var id = card.getAttribute('data-pending-id');
+                    var scoreEl = card.querySelector('[data-readiness-score]');
+                    var flagsEl = card.querySelector('[data-readiness-flags]');
+                    sb.auth.getSession().then(function(s) {
+                        var token = s && s.data && s.data.session && s.data.session.access_token;
+                        return fetch('/api/agent-readiness-score?client_agent_id=' + encodeURIComponent(id), {
+                            headers: { 'Authorization': 'Bearer ' + (token || '') },
+                        });
+                    }).then(function(r) { return r.json(); }).then(function(data) {
+                        if (!data || data.error) return;
+                        if (scoreEl) {
+                            scoreEl.textContent = data.score + ' / 100';
+                            scoreEl.style.color = data.score >= 80 ? '#22c55e' : (data.score >= 60 ? '#eab308' : '#ef4444');
+                        }
+                        if (flagsEl) {
+                            if (data.red_flags && data.red_flags.length) {
+                                flagsEl.innerHTML = '<strong style="color:#ef4444;">' + data.red_flags.length + ' red flags:</strong><ul style="margin:4px 0 0 16px;padding:0;">'
+                                    + data.red_flags.slice(0, 6).map(function(f) { return '<li style="margin:2px 0;">' + escapeAdminHtml(f) + '</li>'; }).join('')
+                                    + (data.red_flags.length > 6 ? '<li style="margin:2px 0;color:var(--text-secondary);">+' + (data.red_flags.length - 6) + ' more</li>' : '')
+                                    + '</ul>';
+                            } else {
+                                flagsEl.innerHTML = '<span style="color:#22c55e;">No red flags. Safe to approve.</span>';
+                            }
+                        }
+                    }).catch(function(e) {
+                        if (scoreEl) scoreEl.textContent = '—';
+                        console.warn('[readiness]', e);
+                    });
+                })(cards[i]);
+            }
+        }
+
+        async function rejectPendingAgent(btn, clientAgentId) {
+            var reason = prompt('What does the client need to fix? (Sent to them by email)');
+            if (!reason || reason.trim().length < 5) return;
+            btn.disabled = true;
+            var orig = btn.textContent;
+            btn.textContent = 'Rejecting…';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/admin/reject-agent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session && session.access_token || '') },
+                    body: JSON.stringify({ client_agent_id: clientAgentId, reason: reason.trim() }),
+                });
+                var data = await resp.json().catch(function() { return {}; });
+                if (resp.ok && data.ok) {
+                    btn.textContent = 'Rejected';
+                    setTimeout(loadPendingReview, 1200);
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = orig;
+                    alert('Reject failed: ' + (data.error || 'unknown'));
+                }
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = orig;
+                alert('Network error: ' + e.message);
+            }
         }
 
         // Admin pre-flight: fires a synthetic test call to the admin's phone
@@ -2413,6 +2534,8 @@
                     return;
                 }
                 wrap.innerHTML = data.items.map(renderPendingReviewCard).join('');
+                // Lazy-load readiness scores after the cards paint.
+                setTimeout(loadReadinessForVisibleCards, 50);
             } catch (e) {
                 console.error('[loadPendingReview]', e);
                 wrap.innerHTML = '<div style="padding:24px;color:#ef4444;font-size:13px;">Could not load the queue: ' + escapeAdminHtml(e.message) + '</div>';
@@ -2826,7 +2949,9 @@
            ============================================================ */
         var prospectState = {
             tab: 'callable',
-            filters: { tier: '', q: '', niche: '', hasEmail: false },
+            // sdr: '' = all, 'remy' | 'david' | 'unassigned'. grantAdminAccess()
+            // overwrites this with the signed-in user before any fetch fires.
+            filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '' },
             rows: [],
             currentLeadId: null,
             deadPage: 1,
@@ -2841,7 +2966,7 @@
             // Per-tab row cache. Tab switches render from cache immediately
             // (no spinner) and fire a background refresh. Logging a call
             // invalidates the relevant tabs so the next open re-fetches.
-            cache: { callable: null, emailable: null, callbacks: null, booked: null, dead: null }
+            cache: { callable: null, emailable: null, callbacks: null, booked: null, dead: null, callsToday: null, myHistory: null }
         };
 
         // Pruned outcome list. Lifecycle moves:
@@ -3294,6 +3419,9 @@
             qs.push('limit=150');
             if (f.q) qs.push('q=' + encodeURIComponent(f.q));
             if (f.niche) qs.push('niche=' + encodeURIComponent(f.niche));
+            // Forward SDR to upstream as a hint. If David's backend doesn't
+            // honor it yet, applyClientFilters() catches it client-side.
+            if (f.sdr) qs.push('assigned_to=' + encodeURIComponent(f.sdr));
             return qs.length ? '?' + qs.join('&') : '';
         }
 
@@ -3353,6 +3481,18 @@
                 rows = rows.filter(function (r) {
                     var t = String(r.prospect_tier || r.tier || '').toLowerCase();
                     return t === want;
+                });
+            }
+
+            // SDR filter. Reads r.assigned_to if present; defaults to "unassigned".
+            // 'remy' / 'david' match the exact value; 'unassigned' matches null/empty.
+            // If David's schema doesn't ship assigned_to yet, every row reads as
+            // unassigned — that's fine, the default filter is "all" until he does.
+            if (f.sdr) {
+                rows = rows.filter(function (r) {
+                    var a = String(r.assigned_to || '').toLowerCase();
+                    if (f.sdr === 'unassigned') return !a;
+                    return a === f.sdr;
                 });
             }
 
@@ -3579,7 +3719,7 @@
                     + '<td style="padding:10px 14px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastStr + '</td>'
                     + '</tr>';
             }).join('');
-            return '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+            return '<table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
         }
 
         function switchProspectTab(name) {
@@ -3892,10 +4032,12 @@
             var tier = document.getElementById('prospectTierFilter');
             var niche = document.getElementById('prospectNicheFilter');
             var hasEmail = document.getElementById('prospectHasEmail');
+            var sdr = document.getElementById('prospectSdrFilter');
             f.q = search ? search.value.trim() : '';
             f.tier = tier ? tier.value : '';
             f.niche = niche ? niche.value : '';
             f.hasEmail = hasEmail ? hasEmail.checked : false;
+            f.sdr = sdr ? sdr.value : '';
             highlightActiveTierCard();
             clearTimeout(prospectState.searchDebounce);
             prospectState.searchDebounce = setTimeout(function(){
