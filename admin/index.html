@@ -1844,17 +1844,22 @@
                 var statusColor = c.status === 'active' ? '#22c55e' : (c.status === 'paused' ? '#f59e0b' : '#ef4444');
                 var emailSafe = (c.email||'').replace(/"/g,'&quot;');
                 var phoneSafe = (c.phone||'').replace(/"/g,'&quot;');
-                return '<tr style="border-top:1px solid rgba(37,99,235,0.08);">' +
+                // Row click opens the client's lead dashboard in a new tab
+                // with admin impersonation (every session_start logged to
+                // impersonation_audit, red banner + Exit button on the page).
+                // event.stopPropagation() on the action buttons prevents the
+                // row handler from firing when the user just wants Email,
+                // Call, or View (drawer).
+                return '<tr onclick="openClientDashboardAsAdmin(\''+c.id+'\')" title="Click to open this client\'s lead dashboard as them (every action audited)" style="border-top:1px solid rgba(37,99,235,0.08);cursor:pointer;transition:background 120ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.04)\'" onmouseleave="this.style.background=\'transparent\'">' +
                   '<td style="padding:14px 16px;"><strong>' + (c.business_name||'—') + '</strong><div style="font-size:12px;color:var(--text-muted,#5a5a75);">' + (c.business_type||'') + '</div></td>' +
                   '<td style="padding:14px 16px;">' + (c.contact_name||'—') + '<div style="font-size:12px;color:var(--text-muted,#5a5a75);">' + (c.email||'') + '</div></td>' +
                   '<td style="padding:14px 16px;">' + count + ' agent' + (count===1?'':'s') + '</td>' +
                   '<td style="padding:14px 16px;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:'+statusColor+';"><span style="width:6px;height:6px;border-radius:50%;background:'+statusColor+';"></span>' + (c.status||'—') + '</span></td>' +
                   '<td style="padding:14px 16px;font-size:13px;color:var(--text-secondary,#8a8aa0);">' + dt + '</td>' +
                   '<td style="padding:14px 16px;text-align:right;white-space:nowrap;">' +
-                    '<a href="mailto:'+emailSafe+'?subject=STILO%20AI%20Partners" title="Email" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Email</a>' +
-                    (c.phone ? '<a href="tel:'+phoneSafe+'" title="Call" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Call</a>' : '<button onclick="showToast(\'No phone on file\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.1);border-radius:6px;font-size:12px;color:var(--text-muted,#5a5a75);background:transparent;cursor:pointer;margin-right:4px;">Call</button>') +
-                    '<button onclick="openClientDashboardAsAdmin(\''+c.id+'\', this)" title="View this client\'s dashboard as them (logged in impersonation_audit)" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.35);border-radius:6px;font-size:12px;color:var(--blue);background:rgba(37,99,235,0.06);cursor:pointer;margin-right:4px;">Dashboard</button>' +
-                    '<button onclick="openClientDrawer(\''+c.id+'\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;background:transparent;cursor:pointer;">View</button>' +
+                    '<a href="mailto:'+emailSafe+'?subject=STILO%20AI%20Partners" onclick="event.stopPropagation()" title="Email" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Email</a>' +
+                    (c.phone ? '<a href="tel:'+phoneSafe+'" onclick="event.stopPropagation()" title="Call" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Call</a>' : '<button onclick="event.stopPropagation();showToast(\'No phone on file\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.1);border-radius:6px;font-size:12px;color:var(--text-muted,#5a5a75);background:transparent;cursor:pointer;margin-right:4px;">Call</button>') +
+                    '<button onclick="event.stopPropagation();openClientDrawer(\''+c.id+'\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;background:transparent;cursor:pointer;">View</button>' +
                   '</td></tr>';
             }).join('');
         }
@@ -2021,7 +2026,7 @@
                  '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">' +
                    '<a href="mailto:'+esc(c.email||'')+'?subject=STILO%20AI%20Partners" style="padding:8px 16px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;">Email</a>' +
                    (c.phone ? '<a href="tel:'+esc(c.phone)+'" style="padding:8px 16px;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:inherit;">Call</a>' : '') +
-                   '<a href="/app/?impersonate='+esc(c.id)+'" target="_blank" rel="noopener" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#ef4444;" title="Open this client\'s dashboard with your admin session, every action logged.">Open as client →</a>' +
+                   '<a href="/app/leads.html?impersonate='+esc(c.id)+'" target="_blank" rel="noopener" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#ef4444;" title="Open this client\'s lead dashboard with your admin session — every action logged to impersonation_audit.">Open as client →</a>' +
                  '</div>' +
                '</div>';
 

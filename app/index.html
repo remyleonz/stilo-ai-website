@@ -1868,13 +1868,18 @@
                 // Paid agent waiting on the Business Profile. Render a soft
                 // explainer + jump-to-profile CTA. Same shell as setup so the
                 // grid layout doesn't shift.
-                var pct = BUSINESS_PROFILE_STATUS.complete_pct || 0;
+                // (Renamed from `pct` to `profilePct` — a `const pct` is
+                // declared earlier in this function for the agent's own
+                // onboarding progress, and a second `var pct` in the same
+                // function scope is a SyntaxError that prevents the entire
+                // /app/ JS from parsing.)
+                var profilePct = BUSINESS_PROFILE_STATUS.complete_pct || 0;
                 body = '<div class="setup-progress" style="opacity:0.85;">'
                     + '<div class="progress-header">'
                         + '<span class="progress-text">Business Profile required</span>'
-                        + '<span class="progress-count">' + pct + '%</span>'
+                        + '<span class="progress-count">' + profilePct + '%</span>'
                     + '</div>'
-                    + '<div class="progress-track"><div class="progress-fill" style="width:' + pct + '%"></div></div>'
+                    + '<div class="progress-track"><div class="progress-fill" style="width:' + profilePct + '%"></div></div>'
                 + '</div>'
                 + '<div class="agent-stats" style="background:var(--bg-elev);border:1px dashed var(--border);border-radius:10px;padding:14px 16px;">'
                     + '<p style="color:var(--text-secondary);font-size:13px;line-height:1.55;margin:0;">Finish your Business Profile first. ' + escapeHtml(meta.name) + ' uses your niche, hours, brand voice, and contact info from there so we don\'t have to ask twice.</p>'
