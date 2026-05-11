@@ -4630,7 +4630,9 @@
         function closeProspectDrawer() {
             var drawer = document.getElementById('prospectDrawer');
             var overlay = document.getElementById('prospectDrawerOverlay');
-            if (drawer)  drawer.style.right  = '-780px';
+            // Must match the drawer's width (920px) — anything smaller leaves
+            // a strip of the drawer peeking in at the right edge after close.
+            if (drawer)  drawer.style.right  = '-920px';
             if (overlay) overlay.style.display = 'none';
             prospectState.currentLeadId = null;
             history.replaceState(null, '', window.location.pathname + window.location.search);
