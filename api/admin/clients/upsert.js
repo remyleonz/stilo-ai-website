@@ -149,12 +149,38 @@ module.exports = async function handler(req, res) {
         }
 
         insertPayload.id = authUserId;
-        const { data: ins, error: insErr } = await sb.from('clients')
-            .insert(insertPayload).select().maybeSingle();
-        if (insErr) {
-            return res.status(500).json({ error: 'client_insert_failed', detail: insErr.message, attempted: insertPayload });
+
+        // Belt-and-suspenders: a clients row may already exist for this auth
+        // user even though our by-email lookup didn't find it (e.g. the email
+        // field is null on a row created by a Supabase trigger that fires on
+        // auth.users insert). Look up by id before inserting — if it's there,
+        // update; otherwise insert.
+        const { data: byId, error: byIdErr } = await sb.from('clients')
+            .select('*').eq('id', authUserId).maybeSingle();
+        if (byIdErr) {
+            return res.status(500).json({ error: 'client_by_id_lookup_failed', detail: byIdErr.message });
         }
-        client = ins;
+        if (byId) {
+            const patch = {};
+            for (const k of ['business_name', 'contact_name', 'phone', 'business_type', 'email', 'status']) {
+                if (insertPayload[k] != null && insertPayload[k] !== byId[k]) patch[k] = insertPayload[k];
+            }
+            if (Object.keys(patch).length) {
+                const { data: upd, error: upErr } = await sb.from('clients')
+                    .update(patch).eq('id', authUserId).select().maybeSingle();
+                if (upErr) return res.status(500).json({ error: 'client_update_by_id_failed', detail: upErr.message, attempted: patch });
+                client = upd;
+            } else {
+                client = byId;
+            }
+        } else {
+            const { data: ins, error: insErr } = await sb.from('clients')
+                .insert(insertPayload).select().maybeSingle();
+            if (insErr) {
+                return res.status(500).json({ error: 'client_insert_failed', detail: insErr.message, attempted: insertPayload });
+            }
+            client = ins;
+        }
     }
 
     // 2. UPSERT client_agents row keyed by (client_id, agent_type).
