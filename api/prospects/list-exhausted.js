@@ -56,25 +56,11 @@ module.exports = async function handler(req, res) {
         // uses the `and(...)` syntax.
         const filter = 'last_called_outcome.in.(' + TERMINAL_OUTCOMES.join(',') + ')'
             + ',and(call_attempts.gte.3,last_called_outcome.is.null)';
-        let leadIdsForSdr = null;
-        if (sdrEmail) {
-            // Pull every lead the SDR has marked dead via a terminal call.
-            // Falls through silently if the lookup fails — Dead Pool is
-            // better as "global view" than "broken empty".
-            try {
-                const { data: deadCalls } = await sb.from('lead_calls')
-                    .select('lead_id')
-                    .eq('logged_by', sdrEmail)
-                    .in('outcome', TERMINAL_OUTCOMES)
-                    .limit(5000);
-                leadIdsForSdr = Array.from(new Set((deadCalls || []).map(r => r.lead_id).filter(x => x != null)));
-            } catch (_) {}
-        }
+        // Scope by assigned_to (parity-based, always populated) rather than
+        // lead_calls.logged_by, which is sparse for calls logged before the
+        // lead_calls INSERT path was deployed.
         let q = sb.from('leads').select(SELECT_COLS).or(filter);
-        if (leadIdsForSdr) {
-            if (!leadIdsForSdr.length) return res.status(200).json({ results: [] });
-            q = q.in('id', leadIdsForSdr);
-        }
+        if (sdrEmail) q = q.eq('assigned_to', sdrEmail);
         const resp = await q
             .order('last_called_at', { ascending: false, nullsFirst: false })
             .limit(limit);

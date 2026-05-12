@@ -76,11 +76,13 @@ async function localStats(sdrEmail) {
         const endOfDay = new Date(startOfDay);
         endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
 
-        // Leads live in a shared callable pool — both SDRs work the same batch.
-        // Do NOT scope the pool counts by assigned_to; keep them global.
-        // SDR filtering only applies to action counts (called_today, dead_pool)
-        // which come from lead_calls.logged_by below.
-        const scope = function (q) { return q; };
+        // assigned_to-based scoping for all lead-table counts. The column was
+        // backfilled via parity (even IDs → Remy, odd → David) matching the
+        // callable batch split. lead_calls.logged_by is NOT used for counts
+        // because it is sparse (old calls updated leads directly, not lead_calls).
+        const scope = function (q) {
+            return sdrEmail ? q.eq('assigned_to', sdrEmail) : q;
+        };
 
         const callable = function (q) {
             return scope(q)
@@ -144,17 +146,6 @@ async function localStats(sdrEmail) {
             return null;
         }
 
-        // Action-style counts come from lead_calls (which always has logged_by
-        // when a call is logged through the admin), so they scope correctly
-        // even when the leads.assigned_to column is missing.
-        let calledTodayBySdr = -1, deadPoolBySdr = -1;
-        if (sdrEmail) {
-            [calledTodayBySdr, deadPoolBySdr] = await Promise.all([
-                distinctLeadsByLoggedBy(sb, sdrEmail, q => q.gte('called_at', startOfDay.toISOString())),
-                distinctLeadsByLoggedBy(sb, sdrEmail, q => q.in('outcome', DEAD_OUTCOMES))
-            ]);
-        }
-
         return {
             tier_counts: {
                 hot:  scopedHot.count  || 0,
@@ -168,16 +159,10 @@ async function localStats(sdrEmail) {
                 booked_this_week:    scopedBw.count || 0,
                 callbacks_due_today: scopedCd.count || 0
             },
-            // Workflow card counts. When SDR-scoped:
-            //   all_leads_count       comes from leads.assigned_to (ownership)
-            //   called_today_count    comes from lead_calls.logged_by (action)
-            //   callbacks_due_today_count comes from leads.assigned_to (ownership)
-            //   dead_pool_count       comes from lead_calls.logged_by (action)
-            // When unscoped: everything is global.
             all_leads_count:            scopedAll.count || 0,
-            called_today_count:         (sdrEmail && calledTodayBySdr >= 0) ? calledTodayBySdr : (scopedCt.count || 0),
+            called_today_count:         scopedCt.count || 0,
             callbacks_due_today_count:  scopedCd.count || 0,
-            dead_pool_count:            (sdrEmail && deadPoolBySdr >= 0)    ? deadPoolBySdr    : (scopedDeadOut.count || 0),
+            dead_pool_count:            scopedDeadOut.count || 0,
             _scoping_applied: scoping_applied,
             _source: 'supabase_local'
         };
