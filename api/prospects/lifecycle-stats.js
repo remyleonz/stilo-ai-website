@@ -76,13 +76,11 @@ async function localStats(sdrEmail) {
         const endOfDay = new Date(startOfDay);
         endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
 
-        // assigned_to-based scoping for OWNERSHIP counts (All Leads, Callbacks Due).
-        // If the column doesn't exist yet, the .eq() will fail and we re-run
-        // without it — the migration in api/migrations/leads_assigned_to.sql
-        // adds the column + backfills via parity to match the frontend.
-        const scope = function (q) {
-            return sdrEmail ? q.eq('assigned_to', sdrEmail) : q;
-        };
+        // Leads live in a shared callable pool — both SDRs work the same batch.
+        // Do NOT scope the pool counts by assigned_to; keep them global.
+        // SDR filtering only applies to action counts (called_today, dead_pool)
+        // which come from lead_calls.logged_by below.
+        const scope = function (q) { return q; };
 
         const callable = function (q) {
             return scope(q)
