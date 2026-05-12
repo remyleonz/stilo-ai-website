@@ -36,6 +36,15 @@ module.exports = async function handler(req, res) {
     }
 
     const limit = Math.min(Math.max(parseInt((req.query && req.query.limit) || '400', 10), 1), 1000);
+    // ?assigned_to=remy|david scopes the Dead Pool table to the SDR who
+    // logged the terminal call. Source of truth: lead_calls.logged_by.
+    // Without this, both SDRs see each other's dead leads (Remy's "Do Not
+    // Call" entry appears in David's Dead Pool).
+    const SDR_EMAIL_BY_KEY = {
+        remy:  'remyleon@stiloaipartners.com',
+        david: 'davidcoira@stiloaipartners.com'
+    };
+    const sdrEmail = SDR_EMAIL_BY_KEY[String((req.query && req.query.assigned_to) || '').toLowerCase()] || null;
 
     try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -47,9 +56,26 @@ module.exports = async function handler(req, res) {
         // uses the `and(...)` syntax.
         const filter = 'last_called_outcome.in.(' + TERMINAL_OUTCOMES.join(',') + ')'
             + ',and(call_attempts.gte.3,last_called_outcome.is.null)';
-        const resp = await sb.from('leads')
-            .select(SELECT_COLS)
-            .or(filter)
+        let leadIdsForSdr = null;
+        if (sdrEmail) {
+            // Pull every lead the SDR has marked dead via a terminal call.
+            // Falls through silently if the lookup fails — Dead Pool is
+            // better as "global view" than "broken empty".
+            try {
+                const { data: deadCalls } = await sb.from('lead_calls')
+                    .select('lead_id')
+                    .eq('logged_by', sdrEmail)
+                    .in('outcome', TERMINAL_OUTCOMES)
+                    .limit(5000);
+                leadIdsForSdr = Array.from(new Set((deadCalls || []).map(r => r.lead_id).filter(x => x != null)));
+            } catch (_) {}
+        }
+        let q = sb.from('leads').select(SELECT_COLS).or(filter);
+        if (leadIdsForSdr) {
+            if (!leadIdsForSdr.length) return res.status(200).json({ results: [] });
+            q = q.in('id', leadIdsForSdr);
+        }
+        const resp = await q
             .order('last_called_at', { ascending: false, nullsFirst: false })
             .limit(limit);
         if (resp.error) throw resp.error;

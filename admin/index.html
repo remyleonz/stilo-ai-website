@@ -3846,7 +3846,8 @@
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
             }
             try {
-                var exResp = await prospectFetchJSON('/api/prospects/list-exhausted?limit=400');
+                var deadQs = '?limit=400' + (prospectState.filters.sdr ? '&assigned_to=' + encodeURIComponent(prospectState.filters.sdr) : '');
+                var exResp = await prospectFetchJSON('/api/prospects/list-exhausted' + deadQs);
                 var rows = exResp.results || [];
                 prospectState.cache.dead = rows;
                 host.innerHTML = renderProspectTable(rows, 'dead');
