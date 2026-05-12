@@ -636,12 +636,25 @@
         }
 
         // ---- Filter handlers (wired from inline onclick / oninput) ----
+        // Stat cards drive both tier + bucket so clicking Dead Pool actually
+        // shows dead leads (not the empty intersection of bucket=callable +
+        // tier=dead). Pattern: Dead Pool card switches to Dead Pool bucket;
+        // Hot/Warm/All cards switch to All-callable bucket.
         function setTierFilter(t) {
             uiFilter.tier = t || 'all';
+            if (t === 'dead') {
+                uiFilter.bucket = 'dead';
+            } else if (uiFilter.bucket === 'dead') {
+                // moving back out of Dead Pool: return to the default tab
+                uiFilter.bucket = 'callable';
+            }
             renderEverything();
         }
         function setBucketFilter(b) {
             uiFilter.bucket = b || 'callable';
+            // Tabs are bucket-only; clear any tier sub-filter so the tab's
+            // own counter matches what gets rendered.
+            uiFilter.tier = (b === 'dead') ? 'dead' : 'all';
             renderEverything();
         }
         var _searchDebounce = null;
