@@ -82,11 +82,12 @@
         }
         .lead-drawer-overlay.open { opacity: 1; pointer-events: auto; }
         .lead-drawer {
-            position: fixed; top: 0; right: 0; height: 100vh; width: 560px; max-width: 100vw;
+            position: fixed; top: 0; right: 0; height: 100vh;
+            width: 60vw; min-width: 520px; max-width: 100vw;
             background: var(--bg-card); border-left: 1px solid var(--border-subtle);
             box-shadow: -16px 0 40px rgba(0,0,0,0.4);
             transform: translateX(100%); transition: transform 220ms cubic-bezier(.4,0,.2,1);
-            overflow-y: auto; z-index: 100; padding: 28px 32px 80px;
+            overflow-y: auto; z-index: 100; padding: 28px 36px 80px;
         }
         .lead-drawer.open { transform: translateX(0); }
         .drawer-close {
@@ -214,10 +215,9 @@
                 <div class="brand">STILO AI PARTNERS</div>
                 <div class="brand-sub">Lead Dashboard</div>
             </div>
-            <div>
-                <a class="back-link" href="/app/">← Back to agents</a>
-                <span style="margin:0 12px;color:var(--text-muted);">·</span>
-                <a class="back-link" href="#" id="signOutLink">Sign out</a>
+            <div id="topbarRight" style="display:flex;align-items:center;gap:10px;position:relative;">
+                <!-- Filled by JS depending on whether the signed-in user is
+                     an impersonating admin or the actual client. -->
             </div>
         </div>
 
@@ -231,22 +231,22 @@
             </div>
 
             <div class="stat-row">
-                <div class="stat-card active" data-filter="all" data-tier="all" onclick="setTierFilter('all')">
+                <div class="stat-card active" data-filter="all" data-tier="all" onclick="setStatFilter('all')">
                     <div class="stat-label">All leads</div>
                     <div class="stat-value" id="statAll">—</div>
                     <div class="stat-hint">Click to clear filter</div>
                 </div>
-                <div class="stat-card" data-filter="hot" data-tier="hot" onclick="setTierFilter('hot')">
-                    <div class="stat-label">Hot</div>
-                    <div class="stat-value" id="statHot">—</div>
-                    <div class="stat-hint">Strong rating + reviews</div>
+                <div class="stat-card" data-filter="called-today" data-tier="called-today" onclick="setStatFilter('called-today')">
+                    <div class="stat-label">Called Today</div>
+                    <div class="stat-value" id="statCalledToday">—</div>
+                    <div class="stat-hint">Leads dialed in the last 24h</div>
                 </div>
-                <div class="stat-card" data-filter="warm" data-tier="warm" onclick="setTierFilter('warm')">
-                    <div class="stat-label">Warm</div>
-                    <div class="stat-value" id="statWarm">—</div>
-                    <div class="stat-hint">One strong signal</div>
+                <div class="stat-card" data-filter="signed" data-tier="signed" onclick="setStatFilter('signed')">
+                    <div class="stat-label">Clients Signed</div>
+                    <div class="stat-value" id="statSigned">—</div>
+                    <div class="stat-hint">Lifetime closed deals</div>
                 </div>
-                <div class="stat-card" data-filter="dead" data-tier="dead" onclick="setTierFilter('dead')">
+                <div class="stat-card" data-filter="dead" data-tier="dead" onclick="setStatFilter('dead')">
                     <div class="stat-label">Dead Pool</div>
                     <div class="stat-value" id="statDead">—</div>
                     <div class="stat-hint">Marked as not worth calling</div>
@@ -257,6 +257,7 @@
                 <button class="tab active" data-tab="callable" onclick="setBucketFilter('callable')">All callable <span id="bucketBadgeCallable" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
                 <button class="tab" data-tab="callbacks" onclick="setBucketFilter('callbacks')">Call Back <span id="bucketBadgeCallbacks" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
                 <button class="tab" data-tab="booked" onclick="setBucketFilter('booked')">Booked <span id="bucketBadgeBooked" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
+                <button class="tab" data-tab="signed" onclick="setBucketFilter('signed')">Signed <span id="bucketBadgeSigned" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
                 <button class="tab" data-tab="dead" onclick="setBucketFilter('dead')">Dead Pool <span id="bucketBadgeDead" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
             </div>
 
@@ -327,10 +328,6 @@
             }
             clientState.session = session;
             document.getElementById('appShell').style.display = 'block';
-            document.getElementById('signOutLink').addEventListener('click', function (e) {
-                e.preventDefault();
-                sb.auth.signOut().then(function () { window.location.href = '/auth.html'; });
-            });
 
             // Impersonation: admin can hit /app/leads.html?impersonate=<client_id>
             // to preview the client's dashboard without the client having
@@ -384,6 +381,11 @@
                 await loadClientContext(session.user);
             }
 
+            // Topbar right side: impersonating admins get a small back-link
+            // (their banner already has Exit). Real clients get a full user
+            // profile menu with avatar + email + agent list + sign out.
+            renderTopbarRight(session, !!impersonateId);
+
             // Tab switching (purely visual until data lands)
             document.querySelectorAll('.tab').forEach(function (btn) {
                 btn.addEventListener('click', function () {
@@ -395,6 +397,75 @@
             });
 
             refreshLeadsView();
+        }
+
+        // Build the top-right area: a quiet back-to-agents link for admins
+        // (whose presence is already shouted by the red banner), and a
+        // proper user-profile menu for actual clients — avatar circle that
+        // expands to email, agent list, billing link, and sign out.
+        function renderTopbarRight(session, isImpersonating) {
+            var host = document.getElementById('topbarRight');
+            if (!host) return;
+            if (isImpersonating) {
+                host.innerHTML = '<a href="/admin/" style="font-size:13px;color:var(--text-secondary);text-decoration:none;">← Back to admin</a>';
+                return;
+            }
+            var email = (session && session.user && session.user.email) || '';
+            var initial = (email[0] || '?').toUpperCase();
+            host.innerHTML = ''
+                + '<button id="userMenuBtn" onclick="toggleUserMenu()" aria-haspopup="true" aria-expanded="false"'
+                + '  style="display:flex;align-items:center;gap:10px;background:transparent;border:1px solid var(--border-medium);border-radius:999px;padding:6px 14px 6px 6px;cursor:pointer;color:inherit;">'
+                +   '<span style="width:28px;height:28px;border-radius:50%;background:var(--blue-strong);color:white;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;font-family:var(--font-display);">' + escapeHtml(initial) + '</span>'
+                +   '<span style="font-size:12px;color:var(--text-secondary);">' + escapeHtml(email) + '</span>'
+                +   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><polyline points="6 9 12 15 18 9"/></svg>'
+                + '</button>'
+                + '<div id="userMenu" style="display:none;position:absolute;top:54px;right:0;min-width:260px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,0.4);padding:6px;z-index:120;">'
+                +   '<div style="padding:12px 14px 10px;border-bottom:1px solid var(--border-subtle);">'
+                +     '<div id="menuBiz" style="font-weight:700;font-size:14px;">' + escapeHtml(clientState.companyName || 'My account') + '</div>'
+                +     '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">' + escapeHtml(email) + '</div>'
+                +   '</div>'
+                +   '<a href="/app/" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:inherit;text-decoration:none;border-radius:8px;">'
+                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'
+                +     'My agents'
+                +   '</a>'
+                +   '<a href="/app/billing.html" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:inherit;text-decoration:none;border-radius:8px;">'
+                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>'
+                +     'Billing & purchases'
+                +   '</a>'
+                +   '<a href="mailto:support@stiloaipartners.com" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:inherit;text-decoration:none;border-radius:8px;">'
+                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>'
+                +     'Support'
+                +   '</a>'
+                +   '<div style="height:1px;background:var(--border-subtle);margin:6px 0;"></div>'
+                +   '<button onclick="userMenuSignOut()" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:0;padding:10px 14px;font-size:13px;color:#ef4444;cursor:pointer;border-radius:8px;">'
+                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'
+                +     'Sign out'
+                +   '</button>'
+                + '</div>';
+            // Close on outside click
+            document.addEventListener('click', function (e) {
+                var menu = document.getElementById('userMenu');
+                var btn = document.getElementById('userMenuBtn');
+                if (!menu || !btn) return;
+                if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                    menu.style.display = 'none';
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+        function toggleUserMenu() {
+            var menu = document.getElementById('userMenu');
+            var btn = document.getElementById('userMenuBtn');
+            if (!menu) return;
+            var open = menu.style.display === 'block';
+            menu.style.display = open ? 'none' : 'block';
+            if (btn) btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+            // Refresh business name in the menu in case context loaded after render
+            var biz = document.getElementById('menuBiz');
+            if (biz && clientState.companyName) biz.textContent = clientState.companyName;
+        }
+        function userMenuSignOut() {
+            sb.auth.signOut().then(function () { window.location.href = '/auth.html'; });
         }
 
         // Big red bar across the top so impersonation is always obvious.
@@ -480,49 +551,103 @@
 
         // -----------------------------------------------------------------
         // CRM state — per-client interactions on top of the GCS lead list.
-        // Persisted in localStorage today (per browser); easy swap to
-        // Supabase Storage / a server table later (interface stays the same).
+        // Persisted in Supabase via /api/client-leads/state, which stores
+        // the JSONB blob inside client_agents.config.lead_state on the
+        // lead_generator agent row. Survives page reloads, syncs across
+        // devices, no DDL was needed.
         // -----------------------------------------------------------------
         var leadsCache = null;
         var crmState = {
             tier_overrides: {}, // lead_key -> 'hot'|'warm'|'cool'|'dead'
             call_logs: {},      // lead_key -> [{at, outcome, notes}]
             callbacks: {},      // lead_key -> { at: ISO }
-            booked: {}          // lead_key -> { at: ISO }
+            booked: {},         // lead_key -> { at: ISO }
+            signed: {}          // lead_key -> { at: ISO }
         };
         var uiFilter = { tier: 'all', bucket: 'callable', search: '' };
+        var _stateSaveTimer = null;
 
-        function crmStorageKey() {
-            return 'stilo:lead-crm:' + clientState.clientId;
-        }
-        function loadCrmState() {
+        async function loadCrmState() {
             try {
-                var raw = localStorage.getItem(crmStorageKey());
-                if (raw) {
-                    var parsed = JSON.parse(raw);
-                    crmState.tier_overrides = parsed.tier_overrides || {};
-                    crmState.call_logs = parsed.call_logs || {};
-                    crmState.callbacks = parsed.callbacks || {};
-                    crmState.booked = parsed.booked || {};
-                }
+                var token = clientState.session && clientState.session.access_token;
+                var url = '/api/client-leads/state?client_id=' + encodeURIComponent(clientState.clientId);
+                var resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!resp.ok) { console.warn('[crm load]', resp.status); return; }
+                var data = await resp.json();
+                var s = (data && data.state) || {};
+                crmState.tier_overrides = s.tier_overrides || {};
+                crmState.call_logs = s.call_logs || {};
+                crmState.callbacks = s.callbacks || {};
+                crmState.booked = s.booked || {};
+                crmState.signed = s.signed || {};
             } catch (e) { console.warn('[crm load]', e); }
         }
-        function saveCrmState() {
-            try { localStorage.setItem(crmStorageKey(), JSON.stringify(crmState)); }
-            catch (e) { console.warn('[crm save]', e); }
+        // Persist a partial state update. Debounced so a burst of edits in
+        // the drawer (tier override + log call back-to-back) only writes once.
+        function saveCrmPatch(patch) {
+            window.__crmPending = window.__crmPending || { tier_overrides: {}, call_logs: {}, callbacks: {}, booked: {}, signed: {} };
+            for (var k in patch) {
+                if (!window.__crmPending[k]) continue;
+                Object.assign(window.__crmPending[k], patch[k]);
+            }
+            clearTimeout(_stateSaveTimer);
+            _stateSaveTimer = setTimeout(flushCrmPatch, 400);
+        }
+        async function flushCrmPatch() {
+            var pending = window.__crmPending;
+            window.__crmPending = null;
+            if (!pending) return;
+            try {
+                var token = clientState.session && clientState.session.access_token;
+                var url = '/api/client-leads/state?client_id=' + encodeURIComponent(clientState.clientId);
+                var resp = await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state: pending })
+                });
+                if (!resp.ok) {
+                    var j = await resp.json().catch(function(){ return {}; });
+                    console.warn('[crm save]', resp.status, j);
+                }
+            } catch (e) { console.warn('[crm save]', e); }
         }
 
         // Effective tier for a lead = manual override if set, else auto-tier.
         function effectiveTier(lead) {
             return crmState.tier_overrides[lead.lead_key] || lead.tier || 'cool';
         }
-        // Which lifecycle bucket the lead lives in (Cold Call / Callbacks /
-        // Booked / Dead Pool). Drives the tabs.
+        // Which lifecycle bucket the lead lives in. Signed wins over booked
+        // (closed deal is a stronger state than scheduled meeting), which
+        // wins over callbacks, which wins over the default callable pool.
         function effectiveBucket(lead) {
             if (effectiveTier(lead) === 'dead') return 'dead';
+            if (crmState.signed[lead.lead_key]) return 'signed';
             if (crmState.booked[lead.lead_key]) return 'booked';
             if (crmState.callbacks[lead.lead_key]) return 'callbacks';
             return 'callable';
+        }
+
+        // Was this lead called within the last 24h?
+        function calledInLast24h(lead) {
+            var logs = crmState.call_logs[lead.lead_key] || [];
+            if (!logs.length) return false;
+            var cutoff = Date.now() - 24 * 60 * 60 * 1000;
+            return logs.some(function (l) { return new Date(l.at).getTime() >= cutoff; });
+        }
+
+        // Sort order: HOT first, then WARM, then COOL. Within each tier,
+        // higher-rated + more-reviewed leads first. Stable for testability.
+        var TIER_RANK = { hot: 0, warm: 1, cool: 2, dead: 3 };
+        function leadComparator(a, b) {
+            var ta = TIER_RANK[effectiveTier(a)] != null ? TIER_RANK[effectiveTier(a)] : 99;
+            var tb = TIER_RANK[effectiveTier(b)] != null ? TIER_RANK[effectiveTier(b)] : 99;
+            if (ta !== tb) return ta - tb;
+            var ra = (a.rating != null && !isNaN(a.rating)) ? a.rating : -1;
+            var rb = (b.rating != null && !isNaN(b.rating)) ? b.rating : -1;
+            if (rb !== ra) return rb - ra;
+            var na = (a.review_count != null && !isNaN(a.review_count)) ? a.review_count : -1;
+            var nb = (b.review_count != null && !isNaN(b.review_count)) ? b.review_count : -1;
+            return nb - na;
         }
 
         async function refreshLeadsView() {
@@ -553,28 +678,34 @@
                 showEmpty('Leads are queued. The first batch will appear here within 48 hours.');
                 return;
             }
-            loadCrmState();
+            await loadCrmState();
             renderEverything();
         }
 
         function renderEverything() {
             // 1. Compute counts
-            var counts = { all: 0, hot: 0, warm: 0, cool: 0, dead: 0,
+            var counts = { all: 0, calledToday: 0, signed: 0, dead: 0,
                            callable: 0, callbacks: 0, booked: 0 };
             leadsCache.forEach(function (lead) {
                 var t = effectiveTier(lead);
                 var b = effectiveBucket(lead);
-                counts[t]++;
-                counts[b]++;
+                counts[b] = (counts[b] || 0) + 1;
                 if (t !== 'dead') counts.all++;
+                if (t === 'dead') counts.dead++;
+                if (calledInLast24h(lead)) counts.calledToday++;
             });
+            // Signed = lifetime closed (count signed-keyed leads, even if
+            // they're not in the current GCS dump anymore).
+            counts.signed = Object.keys(crmState.signed || {}).length;
+
             setText('statAll', counts.all);
-            setText('statHot', counts.hot);
-            setText('statWarm', counts.warm);
+            setText('statCalledToday', counts.calledToday);
+            setText('statSigned', counts.signed);
             setText('statDead', counts.dead);
             setText('bucketBadgeCallable', '· ' + counts.callable);
             setText('bucketBadgeCallbacks', '· ' + counts.callbacks);
             setText('bucketBadgeBooked', '· ' + counts.booked);
+            setText('bucketBadgeSigned', '· ' + (counts.signed || 0));
             setText('bucketBadgeDead', '· ' + counts.dead);
 
             // 2. Highlight active stat card + tab
@@ -585,18 +716,23 @@
                 el.classList.toggle('active', el.getAttribute('data-tab') === uiFilter.bucket);
             });
 
-            // 3. Filter rows
+            // 3. Filter rows. uiFilter.tier holds the stat-card filter value
+            // (one of: all | called-today | signed | dead). uiFilter.bucket
+            // holds the bucket tab (callable | callbacks | booked | signed | dead).
             var q = (uiFilter.search || '').toLowerCase();
             var filtered = leadsCache.filter(function (lead) {
                 var t = effectiveTier(lead);
                 var b = effectiveBucket(lead);
                 if (uiFilter.bucket === 'dead') {
                     if (t !== 'dead') return false;
-                } else {
+                } else if (uiFilter.bucket === 'callable') {
                     if (t === 'dead') return false;
-                    if (uiFilter.bucket !== 'callable' && uiFilter.bucket !== b) return false;
+                } else if (uiFilter.bucket !== b) {
+                    return false;
                 }
-                if (uiFilter.tier !== 'all' && uiFilter.tier !== t) return false;
+                if (uiFilter.tier === 'called-today' && !calledInLast24h(lead)) return false;
+                if (uiFilter.tier === 'signed' && b !== 'signed') return false;
+                if (uiFilter.tier === 'dead' && t !== 'dead') return false;
                 if (q) {
                     var hay = (lead.business_name + ' ' + lead.phone + ' ' + lead.address + ' ' + (lead.niche || '')).toLowerCase();
                     if (hay.indexOf(q) === -1) return false;
@@ -604,7 +740,10 @@
                 return true;
             });
 
-            // 4. Render table or empty
+            // 4. Priority sort (HOT > WARM > COOL > DEAD; tie-break by rating then review_count)
+            filtered.sort(leadComparator);
+
+            // 5. Render table or empty
             if (!filtered.length) {
                 showEmpty('No leads in this view. Adjust the filter to see more.');
                 return;
@@ -636,25 +775,27 @@
         }
 
         // ---- Filter handlers (wired from inline onclick / oninput) ----
-        // Stat cards drive both tier + bucket so clicking Dead Pool actually
-        // shows dead leads (not the empty intersection of bucket=callable +
-        // tier=dead). Pattern: Dead Pool card switches to Dead Pool bucket;
-        // Hot/Warm/All cards switch to All-callable bucket.
-        function setTierFilter(t) {
+        // Stat cards now: All / Called Today / Clients Signed / Dead Pool.
+        // Each card picks the right bucket so the table actually shows
+        // matching rows (no empty intersections).
+        function setStatFilter(t) {
             uiFilter.tier = t || 'all';
-            if (t === 'dead') {
-                uiFilter.bucket = 'dead';
-            } else if (uiFilter.bucket === 'dead') {
-                // moving back out of Dead Pool: return to the default tab
-                uiFilter.bucket = 'callable';
-            }
+            if (t === 'dead')         uiFilter.bucket = 'dead';
+            else if (t === 'signed')  uiFilter.bucket = 'signed';
+            else if (t === 'all')     uiFilter.bucket = 'callable';
+            else if (t === 'called-today') uiFilter.bucket = 'callable';
             renderEverything();
         }
+        // Legacy name kept so older inline handlers still work in case of stale cache.
+        function setTierFilter(t) { return setStatFilter(t); }
+
         function setBucketFilter(b) {
             uiFilter.bucket = b || 'callable';
-            // Tabs are bucket-only; clear any tier sub-filter so the tab's
-            // own counter matches what gets rendered.
-            uiFilter.tier = (b === 'dead') ? 'dead' : 'all';
+            // Tabs are bucket-only; clear any stat-card sub-filter so the
+            // tab's own counter matches what gets rendered.
+            if (b === 'dead')        uiFilter.tier = 'dead';
+            else if (b === 'signed') uiFilter.tier = 'signed';
+            else                     uiFilter.tier = 'all';
             renderEverything();
         }
         var _searchDebounce = null;
@@ -671,19 +812,18 @@
             document.getElementById('emptyState').style.display = 'none';
             var host = document.getElementById('leadsTable');
             host.style.display = 'block';
+            // Rating column dropped per Remy 2026-05-11 — rating is visible
+            // inside the drawer when Marcus clicks a row. Keeping it in the
+            // table made the row too dense.
             var ths = '<tr>'
                 + '<th style="width:1px;">Tier</th>'
                 + '<th>Business</th>'
                 + '<th style="width:1px;">Phone</th>'
-                + '<th style="width:1px;">Rating</th>'
                 + '<th>Address</th>'
                 + '<th style="width:1px;">Last call</th>'
                 + '</tr>';
             var body = rows.map(function (r) {
                 var t = effectiveTier(r);
-                var ratingTxt = (r.rating != null && !isNaN(r.rating))
-                    ? r.rating.toFixed(1) + (r.review_count != null ? ' · ' + r.review_count : '')
-                    : '—';
                 var lastLog = (crmState.call_logs[r.lead_key] || [])[0];
                 var lastTxt = lastLog
                     ? (new Date(lastLog.at).toLocaleDateString() + ' · ' + esc(lastLog.outcome || ''))
@@ -694,7 +834,6 @@
                       + (r.niche ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + esc(r.niche) + '</div>' : '')
                       + '</td>'
                     + '<td style="font-family:var(--font-mono);white-space:nowrap;">' + esc(r.phone || '—') + '</td>'
-                    + '<td style="color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + esc(ratingTxt) + '</td>'
                     + '<td style="color:var(--text-secondary);font-size:12px;max-width:340px;">' + esc(r.address || '—') + '</td>'
                     + '<td style="color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastTxt + '</td>'
                     + '</tr>';
@@ -753,6 +892,7 @@
 
             var bookedAt = crmState.booked[lead.lead_key];
             var callbackAt = crmState.callbacks[lead.lead_key];
+            var signedAt = crmState.signed[lead.lead_key];
 
             document.getElementById('drawerBody').innerHTML =
                 '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);">' + esc(lead.niche || 'Lead') + '</div>'
@@ -762,8 +902,7 @@
                 + '<div class="drawer-section">'
                   + '<h3>Contact</h3>'
                   + (phone
-                      ? '<div style="font-family:var(--font-mono);font-size:18px;font-weight:600;margin-bottom:8px;">' + esc(phone) + '</div>'
-                        + '<a class="drawer-call-link" href="tel:' + esc(phone.replace(/[^+0-9]/g,'')) + '">Call now</a>'
+                      ? '<a href="tel:' + esc(phone.replace(/[^+0-9]/g,'')) + '" style="font-family:var(--font-mono);font-size:20px;font-weight:600;color:var(--text-primary);text-decoration:none;">' + esc(phone) + '</a>'
                       : '<div style="color:var(--text-muted);font-size:13px;">No phone on file.</div>')
                 + '</div>'
 
@@ -798,6 +937,7 @@
                       + '<option value="interested">Interested · follow up</option>'
                       + '<option value="callback_requested">Callback requested</option>'
                       + '<option value="booked_meeting">Booked a meeting</option>'
+                      + '<option value="signed">Signed as client</option>'
                       + '<option value="not_interested">Not interested</option>'
                       + '<option value="dnc">Do not call</option>'
                       + '<option value="wrong_number">Wrong number</option>'
@@ -810,11 +950,12 @@
                   + '</div>'
                 + '</div>'
 
-                + (callbackAt || bookedAt
+                + (callbackAt || bookedAt || signedAt
                     ? '<div class="drawer-section">'
-                      + '<h3>Scheduled</h3>'
-                      + (callbackAt ? '<div style="font-size:12px;">Callback: ' + esc(new Date(callbackAt.at).toLocaleString()) + '</div>' : '')
-                      + (bookedAt ? '<div style="font-size:12px;">Meeting: ' + esc(new Date(bookedAt.at).toLocaleString()) + '</div>' : '')
+                      + '<h3>Status</h3>'
+                      + (signedAt   ? '<div style="font-size:13px;color:#22c55e;font-weight:600;">✓ Signed as client · ' + esc(new Date(signedAt.at).toLocaleString()) + '</div>' : '')
+                      + (callbackAt ? '<div style="font-size:12px;">Callback scheduled: ' + esc(new Date(callbackAt.at).toLocaleString()) + '</div>' : '')
+                      + (bookedAt   ? '<div style="font-size:12px;">Meeting booked: ' + esc(new Date(bookedAt.at).toLocaleString()) + '</div>' : '')
                     + '</div>'
                     : '')
 
@@ -826,13 +967,19 @@
 
         function setLeadTier(leadKey, tier) {
             crmState.tier_overrides[leadKey] = tier;
-            // Moving to Dead Pool also clears any pending callback/booking
-            // so the lead doesn't haunt those tabs.
+            var patch = { tier_overrides: {} };
+            patch.tier_overrides[leadKey] = tier;
+            // Moving to Dead Pool also clears any pending callback/booking/
+            // signed so the lead doesn't haunt those tabs.
             if (tier === 'dead') {
                 delete crmState.callbacks[leadKey];
                 delete crmState.booked[leadKey];
+                delete crmState.signed[leadKey];
+                patch.callbacks = {}; patch.callbacks[leadKey] = null;
+                patch.booked = {}; patch.booked[leadKey] = null;
+                patch.signed = {}; patch.signed[leadKey] = null;
             }
-            saveCrmState();
+            saveCrmPatch(patch);
             var lead = (leadsCache || []).find(function (l) { return l.lead_key === leadKey; });
             if (lead) renderDrawerBody(lead);
             renderEverything();
@@ -847,19 +994,30 @@
             crmState.call_logs[leadKey] = crmState.call_logs[leadKey] || [];
             crmState.call_logs[leadKey].unshift(entry);
 
+            var patch = { call_logs: {} };
+            patch.call_logs[leadKey] = crmState.call_logs[leadKey];
+
             // Outcome-driven side effects: book a meeting, schedule callback,
-            // or move lead to Dead Pool. Same shape as STILO's own admin CRM
-            // so behavior matches Marcus's expectations if he ever sees it.
-            if (outcome === 'booked_meeting') {
+            // mark as signed, or move lead to Dead Pool. Mirrors STILO's
+            // own admin CRM so behavior is consistent across dashboards.
+            if (outcome === 'signed') {
+                crmState.signed[leadKey] = { at: new Date().toISOString() };
+                patch.signed = {}; patch.signed[leadKey] = crmState.signed[leadKey];
+            } else if (outcome === 'booked_meeting') {
                 crmState.booked[leadKey] = { at: callbackVal ? new Date(callbackVal).toISOString() : new Date().toISOString() };
+                patch.booked = {}; patch.booked[leadKey] = crmState.booked[leadKey];
             } else if (outcome === 'callback_requested' && callbackVal) {
                 crmState.callbacks[leadKey] = { at: new Date(callbackVal).toISOString() };
+                patch.callbacks = {}; patch.callbacks[leadKey] = crmState.callbacks[leadKey];
             } else if (outcome === 'not_interested' || outcome === 'dnc' || outcome === 'wrong_number') {
                 crmState.tier_overrides[leadKey] = 'dead';
                 delete crmState.callbacks[leadKey];
                 delete crmState.booked[leadKey];
+                patch.tier_overrides = {}; patch.tier_overrides[leadKey] = 'dead';
+                patch.callbacks = {}; patch.callbacks[leadKey] = null;
+                patch.booked = {}; patch.booked[leadKey] = null;
             }
-            saveCrmState();
+            saveCrmPatch(patch);
 
             var lead = (leadsCache || []).find(function (l) { return l.lead_key === leadKey; });
             if (lead) renderDrawerBody(lead);
