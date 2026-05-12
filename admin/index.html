@@ -1104,23 +1104,31 @@
                      used to live here was removed per Remy 2026-05-11. -->
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:12px;flex-wrap:wrap;">
                     <p style="color:var(--text-secondary);font-size:0.875rem;margin:0;">Daily call list, cold email queue, and archive. Click a row to log an outcome.</p>
-                </div>
-
-                <!-- Activity intelligence strip — counts of today's work + queue size.
-                     Pulses yellow + surfaces a "Generate more leads" prompt when the
-                     callable queue runs low. Driven by Supabase Realtime (no polling). -->
-                <div id="prospectActivityStrip" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px;padding:12px 18px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;flex-wrap:wrap;">
-                    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary);">
-                        <span><strong id="activityCallsToday" style="color:var(--text-primary);font-family:var(--font-mono);">—</strong> calls today</span>
-                        <span style="color:var(--border-medium);">·</span>
-                        <span><strong id="activityBookedWeek" style="color:var(--green,#10b981);font-family:var(--font-mono);">—</strong> booked this week</span>
-                        <span style="color:var(--border-medium);">·</span>
-                        <span><strong id="activityCallbacksDue" style="color:var(--blue);font-family:var(--font-mono);">—</strong> callbacks due today</span>
+                    <!-- SDR selector — replaces the old activity-counter row.
+                         Filters every workflow card + table to the picked SDR.
+                         Defaults to whoever is signed in (set in grantAdminAccess). -->
+                    <div id="sdrSelector" style="position:relative;">
+                        <button id="sdrSelectorBtn" type="button" onclick="toggleSdrMenu(event)" style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;">
+                            <span id="sdrSelectorAvatar" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--blue);color:white;font-size:11px;font-weight:700;letter-spacing:0.02em;">RL</span>
+                            <span id="sdrSelectorName">Remy Leon</span>
+                            <span style="color:var(--text-muted);font-size:10px;">&#9662;</span>
+                        </button>
+                        <div id="sdrSelectorMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);min-width:180px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;padding:4px;">
+                            <button type="button" onclick="selectSdr('remy', 'Remy Leon', 'RL')" class="sdr-menu-item" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:none;border:none;color:var(--text-primary);font-size:13px;text-align:left;cursor:pointer;border-radius:6px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;">RL</span>Remy Leon
+                            </button>
+                            <button type="button" onclick="selectSdr('david', 'David Coira', 'DC')" class="sdr-menu-item" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:none;border:none;color:var(--text-primary);font-size:13px;text-align:left;cursor:pointer;border-radius:6px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--orange);color:white;font-size:10px;font-weight:700;">DC</span>David Coira
+                            </button>
+                            <button type="button" onclick="selectSdr('', 'All SDRs', 'ALL')" class="sdr-menu-item" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:none;border:none;color:var(--text-primary);font-size:13px;text-align:left;cursor:pointer;border-radius:6px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--text-tertiary);color:white;font-size:9px;font-weight:700;">ALL</span>All SDRs
+                            </button>
+                        </div>
                     </div>
-                    <div id="activityQueue" style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-secondary);">
-                        <span title="Leads ready to call today. Excludes leads called in the last 14 days, on DNC, or already booked. Differs from total HOT+WARM in the pipeline.">Ready to call today: <strong id="activityQueueSize" style="color:var(--text-primary);font-family:var(--font-mono);">—</strong></span>
-                    </div>
                 </div>
+                <style>
+                    .sdr-menu-item:hover { background: rgba(37,99,235,0.10); }
+                </style>
 
                 <!-- Live progress bar: visible only while a pipeline is queued or running.
                      Auto-hides on completion. Bar is indeterminate during scrape, becomes
@@ -1168,39 +1176,42 @@
                     <div id="leadGenMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);min-height:16px;"></div>
                 </div>
 
-                <!-- Stats bar: 4 tier cards + 2 small badges. Click a card to scope to that tier. -->
-                <div id="prospectStatsBar" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
-                    <div data-tier="HOT" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--red);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
-                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Hot</div>
-                        <div id="prospectStatHot" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                <!-- Workflow cards — daily SDR navigation. Each card is a quick
+                     filter that swaps the table below to its slice of leads,
+                     scoped to the SDR picked in the top-right selector. -->
+                <div id="prospectStatsBar" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+                    <div data-workflow="all" class="prospect-workflow-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--blue);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">All Leads</div>
+                        <div id="workflowCountAll" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
                     </div>
-                    <div data-tier="WARM" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--orange);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
-                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Warm</div>
-                        <div id="prospectStatWarm" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                    <div data-workflow="called_today" class="prospect-workflow-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--green,#10b981);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Called Today</div>
+                        <div id="workflowCountCalledToday" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
                     </div>
-                    <div data-tier="COOL" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--yellow);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
-                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Cool</div>
-                        <div id="prospectStatCool" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                    <div data-workflow="callbacks_due" class="prospect-workflow-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--orange);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Callbacks Due</div>
+                        <div id="workflowCountCallbacksDue" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
                     </div>
-                    <div data-tier="DEAD" class="prospect-stat-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--text-tertiary);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
-                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Dead</div>
-                        <div id="prospectStatDead" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
+                    <div data-workflow="dead_pool" class="prospect-workflow-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--text-tertiary);border-radius:10px;padding:14px 16px;cursor:pointer;transition:background 150ms;">
+                        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Dead Pool</div>
+                        <div id="workflowCountDeadPool" style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--text-primary);">—</div>
                     </div>
                 </div>
-                <div style="margin-bottom:18px;"></div>
 
-                <!-- Sub-tab strip — order matches the cold-call lifecycle:
-                     Cold Call → Cold Email → Call Back → Booked Meeting → Calls Today → My Call History -->
+                <!-- Sub-tab strip — secondary navigation alongside the workflow
+                     cards above. Cold Call is the main daily view; the others
+                     are auxiliary surfaces (full callback directory, booked
+                     meetings calendar, personal history). Calls Today and the
+                     Dead Pool are reached via the workflow cards above. -->
                 <div id="prospectSubtabs" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:16px;flex-wrap:wrap;">
                     <button class="prospect-subtab active" data-subtab="callable" onclick="switchProspectTab('callable')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;transition:opacity 150ms;">Cold Call</button>
                     <button class="prospect-subtab" data-subtab="emailable" onclick="switchProspectTab('emailable')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Cold Email</button>
                     <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Call Back <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="booked" onclick="switchProspectTab('booked')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Booked Meeting <span id="prospectBookedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,0.18);color:var(--green,#10b981);font-size:10px;font-weight:700;">0</span></button>
-                    <button class="prospect-subtab" data-subtab="calls-today" onclick="switchProspectTab('calls-today')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Calls Today <span id="prospectCallsTodayBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(37,99,235,0.15);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="my-history" onclick="switchProspectTab('my-history')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">My Call History</button>
                 </div>
 
-                <!-- Filter bar: search · tier · niche · has phone · has email -->
+                <!-- Filter bar: search · tier · niche. SDR moved to top-right selector. -->
                 <div id="prospectFilterBar" style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
                     <input id="prospectSearch" type="search" placeholder="Search business or owner..." oninput="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;width:240px;">
                     <select id="prospectTierFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">
@@ -1212,16 +1223,6 @@
                     <select id="prospectNicheFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:160px;">
                         <option value="">All niches</option>
                     </select>
-                    <select id="prospectSdrFilter" onchange="onProspectFilterChange()" title="Filter by SDR. Defaults to whoever's signed in." style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:150px;">
-                        <option value="">All SDRs</option>
-                        <option value="remy">Remy Leon</option>
-                        <option value="david">David Coira</option>
-                        <option value="unassigned">Unassigned</option>
-                    </select>
-                    <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
-                        <input id="prospectHasEmail" type="checkbox" onchange="onProspectFilterChange()" style="accent-color:var(--blue);">
-                        Has email
-                    </label>
                 </div>
 
                 <!-- Six table containers, only one visible at a time. overflow-x:auto so wide tables scroll within the card instead of clipping at the page edge. -->
@@ -1412,8 +1413,13 @@
             // Default the prospecting SDR filter to "me" so Remy lands on his leads.
             if (typeof prospectState !== 'undefined' && info.sdrKey) {
                 prospectState.filters.sdr = info.sdrKey;
-                var sdrSel = document.getElementById('prospectSdrFilter');
-                if (sdrSel) sdrSel.value = info.sdrKey;
+                var nameEl = document.getElementById('sdrSelectorName');
+                var avEl = document.getElementById('sdrSelectorAvatar');
+                if (nameEl) nameEl.textContent = info.displayName || 'Remy Leon';
+                if (avEl) {
+                    avEl.textContent = info.sdrKey === 'david' ? 'DC' : 'RL';
+                    avEl.style.background = info.sdrKey === 'david' ? 'var(--orange)' : 'var(--blue)';
+                }
             }
             // Kick off data load now that we know the user is an admin
             loadClientsGrid();
@@ -3219,12 +3225,12 @@
         // dialedWithin24h + isDialOnly demotion path) and David's strict
         // callable filter excludes it from today's queue.
         var PROSPECT_OUTCOMES = [
-            { value: 'called',              label: 'Called (no outcome yet)',  followUp: false, dialOnly: true },
-            { value: 'booked_meeting',      label: 'Booked closing meeting',   followUp: false },
-            { value: 'callback_requested',  label: 'Interested, follow up',    followUp: true  },
-            { value: 'owner_uninterested',  label: 'Not interested (soft no)', followUp: false },
-            { value: 'wrong_number',        label: 'Wrong number / disconnected', followUp: false, dncOnSubmit: true },
-            { value: 'do_not_call',         label: 'Do Not Call',              followUp: false, dncOnSubmit: true }
+            { value: 'called',              label: 'Called (no outcome yet)',         followUp: false, dialOnly: true },
+            { value: 'booked_meeting',      label: 'Booked closing meeting',          followUp: false },
+            { value: 'callback_requested',  label: 'Interested, follow up',           followUp: true  },
+            { value: 'owner_uninterested',  label: 'Not interested — keep in pipeline', followUp: false },
+            { value: 'wrong_number',        label: 'Wrong number / disconnected (sends to Dead Pool)', followUp: false, dncOnSubmit: true },
+            { value: 'do_not_call',         label: 'Do Not Call (sends to Dead Pool)', followUp: false, dncOnSubmit: true }
         ];
 
         async function prospectAuthHeaders(extra) {
@@ -3548,41 +3554,18 @@
         }
 
 
-        // All counts in one roundtrip: tier cards, tab badges, activity strip.
+        // All counts in one roundtrip: workflow cards + sub-tab badges.
         // Backed by /api/prospects/lifecycle-stats (service-role server-side
         // query against the prospecting schema, sidesteps PostgREST schema
-        // exposure issues). Cached for 30s at the edge so rapid tab switches
+        // exposure issues). Cached briefly at the edge so rapid tab switches
         // don't pound the DB.
-        // Tier badges from the callable pool. Skips the upstream by_tier
-        // (which lumps in David's 4.7k auto-classified-dead archive — never
-        // called by us) so badges reconcile with the visible queue.
-        function applyTierBadgesFromRows(rows) {
-            var tc = { hot: 0, warm: 0, cool: 0, dead: 0 };
-            (rows || []).forEach(function (r) {
-                var t = String(r.prospect_tier || r.tier || '').toLowerCase();
-                if (tc[t] != null) tc[t]++;
-            });
-            var hot = document.getElementById('prospectStatHot');
-            var warm = document.getElementById('prospectStatWarm');
-            var cool = document.getElementById('prospectStatCool');
-            var dead = document.getElementById('prospectStatDead');
-            if (hot)  hot.textContent  = tc.hot.toLocaleString();
-            if (warm) warm.textContent = tc.warm.toLocaleString();
-            if (cool) cool.textContent = tc.cool.toLocaleString();
-            if (dead) dead.textContent = tc.dead.toLocaleString();
-        }
-
         async function loadProspectStats() {
             try {
-                var data = await prospectFetchJSON('/api/prospects/lifecycle-stats');
+                var qs = prospectState.filters.sdr ? ('?assigned_to=' + encodeURIComponent(prospectState.filters.sdr)) : '';
+                var data = await prospectFetchJSON('/api/prospects/lifecycle-stats' + qs);
                 prospectState.statsCache = data;
-                // NOTE: we no longer paint the tier badges from
-                // data.tier_counts — see applyTierBadgesFromRows() (called
-                // after the callable fetch lands). data.tier_counts is kept
-                // around in statsCache for diagnostics only.
 
-                // Tab badges + activity strip filled from the same payload —
-                // saves another 4-5 roundtrips on page load.
+                // Tab badges still drive the Call Back / Booked Meeting sub-tab pills.
                 var tb = data.tab_badges || {};
                 var cbBadge = document.getElementById('prospectCallbackBadge');
                 if (cbBadge) {
@@ -3594,23 +3577,31 @@
                     bkBadge.textContent = String(tb.booked || 0);
                     bkBadge.style.display = tb.booked ? 'inline-block' : 'none';
                 }
+
+                // Workflow cards. callable_ready = today's strict-callable count
+                // (matches the old "Ready to call today" headline). Backend
+                // returns explicit per-card fields when SDR-scoped; falls back
+                // to legacy fields when not.
                 var act = data.activity || {};
-                var t = function (id) { return document.getElementById(id); };
-                if (t('activityCallsToday'))   t('activityCallsToday').textContent   = act.calls_today || 0;
-                if (t('activityBookedWeek'))   t('activityBookedWeek').textContent   = act.booked_this_week || 0;
-                if (t('activityCallbacksDue')) t('activityCallbacksDue').textContent = act.callbacks_due_today || 0;
-                // Queue counter = David's `callable_ready` (strict-default).
-                // Decrements naturally after each call log because the lead
-                // gets `last_called_at = now()`, which kicks it out of the
-                // strict <14d filter on David's side.
-                var queueSize = data.callable_ready != null ? data.callable_ready : null;
-                if (t('activityQueueSize')) t('activityQueueSize').textContent = queueSize != null ? queueSize.toLocaleString() : '—';
+                var allLeads = data.all_leads_count != null ? data.all_leads_count : (data.callable_ready != null ? data.callable_ready : 0);
+                var calledToday = data.called_today_count != null ? data.called_today_count : (act.calls_today || 0);
+                var callbacksDue = data.callbacks_due_today_count != null ? data.callbacks_due_today_count : (act.callbacks_due_today || 0);
+                var deadPool = data.dead_pool_count != null ? data.dead_pool_count : ((data.tier_counts && data.tier_counts.dead) || 0);
+
+                var set = function (id, n) {
+                    var el = document.getElementById(id);
+                    if (el) el.textContent = Number(n || 0).toLocaleString();
+                };
+                set('workflowCountAll', allLeads);
+                set('workflowCountCalledToday', calledToday);
+                set('workflowCountCallbacksDue', callbacksDue);
+                set('workflowCountDeadPool', deadPool);
 
                 populateNicheFilter();
             } catch (e) {
                 console.error('[lifecycle-stats]', e);
-                ['Hot','Warm','Cool','Dead'].forEach(function (k) {
-                    var el = document.getElementById('prospectStat' + k);
+                ['All','CalledToday','CallbacksDue','DeadPool'].forEach(function (k) {
+                    var el = document.getElementById('workflowCount' + k);
                     if (el) el.textContent = '?';
                 });
             }
@@ -3806,9 +3797,6 @@
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'callable');
                 populateNicheFilter();
-                // Tier badges from callable pool only — exclude the dialed-today
-                // re-injected rows since they're already counted in the main pool.
-                applyTierBadgesFromRows(raw.filter(function(r) { return !r._dialedNow; }));
             } catch (e) {
                 console.error('[prospects/callable]', e);
                 if (!cached) {
@@ -3878,7 +3866,7 @@
             var thNarrow = th + 'width:1px;';
             var head;
             if (mode === 'calls-today') {
-                head = '<tr><th style="' + thNarrow + '">Time</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Outcome</th><th style="' + thNarrow + '">Niche</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Time</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Outcome</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last called</th></tr>';
             } else if (mode === 'emailable') {
                 head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last contacted</th></tr>';
             } else if (mode === 'callbacks') {
@@ -3899,16 +3887,16 @@
                 var lastStr = lastCalled ? new Date(lastCalled).toLocaleDateString() : '—';
                 var score = r.prospect_score != null ? r.prospect_score : (r.score != null ? r.score : '—');
                 var strictBadge = r.owner_phone_strict ? ' <span title="Strict-pass owner phone" style="display:inline-block;padding:1px 6px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;letter-spacing:0.04em;">STRICT</span>' : '';
-                var emailSub = email
-                    ? '<div title="' + escapeAdminHtml(email) + '" style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-sans,inherit);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(email) + '</div>'
-                    : '';
+                // Email intentionally NOT shown under phone — keeps the row
+                // scannable. The lead drawer surfaces email next to phone.
                 var contactCol = mode === 'emailable'
                     ? '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
-                    : '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div>' + emailSub + '</td>';
+                    : '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div></td>';
                 if (mode === 'calls-today') {
                     var calledTime = r.last_called_at ? new Date(r.last_called_at).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', timeZone:'America/New_York'}) : '—';
+                    var lastCalledStamp = r.last_called_at ? new Date(r.last_called_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York' }) : '—';
                     var outcome = r.last_called_outcome || '';
-                    var outcomeColors = { answered:'var(--green,#10b981)', voicemail:'var(--yellow,#eab308)', no_answer:'var(--text-muted)', missed_inbound:'var(--blue)', booked_meeting:'var(--green,#10b981)', not_interested:'var(--red)', callback_requested:'var(--blue)', interested_followup:'var(--green,#10b981)' };
+                    var outcomeColors = { answered:'var(--green,#10b981)', voicemail:'var(--yellow,#eab308)', no_answer:'var(--text-muted)', missed_inbound:'var(--blue)', booked_meeting:'var(--green,#10b981)', not_interested:'var(--red)', owner_uninterested:'var(--text-muted)', do_not_call:'var(--red)', callback_requested:'var(--blue)', interested_followup:'var(--green,#10b981)' };
                     var outcomeColor = outcomeColors[outcome] || 'var(--text-muted)';
                     var outcomeLabel = outcome ? outcome.replace(/_/g, ' ') : 'no outcome';
                     return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
@@ -3919,6 +3907,7 @@
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
                         + '<td style="padding:10px 14px;font-size:12px;font-weight:600;color:' + outcomeColor + ';white-space:nowrap;">' + escapeAdminHtml(outcomeLabel) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                        + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(lastCalledStamp) + '</td>'
                         + '</tr>';
                 }
                 if (mode === 'callbacks') {
@@ -3976,8 +3965,20 @@
             return '<table style="border-collapse:collapse;font-size:13px;table-layout:auto;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
         }
 
-        function switchProspectTab(name) {
+        function switchProspectTab(name, opts) {
+            opts = opts || {};
             prospectState.tab = name;
+            // Sub-tab clicks come without opts.fromWorkflow set and should
+            // reset the workflow card scope. Workflow card clicks pass
+            // {fromWorkflow:true} so they can keep their state.
+            if (!opts.fromWorkflow) {
+                if (name === 'callable')          prospectState.workflowCard = 'all';
+                else if (name === 'calls-today')  prospectState.workflowCard = 'called_today';
+                else if (name === 'callbacks')   { prospectState.workflowCard = 'callbacks_due' === prospectState.workflowCard ? prospectState.workflowCard : null; prospectState.dueTodayOnly = false; }
+                else if (name === 'dead')         prospectState.workflowCard = 'dead_pool';
+                else                              prospectState.workflowCard = null;
+                if (typeof highlightActiveWorkflowCard === 'function') highlightActiveWorkflowCard();
+            }
             document.querySelectorAll('.prospect-subtab').forEach(function(btn){
                 var on = btn.getAttribute('data-subtab') === name;
                 btn.classList.toggle('active', on);
@@ -4054,12 +4055,15 @@
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading today\'s calls...</div>';
             }
             try {
-                var data = await prospectFetchJSON('/api/prospects/calls-today');
+                var sdrQs = prospectState.filters.sdr ? ('?assigned_to=' + encodeURIComponent(prospectState.filters.sdr)) : '';
+                var data = await prospectFetchJSON('/api/prospects/calls-today' + sdrQs);
                 var raw = data.results || [];
+                // Apply SDR filter client-side as a safety net in case David's
+                // upstream calls-today doesn't honor assigned_to yet — keeps
+                // the Called Today card honest before backend support lands.
+                if (prospectState.filters.sdr) raw = applyClientFilters(raw);
                 prospectState.cache.callsToday = raw;
                 host.innerHTML = renderProspectTable(raw, 'calls-today');
-                var badge = document.getElementById('prospectCallsTodayBadge');
-                if (badge) { badge.textContent = String(raw.length); badge.style.display = raw.length ? 'inline-block' : 'none'; }
             } catch (e) {
                 console.error('[calls-today]', e);
                 if (!cached) host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
@@ -4069,7 +4073,10 @@
         async function loadProspectCallbacks(opts) {
             opts = opts || {};
             var host = document.getElementById('prospectTableCallbacks');
-            var cached = !opts.force && prospectState.cache.callbacks;
+            // dueTodayOnly is set when the Callbacks Due workflow card is active.
+            // Bypass the cache when scope flips so the right slice renders.
+            var dueOnly = !!prospectState.dueTodayOnly;
+            var cached = !opts.force && !dueOnly && prospectState.cache.callbacks;
             if (cached) {
                 prospectState.rows = applyClientFilters(cached);
                 host.innerHTML = renderProspectTable(prospectState.rows, 'callbacks');
@@ -4077,14 +4084,15 @@
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading callbacks...</div>';
             }
             try {
-                var data = await prospectFetchJSON('/api/prospects/list-callbacks?limit=400');
+                var qs = '?limit=400' + (dueOnly ? '&due=today' : '');
+                var data = await prospectFetchJSON('/api/prospects/list-callbacks' + qs);
                 var raw = data.results || [];
-                prospectState.cache.callbacks = raw;
+                if (!dueOnly) prospectState.cache.callbacks = raw;
                 var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'callbacks');
                 var badge = document.getElementById('prospectCallbackBadge');
-                if (badge) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
+                if (badge && !dueOnly) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
             } catch (e) {
                 console.error('[callbacks]', e);
                 if (!cached) {
@@ -4320,14 +4328,11 @@
             var search = document.getElementById('prospectSearch');
             var tier = document.getElementById('prospectTierFilter');
             var niche = document.getElementById('prospectNicheFilter');
-            var hasEmail = document.getElementById('prospectHasEmail');
-            var sdr = document.getElementById('prospectSdrFilter');
             f.q = search ? search.value.trim() : '';
             f.tier = tier ? tier.value : '';
             f.niche = niche ? niche.value : '';
-            f.hasEmail = hasEmail ? hasEmail.checked : false;
-            f.sdr = sdr ? sdr.value : '';
-            highlightActiveTierCard();
+            // hasEmail filter removed from UI; keep flag false for back-compat.
+            f.hasEmail = false;
             clearTimeout(prospectState.searchDebounce);
             prospectState.searchDebounce = setTimeout(function(){
                 if (prospectState.tab === 'callable') loadProspectCallable();
@@ -4335,42 +4340,89 @@
             }, 200);
         }
 
-        // Visual feedback for which tier card is the active filter. Clicking
-        // the same card again clears the filter (handled in the click listener).
-        function highlightActiveTierCard() {
-            var active = String(prospectState.filters.tier || '').toUpperCase();
-            document.querySelectorAll('.prospect-stat-card').forEach(function (card) {
-                var t = card.getAttribute('data-tier') || '';
-                var on = active && t === active;
+        // Visual feedback for which workflow card is active.
+        function highlightActiveWorkflowCard() {
+            var active = prospectState.workflowCard || 'all';
+            document.querySelectorAll('.prospect-workflow-card').forEach(function (card) {
+                var k = card.getAttribute('data-workflow') || '';
+                var on = k === active;
                 card.style.background = on ? 'rgba(37,99,235,0.10)' : 'var(--bg-card)';
                 card.style.boxShadow = on ? 'inset 0 0 0 1px var(--blue)' : 'none';
             });
         }
 
-        // Click a stats card to scope to that tier. Click the active card again
-        // to clear. Lowercase the value (David's backend stores lowercase).
-        // Clicking DEAD jumps straight to the Dead Pool tab.
+        // Workflow card click — switches the table view + activates the right
+        // sub-tab. The four cards map to:
+        //   all           → Cold Call sub-tab (full callable list)
+        //   called_today  → Cold Call container, calls-today data + columns
+        //   callbacks_due → Call Back sub-tab, due=today filter
+        //   dead_pool     → Dead Pool view (no sub-tab button, reached via card only)
+        function selectWorkflowCard(kind) {
+            prospectState.workflowCard = kind;
+            prospectState.dueTodayOnly = (kind === 'callbacks_due');
+            highlightActiveWorkflowCard();
+            if (kind === 'all') {
+                switchProspectTab('callable', { fromWorkflow: true });
+            } else if (kind === 'called_today') {
+                switchProspectTab('calls-today', { fromWorkflow: true });
+            } else if (kind === 'callbacks_due') {
+                switchProspectTab('callbacks', { fromWorkflow: true });
+            } else if (kind === 'dead_pool') {
+                switchProspectTab('dead', { fromWorkflow: true });
+            }
+        }
+
         document.addEventListener('click', function(ev){
-            var card = ev.target.closest && ev.target.closest('.prospect-stat-card');
+            var card = ev.target.closest && ev.target.closest('.prospect-workflow-card');
             if (!card) return;
-            var tier = (card.getAttribute('data-tier') || '').toLowerCase();
-            if (!tier) return;
-            if (tier === 'dead') {
-                switchProspectTab('dead');
-                return;
-            }
-            var current = String(prospectState.filters.tier || '').toLowerCase();
-            prospectState.filters.tier = (current === tier) ? '' : tier;
-            var sel = document.getElementById('prospectTierFilter');
-            if (sel) sel.value = prospectState.filters.tier;
-            highlightActiveTierCard();
-            if (prospectState.tab !== 'callable' && prospectState.tab !== 'emailable') {
-                switchProspectTab('callable');
-            } else {
-                if (prospectState.tab === 'callable') loadProspectCallable();
-                else loadProspectEmailable();
-            }
+            var kind = card.getAttribute('data-workflow') || '';
+            if (!kind) return;
+            selectWorkflowCard(kind);
         });
+
+        // ─── SDR selector (top-right pill + menu) ───────────────────────────
+        function toggleSdrMenu(ev) {
+            if (ev) ev.stopPropagation();
+            var menu = document.getElementById('sdrSelectorMenu');
+            if (!menu) return;
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+        document.addEventListener('click', function () {
+            var menu = document.getElementById('sdrSelectorMenu');
+            if (menu) menu.style.display = 'none';
+        });
+
+        function selectSdr(sdrKey, label, avatar) {
+            prospectState.filters.sdr = sdrKey || '';
+            var btnName = document.getElementById('sdrSelectorName');
+            var btnAvatar = document.getElementById('sdrSelectorAvatar');
+            if (btnName) btnName.textContent = label;
+            if (btnAvatar) {
+                btnAvatar.textContent = avatar;
+                btnAvatar.style.background = sdrKey === 'david' ? 'var(--orange)' : (sdrKey === '' ? 'var(--text-tertiary)' : 'var(--blue)');
+            }
+            var menu = document.getElementById('sdrSelectorMenu');
+            if (menu) menu.style.display = 'none';
+            // Refresh counts + currently visible table.
+            loadProspectStats();
+            // Bust caches so SDR scoping reapplies on the next fetch.
+            prospectState.cache.callable = null;
+            prospectState.cache.emailable = null;
+            prospectState.cache.callbacks = null;
+            prospectState.cache.booked = null;
+            prospectState.cache.callsToday = null;
+            prospectState.cache.dead = null;
+            prospectState.cache.myHistory = null;
+            // Re-render the currently active tab.
+            var tab = prospectState.tab || 'callable';
+            if (tab === 'callable')          loadProspectCallable();
+            else if (tab === 'emailable')    loadProspectEmailable();
+            else if (tab === 'callbacks')    loadProspectCallbacks();
+            else if (tab === 'booked')       loadProspectBooked();
+            else if (tab === 'dead')         loadProspectDead(1);
+            else if (tab === 'calls-today')  loadCallsToday();
+            else if (tab === 'my-history')   loadMyHistory();
+        }
 
         async function openProspectDrawer(leadId, mode) {
             mode = mode || 'callable';
@@ -4565,9 +4617,40 @@
                     + '<div id="prospectDialerMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);min-height:16px;">Tap Call in Quo. The number is auto-copied — paste in Quo\'s dialer with Cmd+V, hit call. Transcript lands here ~1s after hangup.</div>';
             }
 
+            // Show the owner email next to the phone in the call-mode drawer
+            // (intentionally NOT shown in the row above). Email-mode keeps the
+            // email-only block since phone is irrelevant there.
+            var phoneEmailLine = phone
+                ? '<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;"><div style="color:var(--text-primary);font-size:18px;font-family:var(--font-mono);font-weight:600;">' + escapeAdminHtml(phone) + '</div>'
+                  + (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);font-size:13px;text-decoration:none;">' + escapeAdminHtml(email) + '</a>' : '')
+                  + '</div>'
+                : '';
             var contactBlock = mode === 'emailable'
                 ? (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);font-size:14px;">' + escapeAdminHtml(email) + '</a>' : '<span style="color:var(--text-muted);font-size:13px;">No owner email on file.</span>')
-                : (phone ? '<div style="color:var(--text-primary);font-size:18px;font-family:var(--font-mono);font-weight:600;">' + escapeAdminHtml(phone) + '</div>' + dialerBlock : '<span style="color:var(--text-muted);font-size:13px;">No phone on file.</span>');
+                : (phone ? phoneEmailLine + dialerBlock : '<span style="color:var(--text-muted);font-size:13px;">No phone on file.</span>');
+
+            // Last-log pill — surfaces the most recent outcome at the top of the
+            // drawer so Remy doesn't have to scroll to the call history. Pulled
+            // from leads.last_called_outcome + last_called_at (server source of
+            // truth) and matched to the call_history entry for SDR attribution.
+            var lastOutcome = d.last_called_outcome || '';
+            var lastOutcomeAt = d.last_called_at || null;
+            var lastOutcomePill = '';
+            if (lastOutcome) {
+                var lastMatch = (history || []).find(function (h) {
+                    return (h.outcome === lastOutcome) || (h.called_at && lastOutcomeAt && Math.abs(new Date(h.called_at).getTime() - new Date(lastOutcomeAt).getTime()) < 60000);
+                });
+                var loggedByName = lastMatch && lastMatch.logged_by ? sdrFromEmail(lastMatch.logged_by).displayName : '';
+                var lastWhen = lastOutcomeAt ? new Date(lastOutcomeAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
+                var lastOutcomeColors = { booked_meeting:'var(--green,#10b981)', callback_requested:'var(--blue)', owner_uninterested:'var(--text-muted)', do_not_call:'var(--red)', wrong_number:'var(--red)' };
+                var lastColor = lastOutcomeColors[lastOutcome] || 'var(--text-primary)';
+                lastOutcomePill = '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:8px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border-subtle);border-radius:8px;flex-wrap:wrap;">'
+                    + '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Last log</span>'
+                    + '<span style="padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid ' + lastColor + ';color:' + lastColor + ';font-size:11px;font-weight:700;letter-spacing:0.03em;">' + escapeAdminHtml(lastOutcome.replace(/_/g,' ')) + '</span>'
+                    + (lastWhen ? '<span style="font-size:11px;color:var(--text-secondary);">' + escapeAdminHtml(lastWhen) + '</span>' : '')
+                    + (loggedByName ? '<span style="font-size:11px;color:var(--text-muted);">· by ' + escapeAdminHtml(loggedByName) + '</span>' : '')
+                    + '</div>';
+            }
 
             var formId = mode === 'emailable' ? 'prospectEmailForm' : 'prospectCallForm';
             var submitFn = mode === 'emailable' ? 'submitEmailLog()' : 'submitCallLog()';
@@ -4578,6 +4661,7 @@
                 + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
                 + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.85rem;letter-spacing:-0.02em;margin:0;line-height:1.15;">' + escapeAdminHtml(business) + '</h2>'
                 + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier || d.tier) + '</div>'
+                + lastOutcomePill
                 + '</div>'
 
                 + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'

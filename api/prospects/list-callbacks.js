@@ -31,20 +31,30 @@ module.exports = async function handler(req, res) {
     }
 
     const limit = Math.min(Math.max(parseInt((req.query && req.query.limit) || '400', 10), 1), 1000);
+    // ?due=today narrows to callbacks scheduled for today (and overdue,
+    // since those still need calling). The full Call Back sub-tab in the
+    // admin omits this param so it remains the future-callback directory.
+    const dueToday = String((req.query && req.query.due) || '').toLowerCase() === 'today';
+    const now = new Date();
+    const endOfDay = new Date(now); endOfDay.setUTCHours(23, 59, 59, 999);
 
     try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
             auth: { persistSession: false },
             db: { schema: 'prospecting' }
         });
-        const resp = await sb.from('leads')
+        let q = sb.from('leads')
             .select(SELECT_COLS)
             .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
-            .neq('do_not_call', true)
+            .neq('do_not_call', true);
+        if (dueToday) {
+            q = q.lte('next_action_due_at', endOfDay.toISOString());
+        }
+        const resp = await q
             .order('next_action_due_at', { ascending: true, nullsFirst: false })
             .limit(limit);
         if (resp.error) throw resp.error;
-        return res.status(200).json({ results: resp.data || [] });
+        return res.status(200).json({ results: resp.data || [], due_filter: dueToday ? 'today' : null });
     } catch (e) {
         console.error('[list-callbacks]', e);
         return res.status(500).json({ error: 'list_callbacks_failed', detail: String(e.message || e) });

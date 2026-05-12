@@ -68,16 +68,39 @@ module.exports = async function handler(req, res) {
     // is what My Call History queries against, so we don't have to wait
     // on David to add a column. Best-effort — the upstream forward is the
     // source of truth for lifecycle state.
+    const calledAtIso = new Date().toISOString();
     const historyResult = await appendCallHistory(id, {
-        called_at: new Date().toISOString(),
+        called_at: calledAtIso,
         outcome: body.outcome,
         notes: body.notes || '',
         logged_by: loggedBy,
         source: 'stilo_admin'
     });
 
+    // Safety net: write last_called_at + last_called_outcome directly so the
+    // row reflects the latest call even if the upstream fails or lags. The
+    // workflow cards (Called Today / Dead Pool) read these columns, and My
+    // Call History sorts on last_called_at — silently dropping the write
+    // here is what makes "I called X but it didn't show up" happen.
+    let lastCallSync = { skipped: true };
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+        try {
+            const sb2 = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+                auth: { persistSession: false }, db: { schema: 'prospecting' }
+            });
+            const { error: lcErr } = await sb2.from('leads').update({
+                last_called_at: calledAtIso,
+                last_called_outcome: body.outcome
+            }).eq('id', id);
+            lastCallSync = lcErr ? { error: lcErr.message } : { ok: true };
+        } catch (e) {
+            lastCallSync = { error: String(e.message || e) };
+        }
+    }
+
     return res.status(upstream.status).json({
         ...(upstream.json || {}),
-        _stilo_history: historyResult
+        _stilo_history: historyResult,
+        _stilo_last_call_sync: lastCallSync
     });
 };
