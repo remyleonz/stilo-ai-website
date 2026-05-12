@@ -683,7 +683,9 @@
         }
 
         function renderEverything() {
-            // 1. Compute counts
+            // 1. Compute counts. Dead is its own bucket AND its own stat
+            // card, so we only increment counts.dead via the bucket loop
+            // (was previously double-counted by an extra `if t === dead`).
             var counts = { all: 0, calledToday: 0, signed: 0, dead: 0,
                            callable: 0, callbacks: 0, booked: 0 };
             leadsCache.forEach(function (lead) {
@@ -691,7 +693,6 @@
                 var b = effectiveBucket(lead);
                 counts[b] = (counts[b] || 0) + 1;
                 if (t !== 'dead') counts.all++;
-                if (t === 'dead') counts.dead++;
                 if (calledInLast24h(lead)) counts.calledToday++;
             });
             // Signed = lifetime closed (count signed-keyed leads, even if
