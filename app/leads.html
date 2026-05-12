@@ -99,15 +99,22 @@
             border-radius: 14px; padding: 28px 32px; max-width: 420px; text-align: center;
         }
 
-        table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 13px; }
+        /* Same pattern as admin/index.html: width:auto + intrinsic columns so
+           the table packs left of the container, scrolls inside the panel if
+           content is wider than viewport. Cells default to normal wrap so
+           addresses and business names don't push the table off-screen. */
+        table { width: auto; border-collapse: collapse; font-size: 13px; table-layout: auto; }
         thead th {
-            text-align: left; padding: 12px 16px; color: var(--text-secondary);
+            text-align: left; padding: 11px 14px; color: var(--text-secondary);
             font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
             border-bottom: 1px solid var(--border-subtle); background: rgba(255,255,255,0.02);
+            white-space: nowrap;
         }
-        tbody tr { border-top: 1px solid var(--border-subtle); cursor: pointer; transition: background 100ms; }
+        tbody tr { border-top: 1px solid var(--border-subtle); transition: background 100ms; }
         tbody tr:hover { background: rgba(37,99,235,0.06); }
-        tbody td { padding: 14px 16px; white-space: nowrap; }
+        tbody td { padding: 11px 14px; vertical-align: top; }
+        tbody td a { color: var(--blue); text-decoration: none; }
+        tbody td a:hover { text-decoration: underline; }
         .tier-pill {
             display: inline-block; padding: 2px 8px; border-radius: 999px;
             font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
@@ -381,20 +388,92 @@
             }).catch(function () {});
         }
 
+        // In-memory cache of the fetched leads so tab switches are instant.
+        var leadsCache = null;
+
         async function refreshLeadsView() {
-            // Until David ships tenant-scoped /api/client/prospects/*
-            // endpoints, this is purely the empty state. The fetch path below
-            // is the integration seam: when the endpoints land, swap the URL
-            // and remove the early return.
-            var hasData = false;
-            if (hasData) {
-                document.getElementById('emptyState').style.display = 'none';
-                document.getElementById('leadsTable').style.display = 'block';
-                // TODO: render leads table from /api/client/prospects/{tab}
-            } else {
-                document.getElementById('emptyState').style.display = 'block';
-                document.getElementById('leadsTable').style.display = 'none';
+            if (!clientState.clientId) return; // not loaded yet
+            if (!leadsCache) {
+                try {
+                    var token = clientState.session && clientState.session.access_token;
+                    var url = '/api/client-leads?client_id=' + encodeURIComponent(clientState.clientId);
+                    var resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+                    var data = await resp.json();
+                    if (!resp.ok) {
+                        console.error('[client-leads]', data);
+                        showEmpty('Could not load leads: ' + (data.error || resp.status) + (data.detail ? ' — ' + data.detail : ''));
+                        return;
+                    }
+                    leadsCache = data.results || [];
+                    var srcEl = document.getElementById('lastUpdated');
+                    if (srcEl && data.source) {
+                        var dt = data.source.updated ? new Date(data.source.updated).toLocaleString() : '';
+                        srcEl.textContent = data.count + ' leads · synced ' + dt;
+                    }
+                } catch (e) {
+                    showEmpty('Network error loading leads: ' + (e.message || e));
+                    return;
+                }
             }
+            if (!leadsCache.length) {
+                showEmpty('Leads are queued. The first batch will appear here within 48 hours.');
+                return;
+            }
+            // Stat cards: total here. We don't have tier scoring on the
+            // initial GCS dump yet — show counts where we can.
+            var hot = document.getElementById('statHot'); if (hot) hot.textContent = leadsCache.length;
+            var warm = document.getElementById('statWarm'); if (warm) warm.textContent = '0';
+            var today = document.getElementById('statCallsToday'); if (today) today.textContent = '0';
+            var booked = document.getElementById('statBooked'); if (booked) booked.textContent = '0';
+
+            renderLeadsTable(leadsCache);
+        }
+
+        function showEmpty(msg) {
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('leadsTable').style.display = 'none';
+            var body = document.getElementById('emptyStateBody');
+            if (body && msg) body.textContent = msg;
+        }
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        function renderLeadsTable(rows) {
+            document.getElementById('emptyState').style.display = 'none';
+            var host = document.getElementById('leadsTable');
+            host.style.display = 'block';
+            var ths = '<tr>'
+                + '<th>Business</th>'
+                + '<th>Phone</th>'
+                + '<th>Address</th>'
+                + '<th>Rating</th>'
+                + '<th>Website</th>'
+                + '</tr>';
+            var body = rows.map(function (r) {
+                var ratingTxt = (r.rating != null && !isNaN(r.rating))
+                    ? r.rating.toFixed(1) + (r.review_count != null ? ' · ' + r.review_count + ' reviews' : '')
+                    : '—';
+                var websiteCell = r.website
+                    ? '<a href="' + esc(r.website) + '" target="_blank" rel="noopener" style="color:var(--blue);">' + esc(r.website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a>'
+                    : '<span style="color:var(--text-muted);">—</span>';
+                return '<tr>'
+                    + '<td><strong>' + esc(r.business_name) + '</strong>'
+                      + (r.niche ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + esc(r.niche) + '</div>' : '')
+                      + '</td>'
+                    + '<td style="font-family:var(--font-mono);">' + esc(r.phone || '—') + '</td>'
+                    + '<td style="color:var(--text-secondary);font-size:12px;">' + esc(r.address || '—') + '</td>'
+                    + '<td style="color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + esc(ratingTxt) + '</td>'
+                    + '<td style="font-size:12px;">' + websiteCell + '</td>'
+                    + '</tr>';
+            }).join('');
+            host.innerHTML = '<table style="border-collapse:collapse;font-size:13px;table-layout:auto;">'
+                + '<thead>' + ths + '</thead>'
+                + '<tbody>' + body + '</tbody>'
+                + '</table>';
         }
 
         init();
