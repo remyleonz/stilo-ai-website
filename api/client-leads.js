@@ -75,6 +75,33 @@ function parseCsv(text) {
     return rows;
 }
 
+// Derive an initial tier from the Google Maps signals David ships (rating +
+// review_count). David didn't provide a tier schema, so this is our default.
+// Marcus can override per-lead from his dashboard (stored in localStorage
+// today; moves to Supabase Storage in the next iteration). Rules:
+//   HOT   = highly rated AND well-reviewed  → strong-signal business
+//   WARM  = highly rated  OR  well-reviewed → one-strong-signal
+//   COOL  = anything else with signal
+//   UNRATED = no rating data (rare; surfaces in COOL by default)
+function autoTier(rating, reviewCount) {
+    const r = typeof rating === 'number' && !isNaN(rating) ? rating : null;
+    const n = typeof reviewCount === 'number' && !isNaN(reviewCount) ? reviewCount : null;
+    if (r != null && r >= 4.5 && n != null && n >= 50) return 'hot';
+    if ((r != null && r >= 4.3) || (n != null && n >= 100)) return 'warm';
+    if (r != null || n != null) return 'cool';
+    return 'cool';
+}
+
+// Build a stable identifier for a lead so localStorage / future Supabase
+// state can be keyed without depending on row index (which shifts when
+// David re-runs his scrape). Lowercase + alphanumeric of business_name +
+// last 7 digits of phone gives a clash-resistant slug.
+function leadKey(business, phone) {
+    const slug = String(business || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const phoneDigits = String(phone || '').replace(/\D/g, '').slice(-7);
+    return slug + (phoneDigits ? ':' + phoneDigits : '');
+}
+
 function rowsToLeads(rows) {
     if (!rows.length) return [];
     const headers = rows[0].map(h => String(h || '').trim().toLowerCase());
@@ -85,19 +112,25 @@ function rowsToLeads(rows) {
         for (let c = 0; c < headers.length; c++) {
             obj[headers[c]] = (r[c] != null ? String(r[c]) : '').trim();
         }
+        const rating = obj.rating ? Number(obj.rating) : null;
+        const reviews = obj.reviews ? Number(obj.reviews) : null;
+        const business = obj.name || obj.business_name || '';
+        const phone = obj.phone || '';
         // Normalize the field names to the same vocabulary the admin leads
         // dashboard uses, so /app/leads.html can reuse the same rendering.
         out.push({
             id: 'gcs:' + (i - 1),
-            business_name: obj.name || obj.business_name || '',
+            lead_key: leadKey(business, phone),
+            business_name: business,
             niche: obj.category || obj.niche || '',
-            phone: obj.phone || '',
-            owner_phone: obj.phone || '',
+            phone: phone,
+            owner_phone: phone,
             website: obj.website || '',
             address: obj.address || '',
-            rating: obj.rating ? Number(obj.rating) : null,
-            review_count: obj.reviews ? Number(obj.reviews) : null,
-            source_query: obj.source_query || ''
+            rating: rating,
+            review_count: reviews,
+            source_query: obj.source_query || '',
+            tier: autoTier(rating, reviews)
         });
     }
     return out;

@@ -61,11 +61,85 @@
         @media (max-width: 800px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
         .stat-card {
             background: var(--bg-card); border: 1px solid var(--border-subtle);
-            border-radius: 12px; padding: 18px 20px;
+            border-radius: 12px; padding: 18px 20px; cursor: pointer;
+            transition: background 120ms, border-color 120ms, transform 120ms;
+            position: relative; border-left-width: 3px;
         }
+        .stat-card:hover { background: var(--bg-elevated); }
+        .stat-card.active { border-color: var(--blue); background: rgba(37,99,235,0.06); }
+        .stat-card[data-tier="hot"]  { border-left-color: #ef4444; }
+        .stat-card[data-tier="warm"] { border-left-color: #eab308; }
+        .stat-card[data-tier="cool"] { border-left-color: #3b82f6; }
+        .stat-card[data-tier="dead"] { border-left-color: rgba(255,255,255,0.15); }
         .stat-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
         .stat-value { font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--text-primary); }
         .stat-hint { margin-top: 4px; font-size: 11px; color: var(--text-muted); }
+
+        /* Lead drawer */
+        .lead-drawer-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99;
+            opacity: 0; pointer-events: none; transition: opacity 200ms;
+        }
+        .lead-drawer-overlay.open { opacity: 1; pointer-events: auto; }
+        .lead-drawer {
+            position: fixed; top: 0; right: 0; height: 100vh; width: 560px; max-width: 100vw;
+            background: var(--bg-card); border-left: 1px solid var(--border-subtle);
+            box-shadow: -16px 0 40px rgba(0,0,0,0.4);
+            transform: translateX(100%); transition: transform 220ms cubic-bezier(.4,0,.2,1);
+            overflow-y: auto; z-index: 100; padding: 28px 32px 80px;
+        }
+        .lead-drawer.open { transform: translateX(0); }
+        .drawer-close {
+            position: absolute; top: 14px; right: 16px; width: 32px; height: 32px;
+            border-radius: 8px; background: transparent; border: 1px solid var(--border-medium);
+            color: var(--text-secondary); font-size: 20px; cursor: pointer; line-height: 1;
+        }
+        .drawer-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+        .drawer h2 { font-size: 22px; letter-spacing: -0.02em; margin-right: 40px; }
+        .drawer-section { margin-top: 20px; }
+        .drawer-section h3 {
+            font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--text-secondary); margin-bottom: 8px; font-family: var(--font-body);
+        }
+        .drawer-tier-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        .tier-btn {
+            padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            background: transparent; cursor: pointer; transition: background 120ms;
+            border: 1px solid var(--border-medium); color: var(--text-secondary);
+        }
+        .tier-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+        .tier-btn.active[data-set="hot"]  { background: rgba(239,68,68,0.18); color: #ef4444; border-color: rgba(239,68,68,0.45); }
+        .tier-btn.active[data-set="warm"] { background: rgba(234,179,8,0.18); color: #eab308; border-color: rgba(234,179,8,0.45); }
+        .tier-btn.active[data-set="cool"] { background: rgba(59,130,246,0.18); color: var(--blue); border-color: rgba(59,130,246,0.45); }
+        .tier-btn.active[data-set="dead"] { background: rgba(255,255,255,0.06); color: var(--text-muted); border-color: rgba(255,255,255,0.18); }
+        .drawer-form input, .drawer-form select, .drawer-form textarea {
+            width: 100%; padding: 9px 12px; background: var(--bg-input);
+            border: 1px solid var(--border-medium); border-radius: 8px;
+            color: var(--text-primary); font-family: inherit; font-size: 13px;
+        }
+        .drawer-form textarea { resize: vertical; min-height: 72px; }
+        .drawer-form label {
+            display: block; font-size: 11px; letter-spacing: 0.04em;
+            color: var(--text-secondary); margin: 10px 0 4px;
+        }
+        .drawer-btn-primary {
+            width: 100%; padding: 10px 14px; background: var(--blue-strong);
+            color: white; border: 0; border-radius: 8px; font-size: 13px;
+            font-weight: 600; cursor: pointer; margin-top: 12px;
+        }
+        .drawer-btn-primary:hover { filter: brightness(1.1); }
+        .drawer-call-link {
+            display: inline-block; padding: 10px 16px; background: var(--blue-strong);
+            color: white; border-radius: 8px; font-size: 13px; font-weight: 600;
+            text-decoration: none;
+        }
+        .drawer-link-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+        .history-row {
+            padding: 10px 0; border-top: 1px solid var(--border-subtle);
+            font-size: 12px;
+        }
+        .history-row:first-child { border-top: 0; }
+        .history-meta { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
 
         .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 16px; flex-wrap: wrap; }
         .tab {
@@ -157,30 +231,39 @@
             </div>
 
             <div class="stat-row">
-                <div class="stat-card">
+                <div class="stat-card active" data-filter="all" data-tier="all" onclick="setTierFilter('all')">
+                    <div class="stat-label">All leads</div>
+                    <div class="stat-value" id="statAll">—</div>
+                    <div class="stat-hint">Click to clear filter</div>
+                </div>
+                <div class="stat-card" data-filter="hot" data-tier="hot" onclick="setTierFilter('hot')">
                     <div class="stat-label">Hot</div>
                     <div class="stat-value" id="statHot">—</div>
+                    <div class="stat-hint">Strong rating + reviews</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" data-filter="warm" data-tier="warm" onclick="setTierFilter('warm')">
                     <div class="stat-label">Warm</div>
                     <div class="stat-value" id="statWarm">—</div>
+                    <div class="stat-hint">One strong signal</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Calls Today</div>
-                    <div class="stat-value" id="statCallsToday">—</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Booked Meetings</div>
-                    <div class="stat-value" id="statBooked">—</div>
+                <div class="stat-card" data-filter="dead" data-tier="dead" onclick="setTierFilter('dead')">
+                    <div class="stat-label">Dead Pool</div>
+                    <div class="stat-value" id="statDead">—</div>
+                    <div class="stat-hint">Marked as not worth calling</div>
                 </div>
             </div>
 
             <div class="tabs">
-                <button class="tab active" data-tab="callable">Cold Call</button>
-                <button class="tab" data-tab="emailable">Cold Email</button>
-                <button class="tab" data-tab="callbacks">Call Back</button>
-                <button class="tab" data-tab="booked">Booked</button>
-                <button class="tab" data-tab="dead">Dead Pool</button>
+                <button class="tab active" data-tab="callable" onclick="setBucketFilter('callable')">All callable <span id="bucketBadgeCallable" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
+                <button class="tab" data-tab="callbacks" onclick="setBucketFilter('callbacks')">Call Back <span id="bucketBadgeCallbacks" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
+                <button class="tab" data-tab="booked" onclick="setBucketFilter('booked')">Booked <span id="bucketBadgeBooked" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
+                <button class="tab" data-tab="dead" onclick="setBucketFilter('dead')">Dead Pool <span id="bucketBadgeDead" style="margin-left:6px;opacity:0.6;font-weight:500;"></span></button>
+            </div>
+
+            <div style="margin: 0 0 14px;">
+                <input id="searchInput" type="search" placeholder="Search business, phone, address, or category…"
+                  oninput="onSearchInput()"
+                  style="width:100%;max-width:520px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;" />
             </div>
 
             <div id="leadsPanel" class="panel">
@@ -202,6 +285,13 @@
             </div>
         </main>
     </div>
+
+    <!-- Lead detail drawer ------------------------------------------------ -->
+    <div id="drawerOverlay" class="lead-drawer-overlay" onclick="closeLeadDrawer()"></div>
+    <aside id="leadDrawer" class="lead-drawer drawer">
+        <button class="drawer-close" onclick="closeLeadDrawer()" aria-label="Close">&times;</button>
+        <div id="drawerBody"></div>
+    </aside>
 
     <script>
         // --- Supabase init -----------------------------------------------
@@ -388,11 +478,55 @@
             }).catch(function () {});
         }
 
-        // In-memory cache of the fetched leads so tab switches are instant.
+        // -----------------------------------------------------------------
+        // CRM state — per-client interactions on top of the GCS lead list.
+        // Persisted in localStorage today (per browser); easy swap to
+        // Supabase Storage / a server table later (interface stays the same).
+        // -----------------------------------------------------------------
         var leadsCache = null;
+        var crmState = {
+            tier_overrides: {}, // lead_key -> 'hot'|'warm'|'cool'|'dead'
+            call_logs: {},      // lead_key -> [{at, outcome, notes}]
+            callbacks: {},      // lead_key -> { at: ISO }
+            booked: {}          // lead_key -> { at: ISO }
+        };
+        var uiFilter = { tier: 'all', bucket: 'callable', search: '' };
+
+        function crmStorageKey() {
+            return 'stilo:lead-crm:' + clientState.clientId;
+        }
+        function loadCrmState() {
+            try {
+                var raw = localStorage.getItem(crmStorageKey());
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    crmState.tier_overrides = parsed.tier_overrides || {};
+                    crmState.call_logs = parsed.call_logs || {};
+                    crmState.callbacks = parsed.callbacks || {};
+                    crmState.booked = parsed.booked || {};
+                }
+            } catch (e) { console.warn('[crm load]', e); }
+        }
+        function saveCrmState() {
+            try { localStorage.setItem(crmStorageKey(), JSON.stringify(crmState)); }
+            catch (e) { console.warn('[crm save]', e); }
+        }
+
+        // Effective tier for a lead = manual override if set, else auto-tier.
+        function effectiveTier(lead) {
+            return crmState.tier_overrides[lead.lead_key] || lead.tier || 'cool';
+        }
+        // Which lifecycle bucket the lead lives in (Cold Call / Callbacks /
+        // Booked / Dead Pool). Drives the tabs.
+        function effectiveBucket(lead) {
+            if (effectiveTier(lead) === 'dead') return 'dead';
+            if (crmState.booked[lead.lead_key]) return 'booked';
+            if (crmState.callbacks[lead.lead_key]) return 'callbacks';
+            return 'callable';
+        }
 
         async function refreshLeadsView() {
-            if (!clientState.clientId) return; // not loaded yet
+            if (!clientState.clientId) return;
             if (!leadsCache) {
                 try {
                     var token = clientState.session && clientState.session.access_token;
@@ -419,14 +553,68 @@
                 showEmpty('Leads are queued. The first batch will appear here within 48 hours.');
                 return;
             }
-            // Stat cards: total here. We don't have tier scoring on the
-            // initial GCS dump yet — show counts where we can.
-            var hot = document.getElementById('statHot'); if (hot) hot.textContent = leadsCache.length;
-            var warm = document.getElementById('statWarm'); if (warm) warm.textContent = '0';
-            var today = document.getElementById('statCallsToday'); if (today) today.textContent = '0';
-            var booked = document.getElementById('statBooked'); if (booked) booked.textContent = '0';
+            loadCrmState();
+            renderEverything();
+        }
 
-            renderLeadsTable(leadsCache);
+        function renderEverything() {
+            // 1. Compute counts
+            var counts = { all: 0, hot: 0, warm: 0, cool: 0, dead: 0,
+                           callable: 0, callbacks: 0, booked: 0 };
+            leadsCache.forEach(function (lead) {
+                var t = effectiveTier(lead);
+                var b = effectiveBucket(lead);
+                counts[t]++;
+                counts[b]++;
+                if (t !== 'dead') counts.all++;
+            });
+            setText('statAll', counts.all);
+            setText('statHot', counts.hot);
+            setText('statWarm', counts.warm);
+            setText('statDead', counts.dead);
+            setText('bucketBadgeCallable', '· ' + counts.callable);
+            setText('bucketBadgeCallbacks', '· ' + counts.callbacks);
+            setText('bucketBadgeBooked', '· ' + counts.booked);
+            setText('bucketBadgeDead', '· ' + counts.dead);
+
+            // 2. Highlight active stat card + tab
+            document.querySelectorAll('.stat-card').forEach(function (el) {
+                el.classList.toggle('active', el.getAttribute('data-filter') === uiFilter.tier);
+            });
+            document.querySelectorAll('.tab').forEach(function (el) {
+                el.classList.toggle('active', el.getAttribute('data-tab') === uiFilter.bucket);
+            });
+
+            // 3. Filter rows
+            var q = (uiFilter.search || '').toLowerCase();
+            var filtered = leadsCache.filter(function (lead) {
+                var t = effectiveTier(lead);
+                var b = effectiveBucket(lead);
+                if (uiFilter.bucket === 'dead') {
+                    if (t !== 'dead') return false;
+                } else {
+                    if (t === 'dead') return false;
+                    if (uiFilter.bucket !== 'callable' && uiFilter.bucket !== b) return false;
+                }
+                if (uiFilter.tier !== 'all' && uiFilter.tier !== t) return false;
+                if (q) {
+                    var hay = (lead.business_name + ' ' + lead.phone + ' ' + lead.address + ' ' + (lead.niche || '')).toLowerCase();
+                    if (hay.indexOf(q) === -1) return false;
+                }
+                return true;
+            });
+
+            // 4. Render table or empty
+            if (!filtered.length) {
+                showEmpty('No leads in this view. Adjust the filter to see more.');
+                return;
+            }
+            renderLeadsTable(filtered);
+        }
+
+        function setText(id, val) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = val;
         }
 
         function showEmpty(msg) {
@@ -442,38 +630,227 @@
             });
         }
 
+        function tierPillHtml(t) {
+            var label = String(t || 'cool').toUpperCase();
+            return '<span class="tier-pill tier-' + esc(t || 'cool') + '">' + esc(label) + '</span>';
+        }
+
+        // ---- Filter handlers (wired from inline onclick / oninput) ----
+        function setTierFilter(t) {
+            uiFilter.tier = t || 'all';
+            renderEverything();
+        }
+        function setBucketFilter(b) {
+            uiFilter.bucket = b || 'callable';
+            renderEverything();
+        }
+        var _searchDebounce = null;
+        function onSearchInput() {
+            clearTimeout(_searchDebounce);
+            var v = (document.getElementById('searchInput') || {}).value || '';
+            _searchDebounce = setTimeout(function () {
+                uiFilter.search = v;
+                renderEverything();
+            }, 120);
+        }
+
         function renderLeadsTable(rows) {
             document.getElementById('emptyState').style.display = 'none';
             var host = document.getElementById('leadsTable');
             host.style.display = 'block';
             var ths = '<tr>'
+                + '<th style="width:1px;">Tier</th>'
                 + '<th>Business</th>'
-                + '<th>Phone</th>'
+                + '<th style="width:1px;">Phone</th>'
+                + '<th style="width:1px;">Rating</th>'
                 + '<th>Address</th>'
-                + '<th>Rating</th>'
-                + '<th>Website</th>'
+                + '<th style="width:1px;">Last call</th>'
                 + '</tr>';
             var body = rows.map(function (r) {
+                var t = effectiveTier(r);
                 var ratingTxt = (r.rating != null && !isNaN(r.rating))
-                    ? r.rating.toFixed(1) + (r.review_count != null ? ' · ' + r.review_count + ' reviews' : '')
+                    ? r.rating.toFixed(1) + (r.review_count != null ? ' · ' + r.review_count : '')
                     : '—';
-                var websiteCell = r.website
-                    ? '<a href="' + esc(r.website) + '" target="_blank" rel="noopener" style="color:var(--blue);">' + esc(r.website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a>'
+                var lastLog = (crmState.call_logs[r.lead_key] || [])[0];
+                var lastTxt = lastLog
+                    ? (new Date(lastLog.at).toLocaleDateString() + ' · ' + esc(lastLog.outcome || ''))
                     : '<span style="color:var(--text-muted);">—</span>';
-                return '<tr>'
+                return '<tr onclick="openLeadDrawer(\'' + esc(r.lead_key) + '\')" style="cursor:pointer;">'
+                    + '<td style="white-space:nowrap;">' + tierPillHtml(t) + '</td>'
                     + '<td><strong>' + esc(r.business_name) + '</strong>'
                       + (r.niche ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + esc(r.niche) + '</div>' : '')
                       + '</td>'
-                    + '<td style="font-family:var(--font-mono);">' + esc(r.phone || '—') + '</td>'
-                    + '<td style="color:var(--text-secondary);font-size:12px;">' + esc(r.address || '—') + '</td>'
+                    + '<td style="font-family:var(--font-mono);white-space:nowrap;">' + esc(r.phone || '—') + '</td>'
                     + '<td style="color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + esc(ratingTxt) + '</td>'
-                    + '<td style="font-size:12px;">' + websiteCell + '</td>'
+                    + '<td style="color:var(--text-secondary);font-size:12px;max-width:340px;">' + esc(r.address || '—') + '</td>'
+                    + '<td style="color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastTxt + '</td>'
                     + '</tr>';
             }).join('');
-            host.innerHTML = '<table style="border-collapse:collapse;font-size:13px;table-layout:auto;">'
+            host.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:auto;">'
                 + '<thead>' + ths + '</thead>'
                 + '<tbody>' + body + '</tbody>'
                 + '</table>';
+        }
+
+        // -----------------------------------------------------------------
+        // LEAD DRAWER
+        // -----------------------------------------------------------------
+        var currentDrawerKey = null;
+
+        function openLeadDrawer(leadKey) {
+            var lead = (leadsCache || []).find(function (l) { return l.lead_key === leadKey; });
+            if (!lead) return;
+            currentDrawerKey = leadKey;
+            renderDrawerBody(lead);
+            document.getElementById('leadDrawer').classList.add('open');
+            document.getElementById('drawerOverlay').classList.add('open');
+        }
+        function closeLeadDrawer() {
+            document.getElementById('leadDrawer').classList.remove('open');
+            document.getElementById('drawerOverlay').classList.remove('open');
+            currentDrawerKey = null;
+        }
+
+        function renderDrawerBody(lead) {
+            var t = effectiveTier(lead);
+            var history = (crmState.call_logs[lead.lead_key] || []).slice().sort(function (a, b) {
+                return (b.at || '').localeCompare(a.at || '');
+            });
+            var historyHtml = history.length
+                ? history.map(function (h) {
+                    return '<div class="history-row">'
+                        + '<strong>' + esc(h.outcome || '—') + '</strong>'
+                        + (h.notes ? ' — ' + esc(h.notes) : '')
+                        + '<div class="history-meta">' + esc(new Date(h.at).toLocaleString()) + '</div>'
+                        + '</div>';
+                }).join('')
+                : '<div style="color:var(--text-muted);font-size:12px;">No calls logged yet.</div>';
+
+            var ratingTxt = (lead.rating != null && !isNaN(lead.rating))
+                ? lead.rating.toFixed(1) + (lead.review_count != null ? ' · ' + lead.review_count + ' reviews' : '')
+                : '';
+            var phone = lead.phone || '';
+            var addr = lead.address || '';
+            var website = lead.website || '';
+
+            var tierBtns = ['hot', 'warm', 'cool', 'dead'].map(function (tt) {
+                var active = t === tt ? ' active' : '';
+                return '<button type="button" class="tier-btn' + active + '" data-set="' + tt + '" onclick="setLeadTier(\'' + esc(lead.lead_key) + '\',\'' + tt + '\')">' + tt.toUpperCase() + '</button>';
+            }).join('');
+
+            var bookedAt = crmState.booked[lead.lead_key];
+            var callbackAt = crmState.callbacks[lead.lead_key];
+
+            document.getElementById('drawerBody').innerHTML =
+                '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);">' + esc(lead.niche || 'Lead') + '</div>'
+                + '<h2>' + esc(lead.business_name) + '</h2>'
+                + '<div style="margin-top:6px;font-size:13px;color:var(--text-secondary);">' + esc(ratingTxt) + '</div>'
+
+                + '<div class="drawer-section">'
+                  + '<h3>Contact</h3>'
+                  + (phone
+                      ? '<div style="font-family:var(--font-mono);font-size:18px;font-weight:600;margin-bottom:8px;">' + esc(phone) + '</div>'
+                        + '<a class="drawer-call-link" href="tel:' + esc(phone.replace(/[^+0-9]/g,'')) + '">Call now</a>'
+                      : '<div style="color:var(--text-muted);font-size:13px;">No phone on file.</div>')
+                + '</div>'
+
+                + '<div class="drawer-section">'
+                  + '<h3>Address</h3>'
+                  + (addr
+                      ? '<div style="font-size:13px;">' + esc(addr) + '</div>'
+                        + '<div class="drawer-link-row"><a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr) + '" style="font-size:12px;color:var(--blue);">Open in Google Maps</a></div>'
+                      : '<div style="color:var(--text-muted);font-size:13px;">No address on file.</div>')
+                + '</div>'
+
+                + (website
+                    ? '<div class="drawer-section">'
+                      + '<h3>Website</h3>'
+                      + '<a target="_blank" rel="noopener" href="' + esc(website) + '" style="font-size:13px;color:var(--blue);word-break:break-all;">' + esc(website) + '</a>'
+                    + '</div>'
+                    : '')
+
+                + '<div class="drawer-section">'
+                  + '<h3>Tier</h3>'
+                  + '<div class="drawer-tier-row">' + tierBtns + '</div>'
+                  + '<div style="margin-top:6px;font-size:11px;color:var(--text-muted);">Auto-tier from rating + reviews: ' + esc(String(lead.tier || 'cool').toUpperCase()) + '. Override above.</div>'
+                + '</div>'
+
+                + '<div class="drawer-section">'
+                  + '<h3>Log a call</h3>'
+                  + '<div class="drawer-form">'
+                    + '<label>Outcome</label>'
+                    + '<select id="logOutcome">'
+                      + '<option value="no_answer">No answer</option>'
+                      + '<option value="voicemail">Left voicemail</option>'
+                      + '<option value="interested">Interested · follow up</option>'
+                      + '<option value="callback_requested">Callback requested</option>'
+                      + '<option value="booked_meeting">Booked a meeting</option>'
+                      + '<option value="not_interested">Not interested</option>'
+                      + '<option value="dnc">Do not call</option>'
+                      + '<option value="wrong_number">Wrong number</option>'
+                    + '</select>'
+                    + '<label>Notes</label>'
+                    + '<textarea id="logNotes" placeholder="Who answered, next move, anything you want to remember…"></textarea>'
+                    + '<label>Callback (if applicable)</label>'
+                    + '<input id="logCallback" type="datetime-local" />'
+                    + '<button type="button" class="drawer-btn-primary" onclick="submitLogCall(\'' + esc(lead.lead_key) + '\')">Save call log</button>'
+                  + '</div>'
+                + '</div>'
+
+                + (callbackAt || bookedAt
+                    ? '<div class="drawer-section">'
+                      + '<h3>Scheduled</h3>'
+                      + (callbackAt ? '<div style="font-size:12px;">Callback: ' + esc(new Date(callbackAt.at).toLocaleString()) + '</div>' : '')
+                      + (bookedAt ? '<div style="font-size:12px;">Meeting: ' + esc(new Date(bookedAt.at).toLocaleString()) + '</div>' : '')
+                    + '</div>'
+                    : '')
+
+                + '<div class="drawer-section">'
+                  + '<h3>Call history</h3>'
+                  + historyHtml
+                + '</div>';
+        }
+
+        function setLeadTier(leadKey, tier) {
+            crmState.tier_overrides[leadKey] = tier;
+            // Moving to Dead Pool also clears any pending callback/booking
+            // so the lead doesn't haunt those tabs.
+            if (tier === 'dead') {
+                delete crmState.callbacks[leadKey];
+                delete crmState.booked[leadKey];
+            }
+            saveCrmState();
+            var lead = (leadsCache || []).find(function (l) { return l.lead_key === leadKey; });
+            if (lead) renderDrawerBody(lead);
+            renderEverything();
+        }
+
+        function submitLogCall(leadKey) {
+            var outcome = (document.getElementById('logOutcome') || {}).value || 'no_answer';
+            var notes = (document.getElementById('logNotes') || {}).value || '';
+            var callbackVal = (document.getElementById('logCallback') || {}).value || '';
+
+            var entry = { at: new Date().toISOString(), outcome: outcome, notes: notes };
+            crmState.call_logs[leadKey] = crmState.call_logs[leadKey] || [];
+            crmState.call_logs[leadKey].unshift(entry);
+
+            // Outcome-driven side effects: book a meeting, schedule callback,
+            // or move lead to Dead Pool. Same shape as STILO's own admin CRM
+            // so behavior matches Marcus's expectations if he ever sees it.
+            if (outcome === 'booked_meeting') {
+                crmState.booked[leadKey] = { at: callbackVal ? new Date(callbackVal).toISOString() : new Date().toISOString() };
+            } else if (outcome === 'callback_requested' && callbackVal) {
+                crmState.callbacks[leadKey] = { at: new Date(callbackVal).toISOString() };
+            } else if (outcome === 'not_interested' || outcome === 'dnc' || outcome === 'wrong_number') {
+                crmState.tier_overrides[leadKey] = 'dead';
+                delete crmState.callbacks[leadKey];
+                delete crmState.booked[leadKey];
+            }
+            saveCrmState();
+
+            var lead = (leadsCache || []).find(function (l) { return l.lead_key === leadKey; });
+            if (lead) renderDrawerBody(lead);
+            renderEverything();
         }
 
         init();
