@@ -23,13 +23,7 @@
  * or the client themselves (session.user.id === client_id).
  */
 const { createClient } = require('@supabase/supabase-js');
-
-const ADMIN_EMAILS = [
-    'remyleon11@gmail.com',
-    'stiloaiconsulting@gmail.com',
-    'remyleon@stiloaipartners.com',
-    'davidcoira@stiloaipartners.com'
-];
+const { ADMIN_EMAILS } = require('../_admin-config');
 
 async function readJsonBody(req) {
     if (req.body && typeof req.body === 'object') return req.body;

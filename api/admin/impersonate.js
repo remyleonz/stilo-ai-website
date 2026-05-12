@@ -21,8 +21,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
-
-const ADMIN_EMAILS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
+const { ADMIN_EMAILS } = require('../_admin-config');
 
 function admin() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);

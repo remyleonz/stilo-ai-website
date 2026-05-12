@@ -1464,7 +1464,10 @@
                     business_type: 'commercial cleaning',
                     status: 'active',
                     agent_type: 'lead_generator',
-                    agent_status: 'pending'
+                    // Land friends-and-family clients in 'active' directly —
+                    // they're not going through the Stripe → onboarding wizard
+                    // path, so a default of 'pending' just creates manual work.
+                    agent_status: 'active'
                 }
             ];
             var failures = [];

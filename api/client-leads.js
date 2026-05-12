@@ -18,13 +18,7 @@
  */
 const { createClient } = require('@supabase/supabase-js');
 const cc = require('./prospects/cold-call-script');
-
-const ADMIN_EMAILS = [
-    'remyleon11@gmail.com',
-    'stiloaiconsulting@gmail.com',
-    'remyleon@stiloaipartners.com',
-    'davidcoira@stiloaipartners.com'
-];
+const { ADMIN_EMAILS } = require('./_admin-config');
 
 // Hardcoded fallback for clients onboarded before the user_metadata config
 // existed. New clients: set the prefix from the admin UI (writes
@@ -98,7 +92,11 @@ function autoTier(rating, reviewCount) {
 // last 7 digits of phone gives a clash-resistant slug.
 function leadKey(business, phone) {
     const slug = String(business || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    const phoneDigits = String(phone || '').replace(/\D/g, '').slice(-7);
+    // Use the FULL normalized phone (not just last 7 digits) so two
+    // franchise locations of the same business name don't collide. Last-7
+    // was a launch shortcut; with two Starbucks at (904) 555-1234 and
+    // (305) 555-1234 their state would have merged silently.
+    const phoneDigits = String(phone || '').replace(/\D/g, '');
     return slug + (phoneDigits ? ':' + phoneDigits : '');
 }
 

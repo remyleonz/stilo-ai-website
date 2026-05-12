@@ -67,6 +67,7 @@ module.exports = async function handler(req, res) {
         if (!cur || !cur.user) return res.status(404).json({ error: 'auth_user_not_found' });
 
         const merged = Object.assign({}, cur.user.user_metadata || {});
+        const oldPrefix = merged.lead_source_gcs_prefix || null;
         if (prefix === null || prefix === '') {
             delete merged.lead_source_gcs_prefix;
         } else {
@@ -74,6 +75,17 @@ module.exports = async function handler(req, res) {
         }
         merged.lead_source_updated_by = gate.email;
         merged.lead_source_updated_at = new Date().toISOString();
+        // Append to an in-metadata audit log so we can see who set what
+        // when without a separate audit table. Capped at the last 20
+        // entries so this doesn't grow unbounded.
+        const history = Array.isArray(merged.lead_source_history) ? merged.lead_source_history.slice(-19) : [];
+        history.push({
+            at: merged.lead_source_updated_at,
+            by: gate.email,
+            from: oldPrefix,
+            to: prefix || null
+        });
+        merged.lead_source_history = history;
 
         const { data: upd, error: upErr } = await sb.auth.admin.updateUserById(clientId, {
             user_metadata: merged
