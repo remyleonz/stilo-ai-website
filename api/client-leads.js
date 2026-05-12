@@ -26,13 +26,24 @@ const ADMIN_EMAILS = [
     'davidcoira@stiloaipartners.com'
 ];
 
-// Per-client mapping of CSV files in the GCS leads/ prefix. The value is a
-// prefix; we fetch the most recently-updated object whose name starts with
-// it so newer batches automatically replace older ones without a code change.
-const CLIENT_LEAD_SOURCES = {
-    // Marcus Lindsey Cleaning — Jacksonville office cleaning
+// Hardcoded fallback for clients onboarded before the user_metadata config
+// existed. New clients: set the prefix from the admin UI (writes
+// auth.users.user_metadata.lead_source_gcs_prefix via
+// /api/admin/clients/set-lead-source), no code push required.
+const CLIENT_LEAD_SOURCES_FALLBACK = {
     'bb2e4438-1306-43d7-a56a-4a1c3632816f': 'leads/jacksonville-office-leads-'
 };
+
+async function lookupGcsPrefix(sb, clientId) {
+    try {
+        const { data, error } = await sb.auth.admin.getUserById(clientId);
+        if (!error && data && data.user && data.user.user_metadata) {
+            const p = data.user.user_metadata.lead_source_gcs_prefix;
+            if (p && String(p).trim()) return String(p).trim();
+        }
+    } catch (_) {}
+    return CLIENT_LEAD_SOURCES_FALLBACK[clientId] || null;
+}
 
 // Minimal RFC 4180-ish CSV parser. Handles quoted fields with embedded commas
 // and "" escapes, plus CRLF/LF line endings. Returns array of arrays.
@@ -145,9 +156,14 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ error: 'forbidden', detail: 'Not an admin and not this client' });
     }
 
-    const prefix = CLIENT_LEAD_SOURCES[clientId];
+    const prefix = await lookupGcsPrefix(sb, clientId);
     if (!prefix) {
-        return res.status(200).json({ results: [], note: 'no_leads_source_configured', client_id: clientId });
+        return res.status(200).json({
+            results: [],
+            note: 'no_leads_source_configured',
+            hint: 'Set this client\'s GCS prefix from the admin Client drawer (Lead source field).',
+            client_id: clientId
+        });
     }
 
     let accessToken;

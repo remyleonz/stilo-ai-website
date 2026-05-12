@@ -1883,6 +1883,25 @@
             drawer.style.right = '0';
             overlay.style.display = 'block';
 
+            // Lead source (GCS prefix) lives in auth.users.user_metadata.
+            // Fetch alongside the agent list so the render sees current value.
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var lsResp = await fetch('/api/admin/clients/set-lead-source?client_id=' + encodeURIComponent(clientId), {
+                    headers: { 'Authorization': 'Bearer ' + (session && session.access_token) }
+                });
+                if (lsResp.ok) {
+                    var lsJson = await lsResp.json();
+                    c._lead_source = {
+                        gcs_prefix: lsJson.gcs_prefix || '',
+                        updated_at: lsJson.metadata && lsJson.metadata.lead_source_updated_at,
+                        updated_by: lsJson.metadata && lsJson.metadata.lead_source_updated_by
+                    };
+                } else {
+                    c._lead_source = { gcs_prefix: '' };
+                }
+            } catch (e) { c._lead_source = { gcs_prefix: '' }; }
+
             // Fetch full agent list with config
             var agentsRes = await sb.from('client_agents')
                 .select('id, agent_type, status, created_at, activated_at, config')
@@ -2050,6 +2069,28 @@
                    '<span id="mi-savemsg" style="font-size:12px;margin-left:10px;display:none;"></span>' +
                  '</div></details>';
 
+            // ---- Lead source (GCS prefix) ----
+            // Per-client config so we don't need a code push every time
+            // David drops a new client's CSV into gs://stilo-cold-call-scripts/.
+            // Stored in auth.users.user_metadata.lead_source_gcs_prefix —
+            // service-role only (David doesn't need Supabase access).
+            // /api/client-leads picks the newest .csv matching this prefix
+            // automatically, so a new batch in GCS shows up without any
+            // change here.
+            h += '<details style="margin-bottom:20px;" open>' +
+                 '<summary style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">&#9660; Lead Source (GCS Prefix)</summary>' +
+                 '<div style="margin-top:12px;background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.1);border-radius:10px;padding:16px;">' +
+                   '<div style="font-size:12px;color:var(--text-secondary,#8a8aa0);margin-bottom:8px;line-height:1.5;">' +
+                     'Path inside <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">gs://stilo-cold-call-scripts/</code> that this client\'s leads CSVs share. Newest matching <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">.csv</code> auto-loads.' +
+                   '</div>' +
+                   '<div style="display:flex;gap:8px;align-items:stretch;">' +
+                     '<input id="ls-prefix" type="text" placeholder="e.g. leads/jacksonville-office-leads-" value="' + esc((c._lead_source && c._lead_source.gcs_prefix) || '') + '" style="flex:1;padding:8px 12px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:var(--font-mono,ui-monospace,monospace);">' +
+                     '<button onclick="adminSaveLeadSource(\''+c.id+'\')" id="ls-savebtn" style="padding:8px 16px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);border-radius:7px;font-size:13px;font-weight:600;color:#60a5fa;cursor:pointer;white-space:nowrap;">Save</button>' +
+                   '</div>' +
+                   '<div id="ls-savemsg" style="font-size:12px;margin-top:8px;display:none;"></div>' +
+                   ((c._lead_source && c._lead_source.updated_at) ? '<div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-top:8px;">Last updated ' + new Date(c._lead_source.updated_at).toLocaleString() + (c._lead_source.updated_by ? ' by ' + esc(c._lead_source.updated_by) : '') + '</div>' : '') +
+                 '</div></details>';
+
             // ---- Agents ----
             h += '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);margin-bottom:12px;">Agents (' + agents.length + ')</div>';
 
@@ -2209,6 +2250,41 @@
                     loadDashboard();
                     setTimeout(function(){ if (msg) msg.style.display = 'none'; }, 2500);
                 }
+            }
+        }
+
+        // ---- Action: save lead source GCS prefix ----
+        async function adminSaveLeadSource(clientId) {
+            var btn = document.getElementById('ls-savebtn');
+            var msg = document.getElementById('ls-savemsg');
+            var input = document.getElementById('ls-prefix');
+            if (!input) return;
+            var prefix = (input.value || '').trim();
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var resp = await fetch('/api/admin/clients/set-lead-source', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + session.access_token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ client_id: clientId, gcs_prefix: prefix })
+                });
+                var json = await resp.json().catch(function(){ return {}; });
+                if (msg) msg.style.display = 'block';
+                if (!resp.ok) {
+                    if (msg) { msg.style.color = '#ef4444'; msg.textContent = 'Error: ' + (json.detail || json.error || resp.status); }
+                } else {
+                    if (msg) { msg.style.color = '#22c55e'; msg.textContent = prefix ? 'Saved. New CSV batches will appear automatically.' : 'Cleared.'; }
+                    var cached = clientsCache.find(function(x){ return x.id === clientId; });
+                    if (cached) cached._lead_source = { gcs_prefix: json.gcs_prefix || '', updated_at: json.updated_at, updated_by: json.updated_by };
+                    setTimeout(function(){ if (msg) msg.style.display = 'none'; }, 3000);
+                }
+            } catch (e) {
+                if (msg) { msg.style.display = 'block'; msg.style.color = '#ef4444'; msg.textContent = 'Network error: ' + (e.message || e); }
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
             }
         }
 
