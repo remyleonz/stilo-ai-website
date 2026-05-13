@@ -1114,14 +1114,14 @@
                             <span style="color:var(--text-muted);font-size:10px;">&#9662;</span>
                         </button>
                         <div id="sdrSelectorMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);min-width:180px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;padding:4px;">
+                            <button type="button" onclick="selectSdr('', 'All SDRs', 'ALL')" class="sdr-menu-item" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:none;border:none;color:var(--text-primary);font-size:13px;text-align:left;cursor:pointer;border-radius:6px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--text-tertiary);color:white;font-size:9px;font-weight:700;">ALL</span>All SDRs
+                            </button>
                             <button type="button" onclick="selectSdr('remy', 'Remy Leon', 'RL')" class="sdr-menu-item" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:none;border:none;color:var(--text-primary);font-size:13px;text-align:left;cursor:pointer;border-radius:6px;">
                                 <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;">RL</span>Remy Leon
                             </button>
                             <button type="button" onclick="selectSdr('david', 'David Coira', 'DC')" class="sdr-menu-item" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:none;border:none;color:var(--text-primary);font-size:13px;text-align:left;cursor:pointer;border-radius:6px;">
                                 <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--orange);color:white;font-size:10px;font-weight:700;">DC</span>David Coira
-                            </button>
-                            <button type="button" onclick="selectSdr('', 'All SDRs', 'ALL')" class="sdr-menu-item" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:none;border:none;color:var(--text-primary);font-size:13px;text-align:left;cursor:pointer;border-radius:6px;">
-                                <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--text-tertiary);color:white;font-size:9px;font-weight:700;">ALL</span>All SDRs
                             </button>
                         </div>
                     </div>
@@ -1223,6 +1223,17 @@
                     <select id="prospectNicheFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:160px;">
                         <option value="">All niches</option>
                     </select>
+                </div>
+
+                <!-- My Call History controls: date range pills + (when 'All SDRs' is selected) a hint that both reps' calls are merged. Visible only on the my-history sub-tab. -->
+                <div id="prospectMyHistoryControls" style="display:none;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <div style="display:flex;gap:4px;padding:3px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;">
+                        <button type="button" data-history-range="all"   onclick="selectHistoryRange('all')"   class="history-range-pill" style="padding:6px 12px;background:var(--blue);color:white;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">All time</button>
+                        <button type="button" data-history-range="year"  onclick="selectHistoryRange('year')"  class="history-range-pill" style="padding:6px 12px;background:none;color:var(--text-secondary);border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last year</button>
+                        <button type="button" data-history-range="month" onclick="selectHistoryRange('month')" class="history-range-pill" style="padding:6px 12px;background:none;color:var(--text-secondary);border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last month</button>
+                        <button type="button" data-history-range="week"  onclick="selectHistoryRange('week')"  class="history-range-pill" style="padding:6px 12px;background:none;color:var(--text-secondary);border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last week</button>
+                    </div>
+                    <span id="prospectMyHistoryHint" style="color:var(--text-muted);font-size:12px;"></span>
                 </div>
 
                 <!-- Six table containers, only one visible at a time. overflow-x:auto so wide tables scroll within the card instead of clipping at the page edge. -->
@@ -3184,7 +3195,7 @@
             tab: 'callable',
             // sdr: '' = all, 'remy' | 'david' | 'unassigned'. grantAdminAccess()
             // overwrites this with the signed-in user before any fetch fires.
-            filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '' },
+            filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '', historyRange: 'all' },
             rows: [],
             currentLeadId: null,
             deadPage: 1,
@@ -3865,9 +3876,15 @@
             }
             var th = 'text-align:left;padding:10px 14px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);background:rgba(37,99,235,0.04);white-space:nowrap;';
             var thNarrow = th + 'width:1px;';
+            // my-history and my-history-all reuse the calls-today row template
+            // (Time / Tier / Business / Owner / Phone / Outcome / Niche / Last
+            // called), with one extra "Logged by" column appended in the all-
+            // SDRs view so the user can see who placed each call.
+            var isHistory = (mode === 'my-history' || mode === 'my-history-all');
+            var isHistoryAll = (mode === 'my-history-all');
             var head;
-            if (mode === 'calls-today') {
-                head = '<tr><th style="' + thNarrow + '">Time</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Outcome</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last called</th></tr>';
+            if (mode === 'calls-today' || isHistory) {
+                head = '<tr><th style="' + thNarrow + '">Time</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Outcome</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last called</th>' + (isHistoryAll ? '<th style="' + thNarrow + '">Logged by</th>' : '') + '</tr>';
             } else if (mode === 'emailable') {
                 head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last contacted</th></tr>';
             } else if (mode === 'callbacks') {
@@ -3893,13 +3910,19 @@
                 var contactCol = mode === 'emailable'
                     ? '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
                     : '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;"><div>' + escapeAdminHtml(phone) + strictBadge + '</div></td>';
-                if (mode === 'calls-today') {
+                if (mode === 'calls-today' || isHistory) {
                     var calledTime = r.last_called_at ? new Date(r.last_called_at).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', timeZone:'America/New_York'}) : '—';
                     var lastCalledStamp = r.last_called_at ? new Date(r.last_called_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York' }) : '—';
                     var outcome = r.last_called_outcome || '';
                     var outcomeColors = { answered:'var(--green,#10b981)', voicemail:'var(--yellow,#eab308)', no_answer:'var(--text-muted)', missed_inbound:'var(--blue)', booked_meeting:'var(--green,#10b981)', not_interested:'var(--red)', owner_uninterested:'var(--text-muted)', do_not_call:'var(--red)', callback_requested:'var(--blue)', interested_followup:'var(--green,#10b981)' };
                     var outcomeColor = outcomeColors[outcome] || 'var(--text-muted)';
                     var outcomeLabel = outcome ? outcome.replace(/_/g, ' ') : 'no outcome';
+                    var loggedByCell = '';
+                    if (isHistoryAll) {
+                        var loggedByEmail = r.logged_by || '';
+                        var loggedByName = loggedByEmail ? (sdrFromEmail(loggedByEmail).displayName || loggedByEmail) : '—';
+                        loggedByCell = '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(loggedByName) + '</td>';
+                    }
                     return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                         + '<td style="padding:10px 14px;font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(calledTime) + '</td>'
                         + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
@@ -3909,6 +3932,7 @@
                         + '<td style="padding:10px 14px;font-size:12px;font-weight:600;color:' + outcomeColor + ';white-space:nowrap;">' + escapeAdminHtml(outcomeLabel) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(lastCalledStamp) + '</td>'
+                        + loggedByCell
                         + '</tr>';
                 }
                 if (mode === 'callbacks') {
@@ -3995,6 +4019,8 @@
             document.getElementById('prospectTableCallsToday').style.display  = name === 'calls-today'  ? '' : 'none';
             var myHistoryHost = document.getElementById('prospectTableMyHistory');
             if (myHistoryHost) myHistoryHost.style.display                    = name === 'my-history'   ? '' : 'none';
+            var myHistoryControls = document.getElementById('prospectMyHistoryControls');
+            if (myHistoryControls) myHistoryControls.style.display            = name === 'my-history'   ? 'flex' : 'none';
             // Filter bar useful only for the broad inbound lists; hide on cold-call lifecycle stages.
             var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today' || name === 'my-history');
             document.getElementById('prospectFilterBar').style.display = hideFilter ? 'none' : 'flex';
@@ -4007,30 +4033,94 @@
             else if (name === 'my-history')   loadMyHistory();
         }
 
+        // Map the SDR dropdown key to the admin's email so my-history can be
+        // re-scoped without changing the JWT. Server-side allowlist makes the
+        // override safe.
+        var SDR_KEY_TO_EMAIL = {
+            remy: 'remyleon@stiloaipartners.com',
+            david: 'davidcoira@stiloaipartners.com'
+        };
+
+        // Translate the active history range pill into a `since` ISO date.
+        function historyRangeSinceIso() {
+            var range = prospectState.filters.historyRange || 'all';
+            if (range === 'all') return null;
+            var now = new Date();
+            var ms = { week: 7, month: 30, year: 365 }[range];
+            if (!ms) return null;
+            var since = new Date(now.getTime() - ms * 24 * 60 * 60 * 1000);
+            return since.toISOString();
+        }
+
+        function selectHistoryRange(range) {
+            prospectState.filters.historyRange = range;
+            document.querySelectorAll('.history-range-pill').forEach(function (btn) {
+                var on = btn.getAttribute('data-history-range') === range;
+                btn.style.background = on ? 'var(--blue)' : 'none';
+                btn.style.color = on ? 'white' : 'var(--text-secondary)';
+            });
+            prospectState.cache.myHistory = null;
+            loadMyHistory({ force: true });
+        }
+
+        // Friendly label used in the empty-state message + table caption.
+        // Reflects the SDR dropdown selection (not the JWT user) so switching
+        // the pill to David shows "No call history yet for David Coira."
+        function activeHistoryLabel() {
+            var key = prospectState.filters.sdr;
+            if (!key) return 'All SDRs';
+            if (key === 'remy')  return 'Remy Leon';
+            if (key === 'david') return 'David Coira';
+            return CURRENT_USER.displayName || 'this account';
+        }
+
         // Durable per-SDR call history. Distinct from Calls Today (today only)
-        // and Dead Pool (do_not_call). Backed by /api/prospects/my-history which
-        // filters by the JWT email, so signing in as Remy vs David yields
-        // different lists automatically.
+        // and Dead Pool (do_not_call). Backed by /api/prospects/my-history. The
+        // SDR dropdown drives `?email=` (or `?all=1` for the "All SDRs" view),
+        // and the date-range pills drive `?since=`.
         async function loadMyHistory(opts) {
             opts = opts || {};
             var host = document.getElementById('prospectTableMyHistory');
             if (!host) return;
+            var sdrKey = prospectState.filters.sdr || '';
+            var allSdrs = !sdrKey;
+            var params = ['limit=200'];
+            if (allSdrs) {
+                params.push('all=1');
+            } else {
+                var emailOverride = SDR_KEY_TO_EMAIL[sdrKey];
+                if (emailOverride) params.push('email=' + encodeURIComponent(emailOverride));
+            }
+            var sinceIso = historyRangeSinceIso();
+            if (sinceIso) params.push('since=' + encodeURIComponent(sinceIso));
+            var mode = allSdrs ? 'my-history-all' : 'my-history';
+
+            // Update the hint text next to the pills so the SDR scope is
+            // visible without having to look up at the top-right selector.
+            var hintEl = document.getElementById('prospectMyHistoryHint');
+            if (hintEl) {
+                hintEl.textContent = allSdrs
+                    ? 'Showing calls logged by every SDR.'
+                    : 'Showing calls logged by ' + activeHistoryLabel() + '.';
+            }
+
             var cached = !opts.force && prospectState.cache.myHistory;
             if (cached) {
-                host.innerHTML = renderProspectTable(cached, 'calls-today');
+                host.innerHTML = renderProspectTable(cached, mode);
             } else {
-                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading your call history...</div>';
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading call history...</div>';
             }
             try {
-                var data = await prospectFetchJSON('/api/prospects/my-history?limit=200');
+                var data = await prospectFetchJSON('/api/prospects/my-history?' + params.join('&'));
                 var raw = data.results || [];
                 prospectState.cache.myHistory = raw;
+                var label = activeHistoryLabel();
                 if (raw.length === 0 && data.note) {
-                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No call history yet for ' + escapeAdminHtml(CURRENT_USER.displayName || 'this account') + '. Log a call to see it here.<br/><span style="font-size:11px;color:var(--text-muted);">' + escapeAdminHtml(data.note) + '</span></div>';
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No call history yet for ' + escapeAdminHtml(label) + '. Log a call to see it here.<br/><span style="font-size:11px;color:var(--text-muted);">' + escapeAdminHtml(data.note) + '</span></div>';
                 } else if (raw.length === 0) {
-                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No call history yet for ' + escapeAdminHtml(CURRENT_USER.displayName || 'this account') + '. Log a call to see it here.</div>';
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No call history yet for ' + escapeAdminHtml(label) + '. Log a call to see it here.</div>';
                 } else {
-                    host.innerHTML = renderProspectTable(raw, 'calls-today');
+                    host.innerHTML = renderProspectTable(raw, mode);
                 }
             } catch (e) {
                 console.error('[my-history]', e);
@@ -5008,7 +5098,21 @@
                 if (nextAt) body.next_callback_at = nextAt;
                 var loggedByEl = document.getElementById('prospectLoggedBy');
                 if (loggedByEl && loggedByEl.value) body.logged_by_override = loggedByEl.value;
-                await prospectFetchJSON('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(body) });
+                var logResp = await prospectFetchJSON('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(body) });
+                // log-call dual-writes to prospecting.lead_calls and updates
+                // prospecting.leads. If either errors the upstream still
+                // returns 200, so we have to inspect the diagnostic fields the
+                // handler attaches. Without this, a missing SUPABASE_SERVICE_KEY
+                // or an RLS error silently drops the row that powers My Call
+                // History — which is exactly how yesterday's 6 calls vanished.
+                var callInsertErr = logResp && logResp._stilo_call_insert && logResp._stilo_call_insert.error;
+                var leadUpdateErr = logResp && logResp._stilo_lead_update && logResp._stilo_lead_update.error;
+                if (callInsertErr || leadUpdateErr) {
+                    console.warn('[log-call] history sync failed', logResp._stilo_call_insert, logResp._stilo_lead_update);
+                    if (typeof showToast === 'function') {
+                        showToast('Call logged, but history sync failed: ' + (callInsertErr || leadUpdateErr));
+                    }
+                }
                 // Any outcome flagged dncOnSubmit also goes through David's
                 // /dnc endpoint so the lead lands on the do-not-call list and
                 // surfaces in Dead Pool. Covers wrong_number + dnc_request.
@@ -5017,6 +5121,9 @@
                     try { await prospectFetchJSON('/api/prospects/dnc', { method: 'POST', body: JSON.stringify({ id: leadId }) }); }
                     catch (e) { console.warn('[prospects/dnc]', e); }
                 }
+                // Invalidate My Call History cache so the next visit to the tab
+                // re-fetches and includes the call we just logged.
+                prospectState.cache.myHistory = null;
                 advanceToNextProspect(leadId);
             } catch (e) {
                 msgEl.style.color = 'var(--red)';
