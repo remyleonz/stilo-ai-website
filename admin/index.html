@@ -4565,12 +4565,8 @@
                     // upgrades the script panel content when ready.
                     loadColdCallScript(data || {});
                 }
-                // Fire the auxiliary panes (Tags / Timeline / Score history) in
-                // parallel after the drawer paints. Each renders into its own
-                // host div so failures stay isolated.
-                try { loadLeadTags(leadId); } catch (_) {}
+                // Fire the activity timeline pane after the drawer paints.
                 try { loadLeadTimeline(leadId); } catch (_) {}
-                try { loadLeadScoreHistory(leadId); } catch (_) {}
             } catch (e) {
                 content.innerHTML = '<div style="color:var(--red);padding:20px 0;font-size:14px;">Could not load lead: ' + escapeAdminHtml(e.message) + '</div>';
             }
@@ -4870,33 +4866,16 @@
                 + historyHtml
                 + '</div>'
 
-                // Tags pane — quick segmentation chips. Filled async by
-                // loadLeadTags() after the drawer renders. Add new tags inline.
-                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-top:16px;">'
-                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">Tags</h3>'
-                + '<div id="prospectTagsBody" data-lead-id="' + escapeAdminHtml(d.id) + '" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">'
-                +   '<span style="color:var(--text-muted);font-size:12px;">Loading…</span>'
-                + '</div>'
-                + '<form onsubmit="event.preventDefault();submitNewTag(' + JSON.stringify(d.id) + ');return false;" style="margin-top:10px;display:flex;gap:8px;">'
-                +   '<input id="prospectNewTagInput" type="text" maxlength="48" placeholder="add a tag (e.g. asked-to-callback)" style="flex:1;padding:7px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:var(--text-primary);font-size:12px;">'
-                +   '<button type="submit" style="padding:7px 12px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:12px;cursor:pointer;">Add</button>'
-                + '</form>'
-                + '</div>'
-
-                // Activity timeline pane — unified feed of calls + SMS +
-                // stage transitions. Pulled from /api/prospects/timeline by
-                // loadLeadTimeline() after drawer renders.
+                // Activity timeline — the canonical event feed for this lead:
+                // every call, every stage transition (NEW → CONTACTED →
+                // ENGAGED → DNC etc.), every SMS in/out. Calls themselves
+                // appear in the Call history block above with full transcripts;
+                // this pane is the chronological lifecycle view, useful for
+                // answering "when did this lead get marked DNC?" or "how many
+                // touchpoints have we had?"
                 + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-top:16px;">'
                 + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">Activity timeline</h3>'
                 + '<div id="prospectTimelineBody" data-lead-id="' + escapeAdminHtml(d.id) + '" style="font-size:12px;">'
-                +   '<span style="color:var(--text-muted);">Loading…</span>'
-                + '</div>'
-                + '</div>'
-
-                // Score history pane — every change to prospect_score over time.
-                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-top:16px;">'
-                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">Score history</h3>'
-                + '<div id="prospectScoreHistoryBody" data-lead-id="' + escapeAdminHtml(d.id) + '" style="font-size:12px;">'
                 +   '<span style="color:var(--text-muted);">Loading…</span>'
                 + '</div>'
                 + '</div>'
@@ -4916,53 +4895,6 @@
                 + '</div>';
         }
 
-        // ─── Tags ────────────────────────────────────────────────────────────
-        async function loadLeadTags(leadId) {
-            var host = document.getElementById('prospectTagsBody');
-            if (!host) return;
-            try {
-                var data = await prospectFetchJSON('/api/prospects/tags?id=' + encodeURIComponent(leadId));
-                renderLeadTags(leadId, data.tags || []);
-            } catch (e) {
-                host.innerHTML = '<span style="color:var(--red);font-size:12px;">Could not load tags: ' + escapeAdminHtml(e.message || 'unknown') + '</span>';
-            }
-        }
-        function renderLeadTags(leadId, tags) {
-            var host = document.getElementById('prospectTagsBody');
-            if (!host) return;
-            if (!tags.length) {
-                host.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No tags yet.</span>';
-                return;
-            }
-            host.innerHTML = tags.map(function (t) {
-                var label = escapeAdminHtml(t.tag);
-                return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);color:var(--blue);font-size:11px;font-weight:600;">'
-                    + label
-                    + '<button type="button" onclick="removeLeadTag(' + JSON.stringify(leadId) + ',' + JSON.stringify(t.tag) + ')" title="Remove tag" style="background:none;border:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 4px;">×</button>'
-                    + '</span>';
-            }).join('');
-        }
-        async function submitNewTag(leadId) {
-            var input = document.getElementById('prospectNewTagInput');
-            if (!input || !input.value.trim()) return;
-            var tag = input.value.trim();
-            input.value = '';
-            try {
-                await prospectFetchJSON('/api/prospects/tags', { method: 'POST', body: JSON.stringify({ id: leadId, tag: tag }) });
-                loadLeadTags(leadId);
-            } catch (e) {
-                if (typeof showToast === 'function') showToast('Tag failed: ' + (e.message || 'unknown'));
-            }
-        }
-        async function removeLeadTag(leadId, tag) {
-            try {
-                await prospectFetchJSON('/api/prospects/tags', { method: 'DELETE', body: JSON.stringify({ id: leadId, tag: tag }) });
-                loadLeadTags(leadId);
-            } catch (e) {
-                if (typeof showToast === 'function') showToast('Tag remove failed: ' + (e.message || 'unknown'));
-            }
-        }
-
         // ─── Activity timeline ───────────────────────────────────────────────
         async function loadLeadTimeline(leadId) {
             var host = document.getElementById('prospectTimelineBody');
@@ -4974,25 +4906,50 @@
                     host.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No activity yet.</span>';
                     return;
                 }
+                // Stage labels presented to humans (the raw values are
+                // SCREAMING_CONSTANTS in the DB).
+                var STAGE_LABEL = {
+                    NEW: 'New', CONTACTED: 'Contacted', ENGAGED: 'Engaged',
+                    QUALIFIED: 'Qualified', MEETING_BOOKED: 'Meeting booked',
+                    CLOSED_WON: 'Closed — won', CLOSED_LOST: 'Closed — lost'
+                };
                 host.innerHTML = events.map(function (e) {
                     var when = e.ts ? new Date(e.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
+                    if (e.kind === 'stage') {
+                        // Stage transitions get a pill row to visually
+                        // distinguish them from calls/messages — these are the
+                        // lifecycle moments (lead became DNC, callback queued,
+                        // meeting booked, etc.), not just touchpoints.
+                        var fromLabel = e.from_stage ? (STAGE_LABEL[e.from_stage] || e.from_stage) : null;
+                        var toLabel = STAGE_LABEL[e.to_stage] || e.to_stage;
+                        var who = e.changed_by ? (sdrFromEmail(e.changed_by).displayName || e.changed_by) : 'system';
+                        return '<div style="display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--border-subtle);align-items:center;">'
+                            + '<span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;background:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,0.18);"></span>'
+                            + '<div style="flex:1;min-width:0;">'
+                              + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
+                                + '<span style="font-weight:700;color:var(--text-primary);font-size:12px;">'
+                                  + (fromLabel
+                                      ? 'Stage: ' + escapeAdminHtml(fromLabel) + ' → ' + stageBadge(e.to_stage)
+                                      : 'Stage set to ' + stageBadge(e.to_stage))
+                                + '</span>'
+                                + '<span style="color:var(--text-muted);font-size:11px;white-space:nowrap;">' + escapeAdminHtml(when) + '</span>'
+                              + '</div>'
+                              + '<div style="margin-top:3px;color:var(--text-muted);font-size:11px;">by ' + escapeAdminHtml(who) + '</div>'
+                            + '</div>'
+                            + '</div>';
+                    }
                     var iconColor, header, detail = '';
                     if (e.kind === 'call') {
                         iconColor = 'var(--blue)';
-                        var arrow = e.direction === 'inbound' ? '↓' : '↑';
-                        var who = e.logged_by ? sdrFromEmail(e.logged_by).displayName : 'unknown';
-                        header = arrow + ' Call · ' + escapeAdminHtml((e.outcome || 'no outcome').replace(/_/g,' ')) + ' · by ' + escapeAdminHtml(who);
+                        var arrow = e.direction === 'inbound' ? '↓ in' : '↑ out';
+                        var whoCall = e.logged_by ? (sdrFromEmail(e.logged_by).displayName || e.logged_by) : 'unknown';
+                        header = arrow + ' · Call logged: ' + escapeAdminHtml((e.outcome || 'no outcome').replace(/_/g,' ')) + ' · by ' + escapeAdminHtml(whoCall);
                         if (e.transcript_summary) detail = escapeAdminHtml(String(e.transcript_summary).slice(0, 240));
                     } else if (e.kind === 'message') {
                         iconColor = '#0ea5e9';
-                        var marrow = e.direction === 'inbound' ? '↓' : '↑';
-                        header = marrow + ' ' + (e.channel || 'message').toUpperCase() + ' · ' + escapeAdminHtml((e.status || '').replace(/_/g,' '));
+                        var marrow = e.direction === 'inbound' ? '↓ in' : '↑ out';
+                        header = marrow + ' · ' + (e.channel || 'message').toUpperCase() + (e.status ? ' · ' + escapeAdminHtml(e.status.replace(/_/g,' ')) : '');
                         if (e.body_preview) detail = escapeAdminHtml(String(e.body_preview).slice(0, 240));
-                    } else if (e.kind === 'stage') {
-                        iconColor = '#a855f7';
-                        var fromS = e.from_stage ? e.from_stage + ' → ' : '';
-                        header = '⬢ Stage · ' + escapeAdminHtml(fromS + e.to_stage);
-                        if (e.changed_by) detail = 'by ' + escapeAdminHtml(e.changed_by);
                     } else {
                         return '';
                     }
@@ -5009,35 +4966,6 @@
                 }).join('');
             } catch (e) {
                 host.innerHTML = '<span style="color:var(--red);font-size:12px;">Could not load timeline: ' + escapeAdminHtml(e.message || 'unknown') + '</span>';
-            }
-        }
-
-        // ─── Score history ───────────────────────────────────────────────────
-        async function loadLeadScoreHistory(leadId) {
-            var host = document.getElementById('prospectScoreHistoryBody');
-            if (!host) return;
-            try {
-                var data = await prospectFetchJSON('/api/prospects/score-history?id=' + encodeURIComponent(leadId));
-                var rows = data.history || [];
-                if (!rows.length) {
-                    host.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No score changes recorded.</span>';
-                    return;
-                }
-                host.innerHTML = rows.map(function (r) {
-                    var when = r.scored_at ? new Date(r.scored_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
-                    var delta = (r.old_score != null && r.new_score != null) ? (r.new_score - r.old_score) : null;
-                    var deltaStr = delta != null ? (delta > 0 ? ' (+' + delta + ')' : delta < 0 ? ' (' + delta + ')' : '') : '';
-                    var deltaColor = delta == null ? 'var(--text-muted)' : (delta > 0 ? 'var(--green,#10b981)' : delta < 0 ? 'var(--red)' : 'var(--text-muted)');
-                    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
-                        + '<span><strong style="color:var(--text-primary);">' + escapeAdminHtml(r.new_score) + '</strong>'
-                          + '<span style="color:' + deltaColor + ';">' + escapeAdminHtml(deltaStr) + '</span>'
-                          + (r.reason ? '<span style="margin-left:8px;color:var(--text-secondary);">' + escapeAdminHtml(r.reason) + '</span>' : '')
-                        + '</span>'
-                        + '<span style="color:var(--text-muted);font-size:11px;white-space:nowrap;">' + escapeAdminHtml(when) + '</span>'
-                        + '</div>';
-                }).join('');
-            } catch (e) {
-                host.innerHTML = '<span style="color:var(--red);font-size:12px;">Could not load score history: ' + escapeAdminHtml(e.message || 'unknown') + '</span>';
             }
         }
 
