@@ -3276,6 +3276,23 @@
             return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid ' + color + ';color:' + color + ';font-size:11px;font-weight:600;letter-spacing:0.04em;">' + escapeAdminHtml(t || '—') + '</span>';
         }
 
+        // Lifecycle-stage pill. Sourced from prospecting.leads.stage (added in
+        // the Phase 3 migration). Mirrors the visual treatment of tierBadge.
+        function stageBadge(stage) {
+            var s = String(stage || 'NEW').toUpperCase();
+            var palette = {
+                NEW:            { color: 'var(--text-tertiary)', label: 'New' },
+                CONTACTED:      { color: 'var(--blue)',           label: 'Contacted' },
+                ENGAGED:        { color: '#0ea5e9',               label: 'Engaged' },
+                QUALIFIED:      { color: '#a855f7',               label: 'Qualified' },
+                MEETING_BOOKED: { color: 'var(--green,#10b981)',  label: 'Meeting booked' },
+                CLOSED_WON:     { color: 'var(--green,#10b981)',  label: 'Closed won' },
+                CLOSED_LOST:    { color: 'var(--red)',            label: 'Closed lost' }
+            };
+            var p = palette[s] || palette.NEW;
+            return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid ' + p.color + ';color:' + p.color + ';font-size:11px;font-weight:600;letter-spacing:0.04em;">' + escapeAdminHtml(p.label) + '</span>';
+        }
+
         function loadProspectingPage() {
             if (!prospectState.loaded) {
                 prospectState.loaded = true;
@@ -3892,7 +3909,7 @@
             } else if (mode === 'booked') {
                 head = '<tr><th style="' + thNarrow + '">Booked</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th></tr>';
             } else {
-                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last called</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Stage</th><th style="' + thNarrow + '">Last called</th></tr>';
             }
             var body = rows.map(function(r) {
                 var id = r.id != null ? r.id : r.lead_id;
@@ -3977,6 +3994,7 @@
                     + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
                     + contactCol
                     + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
+                    + '<td style="padding:11px 10px;white-space:nowrap;">' + stageBadge(r.stage) + '</td>'
                     + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastStr + '</td>'
                     + '</tr>';
             }).join('');
@@ -4751,7 +4769,7 @@
                 + '<div style="margin-bottom:20px;">'
                 + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
                 + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.85rem;letter-spacing:-0.02em;margin:0;line-height:1.15;">' + escapeAdminHtml(business) + '</h2>'
-                + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier || d.tier) + '</div>'
+                + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier || d.tier) + ' · ' + stageBadge(d.stage) + '</div>'
                 + lastOutcomePill
                 + '</div>'
 

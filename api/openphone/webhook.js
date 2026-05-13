@@ -113,6 +113,53 @@ module.exports = async function handler(req, res) {
 
     const type = evt.type || evt.event || '';
     const data = evt.data || evt.payload || evt.object || evt;
+    const sb = serviceClient();
+
+    // Message events (SMS/MMS) flow into prospecting.lead_messages, NOT
+    // lead_calls. Quo sends message.received + message.delivered.
+    if (type && type.indexOf('message.') === 0) {
+        const msg = data.object || data.message || data;
+        const direction = type === 'message.received' ? 'inbound' : 'outbound';
+        const fromN = msg.from || (msg.participants && msg.participants[0]) || null;
+        const toN   = msg.to   || (msg.participants && msg.participants[1]) || null;
+        const counterparty = direction === 'inbound' ? fromN : toN;
+        let mLeadId = null;
+        if (counterparty) {
+            const normCounterparty = normalizePhone(counterparty);
+            if (normCounterparty) {
+                const { data: lead } = await sb
+                    .from('leads')
+                    .select('id, assigned_to')
+                    .or('owner_phone.eq.' + normCounterparty + ',phone.eq.' + normCounterparty)
+                    .maybeSingle();
+                if (lead) mLeadId = lead.id;
+            }
+        }
+        const body = msg.body || msg.text || msg.content || '';
+        const messageRow = {
+            lead_id: mLeadId,
+            direction,
+            channel: 'sms',
+            body,
+            body_preview: body.slice(0, 280),
+            sent_at: msg.createdAt || msg.sentAt || msg.deliveredAt || new Date().toISOString(),
+            to_address: toN ? normalizePhone(toN) : null,
+            from_address: fromN ? normalizePhone(fromN) : null,
+            provider: 'openphone',
+            provider_message_id: msg.id || msg.messageId || null,
+            status: type === 'message.delivered' ? 'delivered' : 'received',
+            raw_payload: evt
+        };
+        try {
+            const { error: msgErr } = await sb.from('lead_messages').insert(messageRow);
+            if (msgErr && msgErr.code !== '23505') throw msgErr; // ignore dup-on-key collisions
+            return res.status(200).json({ ok: true, channel: 'sms', lead_id: mLeadId });
+        } catch (e) {
+            console.error('[openphone/webhook] message insert failed', e);
+            return res.status(202).json({ ok: true, error: e.message });
+        }
+    }
+
     const call = data.object || data.call || data;
     const openphoneCallId = call.callId || call.call_id || call.id;
 
@@ -120,8 +167,6 @@ module.exports = async function handler(req, res) {
         console.warn('[openphone/webhook] no call id in event:', type);
         return res.status(202).json({ ok: true, ignored: 'no_call_id' });
     }
-
-    const sb = serviceClient();
     const direction = call.direction || 'outbound';
     const fromNumber = call.from || (call.participants && call.participants[0]) || null;
     const toNumber = call.to || (call.participants && call.participants[1]) || null;
@@ -202,6 +247,20 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // Try every shape Quo / OpenPhone has shipped a recording URL in. If
+    // they ever change the schema or finally start sending recordings (which
+    // requires enabling recordings on each number + subscribing to the
+    // call.recording.completed event in Quo settings), we'll catch it.
+    function extractRecordingUrl() {
+        return (data.recording && (data.recording.url || data.recording.signedUrl))
+            || (call.recording && (call.recording.url || call.recording.signedUrl))
+            || call.recordingUrl
+            || call.recording_url
+            || (Array.isArray(call.media) && call.media[0] && (call.media[0].url || call.media[0].signedUrl))
+            || data.url
+            || null;
+    }
+
     try {
         if (type === 'call.completed' || type === 'call.ended' || type === 'call.summary.completed') {
             baseFields.duration_seconds = call.duration || call.durationSeconds || null;
@@ -221,10 +280,14 @@ module.exports = async function handler(req, res) {
                     ? baseFields.transcript_summary + '\n\n' + nextStr
                     : nextStr;
             }
-        } else if (type === 'call.recording.completed' || (call.recording && call.recording.url)) {
-            baseFields.recording_url = (data.recording && data.recording.url)
-                || (call.recording && call.recording.url)
-                || data.url || null;
+            // Some Quo deployments ship the recording url on call.completed
+            // itself rather than firing a separate call.recording.completed —
+            // grab it here too.
+            const recUrl = extractRecordingUrl();
+            if (recUrl) baseFields.recording_url = recUrl;
+        } else if (type === 'call.recording.completed') {
+            const recUrl = extractRecordingUrl();
+            if (recUrl) baseFields.recording_url = recUrl;
         } else if (type === 'call.transcript.completed' || data.transcript) {
             const transcript = data.transcript || (call.transcript && call.transcript.text) || null;
             if (typeof transcript === 'string') baseFields.transcript = transcript;

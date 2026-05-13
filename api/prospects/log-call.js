@@ -82,17 +82,35 @@ module.exports = async function handler(req, res) {
     }
 
     // 2. Safety write: stamp last_called_at + last_called_outcome on the
-    //    lead row. The workflow cards and Cold Call sort rely on these,
-    //    and silently dropping the write is what makes "I logged a call
-    //    but it doesn't show up anywhere" happen.
+    //    lead row + derive the new lifecycle stage. The trigger on leads
+    //    auto-writes a row to lead_stage_history when stage actually changes.
+    //    The workflow cards and Cold Call sort rely on these, and silently
+    //    dropping the write is what makes "I logged a call but it doesn't
+    //    show up anywhere" happen.
+    const STAGE_FOR_OUTCOME = {
+        booked_meeting:        'MEETING_BOOKED',
+        callback_requested:    'ENGAGED',
+        interested_followup:   'ENGAGED',
+        answered:              'CONTACTED',
+        voicemail:             'CONTACTED',
+        no_answer:             null,
+        not_interested:        'CLOSED_LOST',
+        owner_uninterested:    'CLOSED_LOST',
+        wrong_number:          'CLOSED_LOST',
+        do_not_call:           'CLOSED_LOST',
+        dnc_request:           'CLOSED_LOST'
+    };
+    const nextStage = STAGE_FOR_OUTCOME[body.outcome];
     let leadUpdate = { skipped: 'no_service_key' };
     if (client) {
         try {
-            const { error } = await client.from('leads').update({
+            const update = {
                 last_called_at: calledAtIso,
                 last_called_outcome: body.outcome
-            }).eq('id', id);
-            leadUpdate = error ? { error: error.message } : { ok: true };
+            };
+            if (nextStage) update.stage = nextStage;
+            const { error } = await client.from('leads').update(update).eq('id', id);
+            leadUpdate = error ? { error: error.message } : { ok: true, stage: nextStage || 'unchanged' };
         } catch (e) {
             leadUpdate = { error: String(e.message || e) };
         }
