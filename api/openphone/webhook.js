@@ -141,8 +141,20 @@ module.exports = async function handler(req, res) {
         raw_payload: evt
     };
 
-    if (call.userId || call.metadata) {
-        baseFields.logged_by = (call.metadata && call.metadata.logged_by) || null;
+    // logged_by attribution. Three sources, in order:
+    //   1. call.metadata.logged_by passed through when the admin's log-call
+    //      route originated the OpenPhone call (preferred, exact).
+    //   2. leads.assigned_to for the resolved lead — covers the common case
+    //      where the SDR dials from their OpenPhone app without going through
+    //      the admin's log-call route, but the lead is already assigned to
+    //      them. Without this fallback every webhook row lands with
+    //      logged_by=null and the lead drops out of My Call History.
+    // We intentionally do NOT explicitly set logged_by to null here, because
+    // upsert would otherwise wipe out a value already on the row from a prior
+    // manual log. Set only when we have a value.
+    const metadataLoggedBy = (call.metadata && call.metadata.logged_by) || null;
+    if (metadataLoggedBy) {
+        baseFields.logged_by = metadataLoggedBy;
     }
 
     const { data: existingRow } = await sb
@@ -174,6 +186,21 @@ module.exports = async function handler(req, res) {
         }
     }
     if (leadId) baseFields.lead_id = leadId;
+
+    // Fallback attribution: if we resolved a lead but no explicit logged_by
+    // came through, attribute the call to whoever owns the lead. Without
+    // this every Quo/OpenPhone webhook lands with logged_by=null and the
+    // lead never appears in that SDR's My Call History.
+    if (leadId && !baseFields.logged_by) {
+        const { data: ownerRow } = await sb
+            .from('leads')
+            .select('assigned_to')
+            .eq('id', leadId)
+            .maybeSingle();
+        if (ownerRow && ownerRow.assigned_to) {
+            baseFields.logged_by = ownerRow.assigned_to;
+        }
+    }
 
     try {
         if (type === 'call.completed' || type === 'call.ended' || type === 'call.summary.completed') {

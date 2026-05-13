@@ -63,17 +63,46 @@ module.exports = async function handler(req, res) {
     });
 
     try {
-        // Pull lead_calls rows for the chosen scope, newest first. Cap
-        // generously — we dedupe to one row per lead on the client side
-        // below. When all=1 the cap caps the pool size, not per-SDR rows.
-        let query = sb.from('lead_calls')
-            .select('lead_id, called_at, outcome, notes, logged_by')
+        // Two-stage query so we don't lose leads when the most-recent
+        // lead_calls row has logged_by=null (e.g. webhook race where the
+        // OpenPhone push lands AFTER the admin's manual log). Stage 1: find
+        // every lead_id where ANY call in the date range is attributable to
+        // the SDR (or any SDR if all=1). Stage 2: pull the most recent call
+        // per lead, regardless of who logged it, so the table renders the
+        // freshest outcome/time.
+        let scopeQuery = sb.from('lead_calls')
+            .select('lead_id')
+            .not('lead_id', 'is', null)
             .order('called_at', { ascending: false })
-            .limit(1000);
-        if (!allSdrs) query = query.eq('logged_by', targetEmail);
-        if (since)   query = query.gte('called_at', since);
-        if (until)   query = query.lte('called_at', until);
-        const { data: calls, error: callsErr } = await query;
+            .limit(2000);
+        if (!allSdrs) scopeQuery = scopeQuery.eq('logged_by', targetEmail);
+        if (since)    scopeQuery = scopeQuery.gte('called_at', since);
+        if (until)    scopeQuery = scopeQuery.lte('called_at', until);
+        const { data: scopeRows, error: scopeErr } = await scopeQuery;
+        if (scopeErr) throw scopeErr;
+
+        const scopedLeadIds = Array.from(new Set((scopeRows || []).map(r => r.lead_id)));
+        if (scopedLeadIds.length === 0) {
+            res.setHeader('Cache-Control', 'no-store');
+            return res.status(200).json({
+                results: [],
+                email: allSdrs ? null : targetEmail,
+                scope: allSdrs ? 'all' : 'sdr',
+                since: since || null,
+                until: until || null,
+                note: 'No call history yet. Log a call from the lead drawer to populate this list.'
+            });
+        }
+
+        // Stage 2: pull the freshest call per scoped lead (any logger).
+        let detailQuery = sb.from('lead_calls')
+            .select('lead_id, called_at, outcome, notes, logged_by')
+            .in('lead_id', scopedLeadIds)
+            .order('called_at', { ascending: false })
+            .limit(2000);
+        if (since) detailQuery = detailQuery.gte('called_at', since);
+        if (until) detailQuery = detailQuery.lte('called_at', until);
+        const { data: calls, error: callsErr } = await detailQuery;
         if (callsErr) throw callsErr;
 
         if (!calls || !calls.length) {
