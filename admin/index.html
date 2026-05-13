@@ -3747,17 +3747,24 @@
                 });
             }
 
-            // SDR filter. Reads r.assigned_to if present; otherwise falls back
-            // to a deterministic 50/50 split by lead id parity (even=remy,
-            // odd=david). This keeps the dashboard usable today even though
-            // David's schema doesn't ship the assigned_to column yet — every
-            // lead gets a stable owner so filtering actually returns leads.
-            // When David lands assigned_to, those explicit values take over.
+            // SDR filter. Reads r.assigned_to if present (mapping the SDR's
+            // email to the short key 'remy'/'david'); otherwise falls back
+            // to a deterministic 50/50 split by lead id parity. The email
+            // mapping is what makes Called Today actually return the rows the
+            // backend already filtered to — without it, every comparison
+            // 'remyleon@stiloaipartners.com' === 'remy' was false and every
+            // row got filtered out client-side.
+            var EMAIL_TO_SDR_KEY = {
+                'remyleon@stiloaipartners.com':  'remy',
+                'remyleon11@gmail.com':          'remy',
+                'davidcoira@stiloaipartners.com': 'david'
+            };
             if (f.sdr) {
                 rows = rows.filter(function (r) {
                     var explicit = String(r.assigned_to || '').toLowerCase();
-                    var owner = explicit || fallbackSdrFor(r);
+                    var explicitKey = EMAIL_TO_SDR_KEY[explicit] || (explicit && !explicit.includes('@') ? explicit : '');
                     if (f.sdr === 'unassigned') return !explicit;
+                    var owner = explicitKey || fallbackSdrFor(r);
                     return owner === f.sdr;
                 });
             }
