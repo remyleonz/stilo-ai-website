@@ -186,20 +186,23 @@ module.exports = async function handler(req, res) {
         raw_payload: evt
     };
 
-    // logged_by attribution. Three sources, in order:
-    //   1. call.metadata.logged_by passed through when the admin's log-call
-    //      route originated the OpenPhone call (preferred, exact).
-    //   2. leads.assigned_to for the resolved lead — covers the common case
-    //      where the SDR dials from their OpenPhone app without going through
-    //      the admin's log-call route, but the lead is already assigned to
-    //      them. Without this fallback every webhook row lands with
-    //      logged_by=null and the lead drops out of My Call History.
-    // We intentionally do NOT explicitly set logged_by to null here, because
-    // upsert would otherwise wipe out a value already on the row from a prior
-    // manual log. Set only when we have a value.
+    // logged_by attribution. Four sources, in order of preference:
+    //   1. call.metadata.logged_by — admin's log-call route originated the
+    //      OpenPhone call and pushed metadata through (exact, never null).
+    //   2. Quo userId → SDR email mapping. Quo's webhook never carries an
+    //      email, just their internal user id (e.g. "UShj8EpsSW"). We map it.
+    //   3. leads.assigned_to fallback (applied after lead resolution below).
+    // We intentionally never set logged_by to null here — upsert would wipe
+    // out a value already on the row from a prior manual log.
+    const QUO_USER_ID_TO_EMAIL = {
+        'UShj8EpsSW': 'remyleon@stiloaipartners.com',
+        'USsSwYdBtK': 'davidcoira@stiloaipartners.com'
+    };
     const metadataLoggedBy = (call.metadata && call.metadata.logged_by) || null;
     if (metadataLoggedBy) {
         baseFields.logged_by = metadataLoggedBy;
+    } else if (call.userId && QUO_USER_ID_TO_EMAIL[call.userId]) {
+        baseFields.logged_by = QUO_USER_ID_TO_EMAIL[call.userId];
     }
 
     const { data: existingRow } = await sb
