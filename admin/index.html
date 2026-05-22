@@ -1198,6 +1198,19 @@
                     </div>
                 </div>
 
+                <!-- Find Leads action bar. Only renders when the callable
+                     queue is low (default threshold: <=20 uncalled). Pulls
+                     200 candidates from the 16k pool that meet callable
+                     criteria + queues them for Sage deep-research. Sits
+                     between the workflow cards and the cold-call list. -->
+                <div id="findLeadsBar" style="display:none;margin-bottom:16px;padding:14px 18px;background:linear-gradient(90deg,rgba(37,99,235,0.10),rgba(37,99,235,0.04));border:1px solid rgba(37,99,235,0.35);border-radius:10px;align-items:center;gap:14px;">
+                    <div style="flex:1;">
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px;">Cold-call queue running low</div>
+                        <div id="findLeadsSubtitle" style="font-size:12px;color:var(--text-secondary);">Pull 200 more callable leads from the pool and queue them for research.</div>
+                    </div>
+                    <button id="findLeadsBtn" onclick="findMoreLeads()" style="padding:10px 18px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Find Leads</button>
+                </div>
+
                 <!-- Sub-tab strip — secondary navigation alongside the workflow
                      cards above. Cold Call is the main daily view; the others
                      are auxiliary surfaces (full callback directory, booked
@@ -3616,6 +3629,21 @@
                 var callbacksDue = data.callbacks_due_today_count != null ? data.callbacks_due_today_count : (act.callbacks_due_today || 0);
                 var deadPool = data.dead_pool_count != null ? data.dead_pool_count : ((data.tier_counts && data.tier_counts.dead) || 0);
 
+                // Show Find Leads bar when the callable queue runs low. Threshold
+                // is "uncalled callable" — All Leads minus everyone already called.
+                // Below 20 we surface the action.
+                var FIND_LEADS_THRESHOLD = 20;
+                var uncalled = Math.max(0, Number(allLeads) - Number(calledToday) - (act.dispositioned_total || 0));
+                var fb = document.getElementById('findLeadsBar');
+                if (fb) {
+                    fb.style.display = (uncalled <= FIND_LEADS_THRESHOLD) ? 'flex' : 'none';
+                    var sub = document.getElementById('findLeadsSubtitle');
+                    if (sub) {
+                        if (uncalled === 0) sub.textContent = 'No callable leads left. Pull 200 more from the pool and queue them for research.';
+                        else sub.textContent = 'Only ' + uncalled + ' callable leads left. Pull 200 more and queue them for research before they run out.';
+                    }
+                }
+
                 var set = function (id, n) {
                     var el = document.getElementById(id);
                     if (el) el.textContent = Number(n || 0).toLocaleString();
@@ -4013,6 +4041,41 @@
             // fill leftover space, so there's no "gap" between business and
             // owner columns.
             return '<table style="border-collapse:collapse;font-size:13px;table-layout:auto;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+        }
+
+        // Find Leads handler. Triggers backend enrichment + research on a
+        // fresh batch of 200 candidates from the 16k pool that meet
+        // callable criteria but haven't been touched yet. Returns the
+        // count actually queued — the research itself runs out-of-band on
+        // a Cloud Run Job; we don't block the UI on it.
+        async function findMoreLeads() {
+            var btn = document.getElementById('findLeadsBtn');
+            if (!btn || btn.disabled) return;
+            var origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Queuing...';
+            try {
+                var res = await prospectFetchJSON('/api/prospects/find-more-callable', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count: 200 })
+                });
+                btn.textContent = 'Queued ' + (res.queued || 0);
+                var sub = document.getElementById('findLeadsSubtitle');
+                if (sub) {
+                    if (res.queued > 0) {
+                        sub.textContent = 'Queued ' + res.queued + ' leads for enrichment + research. Sage takes ~22 min — refresh in a bit to see them in Cold Call.';
+                    } else {
+                        sub.textContent = res.message || 'No more eligible leads found in the pool.';
+                    }
+                }
+                // Refresh stats after a beat so the bar reflects new state
+                setTimeout(function() { btn.disabled = false; btn.textContent = origText; }, 4000);
+            } catch (e) {
+                btn.textContent = 'Failed — retry';
+                btn.disabled = false;
+                console.error('findMoreLeads failed:', e);
+            }
         }
 
         function switchProspectTab(name, opts) {

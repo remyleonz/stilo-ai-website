@@ -17,18 +17,53 @@
  * signature on the body; reject anything that doesn't verify.
  */
 
-const { verifySignature, readRawBody, serviceClient, normalizePhone } = require('./_shared');
+const { verifySignature, readRawBody, serviceClient, normalizePhone, openphoneFetch } = require('./_shared');
 
 function deriveOutcome(callPayload) {
     const status = callPayload.status || callPayload.completedReason || '';
     const direction = callPayload.direction || 'outbound';
     const answered = callPayload.answeredAt != null
         || (callPayload.duration != null && callPayload.duration > 5)
-        || status === 'completed' || status === 'answered';
-    if (direction === 'inbound' && !answered) return 'missed_inbound';
+        || status === 'answered';
+    // Voicemail check comes BEFORE the generic answered check because Quo
+    // ships voicemail-only calls with status='completed' + voicemail=true.
     if (status === 'voicemail' || callPayload.voicemail) return 'voicemail';
+    if (direction === 'inbound' && !answered) return 'missed_inbound';
     if (!answered) return 'no_answer';
     return 'answered';
+}
+
+// Quo doesn't ship a `duration` field on the call.completed event — only
+// `answeredAt` + `completedAt` (and `createdAt` for the ring window). Derive
+// talk-time in seconds. For unanswered calls return 0 so the agent can
+// distinguish "instant dismissal / VM" from "real conversation."
+function deriveDurationSeconds(callPayload) {
+    const completed = callPayload.completedAt || callPayload.endedAt;
+    const answered = callPayload.answeredAt;
+    if (!completed) return null;
+    if (!answered) return 0;  // never picked up → no talk time
+    const ms = new Date(completed).getTime() - new Date(answered).getTime();
+    if (!isFinite(ms) || ms < 0) return null;
+    return Math.round(ms / 1000);
+}
+
+// Lightweight Spanish-vs-English classifier for transcript text. Conservative:
+// returns 'es' only when there's strong signal (3+ unique Spanish markers
+// OR a Spanish-only character), otherwise 'en' for any non-trivial English
+// transcript, otherwise null. The dashboard manual override always wins.
+const SPANISH_WORDS = ['hola','gracias','sí','está','tiene','buenos días','buenas tardes','cómo está','cómo estás','español','claro que sí','muchas gracias','por favor','mucho gusto','perdón','disculpe','dígame','permítame','dispense','de nada','llamo','llamando','negocio','dueño','propietario','¿cómo','¿qué','¿dónde','¿cuándo','está bien','está usted','no entiendo','no problema'];
+function detectLanguage(transcript) {
+    if (!transcript || typeof transcript !== 'string') return null;
+    const t = transcript.toLowerCase();
+    if (t.length < 50) return null;
+    // Distinctly Spanish characters — any single one is strong signal.
+    if (/[ñ¿¡]/.test(transcript)) return 'es';
+    let hits = 0;
+    for (const w of SPANISH_WORDS) {
+        if (t.indexOf(w) !== -1) hits++;
+        if (hits >= 3) return 'es';
+    }
+    return 'en';
 }
 
 async function findOrStubLead(sb, phone) {
@@ -75,6 +110,47 @@ async function upsertCall(sb, fields) {
     const { data, error } = await sb
         .from('lead_calls')
         .upsert(fields, { onConflict: 'openphone_call_id' })
+        .select('id, lead_id, outcome, called_at')
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+// Reverse-merge target finder. When Quo's webhook arrives for a call but
+// the SDR already logged the disposition manually (within the last hour
+// for this lead, no openphone_call_id, with a human outcome), we treat
+// the manual row as the merge target instead of inserting a duplicate.
+//
+// Bound at 1 hour because Quo's events usually land within seconds; a
+// human row from yesterday is a different call event. AUTO_OUTCOMES are
+// excluded because rows with those outcomes were written by some other
+// webhook delivery, not a deliberate manual log.
+const AUTO_OUTCOMES = new Set(['answered', 'voicemail', 'no_answer', 'missed_inbound']);
+async function findRecentManualMergeTarget(sb, leadId) {
+    if (!leadId) return null;
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: rows } = await sb.from('lead_calls')
+        .select('id, outcome, called_at')
+        .eq('lead_id', leadId)
+        .is('openphone_call_id', null)
+        .gte('called_at', oneHourAgo)
+        .order('called_at', { ascending: false })
+        .limit(5);
+    if (!rows || rows.length === 0) return null;
+    return rows.find(r => r.outcome && !AUTO_OUTCOMES.has(r.outcome)) || null;
+}
+
+// Merge Quo's enrichment onto an existing manual row. Human outcome +
+// notes are preserved (the SDR's judgment beats Quo's auto-derivation);
+// everything else (transcript, summary, recording, duration, timestamps,
+// openphone_call_id, raw_payload) gets stamped in.
+async function mergeQuoIntoManualRow(sb, rowId, baseFields) {
+    const enrich = Object.assign({}, baseFields);
+    delete enrich.outcome;
+    delete enrich.notes;
+    const { data, error } = await sb.from('lead_calls')
+        .update(enrich)
+        .eq('id', rowId)
         .select('id, lead_id, outcome, called_at')
         .single();
     if (error) throw error;
@@ -232,6 +308,38 @@ module.exports = async function handler(req, res) {
         if (!leadId && counterparty) {
             leadId = await findOrStubLead(sb, counterparty);
         }
+        // Last-resort: Quo summary events don't ship from/to numbers, so when
+        // a summary lands first (or is the only event we get) we previously
+        // dropped the row at lead_id=null and orphaned the transcript. Pull
+        // the call detail from Quo's REST API to recover from/to + a
+        // contact.externalId tag, then re-run resolution.
+        if (!leadId && openphoneCallId && (type === 'call.summary.completed' || type === 'call.transcript.completed')) {
+            try {
+                const fetched = await openphoneFetch({ path: '/calls/' + openphoneCallId });
+                if (fetched.status === 200 && fetched.json) {
+                    const fc = fetched.json.data || fetched.json;
+                    const fcCounterparty = (fc.direction === 'inbound' ? fc.from : fc.to)
+                        || (fc.participants && (fc.direction === 'inbound' ? fc.participants[0] : fc.participants[1]));
+                    if (fc.from && !baseFields.from_number) baseFields.from_number = normalizePhone(fc.from);
+                    if (fc.to && !baseFields.to_number) baseFields.to_number = normalizePhone(fc.to);
+                    // Pull duration from the API response too — summary/transcript
+                    // events don't carry timestamps, so without this duration_seconds
+                    // would stay NULL on rows that only ever fire summary.
+                    const apiDur = deriveDurationSeconds(fc);
+                    if (apiDur != null) baseFields.duration_seconds = apiDur;
+                    if (fcCounterparty) {
+                        leadId = await findOrStubLead(sb, fcCounterparty);
+                    }
+                    if (leadId) {
+                        console.log('[openphone/webhook] recovered orphan lead via Quo API lookup', { call_id: openphoneCallId, lead_id: leadId, duration: apiDur });
+                    }
+                } else {
+                    console.warn('[openphone/webhook] Quo API lookup failed for orphan', { call_id: openphoneCallId, status: fetched.status });
+                }
+            } catch (e) {
+                console.warn('[openphone/webhook] Quo API lookup threw', e.message || e);
+            }
+        }
     }
     if (leadId) baseFields.lead_id = leadId;
 
@@ -266,7 +374,12 @@ module.exports = async function handler(req, res) {
 
     try {
         if (type === 'call.completed' || type === 'call.ended' || type === 'call.summary.completed') {
-            baseFields.duration_seconds = call.duration || call.durationSeconds || null;
+            // Quo never sends a duration field — derive from completedAt / answeredAt.
+            // For unanswered calls deriveDurationSeconds returns 0, which is
+            // signal (not noise) for the sales script agent.
+            const derived = deriveDurationSeconds(call);
+            if (derived != null) baseFields.duration_seconds = derived;
+            else if (call.duration || call.durationSeconds) baseFields.duration_seconds = call.duration || call.durationSeconds;
             baseFields.outcome = deriveOutcome(call);
             // summary may be a string, .text, or an array (Quo v3 sends array)
             const rawSummary = data.summary || call.summary || null;
@@ -307,7 +420,42 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        const callRow = await upsertCall(sb, baseFields);
+        // Reverse-merge path: if the SDR logged this call manually faster
+        // than Quo's webhook landed (the 10-second race), there's a recent
+        // manual row for this lead with no openphone_call_id. Merge our
+        // enrichment onto that row instead of inserting a duplicate.
+        let callRow;
+        if (leadId && !existingRow) {
+            const manualTarget = await findRecentManualMergeTarget(sb, leadId);
+            if (manualTarget) {
+                callRow = await mergeQuoIntoManualRow(sb, manualTarget.id, baseFields);
+                console.log('[openphone/webhook] merged Quo enrichment into recent manual log', {
+                    call_id: openphoneCallId,
+                    lead_calls_id: callRow.id,
+                    preserved_outcome: manualTarget.outcome
+                });
+            }
+        }
+        if (!callRow) {
+            callRow = await upsertCall(sb, baseFields);
+        }
+
+        // Auto-detect Spanish on the transcript and stamp the lead's
+        // primary_language ONLY if currently null. Never overrides a
+        // manual choice from the dashboard.
+        if (baseFields.transcript && callRow.lead_id) {
+            const lang = detectLanguage(baseFields.transcript);
+            if (lang) {
+                try {
+                    await sb.from('leads')
+                        .update({ primary_language: lang })
+                        .eq('id', callRow.lead_id)
+                        .is('primary_language', null);
+                } catch (e) {
+                    console.warn('[openphone/webhook] language stamp failed', e.message || e);
+                }
+            }
+        }
 
         if (baseFields.outcome && callRow.lead_id) {
             // David's leads table tracks last_called_at + last_called_outcome

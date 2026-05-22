@@ -60,22 +60,73 @@ module.exports = async function handler(req, res) {
     const calledAtIso = new Date().toISOString();
     const client = sb();
 
-    // 1. Insert into prospecting.lead_calls — the table the detail drawer
+    // 1. Write to prospecting.lead_calls — the table the detail drawer
     //    + My Call History both read from. `logged_by` is what scopes
     //    per-SDR queries server-side, so this is the load-bearing write
     //    for SDR attribution.
+    //
+    //    Merge rule: find the most recent Quo-side row for THIS lead that
+    //    hasn't been dispositioned by a human yet. "Human outcome" =
+    //    anything other than what the Quo webhook auto-derives from the
+    //    call status (answered / voicemail / no_answer / missed_inbound).
+    //    If such a row exists, UPDATE it with the human outcome + notes.
+    //    Otherwise INSERT a new row.
+    //
+    //    Why this is the right key (not a time window):
+    //      - Tied to the actual call event, not a guess at "how long ago
+    //        was the last call." Calling back a lead a week later won't
+    //        accidentally merge onto the prior call — the prior call's
+    //        outcome was already a human value (booked_meeting / dnc /
+    //        etc.) so it's filtered out as a merge candidate.
+    //      - The Quo row for the new call (still 'answered' from auto-
+    //        derivation) IS picked up as the target.
+    //      - If the SDR logs WAY later (next day) and the new Quo row
+    //        is still 'answered', the merge still works — there's no
+    //        artificial time bound to miss.
+    //
+    //    Safety floor: only consider rows from the last 7 days. Prevents
+    //    merging onto an ancient un-dispositioned call where the SDR
+    //    forgot to log months ago.
+    const AUTO_OUTCOMES = new Set(['answered', 'voicemail', 'no_answer', 'missed_inbound']);
     let callInsert = { skipped: 'no_service_key' };
     if (client) {
         try {
-            const { error } = await client.from('lead_calls').insert({
-                lead_id: id,
-                direction: 'outbound',
-                called_at: calledAtIso,
-                outcome: body.outcome,
-                notes: body.notes || '',
-                logged_by: loggedBy
-            });
-            callInsert = error ? { error: error.message } : { ok: true };
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: candidates } = await client.from('lead_calls')
+                .select('id, openphone_call_id, called_at, outcome, transcript')
+                .eq('lead_id', id)
+                .not('openphone_call_id', 'is', null)
+                .gte('called_at', sevenDaysAgo)
+                .order('called_at', { ascending: false })
+                .limit(5);
+
+            // Pick the most recent Quo row whose outcome is still auto-derived
+            // (or null), meaning "not yet human-dispositioned."
+            const target = (candidates || []).find(r => r.outcome == null || AUTO_OUTCOMES.has(r.outcome));
+
+            if (target) {
+                const update = {
+                    outcome: body.outcome,
+                    logged_by: loggedBy
+                };
+                if (body.notes && body.notes.trim()) {
+                    update.notes = body.notes;
+                }
+                const { error } = await client.from('lead_calls').update(update).eq('id', target.id);
+                callInsert = error
+                    ? { error: error.message, merge_target: target.id }
+                    : { ok: true, merged: true, call_id: target.id, prior_outcome: target.outcome, had_transcript: !!target.transcript };
+            } else {
+                const { error } = await client.from('lead_calls').insert({
+                    lead_id: id,
+                    direction: 'outbound',
+                    called_at: calledAtIso,
+                    outcome: body.outcome,
+                    notes: body.notes || '',
+                    logged_by: loggedBy
+                });
+                callInsert = error ? { error: error.message } : { ok: true, merged: false };
+            }
         } catch (e) {
             callInsert = { error: String(e.message || e) };
         }
