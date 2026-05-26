@@ -18,12 +18,12 @@
  * expose a "dial-only" mutation; the Postgrest schema is exposed, RLS lets
  * admins update).
  */
-const { assertAdmin, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     const body = await readJsonBody(req);

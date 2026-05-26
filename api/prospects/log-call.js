@@ -19,7 +19,7 @@
  * forward is still the source of truth for lifecycle state (auto-decay,
  * callback scheduling, etc.).
  */
-const { assertAdmin, forwardToProspecting, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, forwardToProspecting, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 function sb() {
@@ -32,7 +32,7 @@ function sb() {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
     const body = await readJsonBody(req);
     const id = safeNumberId(body.id);

@@ -14,7 +14,7 @@
  * accumulate as they land. The drawer reads `call_history` and renders a
  * timeline.
  */
-const { assertAdmin, forwardToProspecting, methodNotAllowed, safeNumberId } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, forwardToProspecting, methodNotAllowed, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 async function fetchCallHistory(leadId) {
@@ -37,7 +37,7 @@ async function fetchCallHistory(leadId) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
     const q = req.query || {};
     const id = safeNumberId(q.id);

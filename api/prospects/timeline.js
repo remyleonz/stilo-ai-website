@@ -11,12 +11,12 @@
  *
  * Powers the Timeline tab in the lead drawer.
  */
-const { assertAdmin, methodNotAllowed, safeNumberId } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     const id = safeNumberId((req.query && req.query.id) || (req.query && req.query.lead_id));

@@ -7,11 +7,11 @@
  * Query: limit, due_before (ISO timestamp; defaults to now+24h on the
  * upstream side).
  */
-const { assertAdmin, forwardToProspecting, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, forwardToProspecting, methodNotAllowed } = require('./_shared');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
     const q = req.query || {};
     const { status, json } = await forwardToProspecting({

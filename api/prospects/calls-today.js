@@ -8,12 +8,12 @@
  * Day boundary is ET (Miami), not UTC, so an 8pm call doesn't roll
  * out of the tab at 7-8pm local. DST handled by startOfDayET().
  */
-const { assertAdmin, methodNotAllowed, startOfDayET } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, resolveAssignedTo, methodNotAllowed, startOfDayET } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
@@ -27,14 +27,14 @@ module.exports = async function handler(req, res) {
 
     const startOfDay = startOfDayET();
 
-    // ?assigned_to=remy|david — restrict to leads this SDR called today via
-    // leads.assigned_to (parity-based, reliable). lead_calls.logged_by is NOT
-    // used here because old calls updated leads directly without a lead_calls row.
-    const SDR_EMAIL_BY_KEY = {
-        remy:  'remyleon@stiloaipartners.com',
-        david: 'davidcoira@stiloaipartners.com'
-    };
-    const sdrEmail = SDR_EMAIL_BY_KEY[String((req.query && req.query.assigned_to) || '').toLowerCase()] || null;
+    // SDR scoping. SDR callers are force-scoped to their own email;
+    // admins can pass ?assigned_to=<sdr_key|email>.
+    let sdrEmail = null;
+    if (gate.isSdr && !gate.isAdmin) {
+        sdrEmail = gate.email;
+    } else if (req.query && req.query.assigned_to) {
+        sdrEmail = await resolveAssignedTo(req.query.assigned_to);
+    }
 
     let q = sb.from('leads')
         .select('*')

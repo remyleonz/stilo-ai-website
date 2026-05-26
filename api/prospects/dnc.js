@@ -4,11 +4,11 @@
  * Marks a lead as do-not-call. Forwards to upstream POST
  * /api/prospects/{id}/dnc.
  */
-const { assertAdmin, forwardToProspecting, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, forwardToProspecting, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
     const body = await readJsonBody(req);
     const id = safeNumberId(body.id);

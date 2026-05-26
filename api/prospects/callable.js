@@ -4,13 +4,17 @@
  * recently-called leads. Pass-through query params: limit, niche, tier,
  * min_score, q.
  */
-const { assertAdmin, forwardToProspecting, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, resolveAssignedTo, forwardToProspecting, methodNotAllowed } = require('./_shared');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
     const q = req.query || {};
+    // SDRs are force-scoped to their own email; admins pass-through (with key resolution).
+    const assignedTo = (gate.isSdr && !gate.isAdmin)
+        ? gate.email
+        : (q.assigned_to ? await resolveAssignedTo(q.assigned_to) : null);
     const { status, json } = await forwardToProspecting({
         method: 'GET',
         path: '/api/prospects/callable',
@@ -20,7 +24,7 @@ module.exports = async function handler(req, res) {
             tier: q.tier,
             min_score: q.min_score,
             q: q.q,
-            assigned_to: q.assigned_to
+            assigned_to: assignedTo
         }
     });
     if (status === 200) {

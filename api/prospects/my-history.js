@@ -18,7 +18,7 @@
  *   - Calls Today (today only, any SDR)
  *   - Dead Pool   (terminal outcome OR call_attempts >= 3)
  */
-const { assertAdmin, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const ADMIN_SDRS = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
@@ -32,7 +32,7 @@ const LEAD_SELECT_COLS = [
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {

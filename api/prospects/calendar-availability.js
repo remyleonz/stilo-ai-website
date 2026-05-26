@@ -12,7 +12,7 @@
  * Returns 503 with a clear message if OAuth isn't configured yet — frontend
  * shows a "Configure Google Calendar" prompt instead of a broken picker.
  */
-const { assertAdmin, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
 
 const SLOT_MIN = 15;
 const BIZ_START_HOUR = 9;   // 9am ET
@@ -55,7 +55,7 @@ function generateBusinessSlots(days) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     const days = Math.min(Math.max(parseInt((req.query && req.query.days) || '7', 10), 1), 14);

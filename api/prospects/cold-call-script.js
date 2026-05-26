@@ -18,7 +18,7 @@
  * 404 when no script exists for the slug, 503 when the service account
  * isn't configured (e.g., before David grants IAM access).
  */
-const { assertAdmin, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
 const crypto = require('crypto');
 
 const BUCKET = 'stilo-cold-call-scripts';
@@ -145,7 +145,7 @@ async function readObject(token, name) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     const q = req.query || {};

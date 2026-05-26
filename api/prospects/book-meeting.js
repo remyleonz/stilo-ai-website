@@ -13,7 +13,7 @@
  * If GOOGLE_OAUTH_* aren't configured, returns 503 — frontend shows a
  * "Configure Google Calendar" prompt instead of a broken flow.
  */
-const { assertAdmin, methodNotAllowed, readJsonBody, safeNumberId, forwardToProspecting } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed, readJsonBody, safeNumberId, forwardToProspecting } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 async function getAccessToken() {
@@ -90,7 +90,7 @@ async function sendConfirmationEmail(opts) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     const body = await readJsonBody(req);

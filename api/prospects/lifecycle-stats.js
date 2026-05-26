@@ -16,19 +16,17 @@
  * do-not-call list AND has not already moved out of the cold-call lifecycle
  * (booked / DNC / wrong-number / disconnected).
  */
-const { assertAdmin, forwardToProspecting, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, resolveAssignedTo, forwardToProspecting, methodNotAllowed } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
 const DEAD_OUTCOMES   = ['do_not_call', 'dnc_request', 'wrong_number', 'disconnected'];
 
-const SDR_EMAIL_BY_KEY = {
-    remy:  'remyleon@stiloaipartners.com',
-    david: 'davidcoira@stiloaipartners.com'
-};
-function sdrEmailFromKey(k) {
-    const v = String(k || '').trim().toLowerCase();
-    return SDR_EMAIL_BY_KEY[v] || null;
+// Legacy shim — kept for back-compat with the call site below. New code
+// should use resolveAssignedTo() from _shared.js which is async and reads
+// from sdr_users for every active SDR.
+async function sdrEmailFromKey(k) {
+    return await resolveAssignedTo(k);
 }
 
 async function statsFromUpstream() {
@@ -171,11 +169,17 @@ async function localStats(sdrEmail) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
-    const sdrKey = (req.query && req.query.assigned_to) ? String(req.query.assigned_to) : '';
-    const sdrEmail = sdrEmailFromKey(sdrKey);
+    // SDR scoping: SDR caller is force-scoped to their own email; admin
+    // can pass ?assigned_to=<sdr_key|email> explicitly.
+    let sdrEmail = null;
+    if (gate.isSdr && !gate.isAdmin) {
+        sdrEmail = gate.email;
+    } else if (req.query && req.query.assigned_to) {
+        sdrEmail = await resolveAssignedTo(req.query.assigned_to);
+    }
 
     try {
         const [local, upstream] = await Promise.all([

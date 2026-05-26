@@ -5,7 +5,7 @@
  * Returns leads with last_called_outcome='booked_meeting', ordered by
  * last_called_at desc (most recently booked first).
  */
-const { assertAdmin, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const SELECT_COLS = [
@@ -17,7 +17,7 @@ const SELECT_COLS = [
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-    const gate = await assertAdmin(req, res);
+    const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
 
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
