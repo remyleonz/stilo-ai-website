@@ -295,7 +295,7 @@ nav.scrolled{padding:10px 0;backdrop-filter:blur(18px);-webkit-backdrop-filter:b
     0 0 0 1px rgba(37,99,235,0.08),
     inset 0 1px 0 rgba(255,255,255,0.04);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  overflow:hidden;
+  overflow:visible;
 }
 .call-panel::before{
   content:"";position:absolute;top:0;left:0;right:0;height:1px;
@@ -659,6 +659,314 @@ html.lenis,html.lenis body{height:auto}
   .contact-inner{padding:26px}
 }
 
+/* ========== REDESIGN 2026-05: PREMIUM REFINEMENT ========== */
+
+/* Tighter section padding for the upgrade, more luxe whitespace */
+section{padding:160px 0}
+@media (max-width:960px){section{padding:96px 0}}
+
+/* Hero overrides — two-tone display H1, premium proof rail */
+.hero{padding:160px 0 96px}
+.hero-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:center}
+@media (max-width:980px){.hero-grid{grid-template-columns:1fr;gap:48px}}
+.hero h1{
+  font-family:var(--font-display);font-weight:500;
+  font-size:clamp(2.4rem,5vw,4.4rem);
+  line-height:1.0;letter-spacing:-0.035em;
+  max-width:none;
+}
+.hero h1 .line:first-child{margin-bottom:0.04em}
+.hero h1 .line{display:block;overflow:hidden;padding-bottom:0.06em}
+.hero h1 .line .line-inner{display:inline-block;transform:translateY(110%);transition:transform 1s var(--ease-out)}
+.hero h1 .line.in .line-inner{transform:translateY(0)}
+.hero h1 em{
+  font-family:var(--font-accent);font-style:italic;font-weight:400;
+  background:linear-gradient(135deg,#60A5FA 0%,#3B82F6 45%,#2563EB 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  letter-spacing:-0.01em;padding-right:0.04em;
+}
+.hero-content{max-width:580px}
+.hero-sub{font-size:clamp(1.05rem,1.25vw,1.18rem);color:var(--fg-2);max-width:50ch;margin-top:30px;line-height:1.55}
+.hero-rail{
+  display:flex;gap:22px;flex-wrap:wrap;align-items:center;
+  margin-top:48px;padding-top:24px;border-top:1px solid var(--stroke);
+  font-family:var(--font-mono);font-size:0.7rem;color:var(--fg-3);letter-spacing:0.08em;text-transform:uppercase;
+}
+.hero-rail b{color:var(--fg);font-weight:500;letter-spacing:0.04em}
+.hero-rail .sep{width:3px;height:3px;border-radius:50%;background:var(--fg-3);display:inline-block}
+
+/* ====== PARTNERS / TRUST STRIP ====== */
+.partners{padding:48px 0;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);background:var(--bg-plate)}
+.partners-inner{display:flex;align-items:center;gap:48px;flex-wrap:wrap;justify-content:space-between}
+.partners-label{
+  font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.22em;color:var(--fg-3);
+  white-space:nowrap;
+}
+.partners-row{display:flex;align-items:center;gap:44px;flex-wrap:wrap;flex:1;justify-content:flex-end;opacity:0.78}
+.partner-mark{
+  font-family:var(--font-display);font-weight:600;font-size:1rem;color:var(--fg-2);
+  letter-spacing:-0.01em;display:inline-flex;align-items:center;gap:8px;
+  transition:color .2s,opacity .2s;
+}
+.partner-mark:hover{color:var(--fg)}
+.partner-mark svg{width:18px;height:18px;color:var(--fg-2)}
+@media (max-width:720px){.partners-inner{justify-content:center}.partners-row{justify-content:center;gap:28px}}
+
+/* ====== THESIS LINE ====== */
+.thesis-section{padding:140px 0;background:var(--bg-void);position:relative;overflow:hidden}
+.thesis-section::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(900px 600px at 50% 50%,rgba(37,99,235,0.06),transparent 65%);
+}
+.thesis{
+  font-family:var(--font-display);font-weight:500;
+  font-size:clamp(2rem,4.4vw,4.2rem);letter-spacing:-0.035em;line-height:1.18;
+  margin:0 auto;text-align:center;color:var(--fg-3);
+  position:relative;max-width:none;
+}
+.thesis span{display:block;transition:color .8s var(--ease-out)}
+.thesis span.lit{color:var(--fg)}
+.thesis em{
+  font-family:var(--font-accent);font-style:italic;font-weight:400;
+  background:linear-gradient(135deg,#60A5FA 0%,#3B82F6 50%,#2563EB 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+}
+
+/* ====== SYSTEM DIAGRAM (How STILO works) ====== */
+.system-section{background:linear-gradient(180deg,var(--bg-void) 0%,var(--bg-plate) 100%);position:relative;overflow:hidden}
+.system-wrap{
+  margin-top:64px;position:relative;
+  border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,rgba(19,19,28,0.7),rgba(11,11,17,0.7));
+  border:1px solid var(--stroke);
+  padding:56px 40px;
+  overflow:hidden;
+}
+.system-wrap::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(700px 400px at 50% 110%,rgba(37,99,235,0.10),transparent 60%),
+    radial-gradient(450px 300px at 8% 20%,rgba(59,130,246,0.05),transparent 60%);
+  pointer-events:none;
+}
+.system-grid{
+  position:relative;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:18px;
+  align-items:stretch;
+}
+.system-node{
+  position:relative;padding:18px 18px 16px;border-radius:14px;
+  background:rgba(20,20,26,0.78);border:1px solid var(--stroke);
+  backdrop-filter:blur(6px);
+}
+.system-node-code{font-family:var(--font-mono);font-size:0.66rem;letter-spacing:0.18em;color:var(--accent-hi);text-transform:uppercase;margin-bottom:6px}
+.system-node-name{font-family:var(--font-display);font-size:1rem;font-weight:600;color:var(--fg);margin-bottom:6px}
+.system-node-sub{font-size:0.84rem;color:var(--fg-3);line-height:1.4}
+.system-center{
+  display:grid;place-items:center;padding:22px 14px;
+  border-radius:14px;border:1px solid var(--accent-line);
+  background:radial-gradient(380px 220px at 50% 50%,rgba(37,99,235,0.18),rgba(20,20,26,0.7));
+  text-align:center;position:relative;
+}
+.system-center-eyebrow{font-family:var(--font-mono);font-size:0.66rem;letter-spacing:0.2em;color:var(--accent-hi);text-transform:uppercase;margin-bottom:8px}
+.system-center-name{font-family:var(--font-display);font-size:1.4rem;font-weight:600;color:var(--fg);letter-spacing:-0.02em;line-height:1.1}
+.system-center-sub{font-size:0.84rem;color:var(--fg-2);margin-top:8px;max-width:24ch;line-height:1.45}
+.system-pulse{
+  position:absolute;inset:0;border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 0 rgba(59,130,246,0.4);animation:systemPulse 2.8s ease-in-out infinite;
+}
+@keyframes systemPulse{
+  0%{box-shadow:0 0 0 0 rgba(59,130,246,0.35)}
+  70%{box-shadow:0 0 0 18px rgba(59,130,246,0)}
+  100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}
+}
+@media (max-width:860px){.system-grid{grid-template-columns:1fr}.system-wrap{padding:36px 22px}}
+
+/* ====== USE CASE TABS ====== */
+.usecases-section{background:var(--bg-void)}
+.usecase-tabs{
+  display:inline-flex;gap:6px;padding:6px;border-radius:999px;
+  background:rgba(15,15,20,0.7);border:1px solid var(--stroke);
+  margin-bottom:36px;flex-wrap:wrap;
+}
+.usecase-tab{
+  padding:10px 18px;border-radius:999px;border:0;cursor:pointer;
+  background:transparent;color:var(--fg-2);
+  font-family:var(--font-display);font-weight:500;font-size:0.88rem;letter-spacing:-0.005em;
+  transition:background .25s,color .25s;
+}
+.usecase-tab:hover{color:var(--fg)}
+.usecase-tab.active{background:rgba(37,99,235,0.16);color:var(--accent-hi);border:1px solid var(--accent-line)}
+.usecase-panel{
+  display:none;
+  grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;
+  padding:8px 0;
+}
+.usecase-panel.active{display:grid;animation:ucFade .5s var(--ease-out)}
+@keyframes ucFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.usecase-eyebrow{font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.18em;color:var(--accent-hi);text-transform:uppercase;margin-bottom:14px}
+.usecase-title{font-family:var(--font-display);font-size:clamp(1.7rem,2.6vw,2.4rem);font-weight:500;letter-spacing:-0.025em;line-height:1.1;color:var(--fg);max-width:18ch}
+.usecase-title em{font-family:var(--font-accent);font-style:italic;font-weight:400;color:var(--accent-hi)}
+.usecase-body{margin-top:18px;color:var(--fg-2);font-size:1rem;max-width:46ch;line-height:1.6}
+.usecase-bullets{margin-top:22px;display:flex;flex-direction:column;gap:10px}
+.usecase-bullets li{list-style:none;padding-left:24px;position:relative;color:var(--fg-2);font-size:0.95rem;line-height:1.5}
+.usecase-bullets li::before{
+  content:"";position:absolute;left:0;top:0.55em;width:10px;height:10px;border-radius:50%;
+  border:1.5px solid var(--accent-hi);background:rgba(37,99,235,0.18);
+}
+.usecase-stat{
+  margin-top:30px;display:inline-flex;flex-direction:column;gap:4px;padding:14px 20px;
+  border-radius:14px;border:1px solid var(--accent-line);background:var(--accent-soft);
+}
+.usecase-stat b{font-family:var(--font-display);font-size:1.6rem;font-weight:600;color:var(--fg);letter-spacing:-0.02em}
+.usecase-stat span{font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-hi);text-transform:uppercase;letter-spacing:0.14em}
+.usecase-visual{
+  position:relative;border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,rgba(19,19,28,0.7),rgba(11,11,17,0.7));
+  border:1px solid var(--stroke);padding:32px;
+  min-height:360px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.usecase-visual::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(420px 280px at 50% 50%,rgba(37,99,235,0.10),transparent 60%);
+  pointer-events:none;
+}
+.usecase-visual-inner{position:relative;width:100%;display:flex;flex-direction:column;gap:14px}
+.uc-row{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;
+  border-radius:12px;background:rgba(20,20,26,0.78);border:1px solid var(--stroke);
+}
+.uc-row-tag{font-family:var(--font-mono);font-size:0.66rem;color:var(--accent-hi);letter-spacing:0.18em;text-transform:uppercase;padding:5px 9px;border-radius:6px;background:var(--accent-soft);border:1px solid var(--accent-line);white-space:nowrap}
+.uc-row-text{font-size:0.92rem;color:var(--fg);flex:1}
+.uc-row .uc-pill{font-family:var(--font-mono);font-size:0.68rem;color:var(--fg-3);padding:4px 8px;border-radius:999px;border:1px solid var(--stroke);white-space:nowrap}
+.uc-arrow{height:1px;background:linear-gradient(90deg,transparent,var(--accent-line),transparent);margin:0 32px;position:relative}
+.uc-arrow::after{content:"";position:absolute;left:0;top:-2px;width:6px;height:6px;border-radius:50%;background:var(--accent-hi);box-shadow:0 0 12px var(--accent-hi);animation:ucArrow 2.6s linear infinite}
+@keyframes ucArrow{0%{left:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:100%;opacity:0}}
+@media (max-width:860px){.usecase-panel.active{grid-template-columns:1fr;gap:28px}.usecase-visual{padding:22px;min-height:280px}}
+
+/* ====== AGENT GRID REFINEMENT ====== */
+.agent-card{padding:32px 28px;border-radius:18px}
+.agent-sigil{
+  width:42px;height:42px;border-radius:10px;border:1px solid var(--accent-line);
+  background:var(--accent-soft);
+  color:var(--accent-hi);font-family:var(--font-mono);font-size:0.78rem;font-weight:600;letter-spacing:0.04em;
+  display:grid;place-items:center;flex-shrink:0;
+}
+.agent-card .agent-code{display:block;font-family:var(--font-mono);font-size:0.66rem;color:var(--fg-3);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:4px}
+.agent-card .agent-role{font-family:var(--font-display);font-size:1.06rem;font-weight:600;color:var(--fg);letter-spacing:-0.015em}
+.agent-card p{font-size:0.95rem;line-height:1.55;color:var(--fg-2)}
+.agent-card .agent-expand{top:24px;right:24px}
+
+/* ====== ANCHOR CASE STUDY ====== */
+.case-section{background:var(--bg-plate);position:relative;overflow:hidden}
+.case-card{
+  position:relative;border-radius:var(--radius-lg);overflow:hidden;
+  background:linear-gradient(135deg,#0A0F1F 0%,#0D1326 40%,#08121F 100%);
+  border:1px solid rgba(59,130,246,0.18);
+  padding:56px 48px;
+  display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;
+}
+.case-card::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(700px 400px at 90% 10%,rgba(37,99,235,0.16),transparent 60%),
+    radial-gradient(500px 300px at 0% 100%,rgba(59,130,246,0.10),transparent 60%);
+}
+.case-eyebrow{font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.2em;color:var(--accent-hi);text-transform:uppercase;margin-bottom:18px}
+.case-title{font-family:var(--font-display);font-size:clamp(1.6rem,2.4vw,2.2rem);font-weight:500;letter-spacing:-0.025em;line-height:1.15;color:var(--fg);max-width:22ch}
+.case-quote{margin-top:24px;font-family:var(--font-accent);font-style:italic;font-size:1.1rem;line-height:1.5;color:var(--fg);max-width:34ch}
+.case-attribution{margin-top:14px;font-family:var(--font-mono);font-size:0.74rem;color:var(--fg-3);letter-spacing:0.06em}
+.case-attribution b{color:var(--fg-2);font-weight:500;letter-spacing:0.04em}
+.case-stats{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.case-stat{
+  padding:22px 20px;border-radius:14px;
+  background:rgba(255,255,255,0.025);border:1px solid var(--stroke-hi);
+}
+.case-stat-num{font-family:var(--font-display);font-size:clamp(2rem,2.8vw,2.6rem);font-weight:500;letter-spacing:-0.03em;line-height:1;color:var(--fg);
+  background:linear-gradient(135deg,#60A5FA,#2563EB);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+}
+.case-stat-label{margin-top:8px;font-family:var(--font-mono);font-size:0.66rem;color:var(--fg-3);letter-spacing:0.14em;text-transform:uppercase;line-height:1.4}
+@media (max-width:860px){.case-card{grid-template-columns:1fr;padding:36px 26px;gap:32px}}
+
+/* ====== STATS SHAPED PANEL ====== */
+.stats-section{background:var(--bg-void);padding:0 0 140px}
+.stats-shape{
+  position:relative;border-radius:28px;overflow:hidden;
+  background:linear-gradient(135deg,#1D4ED8 0%,#2563EB 50%,#1E40AF 100%);
+  padding:64px 56px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:32px;
+}
+.stats-shape::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(500px 300px at 12% 0%,rgba(255,255,255,0.10),transparent 60%),
+    radial-gradient(400px 240px at 100% 100%,rgba(255,255,255,0.06),transparent 60%);
+}
+.stats-shape::after{
+  content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;opacity:0.18;
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.10) 0 1px,transparent 1px 14px);
+}
+.stat-block{position:relative}
+.stat-block-num{font-family:var(--font-display);font-size:clamp(2.6rem,4vw,3.8rem);font-weight:500;letter-spacing:-0.04em;line-height:1;color:#F0F6FF}
+.stat-block-num em{font-style:normal;color:#7FBFFF;font-weight:500}
+.stat-block-label{margin-top:14px;font-family:var(--font-mono);font-size:0.74rem;color:rgba(240,246,255,0.78);letter-spacing:0.14em;text-transform:uppercase;line-height:1.4;max-width:22ch}
+@media (max-width:960px){.stats-shape{grid-template-columns:repeat(2,1fr);padding:44px 32px}}
+@media (max-width:520px){.stats-shape{grid-template-columns:1fr;gap:24px}}
+
+/* ====== PROCESS REFINEMENT ====== */
+.process-step{padding:36px 30px}
+.step-num{font-family:var(--font-display);font-size:3.6rem;color:var(--fg);font-weight:500;letter-spacing:-0.05em;opacity:0.92}
+.step-num em{font-style:normal;color:var(--accent-hi)}
+.process-step h3{margin-bottom:8px;font-size:1.18rem;font-weight:600}
+
+/* ====== WHY US REFINEMENT ====== */
+.why-card{padding:34px 30px;min-height:230px}
+.why-card h3{font-size:1.12rem;font-weight:600;letter-spacing:-0.015em;margin-bottom:10px}
+.why-card p{font-size:0.94rem;line-height:1.6}
+
+/* ====== CONTACT / QUIZ HEADER UPGRADE ====== */
+.contact-section{padding:120px 0 160px}
+.contact-section .section-header h2{font-size:clamp(2.2rem,4vw,3.4rem)}
+
+/* Section header tightening */
+.section-header h2{font-size:clamp(2.2rem,3.6vw,3.4rem);letter-spacing:-0.035em;line-height:1.05;font-weight:500}
+.section-header .gradient-text{font-family:var(--font-display);font-style:normal;background:none;-webkit-text-fill-color:initial;color:var(--fg);font-weight:500}
+.section-header .gradient-text em{
+  font-family:var(--font-accent);font-style:italic;font-weight:400;
+  background:linear-gradient(135deg,#60A5FA 0%,#2563EB 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+}
+
+/* Buttons: ensure consistent two-tier system */
+.btn-primary{
+  background:var(--accent);color:#fff;
+  font-weight:500;font-size:0.93rem;letter-spacing:-0.005em;
+  padding:14px 26px;
+}
+.btn-primary::before{display:none}
+.btn-primary:hover{background:var(--accent-hi);box-shadow:0 14px 40px rgba(37,99,235,0.32);transform:translateY(-1px)}
+.btn-ghost{
+  border:1px solid var(--stroke-hi);color:var(--fg);
+  background:rgba(255,255,255,0.025);
+}
+.btn-ghost:hover{border-color:var(--accent-hi);background:rgba(37,99,235,0.10);color:var(--fg)}
+
+/* Inline chevron link */
+.link-chevron{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-display);font-weight:500;font-size:0.9rem;
+  color:var(--accent-hi);transition:gap .2s,color .2s;
+}
+.link-chevron:hover{gap:12px;color:var(--accent-hi)}
+.link-chevron::after{content:"→";display:inline-block;font-family:var(--font-mono)}
+
+/* Nav CTA refinement (single filled style) */
+.nav-cta{background:var(--accent);color:#fff;border:0;padding:9px 18px;font-size:0.85rem}
+.nav-cta::before,.nav-cta::after{display:none}
+.nav-cta:hover{background:var(--accent-hi);box-shadow:0 8px 24px rgba(37,99,235,0.32)}
+
 /* ========== REDUCED MOTION ========== */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
@@ -676,21 +984,24 @@ html.lenis,html.lenis body{height:auto}
   <div class="nav-inner">
     <a href="/" class="nav-logo" onclick="location.href='/';return false;">STILO AI PARTNERS</a>
     <ul class="nav-links">
+      <li><a href="#system">The system</a></li>
       <li><a href="#services">Agents</a></li>
+      <li><a href="#results">Results</a></li>
       <li><a href="#process">Process</a></li>
-      <li><a href="#why-us">Why Us</a></li>
       <li><a href="/auth.html">Account</a></li>
     </ul>
-    <a href="#contact" class="nav-cta">Free Audit</a>
+    <a href="#contact" class="nav-cta">Talk to a partner</a>
     <button class="menu-toggle" aria-label="Toggle menu"><span></span></button>
   </div>
 </nav>
 <div class="mobile-menu" id="mobileMenu">
+  <a href="#system">The system</a>
   <a href="#services">Agents</a>
+  <a href="#results">Results</a>
   <a href="#process">Process</a>
-  <a href="#why-us">Why Us</a>
+  <a href="#why-us">Why us</a>
   <a href="/auth.html">Account</a>
-  <a href="#contact" class="btn-primary" style="margin-top:16px;text-align:center;">Free Audit</a>
+  <a href="#contact" class="btn-primary" style="margin-top:16px;text-align:center;">Talk to a partner</a>
 </div>
 
 <!-- ===== HERO ===== -->
@@ -698,168 +1009,464 @@ html.lenis,html.lenis body{height:auto}
   <canvas id="heroCanvas" class="hero-canvas"></canvas>
   <div class="hero-veil"></div>
   <div class="container">
-    <div class="hero-inner">
-      <h1 data-split="words">We build AI.<br>You build a <span class="accent-italic">business</span>.</h1>
-      <div class="hero-ctas">
-        <a href="#contact" class="btn-primary">Get your free audit &rarr;</a>
-        <a href="#services" class="btn-ghost">See the agents</a>
+    <div class="hero-grid">
+      <div class="hero-content">
+        <span class="hero-eyebrow">Miami &middot; AI consulting partners</span>
+        <h1 data-split="lines">
+          <span class="line"><span class="line-inner">Nine AI agents.</span></span>
+          <span class="line"><span class="line-inner">One <em>operating system</em>.</span></span>
+        </h1>
+        <p class="hero-sub">Custom AI that answers every call, follows up on every lead in under a minute, and brings dormant customers back. Built for your business. Deployed in five days. Managed by us.</p>
+        <div class="hero-ctas">
+          <a href="#contact" class="btn-primary">Talk to a partner</a>
+          <a href="#system" class="btn-ghost">See the system</a>
+        </div>
+        <div class="hero-rail">
+          <span><b>9</b> specialized agents</span><span class="sep"></span>
+          <span><b>5 days</b> to deploy</span><span class="sep"></span>
+          <span><b>24/7</b> human-reviewed</span><span class="sep"></span>
+          <span><b>Built in Miami</b></span>
+        </div>
       </div>
-      <p class="hero-sub">Custom AI agents to answer every call, chase every lead, and bring dormant customers back.</p>
+      <div class="hero-visual">
+        <div class="call-panel">
+          <div class="call-badge">Live agent &middot; ECHO</div>
+          <div class="call-head">
+            <div class="call-avatar">EC</div>
+            <div>
+              <div class="call-name">Incoming call &middot; <b style="color:var(--fg)">+1 (305) 555-0184</b></div>
+              <div class="call-role">AI receptionist on duty</div>
+            </div>
+            <div class="call-live">LIVE</div>
+            <div class="call-timer" id="callTimer">00:00</div>
+          </div>
+          <div class="call-transcript" id="callTranscript"></div>
+          <div class="call-wave">
+            <span style="animation-delay:0s"></span><span style="animation-delay:.08s"></span>
+            <span style="animation-delay:.16s"></span><span style="animation-delay:.24s"></span>
+            <span style="animation-delay:.32s"></span><span style="animation-delay:.40s"></span>
+            <span style="animation-delay:.48s"></span><span style="animation-delay:.56s"></span>
+            <span style="animation-delay:.64s"></span><span style="animation-delay:.72s"></span>
+            <span style="animation-delay:.80s"></span><span style="animation-delay:.88s"></span>
+            <span style="animation-delay:.96s"></span><span style="animation-delay:1.04s"></span>
+            <span style="animation-delay:1.12s"></span>
+          </div>
+          <div class="call-footer">
+            <span>Appointment booked &middot; <b>Confirmation sent</b></span>
+            <span>Calls today: <b>47</b></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ===== INDUSTRIES MARQUEE ===== -->
-<div class="industries">
+<!-- ===== PARTNERS / TRUST STRIP ===== -->
+<div class="partners">
   <div class="container">
-    <div class="industries-label">Built for local operators in</div>
-    <div class="marquee">
-      <div class="marquee-track" id="industryTrack">
-        <span class="industry-chip">Restaurants</span>
-        <span class="industry-chip">Salons &amp; Barbershops</span>
-        <span class="industry-chip">Contractors</span>
-        <span class="industry-chip">Medical &amp; Dental</span>
-        <span class="industry-chip">Real Estate</span>
-        <span class="industry-chip">Gyms &amp; Fitness</span>
-        <span class="industry-chip">Retail</span>
-        <span class="industry-chip">Vet Clinics</span>
-        <span class="industry-chip">Auto Shops</span>
-        <span class="industry-chip">Professional Services</span>
+    <div class="partners-inner">
+      <div class="partners-label">Built on the stack you trust</div>
+      <div class="partners-row">
+        <span class="partner-mark" title="OpenAI">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+          OpenAI
+        </span>
+        <span class="partner-mark" title="Anthropic">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 19 11 5h2l6 14h-3l-1.4-3.4H9.4L8 19H5Zm5.2-6h3.6L12 8.4 10.2 13Z"/></svg>
+          Anthropic
+        </span>
+        <span class="partner-mark" title="Twilio">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="9" cy="9" r="1.8"/><circle cx="15" cy="9" r="1.8"/><circle cx="9" cy="15" r="1.8"/><circle cx="15" cy="15" r="1.8"/></svg>
+          Twilio
+        </span>
+        <span class="partner-mark" title="Stripe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7c-1.5-1-3-1.4-4.5-1.4-2 0-3.5 1-3.5 2.6 0 3.6 8.5 2.4 8.5 6.4 0 1.6-1.5 2.8-4 2.8C9.5 17.4 8 17 6 16"/></svg>
+          Stripe
+        </span>
+        <span class="partner-mark" title="Vercel">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 22 20H2L12 3Z"/></svg>
+          Vercel
+        </span>
+        <span class="partner-mark" title="Google Cloud">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10a6 6 0 0 0-11.5-1.5A4 4 0 0 0 7 17h11a4 4 0 0 0 .5-7Z"/></svg>
+          Google Cloud
+        </span>
       </div>
     </div>
   </div>
 </div>
 
+<!-- ===== THESIS LINE ===== -->
+<section class="thesis-section">
+  <div class="container">
+    <h2 class="thesis" id="thesisLine">
+      <span>Every call answered.</span>
+      <span>Every lead chased.</span>
+      <span>Every customer <em>brought back</em>.</span>
+    </h2>
+  </div>
+</section>
+
+<!-- ===== THE SYSTEM ===== -->
+<section class="system-section" id="system">
+  <div class="container">
+    <div class="section-header fade-in" style="max-width:660px;margin-bottom:20px;">
+      <span class="eyebrow">The system</span>
+      <h2><span class="gradient-text">Nine specialized agents.<br>One <em>connected</em> business.</span></h2>
+      <p>Your front desk talks to your pipeline. Your pipeline feeds your reactivation engine. Every signal routes through one operating layer, built and tuned for your business.</p>
+    </div>
+    <div class="system-wrap fade-in">
+      <div class="system-grid">
+        <div class="system-node"><div class="system-node-code">ECHO</div><div class="system-node-name">Front desk</div><div class="system-node-sub">24/7 voice agent. Books appointments, captures every lead.</div></div>
+        <div class="system-node"><div class="system-node-code">IGNITE</div><div class="system-node-name">Pipeline</div><div class="system-node-sub">Replies to every inbound lead in under 60 seconds.</div></div>
+        <div class="system-node"><div class="system-node-code">REVIVE</div><div class="system-node-name">Reactivation</div><div class="system-node-sub">Brings dormant customers back with tailored offers.</div></div>
+        <div class="system-node"><div class="system-node-code">SCOUT</div><div class="system-node-name">Lead gen</div><div class="system-node-sub">Builds and ranks targeted B2B prospect lists.</div></div>
+        <div class="system-center">
+          <span class="system-pulse"></span>
+          <div class="system-center-eyebrow">STILO OS</div>
+          <div class="system-center-name">Your business,<br>connected.</div>
+          <div class="system-center-sub">One layer. Every agent shares context, customers, and outcomes.</div>
+        </div>
+        <div class="system-node"><div class="system-node-code">FORGE</div><div class="system-node-name">Website</div><div class="system-node-sub">Conversion-built site, researched and shipped in a week.</div></div>
+        <div class="system-node"><div class="system-node-code">SIGNAL</div><div class="system-node-name">AI SEO</div><div class="system-node-sub">Make your business visible to ChatGPT, Google AI, Perplexity.</div></div>
+        <div class="system-node"><div class="system-node-code">ORACLE</div><div class="system-node-name">Intelligence</div><div class="system-node-sub">Weekly market and competitor briefs with specific actions.</div></div>
+        <div class="system-node"><div class="system-node-code">PITCH</div><div class="system-node-name">Sales coach</div><div class="system-node-sub">Real coaching from your calls and emails. Better scripts, sharper replies.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== USE CASES (TABBED) ===== -->
+<section class="usecases-section" id="usecases">
+  <div class="container">
+    <div class="section-header fade-in" style="margin-bottom:36px;">
+      <span class="eyebrow">Use cases</span>
+      <h2><span class="gradient-text">What it looks like for your <em>business</em>.</span></h2>
+    </div>
+    <div class="usecase-tabs" role="tablist" id="ucTabs">
+      <button class="usecase-tab active" data-uc="front">Front desk</button>
+      <button class="usecase-tab" data-uc="pipeline">Pipeline</button>
+      <button class="usecase-tab" data-uc="reactivate">Reactivation</button>
+      <button class="usecase-tab" data-uc="growth">Growth intelligence</button>
+    </div>
+
+    <div class="usecase-panel active" data-uc-panel="front">
+      <div>
+        <div class="usecase-eyebrow">ECHO &middot; AI receptionist</div>
+        <h3 class="usecase-title">Answer every call. <em>Book every lead.</em></h3>
+        <p class="usecase-body">A 24/7 voice agent trained on your hours, services, and pricing. It handles the common questions, books straight into your calendar, and sends you a summary of every call. Transfers to a human when something needs one.</p>
+        <ul class="usecase-bullets">
+          <li>Answers in under 2 rings, every time</li>
+          <li>Books into Google, Outlook, Calendly, or your PMS</li>
+          <li>Nights, weekends, holidays, lunch</li>
+        </ul>
+        <div class="usecase-stat"><b>+38%</b><span>Calls captured</span></div>
+      </div>
+      <div class="usecase-visual">
+        <div class="usecase-visual-inner">
+          <div class="uc-row"><span class="uc-row-tag">Caller</span><span class="uc-row-text">"Do you have an opening tomorrow afternoon?"</span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">ECHO</span><span class="uc-row-text">"I can fit you in. 2:15 or 3:30?"</span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">System</span><span class="uc-row-text">Appointment booked &middot; <b style="color:var(--fg)">3:30 PM tomorrow</b></span><span class="uc-pill">SMS sent</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="usecase-panel" data-uc-panel="pipeline">
+      <div>
+        <div class="usecase-eyebrow">IGNITE &middot; Lead response</div>
+        <h3 class="usecase-title">Reply to every lead in <em>under a minute</em>.</h3>
+        <p class="usecase-body">Connects to your forms, ads, and inbox. New lead lands, IGNITE replies by text, email, or call in under sixty seconds with a personalized message, qualifies the lead, and books them in.</p>
+        <ul class="usecase-bullets">
+          <li>First response in under 60 seconds, every time</li>
+          <li>Multi-channel: SMS, email, voice, web chat</li>
+          <li>Qualifies, books, and hands off when the lead is hot</li>
+        </ul>
+        <div class="usecase-stat"><b>9x</b><span>Faster than industry average</span></div>
+      </div>
+      <div class="usecase-visual">
+        <div class="usecase-visual-inner">
+          <div class="uc-row"><span class="uc-row-tag">Form</span><span class="uc-row-text">New lead: Maria Cruz &middot; kitchen reno quote</span><span class="uc-pill">0:00</span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">IGNITE</span><span class="uc-row-text">SMS sent &middot; "Hi Maria, can I grab a quick 2 min to scope your kitchen?"</span><span class="uc-pill">0:38</span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">Calendar</span><span class="uc-row-text">Discovery call booked &middot; <b style="color:var(--fg)">Thursday 10:00</b></span><span class="uc-pill">1:14</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="usecase-panel" data-uc-panel="reactivate">
+      <div>
+        <div class="usecase-eyebrow">REVIVE &middot; Customer reactivation</div>
+        <h3 class="usecase-title">Bring <em>dormant customers</em> back.</h3>
+        <p class="usecase-body">REVIVE scans your customer history for people who haven't visited in six-plus months and sends personalized SMS and email with offers tailored to their past behavior. Typical first-month recovery is eight to twelve percent.</p>
+        <ul class="usecase-bullets">
+          <li>Segments by recency, spend, and service history</li>
+          <li>Personalized offer per customer, not a mass blast</li>
+          <li>Reports recovered revenue, every week</li>
+        </ul>
+        <div class="usecase-stat"><b>+11%</b><span>Dormant customers recovered, month 1</span></div>
+      </div>
+      <div class="usecase-visual">
+        <div class="usecase-visual-inner">
+          <div class="uc-row"><span class="uc-row-tag">Scan</span><span class="uc-row-text">847 customers inactive &gt; 6 months</span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">REVIVE</span><span class="uc-row-text">Sent 847 personalized offers &middot; <b style="color:var(--fg)">94 reopened the thread</b></span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">Books</span><span class="uc-row-text">Appointments rebooked: 41</span><span class="uc-pill">+$14.2k</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="usecase-panel" data-uc-panel="growth">
+      <div>
+        <div class="usecase-eyebrow">ORACLE &middot; Growth intelligence</div>
+        <h3 class="usecase-title">Know what to do next, <em>every week</em>.</h3>
+        <p class="usecase-body">ORACLE monitors your market, tracks competitor moves, and delivers a weekly brief with specific actions. Where you're being out-positioned, what's about to break in your favor, and what to ship this week to capitalize.</p>
+        <ul class="usecase-bullets">
+          <li>Tracks competitor pricing, offers, and reviews</li>
+          <li>Flags new local demand signals before your peers see them</li>
+          <li>Weekly brief with three specific actions, not 30</li>
+        </ul>
+        <div class="usecase-stat"><b>3 actions</b><span>Per week, prioritized</span></div>
+      </div>
+      <div class="usecase-visual">
+        <div class="usecase-visual-inner">
+          <div class="uc-row"><span class="uc-row-tag">Signal</span><span class="uc-row-text">Top 2 competitors raised price 8% last week</span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">Signal</span><span class="uc-row-text">New 5-star review pattern: "fast response"</span></div>
+          <div class="uc-arrow"></div>
+          <div class="uc-row"><span class="uc-row-tag">ORACLE</span><span class="uc-row-text">Brief: <b style="color:var(--fg)">Raise prices 6%, push speed-of-response in ads</b></span><span class="uc-pill">Mon 8am</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- ===== AGENTS ===== -->
 <section class="services-section" id="services">
   <div class="container">
     <div class="section-header fade-in">
-      <h2><span class="gradient-text">Our Agents</span></h2>
+      <span class="eyebrow">The agents</span>
+      <h2><span class="gradient-text">Nine agents. <em>Pick the team you need.</em></span></h2>
+      <p>Every agent is custom-trained on your business, deployed by us, and monitored every week. Start with three. Add more as you grow.</p>
     </div>
     <div class="services-grid" id="agentGrid">
 
       <article class="agent-card fade-in" data-agent-slug="echo">
         <div class="agent-head">
-          <div class="agent-sigil">◉</div>
-          <div><div class="agent-role">Receptionist</div></div>
+          <div class="agent-sigil">EC</div>
+          <div>
+            <span class="agent-code">ECHO</span>
+            <div class="agent-role">AI receptionist</div>
+          </div>
         </div>
-        <p>24/7 voice agent that answers calls, books appointments, and captures every lead.</p>
+        <p>24/7 voice agent. Answers every call, books appointments, captures every lead.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>ECHO is trained on your business details, services, hours, and pricing. It handles common questions, books directly into your calendar, and sends you a summary of every call. Works nights, weekends, and holidays. Transfers to you when something needs a human touch.</p>
+          <p>Trained on your hours, services, and pricing. Handles common questions, books straight into your calendar, sends you a summary of every call. Nights, weekends, holidays. Transfers to a human when something needs one.</p>
           <video class="agent-demo-video" autoplay muted loop playsinline preload="none" data-src="/assets/demos/ai-receptionist-demo.mp4"></video>
         </div>
       </article>
 
       <article class="agent-card fade-in delay-1" data-agent-slug="ignite">
         <div class="agent-head">
-          <div class="agent-sigil">⟶</div>
-          <div><div class="agent-role">Outbound Lead Caller</div></div>
+          <div class="agent-sigil">IG</div>
+          <div>
+            <span class="agent-code">IGNITE</span>
+            <div class="agent-role">Lead response</div>
+          </div>
         </div>
-        <p>Responds to every inbound lead instantly via email, call, and text.</p>
+        <p>Replies to every new lead in under sixty seconds. SMS, email, voice, or chat.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>IGNITE connects to your forms, ads, and inbox. When a new lead comes in, it responds in under 5 seconds with a personalized message. It qualifies the lead, answers basic questions, and books them straight into your calendar. No more leads going cold because you were busy.</p>
+          <p>Connects to your forms, ads, and inbox. New lead lands, IGNITE replies in under sixty seconds with a personalized message, qualifies the lead, and books them straight into your calendar. No more leads going cold because you were busy.</p>
           <video class="agent-demo-video" autoplay muted loop playsinline preload="none" data-src="/assets/demos/lead-reply-demo.mp4"></video>
         </div>
       </article>
 
       <article class="agent-card fade-in delay-2" data-agent-slug="revive">
         <div class="agent-head">
-          <div class="agent-sigil">↻</div>
-          <div><div class="agent-role">Customer Reactivation</div></div>
+          <div class="agent-sigil">RV</div>
+          <div>
+            <span class="agent-code">REVIVE</span>
+            <div class="agent-role">Customer reactivation</div>
+          </div>
         </div>
-        <p>Brings back dormant customers with personalized outreach campaigns.</p>
+        <p>Brings dormant customers back with offers tailored to their history.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>REVIVE scans your customer database for people who haven't visited in 6+ months. It sends personalized texts and emails with offers tailored to their history. Typical campaigns recover 8-12% of dormant customers in the first 30 days.</p>
+          <p>Scans your customer database for people who haven't visited in six-plus months. Sends personalized texts and emails with offers tailored to their history. Typical first-month recovery: eight to twelve percent.</p>
           <video class="agent-demo-video" autoplay muted loop playsinline preload="none" data-src="/assets/demos/lcr-agent-demo.mp4"></video>
         </div>
       </article>
 
       <article class="agent-card fade-in delay-3" data-agent-slug="scout">
         <div class="agent-head">
-          <div class="agent-sigil">◎</div>
-          <div><div class="agent-role">Lead Generator</div></div>
+          <div class="agent-sigil">SC</div>
+          <div>
+            <span class="agent-code">SCOUT</span>
+            <div class="agent-role">Lead generator</div>
+          </div>
         </div>
-        <p>Finds, ranks, and contacts your ideal B2B customers at scale. B2B only.</p>
+        <p>Builds, ranks, and contacts targeted B2B prospect lists at scale.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>SCOUT builds targeted prospect lists based on your ideal customer profile, location, and industry. It ranks leads by fit, enriches contact data, and can initiate outreach sequences. Up to 5,000 leads per batch.</p>
+          <p>Builds targeted prospect lists based on your ideal customer profile, location, and industry. Ranks leads by fit, enriches contact data, and initiates outreach sequences. Up to five thousand leads per batch.</p>
           <video class="agent-demo-video" autoplay muted loop playsinline preload="none" data-src="/assets/demos/lead-generator-demo.mp4"></video>
         </div>
       </article>
 
       <article class="agent-card fade-in" data-agent-slug="forge">
         <div class="agent-head">
-          <div class="agent-sigil">◈</div>
-          <div><div class="agent-role">Website Builder</div></div>
+          <div class="agent-sigil">FG</div>
+          <div>
+            <span class="agent-code">FORGE</span>
+            <div class="agent-role">Website builder</div>
+          </div>
         </div>
-        <p>Conversion-optimized websites researched and built for your business.</p>
+        <p>Conversion-built site, researched and shipped in a week.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>FORGE researches your market, competitors, and customers, then builds a site designed to convert visitors into booked appointments. Every page is written for your specific services and pricing. Typically launched within a week.</p>
+          <p>Researches your market, competitors, and customers, then builds a site designed to convert visitors into booked appointments. Every page is written for your services and pricing. Launched within a week.</p>
           <video class="agent-demo-video" autoplay muted loop playsinline preload="none" data-src="/assets/demos/custom-website-demo.mp4"></video>
         </div>
       </article>
 
       <article class="agent-card fade-in delay-1" data-agent-slug="signal">
         <div class="agent-head">
-          <div class="agent-sigil">◬</div>
-          <div><div class="agent-role">AI SEO</div></div>
+          <div class="agent-sigil">SG</div>
+          <div>
+            <span class="agent-code">SIGNAL</span>
+            <div class="agent-role">AI SEO &amp; GEO</div>
+          </div>
         </div>
-        <p>Makes your business visible to AI search engines and assistants.</p>
+        <p>Make your business visible to ChatGPT, Google AI, and Perplexity.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>SIGNAL optimizes your website structure, content, and metadata so AI engines like ChatGPT, Google AI Overviews, and Perplexity recommend your business. When someone asks "best dentist near me," SIGNAL makes sure you show up.</p>
+          <p>Optimizes your site structure, content, and metadata so AI engines recommend your business. When someone asks "best dentist near me," SIGNAL makes sure you show up. Tuned for the new generation of AI search.</p>
           <video class="agent-demo-video" autoplay muted loop playsinline preload="none" data-src="/assets/demos/seo-agent-demo.mp4"></video>
         </div>
       </article>
 
       <article class="agent-card fade-in delay-2" data-agent-slug="oracle">
         <div class="agent-head">
-          <div class="agent-sigil">◆</div>
-          <div><div class="agent-role">Growth Intelligence</div></div>
+          <div class="agent-sigil">OR</div>
+          <div>
+            <span class="agent-code">ORACLE</span>
+            <div class="agent-role">Growth intelligence</div>
+          </div>
         </div>
-        <p>Business intelligence and growth strategy, updated weekly.</p>
+        <p>Weekly market and competitor briefs with specific actions.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>ORACLE monitors your market, tracks competitor moves, and delivers weekly strategy briefs with specific action items. It identifies opportunities you're missing and threats you should know about. Think of it as a fractional CMO powered by AI.</p>
+          <p>Monitors your market, tracks competitor moves, and delivers a weekly brief with three specific actions. Where you're being out-positioned, what's about to break in your favor, and what to ship this week to capitalize. Think fractional CMO.</p>
           <video class="agent-demo-video" autoplay muted loop playsinline preload="none" data-src="/assets/demos/ontology-agent-demo.mp4"></video>
         </div>
       </article>
 
-      <article class="agent-card fade-in delay-3" data-agent-slug="flux">
+      <article class="agent-card fade-in delay-3" data-agent-slug="pitch">
         <div class="agent-head">
-          <div class="agent-sigil">≋</div>
-          <div><div class="agent-role">Custom Automations</div></div>
+          <div class="agent-sigil">PT</div>
+          <div>
+            <span class="agent-code">PITCH</span>
+            <div class="agent-role">AI sales coach</div>
+          </div>
+        </div>
+        <p>Real coaching from your calls and emails. Better scripts, sharper replies.</p>
+        <button class="agent-expand" aria-label="Expand">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="agent-detail">
+          <p>Listens to your cold calls and meetings, reads your email threads, ships back better openers, smarter rebuttals, and a weekly playbook on what's actually moving deals. Per-rep scorecards. Real-time deal-risk alerts. Scripts refreshed weekly based on what's working now.</p>
+        </div>
+      </article>
+
+      <article class="agent-card fade-in" data-agent-slug="flux">
+        <div class="agent-head">
+          <div class="agent-sigil">FX</div>
+          <div>
+            <span class="agent-code">FLUX</span>
+            <div class="agent-role">Custom automations</div>
+          </div>
         </div>
         <p>Tell us the problem. We build the AI solution.</p>
         <button class="agent-expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="agent-detail">
-          <p>FLUX handles everything that doesn't fit neatly into another agent. Invoice processing, inventory alerts, review monitoring, staff scheduling, custom integrations. If it can be automated with AI, we build it.</p>
+          <p>Handles everything that doesn't fit neatly into another agent. Invoice processing, inventory alerts, review monitoring, staff scheduling, custom integrations. If it can be automated with AI, we build it.</p>
         </div>
       </article>
 
     </div>
-    <div style="text-align:center;margin-top:52px;" class="fade-in">
-      <a href="#contact" class="btn-primary">Get your free audit &rarr;</a>
+    <div style="text-align:center;margin-top:56px;" class="fade-in">
+      <a href="#contact" class="btn-primary">See what we'd build for you</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ANCHOR CASE STUDY ===== -->
+<section class="case-section" id="results">
+  <div class="container">
+    <div class="section-header fade-in" style="margin-bottom:48px;">
+      <span class="eyebrow">Results</span>
+      <h2><span class="gradient-text">Built for businesses doing <em>real revenue</em>.</span></h2>
+      <p>One example of what happens in the first sixty days. We measure missed-call cost, lead response time, and recovered revenue, every week.</p>
+    </div>
+    <div class="case-card fade-in">
+      <div>
+        <div class="case-eyebrow">Local services &middot; Miami</div>
+        <h3 class="case-title">A 14-truck home services operator went from missing one in three calls to capturing every lead.</h3>
+        <p class="case-quote">"We were quietly bleeding jobs every weekend. After ECHO and IGNITE went live, we picked up calls we never knew we lost, and the booked rate from web leads doubled."</p>
+        <div class="case-attribution"><b>Operations lead</b> &middot; 14-truck home services, Miami</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">+38%</div><div class="case-stat-label">Calls captured in month one</div></div>
+        <div class="case-stat"><div class="case-stat-num">2x</div><div class="case-stat-label">Web lead to booked rate</div></div>
+        <div class="case-stat"><div class="case-stat-num">&lt;60s</div><div class="case-stat-label">Lead first-response time</div></div>
+        <div class="case-stat"><div class="case-stat-num">5 days</div><div class="case-stat-label">From kickoff to live</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STATS PANEL ===== -->
+<section class="stats-section">
+  <div class="container">
+    <div class="stats-shape fade-in">
+      <div class="stat-block">
+        <div class="stat-block-num">9</div>
+        <div class="stat-block-label">Specialized agents, one connected layer</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-num">5 <em>days</em></div>
+        <div class="stat-block-label">Average kickoff to live deployment</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-num">24/7</div>
+        <div class="stat-block-label">Human-reviewed monitoring, every week</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-num">$30k<em>+</em></div>
+        <div class="stat-block-label">Monthly revenue, the operator profile we serve</div>
+      </div>
     </div>
   </div>
 </section>
@@ -868,30 +1475,32 @@ html.lenis,html.lenis body{height:auto}
 <section class="process-section" id="process">
   <div class="container">
     <div class="section-header fade-in">
-      <h2><span class="gradient-text">How it works</span></h2>
+      <span class="eyebrow">How we work</span>
+      <h2><span class="gradient-text">Three steps. <em>Five days.</em></span></h2>
+      <p>No SaaS dashboard handover. No "configure your own bot." We do the research, build the agents, and run them.</p>
     </div>
     <div class="process-track">
       <div class="process-step fade-in">
-        <div class="step-num">01</div>
+        <div class="step-num"><em>01</em></div>
         <h3>Audit</h3>
-        <p>We analyze your business, competitors, and customer flow in a free 15-minute call. You get exact ROI projections per agent.</p>
-        <span class="step-badge">15 minutes · free</span>
+        <p>A focused 15-minute call. We map your call flow, lead path, customer history, and competitive position. You walk out with a one-page diagnosis and a fixed price.</p>
+        <span class="step-badge">15 minutes &middot; free</span>
       </div>
       <div class="process-step fade-in delay-1">
-        <div class="step-num">02</div>
+        <div class="step-num"><em>02</em></div>
         <h3>Build</h3>
-        <p>We design and deploy AI agents trained on your specific business data. No templates, no one-size-fits-all.</p>
-        <span class="step-badge">1 week</span>
+        <p>We design and deploy your agent team, trained on your business. Every script, prompt, and integration reviewed by a human before it touches a customer.</p>
+        <span class="step-badge">5 days, typical</span>
       </div>
       <div class="process-step fade-in delay-2">
-        <div class="step-num">03</div>
-        <h3>Grow</h3>
-        <p>You get more calls, more bookings, more customers. We monitor and tune every agent weekly. You focus on the business.</p>
-        <span class="step-badge">Grow</span>
+        <div class="step-num"><em>03</em></div>
+        <h3>Run</h3>
+        <p>We monitor, tune, and improve every agent every week. You get a weekly report with what shipped, what moved, and the three things we're testing next.</p>
+        <span class="step-badge">Weekly, ongoing</span>
       </div>
     </div>
-    <div style="text-align:center;margin-top:52px;" class="fade-in">
-      <a href="#contact" class="btn-primary">Start in 15 minutes &rarr;</a>
+    <div style="text-align:center;margin-top:60px;" class="fade-in">
+      <a href="#contact" class="btn-primary">Start with a 15-minute audit</a>
     </div>
   </div>
 </section>
@@ -900,32 +1509,87 @@ html.lenis,html.lenis body{height:auto}
 <section class="why-section" id="why-us">
   <div class="container">
     <div class="section-header fade-in">
-      <h2><span class="gradient-text">Why Us</span></h2>
+      <span class="eyebrow">Why STILO</span>
+      <h2><span class="gradient-text">Four reasons. <em>All of them matter.</em></span></h2>
     </div>
     <div class="why-grid">
       <div class="why-card fade-in">
-        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-        <h3>Built for your business</h3>
-        <p>No templates, no one-size-fits-all. Every agent is trained on your services, your pricing, and your customers. We study your market before we write a single line of agent code. What the AI says is what you'd say on your best day.</p>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <h3>Custom, not configured</h3>
+        <p>Every agent is trained on your services, your pricing, your customers. We study your market before we write a single prompt. What the AI says is what you'd say on your best day, not a chatbot template with your logo glued on.</p>
       </div>
       <div class="why-card fade-in delay-1">
-        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
         <h3>We run it. You don't have to.</h3>
-        <p>Other agencies hand you a dashboard and disappear. We manage, monitor, and improve your agents every week.</p>
+        <p>Most agencies hand you a dashboard and disappear. We monitor, tune, and improve every agent every week. You get a report with what shipped, what moved, and what we're testing next.</p>
       </div>
       <div class="why-card fade-in delay-2">
-        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
-        <h3>Eight agents. One system.</h3>
-        <p>Your receptionist talks to your lead agent. Your lead agent feeds your reactivation engine. Everything connects.</p>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+        <h3>One connected system</h3>
+        <p>Your receptionist talks to your lead responder. Your lead responder feeds your reactivation engine. Every agent shares context, customers, and outcomes. One layer, not nine point solutions.</p>
       </div>
       <div class="why-card fade-in delay-3">
-        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-        <h3>AI + human review</h3>
-        <p>AI builds the first draft in minutes. Then a real strategist reviews every detail for quality, accuracy, and conversion potential. Nothing ships without a human signoff, because we know exactly when AI gets the tone wrong.</p>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>AI plus human review</h3>
+        <p>AI drafts in minutes. A real strategist reviews every prompt, script, and message for quality, accuracy, and conversion potential. Nothing ships without a human signoff, because we know exactly when AI gets the tone wrong.</p>
       </div>
     </div>
-    <div style="text-align:center;margin-top:52px;" class="fade-in">
-      <a href="#contact" class="btn-primary">See what we'd build for you &rarr;</a>
+    <div style="text-align:center;margin-top:56px;" class="fade-in">
+      <a href="#contact" class="btn-primary">See what we'd build for you</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="faq-section" id="faq">
+  <div class="container">
+    <div class="section-header fade-in" style="text-align:center;margin:0 auto 48px;">
+      <span class="eyebrow">FAQ</span>
+      <h2><span class="gradient-text">Questions we get from every founder.</span></h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item fade-in">
+        <button class="faq-question" type="button">
+          <span>How long does it take to deploy a full agent team?</span>
+          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Five business days for a typical three-agent deployment, including the audit, training data, scripts, integrations, and a human review pass before anything touches a real customer. Larger builds with custom integrations run two to three weeks.</div></div>
+      </div>
+      <div class="faq-item fade-in">
+        <button class="faq-question" type="button">
+          <span>Do you replace my receptionist or my team?</span>
+          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">No. ECHO covers the calls your team misses, nights, weekends, and overflow. IGNITE responds in under a minute when your team is busy. The agents do what humans cannot, and route the rest to you.</div></div>
+      </div>
+      <div class="faq-item fade-in">
+        <button class="faq-question" type="button">
+          <span>What happens if the AI says something wrong?</span>
+          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Every customer-facing message is scripted, reviewed, and bounded to topics you approved. The agent transfers to a human the moment a request falls outside its scope. We monitor every conversation weekly and tighten the script when something looks off.</div></div>
+      </div>
+      <div class="faq-item fade-in">
+        <button class="faq-question" type="button">
+          <span>What's the pricing?</span>
+          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Pricing depends on which agents you need and your call and lead volume. We quote a fixed monthly price after the audit, with a one-time build fee. The audit takes fifteen minutes and is free.</div></div>
+      </div>
+      <div class="faq-item fade-in">
+        <button class="faq-question" type="button">
+          <span>What integrations are supported?</span>
+          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Google Calendar, Outlook, Calendly, most major PMS and CRM systems, Stripe for payments, Twilio for voice and SMS, and your existing forms and ads. If we don't support it out of the box, FLUX builds the integration.</div></div>
+      </div>
+      <div class="faq-item fade-in">
+        <button class="faq-question" type="button">
+          <span>Are you Miami-only?</span>
+          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">We're based in Miami and most of our clients are Miami operators, but we work with businesses across the US. Local market knowledge matters for SIGNAL and ORACLE, so we tune the agents to your market specifically.</div></div>
+      </div>
     </div>
   </div>
 </section>
@@ -934,8 +1598,10 @@ html.lenis,html.lenis body{height:auto}
 <!-- ===== CONTACT / QUIZ ===== -->
 <section class="contact-section" id="contact">
   <div class="container">
-    <div class="section-header fade-in" style="text-align:center;margin-left:auto;margin-right:auto">
-      <h2><span class="gradient-text">Start Here</span></h2>
+    <div class="section-header fade-in" style="text-align:center;margin:0 auto 40px;">
+      <span class="eyebrow">Get started</span>
+      <h2><span class="gradient-text">See what we'd build for <em>your business</em>.</span></h2>
+      <p style="margin:14px auto 0;max-width:48ch;">Ten quick questions. You get a tailored agent team, a fixed monthly price, and the option to book a 15-minute call with Remy.</p>
     </div>
     <div class="contact-inner fade-in" id="quizContainer">
 
@@ -1050,6 +1716,7 @@ html.lenis,html.lenis body{height:auto}
               <button class="q-option" data-value="more-calls">More calls and bookings coming in</button>
               <button class="q-option" data-value="better-leads">Better quality leads, less wasted time</button>
               <button class="q-option" data-value="reactivate">Reactivate old customers and boost repeat revenue</button>
+              <button class="q-option" data-value="close-more">Close more of the deals already in my pipeline</button>
               <button class="q-option" data-value="scale">Scale the whole operation, I want to grow aggressively</button>
             </div>
           </div>
@@ -1092,19 +1759,22 @@ html.lenis,html.lenis body{height:auto}
     <div class="footer-grid">
       <div class="footer-brand">
         <a href="/" class="nav-logo">STILO AI PARTNERS</a>
-        <p>AI consulting agency for growing businesses. Custom AI agents for call handling, lead response, customer reactivation, websites, SEO, and lead generation.</p>
+        <p>Custom AI agents for growing businesses. Receptionist, lead response, customer reactivation, websites, SEO, growth intelligence, and sales coaching. Built in Miami.</p>
       </div>
       <div class="footer-col">
-        <h4>Quick Links</h4>
+        <h4>The system</h4>
         <ul>
-          <li><a href="#services">Agents</a></li>
-          <li><a href="#process">How It Works</a></li>
-          <li><a href="#why-us">Why Us</a></li>
+          <li><a href="#system">How it works</a></li>
+          <li><a href="#services">The nine agents</a></li>
+          <li><a href="#results">Results</a></li>
+          <li><a href="#process">Our process</a></li>
+          <li><a href="#faq">FAQ</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>Contact</h4>
         <ul>
+          <li><a href="#contact">Talk to a partner</a></li>
           <li><a href="tel:+17868067509">(786) 806-7509</a></li>
           <li><a href="mailto:stiloaiconsulting@gmail.com">stiloaiconsulting@gmail.com</a></li>
           <li><span style="color:var(--fg-3);font-size:0.9rem;">Miami, FL</span></li>
@@ -1214,7 +1884,15 @@ if (!canvas) { /* no-op */ } else if (reduced) {
 <!-- ===== HERO KINETIC HEADLINE + LIVE CALL ===== -->
 <script>
 (function(){
-  // Split headline into word-reveal spans
+  // Reveal pre-split lines (new hero markup)
+  var h1Lines = document.querySelector('.hero h1[data-split="lines"]');
+  if (h1Lines){
+    var lines = h1Lines.querySelectorAll('.line');
+    lines.forEach(function(line, i){
+      setTimeout(function(){ line.classList.add('in'); }, 180 + i*220);
+    });
+  }
+  // Legacy: word-split fallback if a future H1 uses data-split="words"
   var h1 = document.querySelector('.hero h1[data-split="words"]');
   if (h1){
     var walk = function(node){
@@ -1634,6 +2312,56 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     });
   });
 })();
+
+// FAQ accordion
+(function(){
+  var items = document.querySelectorAll('.faq-item');
+  items.forEach(function(item){
+    var btn = item.querySelector('.faq-question');
+    if (!btn) return;
+    btn.addEventListener('click', function(){
+      var open = item.classList.contains('open');
+      // Optionally collapse others for cleaner UX
+      items.forEach(function(other){ if (other !== item) other.classList.remove('open'); });
+      item.classList.toggle('open', !open);
+    });
+  });
+})();
+
+// Use-case tab switcher
+(function(){
+  var tabs = document.querySelectorAll('.usecase-tab');
+  var panels = document.querySelectorAll('.usecase-panel');
+  if (!tabs.length) return;
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var key = tab.getAttribute('data-uc');
+      tabs.forEach(function(t){ t.classList.toggle('active', t === tab); });
+      panels.forEach(function(p){
+        p.classList.toggle('active', p.getAttribute('data-uc-panel') === key);
+      });
+    });
+  });
+})();
+
+// Thesis line scroll fade (light up each span as it enters viewport)
+(function(){
+  var thesis = document.getElementById('thesisLine');
+  if (!thesis) return;
+  var spans = thesis.querySelectorAll('span');
+  function check(){
+    var r = thesis.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var inView = r.top < vh * 0.85 && r.bottom > vh * 0.15;
+    if (!inView) return;
+    var progress = Math.max(0, Math.min(1, (vh * 0.7 - r.top) / (vh * 0.55)));
+    var count = Math.floor(progress * spans.length);
+    spans.forEach(function(s, i){ s.classList.toggle('lit', i < count); });
+  }
+  window.addEventListener('scroll', check, {passive:true});
+  window.addEventListener('resize', check);
+  check();
+})();
 </script>
 
 <!-- ===== QUIZ LOGIC (preserved) ===== -->
@@ -1651,6 +2379,7 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     { id: 'website', name: 'AI Website', icon: 'FORGE', price: '$1,250 setup + $200/mo', desc: 'Conversion-optimized site researched and built for your exact business.', tiers: ['starter','growth','partner'] },
     { id: 'seo', name: 'AI SEO (GEO)', icon: 'SIGNAL', price: '$1,000 one-time', desc: 'Get recommended by ChatGPT, Google AI, and every AI assistant in your area.', tiers: ['growth','partner'] },
     { id: 'growth-intel', name: 'Growth Intelligence', icon: 'ORACLE', price: '$3,000 setup + $2,000/mo', desc: 'Weekly data-driven strategy: what\'s working, what\'s not, and what to do next.', tiers: ['partner'] },
+    { id: 'sales-coach', name: 'AI Sales Coach', icon: 'PITCH', price: '$2,500 setup + $1,500/mo', desc: 'Listens to your calls and emails. Ships better scripts, sharper replies, more closed deals.', tiers: ['growth','partner'] },
     { id: 'custom', name: 'Custom Automation', icon: 'FLUX', price: 'From $1,000', desc: 'Got a specific problem? We\'ll build the AI solution for it.', tiers: ['partner'] }
   ];
 
@@ -1663,6 +2392,7 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     'website':       { setup: 1250, monthly: 200  },
     'seo':           { setup: 1000, monthly: 0    },
     'growth-intel':  { setup: 3000, monthly: 2000 },
+    'sales-coach':   { setup: 2500, monthly: 1500 },
     'custom':        { setup: 1000, monthly: 0    }
   };
 
@@ -1675,13 +2405,14 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     'website':       'forge',
     'seo':           'signal',
     'growth-intel':  'oracle',
+    'sales-coach':   'pitch',
     'custom':        'flux'
   };
 
   var tierData = {
     starter: { label: 'Starter',      agents: ['receptionist','website'] },
-    growth:  { label: 'Growth',       agents: ['receptionist','lead-response','reactivation','website','seo'] },
-    partner: { label: 'Partner',      agents: ['receptionist','lead-response','reactivation','lead-gen','website','seo','growth-intel'] }
+    growth:  { label: 'Growth',       agents: ['receptionist','lead-response','reactivation','website','seo','sales-coach'] },
+    partner: { label: 'Partner',      agents: ['receptionist','lead-response','reactivation','lead-gen','website','seo','growth-intel','sales-coach'] }
   };
 
   var currentTier = 'partner';
