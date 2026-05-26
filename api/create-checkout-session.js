@@ -108,6 +108,10 @@ module.exports = async function createCheckoutSession(req, res) {
   const totals = calculateTotals(normalized);
   const origin = process.env.SITE_URL || req.headers.origin || '';
 
+  // Stripe webhook auto-attribution (api/stripe-webhook.js) reads
+  // monthly_retainer_cents to populate client_attribution.monthly_retainer_cents
+  // so the SDR's commission ledger captures real MRR. Upfront fee is read
+  // from session.amount_total directly so we don't duplicate it here.
   const metadata = {
     selected_agents: normalized.join(','),
     client_id: body.client_id || '',
@@ -115,6 +119,8 @@ module.exports = async function createCheckoutSession(req, res) {
     contact_name: body.name || '',
     phone: body.phone || '',
     source: 'stilo-ai-site',
+    monthly_retainer_cents: String(totals.monthlyCents || 0),
+    upfront_fee_cents: String(totals.setupCents || 0),
   };
 
   const successUrl = (function() {
