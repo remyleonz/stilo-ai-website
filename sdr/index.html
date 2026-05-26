@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDR Dashboard | STILO AI Partners</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #11111a;
+            --bg-card: #16161f;
+            --bg-input: #1a1a25;
+            --bg-elev: #22223a;
+            --border-subtle: rgba(255,255,255,0.06);
+            --border-medium: rgba(255,255,255,0.12);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a8a8b3;
+            --text-tertiary: #6b6b78;
+            --text-muted: #4a4a55;
+            --blue: #2563EB;
+            --blue-bg: rgba(37,99,235,0.12);
+            --cyan: #0ea5e9;
+            --purple: #a855f7;
+            --green: #10b981;
+            --orange: #f97316;
+            --red: #ef4444;
+            --yellow: #eab308;
+            --sidebar-width: 260px;
+            --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-display);
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        body { display: flex; }
+        a { color: var(--blue); text-decoration: none; }
+        button { font-family: inherit; }
+        code { font-family: var(--font-mono); }
+
+        /* SIDEBAR */
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-width); height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-subtle);
+            display: flex; flex-direction: column;
+            z-index: 50;
+        }
+        .sidebar-header {
+            padding: 22px 22px 18px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .sidebar-logo {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 0.02em;
+        }
+        .sidebar-logo span { color: var(--blue); }
+        .sidebar-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .sidebar-nav {
+            flex: 1;
+            padding: 12px 0;
+            overflow-y: auto;
+        }
+        .nav-item {
+            display: flex; align-items: center;
+            gap: 11px; width: 100%;
+            padding: 11px 22px;
+            background: none; border: none;
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            transition: background 100ms, color 100ms;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.02); color: var(--text-primary); }
+        .nav-item.active {
+            color: var(--text-primary);
+            background: var(--blue-bg);
+            border-left-color: var(--blue);
+        }
+        .nav-item svg { width: 18px; height: 18px; opacity: 0.65; }
+        .nav-item.active svg { opacity: 1; }
+        .nav-badge {
+            margin-left: auto;
+            padding: 1px 7px;
+            border-radius: 999px;
+            background: var(--blue-bg);
+            color: var(--blue);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .sidebar-footer {
+            padding: 14px 22px 18px;
+            border-top: 1px solid var(--border-subtle);
+        }
+        .sdr-card {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 10px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .sdr-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 11px;
+        }
+        .sdr-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .sdr-role {
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+        .signout-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%;
+            gap: 8px;
+            padding: 8px 12px;
+            background: none;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .signout-btn:hover { background: rgba(239,68,68,0.05); color: var(--red); border-color: rgba(239,68,68,0.3); }
+
+        /* MAIN */
+        main {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            padding: 0 32px 64px;
+        }
+        .topbar {
+            position: sticky; top: 0;
+            background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            margin: 0 -32px 28px;
+            padding: 18px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 18px;
+            z-index: 10;
+        }
+        .page-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 22px;
+            letter-spacing: -0.02em;
+        }
+        .quota-ring-mini {
+            display: flex; align-items: center; gap: 10px;
+            padding: 6px 14px 6px 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 999px;
+        }
+        .quota-ring-svg {
+            width: 32px; height: 32px;
+            transform: rotate(-90deg);
+        }
+        .quota-ring-svg circle {
+            fill: none;
+            stroke-width: 3;
+        }
+        .quota-ring-track { stroke: var(--bg-elev); }
+        .quota-ring-fill {
+            stroke: var(--blue);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 400ms ease;
+        }
+        .quota-ring-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .quota-ring-label strong {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        /* CARDS / GRIDS */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+        .stat-label {
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .stat-value {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 2rem;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 6px;
+        }
+        .stat-card.accent-blue { border-left: 3px solid var(--blue); }
+        .stat-card.accent-green { border-left: 3px solid var(--green); }
+        .stat-card.accent-purple { border-left: 3px solid var(--purple); }
+        .stat-card.accent-orange { border-left: 3px solid var(--orange); }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
+        }
+        .section-subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+
+        /* TABLE */
+        .table-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        th {
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: 600;
+            background: rgba(255,255,255,0.01);
+        }
+        tr:hover td { background: rgba(37,99,235,0.04); }
+        tbody tr { cursor: pointer; }
+        .empty-state {
+            padding: 56px 24px;
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 13px;
+        }
+
+        /* TIER + STAGE BADGES */
+        .badge {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--text-tertiary);
+            color: var(--text-tertiary);
+        }
+        .badge.hot { border-color: var(--red); color: var(--red); }
+        .badge.warm { border-color: var(--orange); color: var(--orange); }
+        .badge.cool { border-color: var(--yellow); color: var(--yellow); }
+        .badge.new { border-color: var(--text-tertiary); color: var(--text-tertiary); }
+        .badge.contacted { border-color: var(--blue); color: var(--blue); }
+        .badge.engaged { border-color: var(--cyan); color: var(--cyan); }
+        .badge.qualified { border-color: var(--purple); color: var(--purple); }
+        .badge.meeting_booked, .badge.closed_won { border-color: var(--green); color: var(--green); }
+        .badge.closed_lost { border-color: var(--red); color: var(--red); }
+        .badge.paid { border-color: var(--green); color: var(--green); }
+        .badge.pending { border-color: var(--orange); color: var(--orange); }
+        .badge.invoiced { border-color: var(--cyan); color: var(--cyan); }
+
+        /* DRAWER */
+        .drawer {
+            position: fixed; top: 0; right: -880px;
+            width: 880px; max-width: 100vw; height: 100vh;
+            background: var(--bg-primary);
+            border-left: 1px solid var(--border-medium);
+            z-index: 100;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 32px 36px;
+        }
+        .drawer.open { right: 0; }
+        .drawer-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 99;
+        }
+        .drawer-overlay.open { display: block; }
+        .drawer-close {
+            position: absolute; top: 16px; right: 18px;
+            background: none; border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* MESSAGES */
+        .chat-wrap {
+            display: grid;
+            grid-template-columns: 1fr;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            height: calc(100vh - 220px);
+            min-height: 540px;
+            overflow: hidden;
+        }
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex; flex-direction: column;
+            gap: 12px;
+        }
+        .msg {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+        .msg.from-admin {
+            align-self: flex-start;
+            background: var(--bg-elev);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+        .msg.from-sdr {
+            align-self: flex-end;
+            background: var(--blue);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-meta {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .chat-form {
+            display: flex; gap: 8px;
+            padding: 12px;
+            border-top: 1px solid var(--border-subtle);
+            background: var(--bg-secondary);
+        }
+        .chat-form textarea {
+            flex: 1;
+            min-height: 38px; max-height: 120px;
+            padding: 9px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            color: inherit;
+            font-family: inherit;
+            font-size: 13.5px;
+            resize: vertical;
+        }
+        .btn-primary {
+            padding: 9px 18px;
+            background: var(--blue);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary {
+            padding: 9px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-secondary:hover { background: var(--bg-elev); }
+
+        /* FORMS */
+        .form-row {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 16px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border-subtle);
+            align-items: center;
+        }
+        .form-row label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .form-row input,
+        .form-row select,
+        .form-row textarea {
+            padding: 9px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            color: inherit;
+            font-size: 13.5px;
+            font-family: inherit;
+        }
+        .form-row input[readonly] {
+            background: var(--bg-secondary);
+            color: var(--text-tertiary);
+            cursor: not-allowed;
+        }
+
+        /* PROGRESS RING (big) */
+        .ring-wrap {
+            display: flex; align-items: center; gap: 22px;
+            margin-bottom: 28px;
+            padding: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+        }
+        .ring-svg {
+            width: 92px; height: 92px;
+            transform: rotate(-90deg);
+        }
+        .ring-svg .track { fill: none; stroke: var(--bg-elev); stroke-width: 8; }
+        .ring-svg .fill { fill: none; stroke: var(--blue); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 600ms ease; }
+        .ring-text {
+            font-size: 12px; color: var(--text-secondary);
+        }
+        .ring-text strong {
+            display: block;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 24px;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        /* Hide sidebar overflow at any width so its 260px contents never
+           bleed visually when slid off-screen on smaller viewports. */
+        .sidebar { overflow: hidden; }
+
+        /* MOBILE */
+        @media (max-width: 900px) {
+            /* Keep sidebar at its full 260px so children still fit; just
+               slide it off-screen and zero the main margin. Toggling .open
+               brings it back. Do NOT shrink --sidebar-width here — that
+               collapses sidebar contents and breaks layout. */
+            .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 8px 0 24px rgba(0,0,0,0.5); }
+            .sidebar.open { transform: translateX(0); }
+            main { margin-left: 0; padding: 0 18px 64px; }
+            .topbar { margin: 0 -18px 22px; padding: 14px 18px; }
+            .page-title { font-size: 18px; }
+            .menu-toggle { display: inline-flex; }
+            .form-row { grid-template-columns: 1fr; gap: 6px; }
+            .stat-grid { grid-template-columns: 1fr 1fr; }
+            .stat-value { font-size: 1.5rem; }
+            .ring-wrap { flex-direction: column; align-items: flex-start; }
+        }
+        .menu-toggle {
+            display: none;
+            align-items: center; justify-content: center;
+            width: 36px; height: 36px;
+            background: none;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .hidden { display: none !important; }
+
+        /* PAGES */
+        .page-content {
+            animation: fadeIn 150ms ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* MONEY */
+        .money {
+            font-variant-numeric: tabular-nums;
+            font-family: var(--font-display);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        .money.big { font-size: 1.8rem; }
+        .pct { color: var(--text-tertiary); font-size: 13px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">STILO AI <span>PARTNERS</span></div>
+            <div class="sidebar-label">SDR Panel</div>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="nav-item active" data-page="overview" onclick="switchPage('overview')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                Dashboard
+            </button>
+            <button class="nav-item" data-page="leads" onclick="switchPage('leads')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Leads
+            </button>
+            <button class="nav-item" data-page="performance" onclick="switchPage('performance')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Performance
+            </button>
+            <button class="nav-item" data-page="earnings" onclick="switchPage('earnings')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Earnings
+            </button>
+            <button class="nav-item" data-page="messages" onclick="switchPage('messages')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Messages
+                <span class="nav-badge hidden" id="msgBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="history" onclick="switchPage('history')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Call History
+            </button>
+            <button class="nav-item" data-page="profile" onclick="switchPage('profile')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Profile
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sdr-card">
+                <div class="sdr-avatar" id="sidebarAvatar" style="background:var(--blue);">?</div>
+                <div>
+                    <div class="sdr-name" id="sidebarName">Loading…</div>
+                    <div class="sdr-role">SDR</div>
+                </div>
+            </div>
+            <button class="signout-btn" onclick="signOut()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main>
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="quota-ring-mini">
+                <svg class="quota-ring-svg" viewBox="0 0 36 36">
+                    <circle class="quota-ring-track" cx="18" cy="18" r="14"/>
+                    <circle class="quota-ring-fill" id="topbarQuotaRing" cx="18" cy="18" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"/>
+                </svg>
+                <div class="quota-ring-label">
+                    <strong id="topbarQuotaToday">0</strong> / <span id="topbarQuotaTarget">80</span> calls today
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ OVERVIEW ============ -->
+        <section class="page-content" id="page-overview">
+            <div class="ring-wrap">
+                <svg class="ring-svg" viewBox="0 0 36 36">
+                    <circle class="track" cx="18" cy="18" r="14"/>
+                    <circle class="fill" id="bigQuotaRing" cx="18" cy="18" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"/>
+                </svg>
+                <div>
+                    <div class="ring-text">
+                        <strong id="bigQuotaDials">0</strong>
+                        of <span id="bigQuotaTarget">80</span> daily calls
+                    </div>
+                    <div style="color:var(--text-secondary);font-size:13px;margin-top:6px;" id="bigQuotaRemaining">— remaining</div>
+                </div>
+                <div style="margin-left:auto;text-align:right;">
+                    <div class="stat-label">Streak</div>
+                    <div style="font-family:var(--font-display);font-weight:800;font-size:1.8rem;letter-spacing:-0.02em;" id="overviewStreak">—</div>
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-card accent-blue">
+                    <div class="stat-label">Calls This Week</div>
+                    <div class="stat-value" id="overviewDialsWeek">0</div>
+                    <div class="stat-meta">Last 7 days</div>
+                </div>
+                <div class="stat-card accent-green">
+                    <div class="stat-label">Meetings Booked</div>
+                    <div class="stat-value" id="overviewMeetingsAll">0</div>
+                    <div class="stat-meta">All time</div>
+                </div>
+                <div class="stat-card accent-purple">
+                    <div class="stat-label">Clients Closed</div>
+                    <div class="stat-value" id="overviewClosed">0</div>
+                    <div class="stat-meta">Lifetime</div>
+                </div>
+                <div class="stat-card accent-orange">
+                    <div class="stat-label">Commission Pending</div>
+                    <div class="stat-value money" id="overviewCommissionPending">$0</div>
+                    <div class="stat-meta" id="overviewCommissionMeta">— to be paid</div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px;">
+                <div class="stat-card">
+                    <div class="section-title" style="font-size:14px;margin-bottom:14px;">Callbacks Due Today</div>
+                    <div id="overviewCallbacksList" style="font-size:13px;color:var(--text-secondary);">Loading…</div>
+                </div>
+                <div class="stat-card">
+                    <div class="section-title" style="font-size:14px;margin-bottom:14px;">Booked Meetings This Week</div>
+                    <div id="overviewMeetingsList" style="font-size:13px;color:var(--text-secondary);">Loading…</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ LEADS ============ -->
+        <section class="page-content hidden" id="page-leads">
+            <div class="section-title">My Leads</div>
+            <div class="section-subtitle">Cold call queue + callbacks. Click any row to log a call.</div>
+
+            <!-- Workflow cards -->
+            <div class="stat-grid" id="leadsWorkflowCards" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+                <div class="stat-card accent-blue" data-workflow="callable" onclick="setLeadsSubtab('callable')" style="cursor:pointer;">
+                    <div class="stat-label">All Callable</div>
+                    <div class="stat-value" id="lwfCallable">—</div>
+                </div>
+                <div class="stat-card accent-green" data-workflow="called_today" onclick="setLeadsSubtab('calls_today')" style="cursor:pointer;">
+                    <div class="stat-label">Called Today</div>
+                    <div class="stat-value" id="lwfCalledToday">—</div>
+                </div>
+                <div class="stat-card accent-orange" data-workflow="callbacks" onclick="setLeadsSubtab('callbacks')" style="cursor:pointer;">
+                    <div class="stat-label">Callbacks Due</div>
+                    <div class="stat-value" id="lwfCallbacks">—</div>
+                </div>
+                <div class="stat-card accent-purple" data-workflow="booked" onclick="setLeadsSubtab('booked')" style="cursor:pointer;">
+                    <div class="stat-label">Booked Meetings</div>
+                    <div class="stat-value" id="lwfBooked">—</div>
+                </div>
+            </div>
+
+            <!-- Sub-tabs -->
+            <div style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:14px;">
+                <button class="leads-subtab active" data-sub="callable" onclick="setLeadsSubtab('callable')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;">Cold Call</button>
+                <button class="leads-subtab" data-sub="callbacks" onclick="setLeadsSubtab('callbacks')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Callbacks</button>
+                <button class="leads-subtab" data-sub="booked" onclick="setLeadsSubtab('booked')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Booked</button>
+                <button class="leads-subtab" data-sub="calls_today" onclick="setLeadsSubtab('calls_today')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Today</button>
+            </div>
+
+            <div class="table-wrap" id="leadsTableWrap">
+                <div class="empty-state">Loading leads…</div>
+            </div>
+        </section>
+
+        <!-- ============ PERFORMANCE ============ -->
+        <section class="page-content hidden" id="page-performance">
+            <div class="section-title">Performance</div>
+            <div class="section-subtitle">Lifetime stats. Refresh anytime.</div>
+
+            <div class="stat-grid">
+                <div class="stat-card accent-blue">
+                    <div class="stat-label">Total Dials</div>
+                    <div class="stat-value" id="perfDialsAll">0</div>
+                    <div class="stat-meta">All time</div>
+                </div>
+                <div class="stat-card accent-green">
+                    <div class="stat-label">Meetings Booked</div>
+                    <div class="stat-value" id="perfMeetingsAll">0</div>
+                    <div class="stat-meta">All time</div>
+                </div>
+                <div class="stat-card accent-purple">
+                    <div class="stat-label">Close Rate</div>
+                    <div class="stat-value" id="perfCloseRate">0%</div>
+                    <div class="stat-meta">Meetings / Dials</div>
+                </div>
+                <div class="stat-card accent-orange">
+                    <div class="stat-label">Conversion</div>
+                    <div class="stat-value" id="perfConversion">0%</div>
+                    <div class="stat-meta">Closed / Meetings</div>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top:24px;font-size:15px;">By time window</div>
+            <div class="table-wrap" style="margin-top:10px;">
+                <table>
+                    <thead><tr><th>Window</th><th style="text-align:right;">Dials</th><th style="text-align:right;">Meetings</th><th style="text-align:right;">Show Rate</th></tr></thead>
+                    <tbody id="perfBreakdownBody">
+                        <tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-title" style="margin-top:24px;font-size:15px;">Full funnel</div>
+            <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);">
+                <div class="stat-card"><div class="stat-label">Dials</div><div class="stat-value" id="funnelDials">0</div></div>
+                <div class="stat-card"><div class="stat-label">Unique Leads</div><div class="stat-value" id="funnelUnique">0</div></div>
+                <div class="stat-card"><div class="stat-label">Meetings</div><div class="stat-value" id="funnelMeetings">0</div></div>
+                <div class="stat-card"><div class="stat-label">Closed</div><div class="stat-value" id="funnelClosed">0</div></div>
+                <div class="stat-card"><div class="stat-label">MRR Closed</div><div class="stat-value money" id="funnelMrr">$0</div></div>
+            </div>
+        </section>
+
+        <!-- ============ EARNINGS ============ -->
+        <section class="page-content hidden" id="page-earnings">
+            <div class="section-title">Earnings</div>
+            <div class="section-subtitle">25% commission on every closed deal. MRR + upfront fees.</div>
+
+            <div class="stat-grid">
+                <div class="stat-card accent-green">
+                    <div class="stat-label">MRR Closed</div>
+                    <div class="stat-value money" id="earnMrr">$0</div>
+                    <div class="stat-meta">Active clients you closed</div>
+                </div>
+                <div class="stat-card accent-blue">
+                    <div class="stat-label">Commission Pending</div>
+                    <div class="stat-value money" id="earnPending">$0</div>
+                    <div class="stat-meta">Awaiting payout</div>
+                </div>
+                <div class="stat-card accent-purple">
+                    <div class="stat-label">Commission Paid</div>
+                    <div class="stat-value money" id="earnPaid">$0</div>
+                    <div class="stat-meta">Lifetime</div>
+                </div>
+                <div class="stat-card accent-orange">
+                    <div class="stat-label">Lifetime Commission</div>
+                    <div class="stat-value money" id="earnLifetime">$0</div>
+                    <div class="stat-meta">Pending + paid</div>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top:24px;font-size:15px;">Closed clients</div>
+            <div class="table-wrap" style="margin-top:10px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Client</th>
+                            <th>Closed</th>
+                            <th style="text-align:right;">Upfront</th>
+                            <th style="text-align:right;">Monthly</th>
+                            <th style="text-align:right;">Commission</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="earnClientsBody">
+                        <tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);">No closed clients yet. Keep dialing.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ============ MESSAGES ============ -->
+        <section class="page-content hidden" id="page-messages">
+            <div class="section-title">Messages with Remy</div>
+            <div class="section-subtitle">Direct line to your manager. Updates, scripts, coaching.</div>
+
+            <div class="chat-wrap" style="display:flex;flex-direction:column;">
+                <div class="chat-header" id="chatHeader">Direct messages</div>
+                <div class="chat-messages" id="chatMessages">
+                    <div style="margin:auto;color:var(--text-tertiary);font-size:13px;">Loading…</div>
+                </div>
+                <form class="chat-form" onsubmit="return sendMessage(event)">
+                    <textarea id="chatInput" placeholder="Type a message..." rows="1"></textarea>
+                    <button type="submit" class="btn-primary">Send</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ============ HISTORY ============ -->
+        <section class="page-content hidden" id="page-history">
+            <div class="section-title">Call History</div>
+            <div class="section-subtitle">Every call you've logged, newest first.</div>
+
+            <div style="display:flex;gap:6px;margin-bottom:14px;">
+                <button class="hist-range active" data-range="week" onclick="setHistoryRange('week')" style="padding:6px 14px;background:var(--blue);color:white;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last week</button>
+                <button class="hist-range" data-range="month" onclick="setHistoryRange('month')" style="padding:6px 14px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last month</button>
+                <button class="hist-range" data-range="all" onclick="setHistoryRange('all')" style="padding:6px 14px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">All time</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>When</th><th>Business</th><th>Owner</th><th>Outcome</th><th>Notes</th></tr></thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ============ PROFILE ============ -->
+        <section class="page-content hidden" id="page-profile">
+            <div class="section-title">Profile</div>
+            <div class="section-subtitle">Your account details. Reset password to remove the temp one Remy gave you.</div>
+
+            <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:8px 24px;max-width:720px;">
+                <div class="form-row">
+                    <label>Display name</label>
+                    <input id="profDisplayName" type="text" placeholder="Luke Huron">
+                </div>
+                <div class="form-row">
+                    <label>Email</label>
+                    <input id="profEmail" type="email" readonly>
+                </div>
+                <div class="form-row">
+                    <label>SDR key</label>
+                    <input id="profSdrKey" type="text" readonly>
+                </div>
+                <div class="form-row">
+                    <label>Avatar color</label>
+                    <input id="profAvatarColor" type="text" placeholder="#2563EB">
+                </div>
+                <div class="form-row">
+                    <label>OpenPhone number</label>
+                    <input id="profOpenPhone" type="tel" placeholder="+1 555 555 5555">
+                </div>
+                <div class="form-row">
+                    <label>Commission rate</label>
+                    <input id="profCommission" type="text" readonly>
+                </div>
+                <div class="form-row">
+                    <label>Daily call quota</label>
+                    <input id="profQuota" type="text" readonly>
+                </div>
+                <div class="form-row">
+                    <label>&nbsp;</label>
+                    <div>
+                        <button class="btn-primary" onclick="saveProfile()">Save changes</button>
+                        <span id="profSavedMsg" style="margin-left:12px;color:var(--green);font-size:12px;display:none;">Saved.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:8px 24px;max-width:720px;margin-top:20px;">
+                <div class="form-row">
+                    <label>Reset password</label>
+                    <input id="profNewPwd" type="password" placeholder="At least 10 characters">
+                </div>
+                <div class="form-row">
+                    <label>&nbsp;</label>
+                    <div>
+                        <button class="btn-primary" onclick="resetPassword()">Update password</button>
+                        <span id="profPwdMsg" style="margin-left:12px;color:var(--green);font-size:12px;display:none;">Password updated.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LEAD DRAWER -->
+        <div id="leadDrawer" class="drawer">
+            <button class="drawer-close" onclick="closeLeadDrawer()">&times;</button>
+            <div id="leadDrawerBody">Loading…</div>
+        </div>
+        <div id="leadDrawerOverlay" class="drawer-overlay" onclick="closeLeadDrawer()"></div>
+    </main>
+
+    <script>
+        /* ============================================================
+           SDR Dashboard
+           Backed by: /api/sdr/* + /api/prospects/* (auto-scoped to SDR
+           via Supabase JWT app_metadata.role)
+           ============================================================ */
+        const SUPABASE_URL = 'https://zsrskphpvgautfgklgxf.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_exRKfUY8b_1Dj5GaQsSwdA_KJG_ZtT3';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        var CURRENT = { session: null, sdr: null };
+        var STATE = { leadsSubtab: 'callable', historyRange: 'week' };
+
+        /* ===== AUTH ===== */
+        (async function init() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) {
+                localStorage.setItem('auth_redirect', '/sdr/');
+                window.location.href = '/auth.html';
+                return;
+            }
+            const u = session.user;
+            const role = u.app_metadata && u.app_metadata.role;
+            const isAdmin = role === 'admin';
+            const isSdr = role === 'sdr';
+            if (!isSdr && !isAdmin) {
+                window.location.href = '/app/';
+                return;
+            }
+            if (isAdmin && !isSdr) {
+                // Admin sneaking in: bounce them to admin (they have a Team tab there)
+                window.location.href = '/admin/';
+                return;
+            }
+            CURRENT.session = session;
+            await loadProfile();
+            await Promise.all([
+                loadOverview(),
+                loadMessagesPreview()
+            ]);
+        })();
+
+        async function authHeaders() {
+            return { 'Authorization': 'Bearer ' + CURRENT.session.access_token };
+        }
+
+        async function fetchJSON(path, opts) {
+            opts = opts || {};
+            const headers = Object.assign({}, await authHeaders(), opts.headers || {});
+            if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+            const res = await fetch(path, { method: opts.method || 'GET', headers, body: opts.body });
+            const text = await res.text();
+            let json;
+            try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
+            if (!res.ok) {
+                const err = new Error((json && json.error) || ('HTTP ' + res.status));
+                err.status = res.status;
+                err.body = json;
+                throw err;
+            }
+            return json;
+        }
+
+        async function signOut() {
+            await sb.auth.signOut();
+            window.location.href = '/auth.html';
+        }
+
+        /* ===== PROFILE ===== */
+        async function loadProfile() {
+            try {
+                const { sdr } = await fetchJSON('/api/sdr/profile');
+                if (!sdr) {
+                    document.body.innerHTML = '<div style="padding:80px;text-align:center;color:#a8a8b3;font-family:Inter,sans-serif;">No SDR profile found for your account. Contact Remy.</div>';
+                    return;
+                }
+                CURRENT.sdr = sdr;
+                renderSdrIdentity(sdr);
+                document.getElementById('profDisplayName').value = sdr.display_name || '';
+                document.getElementById('profEmail').value = sdr.email || '';
+                document.getElementById('profSdrKey').value = sdr.sdr_key || '';
+                document.getElementById('profAvatarColor').value = sdr.avatar_color || '#2563EB';
+                document.getElementById('profOpenPhone').value = sdr.openphone_number || '';
+                document.getElementById('profCommission').value = Math.round(Number(sdr.commission_pct || 0.25) * 1000) / 10 + '%';
+                document.getElementById('profQuota').value = (sdr.daily_call_quota || 80) + ' calls / day';
+            } catch (e) {
+                console.error('[loadProfile]', e);
+            }
+        }
+
+        function renderSdrIdentity(sdr) {
+            const sb_av = document.getElementById('sidebarAvatar');
+            const sb_nm = document.getElementById('sidebarName');
+            sb_av.textContent = sdr.initials || '?';
+            sb_av.style.background = sdr.avatar_color || '#2563EB';
+            sb_nm.textContent = sdr.display_name || sdr.email;
+        }
+
+        async function saveProfile() {
+            try {
+                await fetchJSON('/api/sdr/profile', {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        display_name: document.getElementById('profDisplayName').value,
+                        avatar_color: document.getElementById('profAvatarColor').value,
+                        openphone_number: document.getElementById('profOpenPhone').value
+                    })
+                });
+                const m = document.getElementById('profSavedMsg');
+                m.style.display = '';
+                setTimeout(() => m.style.display = 'none', 2400);
+                loadProfile();
+            } catch (e) {
+                alert('Save failed: ' + e.message);
+            }
+        }
+
+        async function resetPassword() {
+            const pw = document.getElementById('profNewPwd').value;
+            if (pw.length < 10) { alert('Password must be at least 10 characters.'); return; }
+            try {
+                await fetchJSON('/api/sdr/profile', {
+                    method: 'POST',
+                    body: JSON.stringify({ new_password: pw })
+                });
+                const m = document.getElementById('profPwdMsg');
+                m.style.display = '';
+                document.getElementById('profNewPwd').value = '';
+                setTimeout(() => m.style.display = 'none', 2400);
+            } catch (e) {
+                alert('Password update failed: ' + e.message);
+            }
+        }
+
+        /* ===== ROUTING ===== */
+        function switchPage(page) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            const target = document.getElementById('page-' + page);
+            if (target) target.classList.remove('hidden');
+            document.getElementById('pageTitle').textContent = {
+                overview: 'Dashboard', leads: 'Leads', performance: 'Performance',
+                earnings: 'Earnings', messages: 'Messages', history: 'Call History', profile: 'Profile'
+            }[page] || 'Dashboard';
+
+            if (page === 'leads') loadLeads();
+            else if (page === 'performance') loadPerformance();
+            else if (page === 'earnings') loadEarnings();
+            else if (page === 'messages') loadMessages();
+            else if (page === 'history') loadHistory();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        /* ===== OVERVIEW ===== */
+        async function loadOverview() {
+            try {
+                const perf = await fetchJSON('/api/sdr/performance');
+                document.getElementById('overviewDialsWeek').textContent = perf.dials.week;
+                document.getElementById('overviewMeetingsAll').textContent = perf.meetings_booked.all;
+                document.getElementById('overviewClosed').textContent = perf.closed_clients;
+
+                // Big quota ring + topbar mini ring
+                const pct = perf.quota.today_pct || 0;
+                const circumference = 2 * Math.PI * 14;
+                const offset = circumference - (circumference * pct / 100);
+                document.getElementById('bigQuotaRing').setAttribute('stroke-dashoffset', offset);
+                document.getElementById('topbarQuotaRing').setAttribute('stroke-dashoffset', offset);
+                document.getElementById('bigQuotaDials').textContent = perf.quota.today_progress;
+                document.getElementById('bigQuotaTarget').textContent = perf.quota.daily;
+                document.getElementById('bigQuotaRemaining').textContent =
+                    perf.quota.today_remaining + ' more to hit today\'s target';
+                document.getElementById('topbarQuotaToday').textContent = perf.quota.today_progress;
+                document.getElementById('topbarQuotaTarget').textContent = perf.quota.daily;
+                document.getElementById('overviewStreak').textContent = '—';
+
+                // Commission preview
+                const earn = await fetchJSON('/api/sdr/earnings');
+                document.getElementById('overviewCommissionPending').textContent = formatMoney(earn.totals.commission_pending_cents);
+                document.getElementById('overviewCommissionMeta').textContent = earn.totals.client_count + ' clients · ' + formatMoney(earn.totals.mrr_closed_cents) + ' MRR closed';
+
+                // Callbacks + booked
+                loadOverviewLists();
+            } catch (e) {
+                console.error('[overview]', e);
+            }
+        }
+
+        async function loadOverviewLists() {
+            try {
+                const cb = await fetchJSON('/api/prospects/callbacks');
+                renderMiniList('overviewCallbacksList', cb.results || cb || [], 'callback');
+            } catch (e) { document.getElementById('overviewCallbacksList').textContent = 'No callbacks today.'; }
+            try {
+                const bk = await fetchJSON('/api/prospects/list-booked?limit=5');
+                renderMiniList('overviewMeetingsList', bk.results || bk || [], 'booked');
+            } catch (e) { document.getElementById('overviewMeetingsList').textContent = 'No booked meetings yet.'; }
+        }
+
+        function renderMiniList(elId, rows, kind) {
+            const el = document.getElementById(elId);
+            if (!rows.length) {
+                el.innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;">None right now.</div>';
+                return;
+            }
+            el.innerHTML = rows.slice(0, 6).map(r => {
+                const name = escapeHtml(r.business_name || r.owner_name || 'Unknown');
+                const meta = kind === 'callback'
+                    ? (r.next_action_due_at ? new Date(r.next_action_due_at).toLocaleString() : '')
+                    : (r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at).toLocaleString() : '');
+                return '<div style="padding:8px 0;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;gap:10px;">'
+                    + '<span style="color:var(--text-primary);">' + name + '</span>'
+                    + '<span style="color:var(--text-tertiary);font-size:11px;">' + escapeHtml(meta) + '</span>'
+                    + '</div>';
+            }).join('');
+        }
+
+        /* ===== LEADS ===== */
+        async function loadLeads() {
+            await Promise.all([loadLeadsStats(), loadLeadsTable()]);
+        }
+        async function loadLeadsStats() {
+            try {
+                const stats = await fetchJSON('/api/prospects/lifecycle-stats');
+                document.getElementById('lwfCallable').textContent = (stats.all_leads_count != null) ? stats.all_leads_count : (stats.tier ? Object.values(stats.tier).reduce((a,b) => a + (b||0), 0) : '—');
+                document.getElementById('lwfCalledToday').textContent = (stats.called_today_count != null) ? stats.called_today_count : (stats.activity && stats.activity.calls_today) || 0;
+                document.getElementById('lwfCallbacks').textContent = (stats.callbacks_due_today_count != null) ? stats.callbacks_due_today_count : (stats.tab_badges && stats.tab_badges.callbacks) || 0;
+                document.getElementById('lwfBooked').textContent = (stats.tab_badges && stats.tab_badges.booked) || (stats.activity && stats.activity.booked_this_week) || 0;
+            } catch (e) { console.error('[leads-stats]', e); }
+        }
+
+        function setLeadsSubtab(sub) {
+            STATE.leadsSubtab = sub;
+            document.querySelectorAll('.leads-subtab').forEach(b => {
+                const active = b.dataset.sub === sub;
+                b.style.borderBottomColor = active ? 'var(--blue)' : 'transparent';
+                b.style.opacity = active ? 1 : 0.55;
+            });
+            loadLeadsTable();
+        }
+
+        async function loadLeadsTable() {
+            const wrap = document.getElementById('leadsTableWrap');
+            wrap.innerHTML = '<div class="empty-state">Loading…</div>';
+            const sub = STATE.leadsSubtab;
+            const endpoint = {
+                callable: '/api/prospects/callable?limit=200',
+                callbacks: '/api/prospects/callbacks',
+                booked: '/api/prospects/list-booked',
+                calls_today: '/api/prospects/calls-today'
+            }[sub];
+            try {
+                const data = await fetchJSON(endpoint);
+                const rows = data.results || data.leads || data || [];
+                if (!rows.length) {
+                    wrap.innerHTML = '<div class="empty-state">No leads in this view yet.</div>';
+                    return;
+                }
+                let html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th><th>Last touch</th></tr></thead><tbody>';
+                rows.slice(0, 200).forEach(r => {
+                    const tier = String(r.tier || r.prospect_tier || '').toLowerCase();
+                    const lastTouch = r.last_called_at ? new Date(r.last_called_at).toLocaleString()
+                        : r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at).toLocaleString()
+                        : '—';
+                    html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
+                        + '<td><strong>' + escapeHtml(r.business_name || '—') + '</strong></td>'
+                        + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
+                        + '<td>' + escapeHtml(r.owner_phone || '—') + '</td>'
+                        + '<td>' + escapeHtml(r.niche || '—') + '</td>'
+                        + '<td>' + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '—') + '</td>'
+                        + '<td>' + escapeHtml(lastTouch) + '</td>'
+                        + '</tr>';
+                });
+                html += '</tbody></table>';
+                wrap.innerHTML = html;
+            } catch (e) {
+                wrap.innerHTML = '<div class="empty-state">Failed to load: ' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        async function openLeadDrawer(leadId) {
+            if (!leadId) return;
+            const drawer = document.getElementById('leadDrawer');
+            const overlay = document.getElementById('leadDrawerOverlay');
+            drawer.classList.add('open');
+            overlay.classList.add('open');
+            const body = document.getElementById('leadDrawerBody');
+            body.innerHTML = '<div style="color:var(--text-tertiary);">Loading lead…</div>';
+            try {
+                const data = await fetchJSON('/api/prospects/detail?id=' + leadId);
+                const r = data.lead || data;
+                body.innerHTML = buildLeadDrawerHtml(r);
+            } catch (e) {
+                body.innerHTML = '<div style="color:var(--red);">Failed: ' + escapeHtml(e.message) + '</div>';
+            }
+        }
+        function closeLeadDrawer() {
+            document.getElementById('leadDrawer').classList.remove('open');
+            document.getElementById('leadDrawerOverlay').classList.remove('open');
+        }
+        function buildLeadDrawerHtml(r) {
+            const tier = String(r.tier || r.prospect_tier || '').toLowerCase();
+            const stage = String(r.stage || 'NEW').toLowerCase();
+            return ''
+                + '<div style="margin-bottom:20px;">'
+                + '<div style="font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.02em;">' + escapeHtml(r.business_name || '—') + '</div>'
+                + '<div style="color:var(--text-secondary);margin-top:6px;">' + escapeHtml(r.owner_name || '—') + ' · ' + escapeHtml(r.owner_phone || '—') + '</div>'
+                + '<div style="margin-top:10px;display:flex;gap:8px;">'
+                + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '')
+                + (stage ? '<span class="badge ' + stage + '">' + stage.replace('_',' ').toUpperCase() + '</span>' : '')
+                + '</div>'
+                + '</div>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px;">'
+                + '<div><div class="stat-label">Niche</div><div>' + escapeHtml(r.niche || '—') + '</div></div>'
+                + '<div><div class="stat-label">City</div><div>' + escapeHtml(r.city || '—') + '</div></div>'
+                + '<div><div class="stat-label">Email</div><div>' + escapeHtml(r.owner_email || '—') + '</div></div>'
+                + '<div><div class="stat-label">Score</div><div>' + (r.prospect_score != null ? r.prospect_score : '—') + '</div></div>'
+                + '</div>'
+                + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Log a call outcome</div>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+                + outcomeBtn(r.id, 'called',              'Called (dial only)',          'var(--blue)')
+                + outcomeBtn(r.id, 'booked_meeting',      'Booked meeting',              'var(--green)')
+                + outcomeBtn(r.id, 'callback_requested',  'Interested · follow up',      'var(--orange)')
+                + outcomeBtn(r.id, 'owner_uninterested',  'Not interested',              'var(--text-tertiary)')
+                + outcomeBtn(r.id, 'wrong_number',        'Wrong number',                'var(--red)')
+                + outcomeBtn(r.id, 'do_not_call',         'Do Not Call',                 'var(--red)')
+                + '</div>'
+                + '<textarea id="callNote" placeholder="Notes (optional)" rows="3" style="width:100%;margin-top:14px;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;"></textarea>';
+        }
+        function outcomeBtn(leadId, outcome, label, color) {
+            return '<button onclick="logCall(' + leadId + ',\'' + outcome + '\')" style="padding:10px 14px;background:var(--bg-card);border:1px solid ' + color + ';color:' + color + ';border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">' + label + '</button>';
+        }
+        async function logCall(leadId, outcome) {
+            const note = document.getElementById('callNote') ? document.getElementById('callNote').value : '';
+            try {
+                const endpoint = outcome === 'called' ? '/api/prospects/log-dial' : '/api/prospects/log-call';
+                await fetchJSON(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify({ lead_id: leadId, outcome, notes: note })
+                });
+                closeLeadDrawer();
+                loadLeads();
+                loadOverview();
+            } catch (e) { alert('Log failed: ' + e.message); }
+        }
+
+        /* ===== PERFORMANCE ===== */
+        async function loadPerformance() {
+            try {
+                const perf = await fetchJSON('/api/sdr/performance');
+                document.getElementById('perfDialsAll').textContent = perf.dials.all;
+                document.getElementById('perfMeetingsAll').textContent = perf.meetings_booked.all;
+                document.getElementById('perfCloseRate').textContent = perf.rates.close_rate_pct + '%';
+                document.getElementById('perfConversion').textContent = perf.rates.conversion_rate_pct + '%';
+                document.getElementById('funnelDials').textContent = perf.dials.all;
+                document.getElementById('funnelUnique').textContent = perf.unique_leads.all;
+                document.getElementById('funnelMeetings').textContent = perf.meetings_booked.all;
+                document.getElementById('funnelClosed').textContent = perf.closed_clients;
+
+                const earn = await fetchJSON('/api/sdr/earnings');
+                document.getElementById('funnelMrr').textContent = formatMoney(earn.totals.mrr_closed_cents);
+
+                const windows = [
+                    { name: 'Today', d: perf.dials.today, m: perf.meetings_booked.today },
+                    { name: 'This week', d: perf.dials.week, m: perf.meetings_booked.week },
+                    { name: 'Last 30 days', d: perf.dials.month, m: perf.meetings_booked.month },
+                    { name: 'All time', d: perf.dials.all, m: perf.meetings_booked.all }
+                ];
+                document.getElementById('perfBreakdownBody').innerHTML = windows.map(w => {
+                    const rate = w.d > 0 ? Math.round((w.m / w.d) * 1000) / 10 : 0;
+                    return '<tr><td>' + w.name + '</td><td style="text-align:right;">' + w.d + '</td>'
+                         + '<td style="text-align:right;">' + w.m + '</td>'
+                         + '<td style="text-align:right;color:var(--text-secondary);">' + rate + '%</td></tr>';
+                }).join('');
+            } catch (e) { console.error('[performance]', e); }
+        }
+
+        /* ===== EARNINGS ===== */
+        async function loadEarnings() {
+            try {
+                const e = await fetchJSON('/api/sdr/earnings');
+                document.getElementById('earnMrr').textContent = formatMoney(e.totals.mrr_closed_cents);
+                document.getElementById('earnPending').textContent = formatMoney(e.totals.commission_pending_cents);
+                document.getElementById('earnPaid').textContent = formatMoney(e.totals.commission_paid_cents);
+                document.getElementById('earnLifetime').textContent = formatMoney(e.totals.commission_lifetime_cents);
+
+                const body = document.getElementById('earnClientsBody');
+                if (!e.clients.length) {
+                    body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);">No closed clients yet. Keep dialing.</td></tr>';
+                    return;
+                }
+                body.innerHTML = e.clients.map(c => {
+                    const totalComm = (c.commission_upfront_cents || 0) + (c.commission_monthly_cents || 0);
+                    return '<tr>'
+                        + '<td><strong>' + escapeHtml(c.business_name || '—') + '</strong><br><span style="color:var(--text-tertiary);font-size:11px;">' + escapeHtml(c.contact_name || '') + '</span></td>'
+                        + '<td>' + (c.closed_at ? new Date(c.closed_at).toLocaleDateString() : '—') + '</td>'
+                        + '<td style="text-align:right;" class="money">' + formatMoney(c.upfront_fee_cents) + '</td>'
+                        + '<td style="text-align:right;" class="money">' + formatMoney(c.monthly_retainer_cents) + '/mo</td>'
+                        + '<td style="text-align:right;" class="money">' + formatMoney(totalComm) + '<br><span class="pct">incl ' + formatMoney(c.commission_monthly_cents) + '/mo</span></td>'
+                        + '<td><span class="badge ' + (c.payout_status || 'pending') + '">' + (c.payout_status || 'pending') + '</span></td>'
+                        + '</tr>';
+                }).join('');
+            } catch (e) { console.error('[earnings]', e); }
+        }
+
+        /* ===== MESSAGES ===== */
+        async function loadMessagesPreview() {
+            try {
+                const data = await fetchJSON('/api/sdr/messages');
+                const unread = (data.messages || []).filter(m => m.sender_type === 'admin' && !m.read_at).length;
+                const badge = document.getElementById('msgBadge');
+                if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
+            } catch (e) { /* ignore */ }
+        }
+        async function loadMessages() {
+            try {
+                const data = await fetchJSON('/api/sdr/messages');
+                document.getElementById('chatHeader').textContent = 'DM with Remy';
+                const list = document.getElementById('chatMessages');
+                const msgs = data.messages || [];
+                if (!msgs.length) {
+                    list.innerHTML = '<div style="margin:auto;color:var(--text-tertiary);font-size:13px;">No messages yet. Say hi.</div>';
+                } else {
+                    list.innerHTML = msgs.map(m => {
+                        const side = m.sender_type === 'sdr' ? 'from-sdr' : 'from-admin';
+                        const when = new Date(m.created_at).toLocaleString();
+                        return '<div class="msg ' + side + '">'
+                            + escapeHtml(m.body).replace(/\n/g, '<br>')
+                            + '<div class="msg-meta">' + when + '</div>'
+                            + '</div>';
+                    }).join('');
+                    list.scrollTop = list.scrollHeight;
+                }
+                document.getElementById('msgBadge').classList.add('hidden');
+            } catch (e) {
+                document.getElementById('chatMessages').innerHTML = '<div style="color:var(--red);margin:auto;">Failed: ' + escapeHtml(e.message) + '</div>';
+            }
+        }
+        async function sendMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return false;
+            input.value = '';
+            try {
+                await fetchJSON('/api/sdr/messages', { method: 'POST', body: JSON.stringify({ body: text }) });
+                loadMessages();
+            } catch (err) {
+                alert('Send failed: ' + err.message);
+                input.value = text;
+            }
+            return false;
+        }
+
+        /* ===== HISTORY ===== */
+        function setHistoryRange(r) {
+            STATE.historyRange = r;
+            document.querySelectorAll('.hist-range').forEach(b => {
+                const active = b.dataset.range === r;
+                b.style.background = active ? 'var(--blue)' : 'var(--bg-card)';
+                b.style.color = active ? 'white' : 'var(--text-secondary)';
+                b.style.border = active ? 'none' : '1px solid var(--border-subtle)';
+            });
+            loadHistory();
+        }
+        async function loadHistory() {
+            const body = document.getElementById('historyBody');
+            body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);">Loading…</td></tr>';
+            const sinceMs = { week: 7, month: 30, all: 9999 }[STATE.historyRange] || 7;
+            const since = new Date(Date.now() - sinceMs * 86400000).toISOString();
+            try {
+                const data = await fetchJSON('/api/prospects/my-history?since=' + encodeURIComponent(since));
+                const rows = data.results || data || [];
+                if (!rows.length) {
+                    body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);">No calls in this range.</td></tr>';
+                    return;
+                }
+                body.innerHTML = rows.map(r => {
+                    const when = r.called_at || r.last_called_at;
+                    return '<tr>'
+                        + '<td>' + (when ? new Date(when).toLocaleString() : '—') + '</td>'
+                        + '<td>' + escapeHtml(r.business_name || '—') + '</td>'
+                        + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
+                        + '<td>' + escapeHtml(r.outcome || r.last_called_outcome || '—') + '</td>'
+                        + '<td style="color:var(--text-tertiary);">' + escapeHtml(r.notes || '') + '</td>'
+                        + '</tr>';
+                }).join('');
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--red);">Failed: ' + escapeHtml(e.message) + '</td></tr>';
+            }
+        }
+
+        /* ===== UTIL ===== */
+        function formatMoney(cents) {
+            const n = Number(cents || 0) / 100;
+            if (n >= 1000) return '$' + (Math.round(n * 10) / 10).toLocaleString(undefined, { maximumFractionDigits: 0 });
+            return '$' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        }
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+    </script>
+</body>
+</html>

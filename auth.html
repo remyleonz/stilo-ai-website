@@ -454,8 +454,13 @@
 
         function redirectAfterAuth(session) {
             if (!session) return;
-            if (ADMIN_EMAILS_AUTH.includes(session.user.email)) {
+            var u = session.user || {};
+            var role = u.app_metadata && u.app_metadata.role;
+            var isAdmin = role === 'admin' || ADMIN_EMAILS_AUTH.includes((u.email || '').toLowerCase());
+            if (isAdmin) {
                 window.location.href = '/admin/';
+            } else if (role === 'sdr') {
+                window.location.href = '/sdr/';
             } else {
                 window.location.href = '/app/';
             }

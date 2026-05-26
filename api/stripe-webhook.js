@@ -258,6 +258,72 @@ async function handleCheckoutComplete(session) {
     .update({ status: 'active' })
     .eq('id', linkedClientId);
 
+  // ---------------------------------------------------------------------
+  // SDR commission attribution
+  // ---------------------------------------------------------------------
+  // If this customer's email matches a prospecting lead that's currently
+  // assigned to an active SDR, create a client_attribution row so that SDR
+  // gets credit (and their commission_pct snapshot is locked in).
+  // Idempotent: skips if an attribution row already exists for this client.
+  try {
+    const { data: existingAttr } = await supabase
+      .from('client_attribution')
+      .select('id')
+      .eq('client_id', linkedClientId)
+      .eq('role', 'primary')
+      .maybeSingle();
+
+    if (!existingAttr && customerEmail) {
+      // Find the lead matching this email. prospecting.leads has owner_email
+      // and is_assigned_to columns. We match on lower(owner_email)=email.
+      const pSb = getSupabase();
+      const { data: matchedLead } = await pSb
+        .schema('prospecting')
+        .from('leads')
+        .select('id, assigned_to')
+        .ilike('owner_email', customerEmail)
+        .maybeSingle();
+
+      const ownerEmail = matchedLead && matchedLead.assigned_to;
+      if (ownerEmail) {
+        const { data: sdr } = await supabase
+          .from('sdr_users')
+          .select('id, commission_pct')
+          .eq('email', ownerEmail.toLowerCase())
+          .eq('active', true)
+          .maybeSingle();
+
+        if (sdr) {
+          // Compute upfront + monthly from the session
+          const upfrontCents = session.amount_total || 0;
+          // Best-effort: read the first line item's recurring amount for monthly.
+          // Stripe doesn't include this on the session by default, so we rely on
+          // metadata.monthly_retainer_cents from the checkout-session creator.
+          const monthlyCents = parseInt(md.monthly_retainer_cents || '0', 10) || 0;
+
+          await supabase.from('client_attribution').insert({
+            client_id: linkedClientId,
+            sdr_id: sdr.id,
+            source_lead_id: matchedLead.id,
+            role: 'primary',
+            upfront_fee_cents: upfrontCents,
+            monthly_retainer_cents: monthlyCents,
+            commission_pct: sdr.commission_pct,
+            payout_status: 'pending',
+            stripe_customer_id: session.customer || null,
+            stripe_subscription_id: session.subscription || null,
+            notes: 'Auto-attributed from prospecting.leads.assigned_to'
+          });
+          console.log('[stripe-webhook] Attributed client %s to SDR %s (lead %s)',
+            linkedClientId, sdr.id, matchedLead.id);
+        }
+      }
+    }
+  } catch (e) {
+    // Attribution is best-effort — never block the main provisioning path.
+    console.warn('[stripe-webhook] attribution failed:', e.message);
+  }
+
   console.log(
     '[stripe-webhook] Provisioned %d agents for client %s: %s',
     inserted.length,
