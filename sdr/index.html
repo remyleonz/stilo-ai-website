@@ -765,22 +765,22 @@
                 <div class="stat-card accent-green">
                     <div class="stat-label">MRR Closed</div>
                     <div class="stat-value money" id="earnMrr">$0</div>
-                    <div class="stat-meta">Active clients you closed</div>
+                    <div class="stat-meta">Clients that paid</div>
                 </div>
                 <div class="stat-card accent-blue">
-                    <div class="stat-label">Commission Pending</div>
+                    <div class="stat-label">Commission Owed</div>
                     <div class="stat-value money" id="earnPending">$0</div>
-                    <div class="stat-meta">Awaiting payout</div>
+                    <div class="stat-meta">Paid by client, awaiting your payout</div>
                 </div>
                 <div class="stat-card accent-purple">
                     <div class="stat-label">Commission Paid</div>
                     <div class="stat-value money" id="earnPaid">$0</div>
-                    <div class="stat-meta">Lifetime</div>
+                    <div class="stat-meta">Already paid to you</div>
                 </div>
                 <div class="stat-card accent-orange">
-                    <div class="stat-label">Lifetime Commission</div>
-                    <div class="stat-value money" id="earnLifetime">$0</div>
-                    <div class="stat-meta">Pending + paid</div>
+                    <div class="stat-label">Deals Awaiting Payment</div>
+                    <div class="stat-value" id="earnAwaiting">0</div>
+                    <div class="stat-meta">Closed by you, client hasn't paid yet</div>
                 </div>
             </div>
 
@@ -1294,7 +1294,7 @@
                 document.getElementById('earnMrr').textContent = formatMoney(e.totals.mrr_closed_cents);
                 document.getElementById('earnPending').textContent = formatMoney(e.totals.commission_pending_cents);
                 document.getElementById('earnPaid').textContent = formatMoney(e.totals.commission_paid_cents);
-                document.getElementById('earnLifetime').textContent = formatMoney(e.totals.commission_lifetime_cents);
+                document.getElementById('earnAwaiting').textContent = e.totals.awaiting_payment_count || 0;
 
                 const body = document.getElementById('earnClientsBody');
                 if (!e.clients.length) {

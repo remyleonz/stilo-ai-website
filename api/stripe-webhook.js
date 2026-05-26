@@ -85,6 +85,68 @@ module.exports = async function handleWebhook(req, res) {
   res.status(200).json({ received: true });
 };
 
+// Try every matching strategy in order: stripe_checkout_session_id (exact),
+// then business_name (case-insensitive), then phone (digits only), then email.
+// Returns the deal row or null. The order matches the design doc — business
+// name survives the most common identity drift (personal Gmail at checkout).
+async function findDealForSession(supabase, session) {
+  const md = session.metadata || {};
+
+  // 1. Explicit deal_id passed in metadata (new admin flow puts it there)
+  if (md.deal_id) {
+    const { data } = await supabase.from('deals').select('*').eq('id', md.deal_id).maybeSingle();
+    if (data) return { deal: data, matchedBy: 'deal_id_metadata' };
+  }
+
+  // 2. Stripe checkout session id snapshot (admin Close Deal flow sets this)
+  const { data: bySession } = await supabase
+    .from('deals')
+    .select('*')
+    .eq('stripe_checkout_session_id', session.id)
+    .maybeSingle();
+  if (bySession) return { deal: bySession, matchedBy: 'stripe_session_id' };
+
+  // 3. business_name (admin Close Deal stores this canonically)
+  const bizName = md.business_name || '';
+  if (bizName) {
+    const { data: byBiz } = await supabase
+      .from('deals')
+      .select('*')
+      .ilike('business_name', bizName)
+      .order('closed_at', { ascending: false })
+      .limit(1);
+    if (byBiz && byBiz[0]) return { deal: byBiz[0], matchedBy: 'business_name' };
+  }
+
+  // 4. phone (digits only, last 10)
+  const rawPhone = md.phone || (session.customer_details && session.customer_details.phone) || '';
+  const phoneDigits = String(rawPhone).replace(/\D/g, '').slice(-10);
+  if (phoneDigits.length >= 7) {
+    const { data: byPhone } = await supabase
+      .from('deals')
+      .select('*')
+      .ilike('contact_phone', '%' + phoneDigits + '%')
+      .order('closed_at', { ascending: false })
+      .limit(1);
+    if (byPhone && byPhone[0]) return { deal: byPhone[0], matchedBy: 'phone' };
+  }
+
+  // 5. email (least reliable — prospect often uses personal Gmail at checkout)
+  const customerEmail = (session.customer_details && session.customer_details.email)
+    || session.customer_email || md.contact_email || null;
+  if (customerEmail) {
+    const { data: byEmail } = await supabase
+      .from('deals')
+      .select('*')
+      .ilike('contact_email', customerEmail)
+      .order('closed_at', { ascending: false })
+      .limit(1);
+    if (byEmail && byEmail[0]) return { deal: byEmail[0], matchedBy: 'email' };
+  }
+
+  return { deal: null, matchedBy: null };
+}
+
 async function handleCheckoutComplete(session) {
   const supabase = getSupabase();
   if (!supabase) {
@@ -94,6 +156,35 @@ async function handleCheckoutComplete(session) {
     );
     return;
   }
+
+  // ── New flow: admin Close Deal created a deal row first. Find it and mark it paid.
+  const { deal, matchedBy } = await findDealForSession(supabase, session);
+  if (deal) {
+    console.log('[stripe-webhook] deal matched via %s for session %s (deal=%s)', matchedBy, session.id, deal.id);
+    try {
+      const { provisionFromDeal } = require('./admin/deals/mark-paid');
+      await provisionFromDeal(supabase, {
+        ...deal,
+        stripe_customer_id: session.customer || deal.stripe_customer_id,
+        stripe_subscription_id: session.subscription || deal.stripe_subscription_id
+      }, new Date().toISOString());
+      await supabase.from('deal_events').insert({
+        deal_id: deal.id,
+        event_type: 'payment_received',
+        body: 'Stripe checkout completed (matched by ' + matchedBy + ')',
+        actor_role: 'system'
+      });
+      return;
+    } catch (e) {
+      console.error('[stripe-webhook] deal provisioning failed:', e);
+      // Fall through to legacy flow as belt-and-suspenders
+    }
+  }
+
+  // ── Legacy fallback: no deal row exists (old direct-checkout link from before
+  //    the admin Close Deal flow). Provision agents the old way + log a warning
+  //    so the admin sees an orphan in the Activity feed.
+  console.warn('[stripe-webhook] no deal row matched session %s, using legacy path', session.id);
 
   const md = session.metadata || {};
   const rawCodes = (md.selected_agents || md.agent_type || '').split(',');

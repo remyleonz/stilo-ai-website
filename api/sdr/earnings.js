@@ -49,9 +49,28 @@ module.exports = async function handler(req, res) {
 
     let mrrCents = 0;
     let revenueCents = 0;
-    let commissionPendingCents = 0;
-    let commissionPaidCents = 0;
+    let commissionPendingCents = 0;          // confirmed-paid by client, owed to SDR
+    let commissionPaidCents = 0;             // already cut to SDR
     let commissionLifetimeCents = 0;
+
+    // Awaiting-payment count comes from `deals` table (stage = PROPOSAL_SENT
+    // or INVOICE_SENT). attribution rows don't exist until the deal is paid,
+    // so we can't infer this from client_attribution alone.
+    let awaitingPaymentCount = 0;
+    if (scope.sdrId) {
+        const { count } = await caller.sb
+            .from('deals')
+            .select('id', { count: 'exact', head: true })
+            .eq('sdr_id', scope.sdrId)
+            .in('stage', ['PROPOSAL_SENT', 'INVOICE_SENT']);
+        awaitingPaymentCount = count || 0;
+    } else if (caller.isAdmin) {
+        const { count } = await caller.sb
+            .from('deals')
+            .select('id', { count: 'exact', head: true })
+            .in('stage', ['PROPOSAL_SENT', 'INVOICE_SENT']);
+        awaitingPaymentCount = count || 0;
+    }
 
     const items = (rows || []).map(r => {
         const pct = r.commission_pct != null ? Number(r.commission_pct) : fallbackPct;
@@ -60,21 +79,26 @@ module.exports = async function handler(req, res) {
         const commissionUpfront = Math.round(upfront * pct);
         const commissionMonthly = Math.round(retainer * pct);
 
-        // MRR + lifetime revenue only count primary, currently-active clients
+        // payout_status === 'pending' means client hasn't paid yet → commission is "awaiting payment"
+        // (visibility-only on SDR dashboard, no dollar amount per Remy's choice).
+        // Any other status (unpaid|paid) means client paid → commission is real.
+        const clientPaid = r.payout_status && r.payout_status !== 'pending';
+
         const clientActive = r.clients && r.clients.status !== 'cancelled' && r.clients.status !== 'paused';
-        if (r.role === 'primary' && clientActive) {
+        if (r.role === 'primary' && clientActive && clientPaid) {
             mrrCents += retainer;
         }
-        if (r.role === 'primary') {
+        if (r.role === 'primary' && clientPaid) {
             revenueCents += upfront;
         }
 
-        // Commission ledger
         const paid = r.payout_paid_cents || 0;
-        const pending = (r.payout_pending_cents || 0) + (r.payout_status === 'pending' ? (commissionUpfront - paid) : 0);
-        commissionPaidCents += paid;
-        commissionPendingCents += Math.max(0, pending);
-        commissionLifetimeCents += paid + Math.max(0, pending);
+        if (clientPaid) {
+            const owedNow = (r.payout_pending_cents || 0);
+            commissionPaidCents += paid;
+            commissionPendingCents += Math.max(0, owedNow);
+            commissionLifetimeCents += paid + Math.max(0, owedNow);
+        }
 
         return {
             id: r.id,
@@ -111,7 +135,10 @@ module.exports = async function handler(req, res) {
             commission_pending_cents: commissionPendingCents,
             commission_paid_cents: commissionPaidCents,
             commission_lifetime_cents: commissionLifetimeCents,
-            client_count: items.filter(i => i.role === 'primary').length
+            client_count: items.filter(i => i.role === 'primary').length,
+            // Visibility-only: how many deals you closed that haven't been paid
+            // by the client yet. Dollar amount intentionally hidden until payment.
+            awaiting_payment_count: awaitingPaymentCount
         },
         clients: items
     });

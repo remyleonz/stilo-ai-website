@@ -30,6 +30,17 @@ const MIME_TYPES = {
 // Enough to run the serverless handlers in `api/` during local dev.
 function wrapHandler(handler) {
   return function (req, res) {
+    // Populate req.query from the URL search params (Vercel does this; raw node does not).
+    // Preserve any pre-injected dynamic-route params (set by the router).
+    const qIdx = (req.url || '').indexOf('?');
+    if (qIdx >= 0) {
+      const search = new URLSearchParams(req.url.slice(qIdx + 1));
+      const parsed = {};
+      for (const [k, v] of search) parsed[k] = v;
+      req.query = Object.assign({}, parsed, req.query || {});
+    } else {
+      req.query = req.query || {};
+    }
     // req gets `.body` set if content-type is JSON, matching Vercel.
     let raw = '';
     req.setEncoding('utf8');
@@ -61,17 +72,50 @@ function wrapHandler(handler) {
 const server = http.createServer((req, res) => {
   let urlPath = req.url.split('?')[0];
 
-  // Route /api/<name> to api/<name>.js if the file exists.
+  // Route /api/<path> to the matching file. Resolution order matches Vercel:
+  //   1. Exact file:        /api/foo            → api/foo.js
+  //   2. Directory index:   /api/foo            → api/foo/index.js
+  //   3. Dynamic segment:   /api/foo/abc-123    → api/foo/[id].js (parses :id)
+  // This is needed because our /api/admin/deals routes split into
+  // api/admin/deals/index.js + api/admin/deals/[id].js for Vercel.
   if (urlPath.indexOf('/api/') === 0) {
     const apiRel = urlPath.replace(/^\/+/, '').split('?')[0];
-    const apiFile = path.join(__dirname, apiRel + '.js');
-    if (fs.existsSync(apiFile)) {
+    const candidates = [
+      { file: path.join(__dirname, apiRel + '.js'), params: null },
+      { file: path.join(__dirname, apiRel, 'index.js'), params: null }
+    ];
+    // Dynamic [param] match: walk the path, look for a sibling [x].js whose
+    // base name matches the directory pattern. e.g. /api/admin/deals/abc
+    // looks at /api/admin/deals/ and finds [id].js there.
+    try {
+      const segs = apiRel.split('/');
+      if (segs.length >= 2) {
+        const parentDir = path.join(__dirname, ...segs.slice(0, -1));
+        if (fs.existsSync(parentDir)) {
+          const entries = fs.readdirSync(parentDir).filter(n => /^\[.+\]\.js$/.test(n));
+          for (const entry of entries) {
+            const paramName = entry.match(/^\[(.+)\]\.js$/)[1];
+            candidates.push({
+              file: path.join(parentDir, entry),
+              params: { [paramName]: segs[segs.length - 1] }
+            });
+          }
+        }
+      }
+    } catch (_) { /* best-effort */ }
+
+    for (const { file, params } of candidates) {
+      if (!fs.existsSync(file)) continue;
       try {
-        delete require.cache[require.resolve(apiFile)];
-        const handler = require(apiFile);
+        delete require.cache[require.resolve(file)];
+        const handler = require(file);
+        // Inject dynamic params into req.query so handlers see them like on Vercel
+        if (params) {
+          req.query = Object.assign({}, req.query || {}, params);
+        }
         return wrapHandler(handler)(req, res);
       } catch (e) {
-        console.error('[api] failed to load', apiFile, e);
+        console.error('[api] failed to load', file, e);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: 'Handler load failed', message: String(e.message) }));
       }

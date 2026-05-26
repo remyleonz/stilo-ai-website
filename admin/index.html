@@ -897,6 +897,24 @@
                     </svg>
                     Team
                 </button>
+                <button class="nav-item" data-page="pipeline" onclick="switchPage('pipeline')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25Zm9.75-9.75A2.25 2.25 0 0 1 15.75 3.75H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
+                    </svg>
+                    Pipeline
+                </button>
+                <button class="nav-item" data-page="deals" onclick="switchPage('deals')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+                    </svg>
+                    Deals
+                </button>
+                <button class="nav-item" data-page="activity" onclick="switchPage('activity')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25"/>
+                    </svg>
+                    Activity
+                </button>
                 <button class="nav-item" data-page="support" onclick="switchPage('support')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/>
@@ -1382,6 +1400,54 @@
                 <div id="sdrDetailOverlay" onclick="closeSdrDetailDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
             </div>
 
+            <!-- ============================================================
+                 Pipeline tab — every deal grouped by stage (kanban)
+                 ============================================================ -->
+            <div class="page-content" id="page-pipeline" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="margin:0 0 6px 0;font-size:18px;">Pipeline</h2>
+                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Every deal grouped by lifecycle stage. Click a card to manage.</p>
+                    </div>
+                    <button class="quick-action-btn" onclick="loadPipelinePage()">Refresh</button>
+                </div>
+                <div id="pipelineGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
+                    <div style="grid-column:1/-1;padding:18px;color:var(--text-secondary);">Loading…</div>
+                </div>
+            </div>
+
+            <!-- ============================================================
+                 Deals tab — table of every deal
+                 ============================================================ -->
+            <div class="page-content" id="page-deals" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="margin:0 0 6px 0;font-size:18px;">Deals</h2>
+                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">All closed deals. Click row for activity, mark paid for manual payments.</p>
+                    </div>
+                    <button class="quick-action-btn" onclick="loadDealsPage()">Refresh</button>
+                </div>
+                <div id="dealsTableWrap" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow-x:auto;">
+                    <div style="padding:24px;color:var(--text-secondary);">Loading…</div>
+                </div>
+            </div>
+
+            <!-- ============================================================
+                 Activity Feed tab — recent deal events agency-wide
+                 ============================================================ -->
+            <div class="page-content" id="page-activity" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="margin:0 0 6px 0;font-size:18px;">Activity Feed</h2>
+                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Every deal touchpoint, newest first. Click any row to open the deal.</p>
+                    </div>
+                    <button class="quick-action-btn" onclick="loadActivityFeed()">Refresh</button>
+                </div>
+                <div id="activityFeedList" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow:hidden;">
+                    <div style="padding:18px;color:var(--text-secondary);">Loading…</div>
+                </div>
+            </div>
+
             <!-- Support inbox tab -->
             <div class="page-content" id="page-support" style="display:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
@@ -1694,6 +1760,9 @@
             else if (page === 'review') loadPendingReview();
             else if (page === 'revenue') loadRevenue();
             else if (page === 'team') loadTeamPage();
+            else if (page === 'pipeline') loadPipelinePage();
+            else if (page === 'deals') loadDealsPage();
+            else if (page === 'activity') loadActivityFeed();
             else if (page === 'support') adminLoadSupportThreads();
             else if (page === 'settings') loadSettings();
             else if (page === 'prospecting') loadProspectingPage();
@@ -5126,12 +5195,32 @@
             var submitFn = mode === 'emailable' ? 'submitEmailLog()' : 'submitCallLog()';
             var submitLabel = mode === 'emailable' ? 'Log email and next' : 'Log call and next';
 
+            // "Close Deal" admin action — primary CTA when the lead is ready to convert.
+            // Visible always for admin convenience (rare cases need closing without
+            // a booked meeting). Opens the deal modal pre-filled with the lead data.
+            var leadJsonForModal = encodeURIComponent(JSON.stringify({
+                id: d.id,
+                business_name: business,
+                contact_name: owner,
+                contact_email: email,
+                contact_phone: phone,
+                niche: niche,
+                assigned_to: d.assigned_to || null
+            }));
+            var closeDealCta = '<button type="button" onclick="openCloseDealModal(decodeURIComponent(\'' + leadJsonForModal + '\'))" '
+                + 'style="padding:9px 16px;background:linear-gradient(135deg,var(--blue),#1d4ed8);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.01em;box-shadow:0 2px 10px rgba(37,99,235,0.35);">'
+                + '<span style="display:inline-block;vertical-align:-1px;margin-right:6px;">⚡</span>Close Deal'
+                + '</button>';
+
             return ''
-                + '<div style="margin-bottom:20px;">'
-                + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
-                + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.85rem;letter-spacing:-0.02em;margin:0;line-height:1.15;">' + escapeAdminHtml(business) + '</h2>'
-                + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier || d.tier) + ' · ' + stageBadge(d.stage) + '</div>'
-                + lastOutcomePill
+                + '<div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
+                  + '<div style="flex:1;min-width:0;">'
+                    + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
+                    + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.85rem;letter-spacing:-0.02em;margin:0;line-height:1.15;">' + escapeAdminHtml(business) + '</h2>'
+                    + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier || d.tier) + ' · ' + stageBadge(d.stage) + '</div>'
+                    + lastOutcomePill
+                  + '</div>'
+                  + closeDealCta
                 + '</div>'
 
                 + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
@@ -5675,6 +5764,456 @@
             if (next) {
                 var nid = next.id != null ? next.id : next.lead_id;
                 setTimeout(function(){ openProspectDrawer(nid, prospectState.tab); }, 200);
+            }
+        }
+
+        /* ============================================================
+           Close Deal flow (admin only)
+           Posts to /api/admin/deals to create the deal + proposal PDF +
+           Stripe checkout link or invoice. Modal renders with sensible
+           defaults pulled from the lead drawer; admin tweaks fees +
+           picks payment method + clicks Close.
+           ============================================================ */
+        var AGENT_CATALOG_CACHE = null;
+        async function getAgentCatalog() {
+            if (AGENT_CATALOG_CACHE) return AGENT_CATALOG_CACHE;
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/agents-meta', { headers: { 'Authorization': 'Bearer ' + (session && session.access_token || '') } });
+                if (!res.ok) return [];
+                var data = await res.json();
+                AGENT_CATALOG_CACHE = data.agents || [];
+                return AGENT_CATALOG_CACHE;
+            } catch (e) { return []; }
+        }
+
+        async function openCloseDealModal(leadJsonStr) {
+            var lead = {};
+            try { lead = JSON.parse(leadJsonStr); } catch (_) {}
+            var agents = await getAgentCatalog();
+
+            var agentsHtml = agents.filter(function (a) { return a.purchaseMode === 'self_serve'; }).map(function (a) {
+                var monthly = a.monthlyFeeCents ? '$' + (a.monthlyFeeCents/100).toLocaleString() + '/mo' : '';
+                var setup = a.setupFeeCents ? '$' + (a.setupFeeCents/100).toLocaleString() : '';
+                return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);">'
+                    + '<input type="checkbox" name="agent_code" value="' + escapeAdminHtml(a.id) + '" '
+                    + 'data-setup="' + (a.setupFeeCents || 0) + '" data-monthly="' + (a.monthlyFeeCents || 0) + '" '
+                    + 'onchange="recomputeDealTotals()" style="margin:0;">'
+                    + '<div style="flex:1;"><div style="font-weight:700;color:var(--text-primary);font-size:13px;">' + escapeAdminHtml(a.label || a.id.toUpperCase()) + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-tertiary);">' + setup + (setup && monthly ? ' · ' : '') + monthly + '</div></div>'
+                    + '</label>';
+            }).join('');
+
+            // Resolve owning SDR from lead.assigned_to → render disabled badge so admin
+            // sees who's getting credit. Admin can override via dropdown below.
+            var sdrRoster = (window.__SDR_ROSTER || []);
+            var defaultSdrId = '';
+            if (lead.assigned_to) {
+                var match = sdrRoster.find(function (s) { return s.email && s.email.toLowerCase() === String(lead.assigned_to).toLowerCase(); });
+                if (match) defaultSdrId = match.id;
+            }
+            var sdrOptions = '<option value="">No SDR credit (house deal)</option>' + sdrRoster.map(function (s) {
+                var sel = s.id === defaultSdrId ? ' selected' : '';
+                return '<option value="' + s.id + '"' + sel + '>' + escapeAdminHtml(s.display_name) + ' (' + Math.round(Number(s.commission_pct || 0.25) * 100) + '%)</option>';
+            }).join('');
+
+            var modalHtml = ''
+                + '<form id="closeDealForm" onsubmit="return submitCloseDeal(event)" style="padding:0 4px;">'
+                + '<input type="hidden" name="source_lead_id" value="' + (lead.id || '') + '">'
+                + '<h2 style="margin:0 0 6px 0;font-size:20px;font-weight:800;letter-spacing:-0.02em;">Close Deal: ' + escapeAdminHtml(lead.business_name || 'New deal') + '</h2>'
+                + '<p style="margin:0 0 18px 0;color:var(--text-secondary);font-size:13px;">Creates the deal, generates a proposal PDF, sends payment link. SDR commission locks at payment.</p>'
+
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Business name</label>'
+                    + '<input name="business_name" value="' + escapeAdminHtml(lead.business_name || '') + '" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;"></div>'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Contact name</label>'
+                    + '<input name="contact_name" value="' + escapeAdminHtml(lead.contact_name || '') + '" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;"></div>'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Contact email *</label>'
+                    + '<input name="contact_email" type="email" value="' + escapeAdminHtml(lead.contact_email || '') + '" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;"></div>'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Phone</label>'
+                    + '<input name="contact_phone" value="' + escapeAdminHtml(lead.contact_phone || '') + '" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;"></div>'
+                + '</div>'
+
+                + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Agents (check all that apply)</label>'
+                  + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' + agentsHtml + '</div></div>'
+
+                + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Upfront fee ($)</label>'
+                    + '<input name="upfront_fee" id="dealUpfront" type="number" min="0" value="0" step="50" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Monthly retainer ($)</label>'
+                    + '<input name="monthly_retainer" id="dealMonthly" type="number" min="0" value="0" step="50" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Discount %</label>'
+                    + '<input name="discount_pct" type="number" min="0" max="100" value="0" step="5" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
+                + '</div>'
+
+                + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">SDR credit</label>'
+                  + '<select name="sdr_id" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">' + sdrOptions + '</select></div>'
+
+                + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Payment method</label>'
+                  + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+                    + '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);font-size:12px;"><input type="radio" name="payment_method" value="stripe_checkout" checked> Stripe checkout link</label>'
+                    + '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);font-size:12px;"><input type="radio" name="payment_method" value="stripe_invoice"> Stripe invoice (email)</label>'
+                    + '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);font-size:12px;"><input type="radio" name="payment_method" value="manual"> Manual (wire / check)</label>'
+                  + '</div></div>'
+
+                + '<div style="margin-bottom:18px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Internal notes</label>'
+                  + '<textarea name="notes" rows="2" placeholder="Optional context..." style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;"></textarea></div>'
+
+                + '<div id="closeDealMsg" style="margin-bottom:14px;font-size:12px;color:var(--text-secondary);min-height:18px;"></div>'
+
+                + '<div style="display:flex;justify-content:flex-end;gap:8px;">'
+                  + '<button type="button" onclick="closeCloseDealModal()" style="padding:10px 18px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>'
+                  + '<button type="submit" id="closeDealSubmitBtn" style="padding:10px 22px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:700;cursor:pointer;">Close Deal →</button>'
+                + '</div>'
+                + '</form>';
+
+            var modal = document.getElementById('closeDealModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'closeDealModal';
+                modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:720px;max-width:calc(100vw - 32px);max-height:calc(100vh - 64px);overflow-y:auto;background:#0a0a0f;border:1px solid rgba(37,99,235,0.25);border-radius:14px;z-index:200;padding:28px 32px;display:none;';
+                document.body.appendChild(modal);
+                var overlay = document.createElement('div');
+                overlay.id = 'closeDealOverlay';
+                overlay.onclick = closeCloseDealModal;
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;display:none;';
+                document.body.appendChild(overlay);
+            }
+            modal.innerHTML = modalHtml;
+            modal.style.display = 'block';
+            document.getElementById('closeDealOverlay').style.display = 'block';
+            recomputeDealTotals();
+        }
+
+        function closeCloseDealModal() {
+            var m = document.getElementById('closeDealModal');
+            var o = document.getElementById('closeDealOverlay');
+            if (m) m.style.display = 'none';
+            if (o) o.style.display = 'none';
+        }
+
+        function recomputeDealTotals() {
+            var form = document.getElementById('closeDealForm');
+            if (!form) return;
+            var setup = 0, monthly = 0;
+            form.querySelectorAll('input[name="agent_code"]:checked').forEach(function (el) {
+                setup   += parseInt(el.dataset.setup || 0, 10);
+                monthly += parseInt(el.dataset.monthly || 0, 10);
+            });
+            form.querySelector('[name="upfront_fee"]').value = Math.round(setup / 100);
+            form.querySelector('[name="monthly_retainer"]').value = Math.round(monthly / 100);
+        }
+
+        async function submitCloseDeal(event) {
+            event.preventDefault();
+            var form = event.target;
+            var btn = document.getElementById('closeDealSubmitBtn');
+            var msg = document.getElementById('closeDealMsg');
+            btn.disabled = true;
+            btn.textContent = 'Creating deal…';
+            msg.textContent = '';
+            msg.style.color = 'var(--text-secondary)';
+
+            var agentCodes = Array.from(form.querySelectorAll('input[name="agent_code"]:checked')).map(function (el) { return el.value; });
+            if (agentCodes.length === 0) {
+                msg.textContent = 'Pick at least one agent.';
+                msg.style.color = 'var(--red)';
+                btn.disabled = false; btn.textContent = 'Close Deal →';
+                return false;
+            }
+
+            var fd = new FormData(form);
+            var payload = {
+                source_lead_id: fd.get('source_lead_id') ? Number(fd.get('source_lead_id')) : null,
+                business_name: fd.get('business_name'),
+                contact_name: fd.get('contact_name'),
+                contact_email: fd.get('contact_email'),
+                contact_phone: fd.get('contact_phone'),
+                agent_codes: agentCodes,
+                upfront_fee_cents: Math.round(parseFloat(fd.get('upfront_fee') || 0) * 100),
+                monthly_retainer_cents: Math.round(parseFloat(fd.get('monthly_retainer') || 0) * 100),
+                discount_pct: parseFloat(fd.get('discount_pct') || 0) / 100,
+                sdr_id: fd.get('sdr_id') || null,
+                payment_method: fd.get('payment_method'),
+                notes: fd.get('notes')
+            };
+
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    msg.textContent = 'Failed: ' + (data.error || 'unknown') + (data.detail ? ' — ' + data.detail : '');
+                    msg.style.color = 'var(--red)';
+                    btn.disabled = false; btn.textContent = 'Close Deal →';
+                    return false;
+                }
+                msg.style.color = 'var(--green,#10b981)';
+                msg.innerHTML = '✓ Deal created. ' + (data.payment_link ? '<a href="' + data.payment_link + '" target="_blank" style="color:var(--blue);">Copy payment link</a> · ' : '')
+                    + (data.proposal_url ? '<a href="' + data.proposal_url + '" target="_blank" style="color:var(--blue);">View PDF</a> · ' : '')
+                    + '<button type="button" onclick="sendProposalEmail(\'' + data.deal.id + '\')" style="background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;">Email it to ' + escapeAdminHtml(data.deal.contact_email) + '</button>';
+                btn.textContent = 'Done';
+            } catch (e) {
+                msg.textContent = 'Network error: ' + e.message;
+                msg.style.color = 'var(--red)';
+                btn.disabled = false; btn.textContent = 'Close Deal →';
+            }
+            return false;
+        }
+
+        async function sendProposalEmail(dealId) {
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals/send-proposal-email', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deal_id: dealId })
+                });
+                var data = await res.json();
+                var msg = document.getElementById('closeDealMsg');
+                if (res.ok) {
+                    msg.innerHTML = '✓ Email sent. Closing in 2s…';
+                    setTimeout(closeCloseDealModal, 2000);
+                } else {
+                    msg.textContent = 'Email failed: ' + (data.error || 'unknown') + ' (you can copy the link above and email manually)';
+                    msg.style.color = 'var(--orange)';
+                }
+            } catch (e) {
+                alert('Send failed: ' + e.message);
+            }
+        }
+
+        /* ============================================================
+           Pipeline / Deals / Invoices / Activity tabs
+           ============================================================ */
+        async function loadPipelinePage() {
+            var grid = document.getElementById('pipelineGrid');
+            if (!grid) return;
+            grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);padding:18px;">Loading pipeline…</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+                var data = await res.json();
+                var deals = data.deals || [];
+                var stages = ['PROPOSAL_SENT', 'INVOICE_SENT', 'PAID', 'ONBOARDING', 'LIVE', 'CHURNED', 'CLOSED_LOST'];
+                var stageColors = {
+                    PROPOSAL_SENT: '#f97316', INVOICE_SENT: '#eab308', PAID: '#0ea5e9',
+                    ONBOARDING: '#a855f7', LIVE: '#10b981', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280'
+                };
+                grid.innerHTML = stages.map(function (st) {
+                    var stageDeals = deals.filter(function (d) { return d.stage === st; });
+                    var color = stageColors[st];
+                    return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-top:3px solid ' + color + ';border-radius:12px;padding:14px;min-width:240px;">'
+                        + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">'
+                          + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:' + color + ';font-weight:700;">' + st.replace(/_/g, ' ') + '</div>'
+                          + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.1rem;">' + stageDeals.length + '</div>'
+                        + '</div>'
+                        + (stageDeals.length === 0 ? '<div style="color:var(--text-tertiary);font-size:12px;text-align:center;padding:24px 0;">Empty</div>' : stageDeals.map(function (d) {
+                            return '<div onclick="openDealDetail(\'' + d.id + '\')" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-subtle);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;">'
+                                + '<div style="font-weight:700;font-size:13px;color:var(--text-primary);">' + escapeAdminHtml(d.business_name) + '</div>'
+                                + '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">' + escapeAdminHtml(d.contact_name || d.contact_email) + '</div>'
+                                + '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;">'
+                                  + '<span style="color:var(--text-tertiary);">' + (d.sdr_users ? escapeAdminHtml(d.sdr_users.display_name) : '—') + '</span>'
+                                  + '<span style="color:var(--text-primary);font-family:var(--font-mono);font-weight:600;">$' + ((d.upfront_fee_cents + d.monthly_retainer_cents) / 100).toLocaleString() + '</span>'
+                                + '</div>'
+                                + '</div>';
+                        }).join(''))
+                        + '</div>';
+                }).join('');
+            } catch (e) {
+                grid.innerHTML = '<div style="grid-column:1/-1;color:#ef4444;padding:18px;">Failed: ' + (e.message || 'unknown') + '</div>';
+            }
+        }
+
+        async function loadDealsPage() {
+            var wrap = document.getElementById('dealsTableWrap');
+            if (!wrap) return;
+            wrap.innerHTML = '<div style="padding:24px;color:var(--text-secondary);">Loading deals…</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+                var data = await res.json();
+                var deals = data.deals || [];
+                if (!deals.length) {
+                    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-tertiary);">No deals yet. Close one from any lead drawer.</div>';
+                    return;
+                }
+                wrap.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>'
+                    + '<th style="text-align:left;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Business</th>'
+                    + '<th style="text-align:left;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">SDR</th>'
+                    + '<th style="text-align:left;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Stage</th>'
+                    + '<th style="text-align:right;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Upfront</th>'
+                    + '<th style="text-align:right;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Monthly</th>'
+                    + '<th style="text-align:left;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Closed</th>'
+                    + '<th style="padding:10px;"></th>'
+                    + '</tr></thead><tbody>'
+                    + deals.map(function (d) {
+                        var stageColor = { PROPOSAL_SENT: '#f97316', INVOICE_SENT: '#eab308', PAID: '#0ea5e9', ONBOARDING: '#a855f7', LIVE: '#10b981', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280' }[d.stage] || '#6b7280';
+                        return '<tr style="border-top:1px solid var(--border-subtle);cursor:pointer;" onclick="openDealDetail(\'' + d.id + '\')">'
+                            + '<td style="padding:10px;"><strong>' + escapeAdminHtml(d.business_name) + '</strong><br><span style="color:var(--text-tertiary);font-size:11px;">' + escapeAdminHtml(d.contact_email) + '</span></td>'
+                            + '<td style="padding:10px;">' + (d.sdr_users ? escapeAdminHtml(d.sdr_users.display_name) : '<span style="color:var(--text-muted);">—</span>') + '</td>'
+                            + '<td style="padding:10px;"><span style="padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid ' + stageColor + ';color:' + stageColor + ';font-size:11px;font-weight:700;letter-spacing:0.04em;">' + d.stage.replace(/_/g,' ') + '</span></td>'
+                            + '<td style="padding:10px;text-align:right;font-family:var(--font-mono);">$' + (d.upfront_fee_cents/100).toLocaleString() + '</td>'
+                            + '<td style="padding:10px;text-align:right;font-family:var(--font-mono);">$' + (d.monthly_retainer_cents/100).toLocaleString() + '/mo</td>'
+                            + '<td style="padding:10px;font-size:12px;color:var(--text-secondary);">' + (d.closed_at ? new Date(d.closed_at).toLocaleDateString() : '—') + '</td>'
+                            + '<td style="padding:10px;text-align:right;">' + (d.stage === 'INVOICE_SENT' || d.stage === 'PROPOSAL_SENT' ? '<button onclick="event.stopPropagation();markDealPaid(\'' + d.id + '\')" style="padding:5px 10px;background:var(--green,#10b981);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;">Mark paid</button>' : '') + '</td>'
+                            + '</tr>';
+                    }).join('') + '</tbody></table>';
+            } catch (e) {
+                wrap.innerHTML = '<div style="padding:24px;color:#ef4444;">Failed: ' + (e.message || 'unknown') + '</div>';
+            }
+        }
+
+        async function markDealPaid(dealId) {
+            var note = prompt('Optional note (e.g. "wire received from chase business account"):');
+            if (note === null) return; // cancelled
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals/mark-paid', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deal_id: dealId, note: note })
+                });
+                var data = await res.json();
+                if (res.ok) { alert('Deal marked paid. Client provisioned: ' + data.client_id); loadDealsPage(); }
+                else alert('Failed: ' + (data.error || 'unknown'));
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        async function openDealDetail(dealId) {
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals/' + dealId, { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+                var data = await res.json();
+                if (!res.ok) return alert('Failed: ' + (data.error || 'unknown'));
+                var d = data.deal;
+                var events = data.events || [];
+
+                var lostReasons = '';
+                if (d.stage !== 'CLOSED_LOST' && d.stage !== 'CHURNED') {
+                    lostReasons = '<details style="margin-top:14px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-tertiary);">Mark as lost / churned</summary>'
+                        + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+                        + '<select id="lostReasonSelect" style="padding:7px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;">'
+                        + '<option value="">— Pick lost reason —</option>'
+                        + '<option value="price_too_high">Price too high</option>'
+                        + '<option value="no_fit">Not a fit / wrong ICP</option>'
+                        + '<option value="ghosted">Ghosted (no response)</option>'
+                        + '<option value="competitor">Went with competitor</option>'
+                        + '<option value="timing">Bad timing / revisit later</option>'
+                        + '<option value="internal_change">Internal change (owner left, sold business)</option>'
+                        + '<option value="other">Other (see notes)</option>'
+                        + '</select>'
+                        + '<button onclick="markDealLost(\'' + d.id + '\')" style="padding:7px 14px;background:var(--red);border:none;border-radius:6px;color:white;font-size:12px;font-weight:600;cursor:pointer;">Mark CLOSED_LOST</button>'
+                        + '</div></details>';
+                }
+
+                var modal = document.getElementById('dealDetailModal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'dealDetailModal';
+                    modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:760px;max-width:calc(100vw - 32px);max-height:calc(100vh - 64px);overflow-y:auto;background:#0a0a0f;border:1px solid rgba(37,99,235,0.25);border-radius:14px;z-index:200;padding:28px 32px;';
+                    document.body.appendChild(modal);
+                    var overlay = document.createElement('div');
+                    overlay.id = 'dealDetailOverlay';
+                    overlay.onclick = function () { modal.style.display = 'none'; overlay.style.display = 'none'; };
+                    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;';
+                    document.body.appendChild(overlay);
+                }
+
+                modal.innerHTML = ''
+                    + '<button onclick="document.getElementById(\'dealDetailModal\').style.display=\'none\';document.getElementById(\'dealDetailOverlay\').style.display=\'none\';" style="position:absolute;top:14px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;">&times;</button>'
+                    + '<h2 style="margin:0 0 4px 0;font-size:20px;font-weight:800;letter-spacing:-0.02em;">' + escapeAdminHtml(d.business_name) + '</h2>'
+                    + '<div style="color:var(--text-secondary);font-size:13px;margin-bottom:18px;">' + escapeAdminHtml(d.contact_name || '') + ' · ' + escapeAdminHtml(d.contact_email) + ' · stage: <strong>' + d.stage + '</strong></div>'
+                    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:18px;">'
+                      + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Upfront</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.2rem;">$' + (d.upfront_fee_cents/100).toLocaleString() + '</div></div>'
+                      + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Monthly</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.2rem;">$' + (d.monthly_retainer_cents/100).toLocaleString() + '</div></div>'
+                      + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">SDR</div><div style="font-weight:600;font-size:13px;margin-top:4px;">' + (d.sdr_users ? escapeAdminHtml(d.sdr_users.display_name) : '—') + '</div></div>'
+                      + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Agents</div><div style="font-weight:600;font-size:13px;margin-top:4px;">' + (d.agent_codes || []).join(', ').toUpperCase() + '</div></div>'
+                    + '</div>'
+                    + (d.proposal_pdf_url ? '<div style="margin-bottom:14px;"><a href="' + d.proposal_pdf_url + '" target="_blank" style="color:var(--blue);font-size:13px;">📄 Proposal PDF</a></div>' : '')
+                    + '<h3 style="margin:18px 0 10px 0;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Activity</h3>'
+                    + '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:10px;padding:14px;max-height:300px;overflow-y:auto;">'
+                      + (events.length ? events.map(function (e) {
+                            return '<div style="padding:8px 0;border-bottom:1px solid var(--border-subtle);font-size:12px;">'
+                                + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'
+                                  + '<span style="font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(e.event_type.replace(/_/g,' ')) + '</span>'
+                                  + '<span style="color:var(--text-muted);font-size:11px;">' + new Date(e.created_at).toLocaleString() + '</span>'
+                                + '</div>'
+                                + (e.from_value || e.to_value ? '<div style="color:var(--text-secondary);margin-top:2px;">' + escapeAdminHtml(e.from_value || '') + ' → ' + escapeAdminHtml(e.to_value || '') + '</div>' : '')
+                                + (e.body ? '<div style="color:var(--text-secondary);margin-top:3px;">' + escapeAdminHtml(e.body) + '</div>' : '')
+                                + '</div>';
+                        }).join('') : '<div style="color:var(--text-muted);text-align:center;padding:14px;">No events yet.</div>')
+                    + '</div>'
+                    + lostReasons;
+                modal.style.display = 'block';
+                document.getElementById('dealDetailOverlay').style.display = 'block';
+            } catch (e) { alert('Failed to load deal: ' + e.message); }
+        }
+
+        async function markDealLost(dealId) {
+            var reason = document.getElementById('lostReasonSelect').value;
+            if (!reason) { alert('Pick a lost reason.'); return; }
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals/' + dealId, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stage: 'CLOSED_LOST', lost_reason: reason })
+                });
+                if (res.ok) {
+                    document.getElementById('dealDetailModal').style.display = 'none';
+                    document.getElementById('dealDetailOverlay').style.display = 'none';
+                    loadDealsPage();
+                } else {
+                    var d = await res.json();
+                    alert('Failed: ' + (d.error || 'unknown'));
+                }
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        async function loadActivityFeed() {
+            var feed = document.getElementById('activityFeedList');
+            if (!feed) return;
+            feed.innerHTML = '<div style="padding:18px;color:var(--text-secondary);">Loading activity…</div>';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                // Reuse deals endpoint to assemble recent events
+                var res = await fetch('/api/admin/deals', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+                var data = await res.json();
+                var deals = data.deals || [];
+                if (!deals.length) {
+                    feed.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-tertiary);">No deal activity yet.</div>';
+                    return;
+                }
+                // Pull events per deal in parallel — limited to top 10 most recent deals for speed
+                var top = deals.slice(0, 20);
+                var allEvents = [];
+                await Promise.all(top.map(async function (d) {
+                    var r = await fetch('/api/admin/deals/' + d.id, { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+                    var rd = await r.json();
+                    (rd.events || []).forEach(function (e) { e._deal = d; allEvents.push(e); });
+                }));
+                allEvents.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+
+                feed.innerHTML = allEvents.slice(0, 80).map(function (e) {
+                    var d = e._deal;
+                    return '<div style="padding:14px 18px;border-bottom:1px solid var(--border-subtle);display:flex;gap:14px;align-items:flex-start;cursor:pointer;" onclick="openDealDetail(\'' + d.id + '\')">'
+                        + '<div style="width:8px;height:8px;border-radius:50%;background:var(--blue);margin-top:6px;flex-shrink:0;"></div>'
+                        + '<div style="flex:1;">'
+                          + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'
+                            + '<strong style="font-size:13px;color:var(--text-primary);">' + escapeAdminHtml(d.business_name) + '</strong>'
+                            + '<span style="color:var(--text-muted);font-size:11px;">' + new Date(e.created_at).toLocaleString() + '</span>'
+                          + '</div>'
+                          + '<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">' + escapeAdminHtml(e.event_type.replace(/_/g,' ')) + (e.body ? ' · ' + escapeAdminHtml(e.body.slice(0, 140)) : '') + '</div>'
+                        + '</div>'
+                        + '</div>';
+                }).join('');
+            } catch (e) {
+                feed.innerHTML = '<div style="padding:18px;color:#ef4444;">Failed: ' + (e.message || 'unknown') + '</div>';
             }
         }
     </script>

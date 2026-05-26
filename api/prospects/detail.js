@@ -62,5 +62,25 @@ module.exports = async function handler(req, res) {
     if (status >= 200 && status < 300 && json && typeof json === 'object') {
         json.call_history = callHistory;
     }
+
+    // Compliance audit: log every lead-drawer open. Fire-and-forget so we
+    // never block the response. Captures who accessed which lead and when.
+    if (id != null) {
+        try {
+            const auditSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+                auth: { persistSession: false }
+            });
+            const xf = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+            auditSb.from('lead_access_log').insert({
+                lead_id: id,
+                user_id: null,  // We have email but not the auth.uid() here without an extra lookup
+                user_email: gate.email || null,
+                user_role: gate.role || null,
+                user_agent: (req.headers['user-agent'] || '').slice(0, 250),
+                ip: xf || (req.headers['x-real-ip'] || '').slice(0, 50) || null
+            }).then(() => {}).catch(() => {});
+        } catch (_) { /* never block */ }
+    }
+
     return res.status(status).json(json);
 };
