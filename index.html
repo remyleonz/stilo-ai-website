@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STILO AI PARTNERS | AI Consulting for Growing Businesses</title>
-    <meta name="description" content="AI consulting agency: custom AI agents for receptionist, lead response, customer reactivation, SEO, lead generation, and more. Free AI audit. Deployed in days, not months.">
-    <meta property="og:title" content="STILO AI PARTNERS | AI Consulting for Growing Businesses">
-    <meta property="og:description" content="Custom AI agents for your business: receptionist, lead response, customer reactivation, websites, SEO, and more. Free AI audit.">
+    <meta name="description" content="We implement custom AI for small business. Receptionist, lead response, customer reactivation, websites, SEO, growth intelligence, sales coaching. Designed, built, and run by us.">
+    <meta property="og:title" content="STILO AI PARTNERS | Custom AI for Small Business">
+    <meta property="og:description" content="We design, build, and run AI agents trained on your business. Receptionist, lead response, reactivation, websites, SEO, and more.">
     <meta property="og:type" content="website">
     <meta name="geo.region" content="US-FL">
     <meta name="geo.placename" content="Miami">
@@ -25,8 +25,8 @@
     <meta property="og:image" content="https://stiloaipartners.com/og-image.png">
     <meta property="og:site_name" content="STILO AI Partners">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="STILO AI Partners | AI Consulting for Growing Businesses">
-    <meta name="twitter:description" content="Custom AI agents for receptionist, lead response, customer reactivation, websites, SEO, and more. Free audit, deployed in days.">
+    <meta name="twitter:title" content="STILO AI Partners | Custom AI for Small Business">
+    <meta name="twitter:description" content="We implement custom AI for small business. Receptionist, lead response, reactivation, websites, SEO, sales coaching, and more.">
     <meta name="twitter:image" content="https://stiloaipartners.com/og-image.png">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="keywords" content="AI agency Miami, AI receptionist, AI lead response, AI for small business, AI consulting, custom AI agents, AI website, AI SEO, GEO, AI customer reactivation">
@@ -665,17 +665,136 @@ html.lenis,html.lenis body{height:auto}
 section{padding:160px 0}
 @media (max-width:960px){section{padding:96px 0}}
 
-/* Hero overrides — two-tone display H1, premium proof rail */
-.hero{padding:160px 0 96px}
-.hero-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:center}
-@media (max-width:980px){.hero-grid{grid-template-columns:1fr;gap:48px}}
+/* Hero overrides — centered Snowflake-style, ambient background, no rail */
+.hero{padding:200px 0 140px;min-height:100vh;min-height:100svh;display:flex;align-items:center;text-align:center}
+.hero .container{position:relative;z-index:2;width:var(--container)}
+.hero-center{max-width:980px;margin:0 auto;display:flex;flex-direction:column;align-items:center}
 .hero h1{
   font-family:var(--font-display);font-weight:500;
-  font-size:clamp(2.4rem,5vw,4.4rem);
-  line-height:1.0;letter-spacing:-0.035em;
-  max-width:none;
+  font-size:clamp(2.6rem,6.4vw,5.4rem);
+  line-height:1.02;letter-spacing:-0.04em;
+  max-width:none;text-align:center;
 }
 .hero h1 .line:first-child{margin-bottom:0.04em}
+.hero h1 em{
+  font-family:var(--font-accent);font-style:italic;font-weight:400;
+  background:linear-gradient(135deg,#7DAFFF 0%,#3B82F6 50%,#2563EB 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  letter-spacing:-0.005em;padding-right:0.04em;
+}
+.hero-sub{font-size:clamp(1.05rem,1.25vw,1.22rem);color:var(--fg-2);max-width:62ch;margin:34px auto 0;line-height:1.55;text-align:center}
+.hero-ctas{display:flex;gap:14px;margin-top:42px;justify-content:center;flex-wrap:wrap}
+.hero-content,.hero-grid,.hero-rail,.hero-visual,.hero-eyebrow{}/* legacy slots, no longer used */
+
+/* Ambient hero background: aurora orbs + video slot */
+.hero-aurora{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.aurora-orb{
+  position:absolute;border-radius:50%;
+  filter:blur(90px);opacity:0.85;
+  will-change:transform;
+}
+.aurora-orb.a{
+  width:780px;height:780px;left:-160px;top:-200px;
+  background:radial-gradient(circle,rgba(59,130,246,0.65) 0%,rgba(59,130,246,0) 65%);
+  animation:auroraDriftA 26s ease-in-out infinite alternate;
+}
+.aurora-orb.b{
+  width:640px;height:640px;right:-120px;top:6%;
+  background:radial-gradient(circle,rgba(124,58,237,0.55) 0%,rgba(124,58,237,0) 65%);
+  animation:auroraDriftB 32s ease-in-out infinite alternate;
+}
+.aurora-orb.c{
+  width:880px;height:880px;left:14%;bottom:-260px;
+  background:radial-gradient(circle,rgba(37,99,235,0.60) 0%,rgba(37,99,235,0) 65%);
+  animation:auroraDriftC 30s ease-in-out infinite alternate;
+}
+.aurora-orb.d{
+  width:520px;height:520px;right:8%;bottom:4%;
+  background:radial-gradient(circle,rgba(96,165,250,0.55) 0%,rgba(96,165,250,0) 65%);
+  animation:auroraDriftD 36s ease-in-out infinite alternate;
+}
+@keyframes auroraDriftA{0%{transform:translate(0,0) scale(1)}100%{transform:translate(80px,60px) scale(1.08)}}
+@keyframes auroraDriftB{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-90px,80px) scale(1.12)}}
+@keyframes auroraDriftC{0%{transform:translate(0,0) scale(1)}100%{transform:translate(60px,-50px) scale(1.06)}}
+@keyframes auroraDriftD{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-70px,-90px) scale(1.10)}}
+.hero-veil{
+  position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:
+    radial-gradient(1400px 800px at 50% 50%, rgba(7,7,10,0.20) 0%, rgba(7,7,10,0) 60%),
+    linear-gradient(180deg, rgba(7,7,10,0.35) 0%, rgba(7,7,10,0) 30%, rgba(7,7,10,0.85) 100%);
+}
+.hero-video{
+  position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;opacity:0;
+  transition:opacity .8s ease;pointer-events:none;
+}
+.hero-video[data-loaded="true"]{opacity:0.45}
+.hero-canvas{opacity:0.75}
+
+/* ====== LIVE AGENT DEMO SECTION (extracted from hero) ====== */
+.live-demo-section{padding:120px 0 160px;background:var(--bg-void);position:relative;overflow:hidden}
+.live-demo-section::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(900px 500px at 50% 0%,rgba(37,99,235,0.07),transparent 60%);
+}
+.live-demo-wrap{
+  position:relative;max-width:880px;margin:0 auto;
+  perspective:1400px;
+}
+.live-demo-wrap .call-panel{
+  position:relative;width:100%;
+  transform:translateY(80px) scale(0.94) rotateX(10deg);
+  opacity:0;
+  transition:transform 1.1s var(--ease-out), opacity .9s var(--ease-out);
+  box-shadow:
+    0 60px 120px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(59,130,246,0.12),
+    0 0 80px rgba(37,99,235,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  padding:28px 28px 24px;
+  border-radius:24px;
+}
+.live-demo-wrap.in-view .call-panel{transform:translateY(0) scale(1) rotateX(0deg);opacity:1}
+.live-demo-wrap .call-panel::before{height:2px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.85),transparent)}
+.live-demo-wrap .call-badge{top:-16px;font-size:0.7rem;padding:7px 14px}
+.live-demo-wrap .call-transcript{min-height:240px}
+
+/* ====== PARTNER STRIP V2: centered label + scrolling carousel + brand logos ====== */
+.partners{padding:64px 0 56px;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);background:var(--bg-plate);position:relative;overflow:hidden}
+.partners-inner{display:flex;flex-direction:column;align-items:center;gap:32px;justify-content:center}
+.partners-label{
+  font-family:var(--font-mono);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.28em;color:var(--fg-3);
+  text-align:center;white-space:nowrap;
+}
+.partners-row{display:none}/* legacy hidden */
+.partner-marquee{
+  width:100%;display:flex;overflow:hidden;position:relative;
+  mask-image:linear-gradient(90deg,transparent 0%,#000 8%,#000 92%,transparent 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 8%,#000 92%,transparent 100%);
+}
+.partner-marquee-track{
+  display:flex;gap:64px;flex-shrink:0;align-items:center;
+  animation:partnerScroll 38s linear infinite;
+  padding:8px 32px;
+}
+.partner-marquee:hover .partner-marquee-track{animation-play-state:paused}
+@keyframes partnerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.partner-logo{
+  display:inline-flex;align-items:center;gap:12px;
+  font-family:var(--font-display);font-weight:600;font-size:1.1rem;letter-spacing:-0.01em;
+  color:var(--fg);
+  white-space:nowrap;opacity:0.92;transition:opacity .2s,transform .2s;
+}
+.partner-logo:hover{opacity:1}
+.partner-logo img{
+  width:26px;height:26px;object-fit:contain;display:block;flex-shrink:0;
+}
+.partner-logo svg{width:26px;height:26px;display:block;flex-shrink:0}
+.partner-logo.large img,.partner-logo.large svg{width:30px;height:30px}
+@media (max-width:720px){
+  .partner-marquee-track{gap:44px;padding:8px 20px}
+  .partner-logo{font-size:0.98rem;gap:10px}
+  .partner-logo img,.partner-logo svg{width:22px;height:22px}
+}
 .hero h1 .line{display:block;overflow:hidden;padding-bottom:0.06em}
 .hero h1 .line .line-inner{display:inline-block;transform:translateY(110%);transition:transform 1s var(--ease-out)}
 .hero h1 .line.in .line-inner{transform:translateY(0)}
@@ -1007,54 +1126,63 @@ section{padding:160px 0}
 <!-- ===== HERO ===== -->
 <section class="hero" id="hero">
   <canvas id="heroCanvas" class="hero-canvas"></canvas>
+  <div class="hero-aurora">
+    <span class="aurora-orb a"></span>
+    <span class="aurora-orb b"></span>
+    <span class="aurora-orb c"></span>
+    <span class="aurora-orb d"></span>
+  </div>
+  <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="none" poster=""></video>
   <div class="hero-veil"></div>
   <div class="container">
-    <div class="hero-grid">
-      <div class="hero-content">
-        <span class="hero-eyebrow">Miami &middot; AI consulting partners</span>
-        <h1 data-split="lines">
-          <span class="line"><span class="line-inner">Nine AI agents.</span></span>
-          <span class="line"><span class="line-inner">One <em>operating system</em>.</span></span>
-        </h1>
-        <p class="hero-sub">Custom AI that answers every call, follows up on every lead in under a minute, and brings dormant customers back. Built for your business. Deployed in five days. Managed by us.</p>
-        <div class="hero-ctas">
-          <a href="#contact" class="btn-primary">Talk to a partner</a>
-          <a href="#system" class="btn-ghost">See the system</a>
-        </div>
-        <div class="hero-rail">
-          <span><b>9</b> specialized agents</span><span class="sep"></span>
-          <span><b>5 days</b> to deploy</span><span class="sep"></span>
-          <span><b>24/7</b> human-reviewed</span><span class="sep"></span>
-          <span><b>Built in Miami</b></span>
-        </div>
+    <div class="hero-center">
+      <h1 data-split="lines">
+        <span class="line"><span class="line-inner">We implement custom AI</span></span>
+        <span class="line"><span class="line-inner">for <em>small business</em>.</span></span>
+      </h1>
+      <p class="hero-sub">We design, build, and run AI agents trained on your business. The voice on the phone, the reply to every inbound lead, the system that brings dormant customers back. You stay focused on running the company.</p>
+      <div class="hero-ctas">
+        <a href="#contact" class="btn-primary">Talk to a partner</a>
+        <a href="#live-demo" class="btn-ghost">See it work</a>
       </div>
-      <div class="hero-visual">
-        <div class="call-panel">
-          <div class="call-badge">Live agent &middot; ECHO</div>
-          <div class="call-head">
-            <div class="call-avatar">EC</div>
-            <div>
-              <div class="call-name">Incoming call &middot; <b style="color:var(--fg)">+1 (305) 555-0184</b></div>
-              <div class="call-role">AI receptionist on duty</div>
-            </div>
-            <div class="call-live">LIVE</div>
-            <div class="call-timer" id="callTimer">00:00</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== LIVE AGENT DEMO (was inside hero) ===== -->
+<section class="live-demo-section" id="live-demo">
+  <div class="container">
+    <div class="section-header fade-in" style="text-align:center;margin:0 auto 56px;">
+      <span class="eyebrow">Live agent</span>
+      <h2><span class="gradient-text">This is what your front desk <em>actually does</em>.</span></h2>
+      <p style="margin:14px auto 0;max-width:54ch;">A real ECHO call, end to end. Answers in under two rings, qualifies the caller, books straight into your calendar, and sends a confirmation. No script switching, no missed leads.</p>
+    </div>
+    <div class="live-demo-wrap">
+      <div class="call-panel" id="callPanel">
+        <div class="call-badge">Live agent &middot; ECHO</div>
+        <div class="call-head">
+          <div class="call-avatar">EC</div>
+          <div>
+            <div class="call-name">Incoming call &middot; <b style="color:var(--fg)">+1 (305) 555-0184</b></div>
+            <div class="call-role">AI receptionist on duty</div>
           </div>
-          <div class="call-transcript" id="callTranscript"></div>
-          <div class="call-wave">
-            <span style="animation-delay:0s"></span><span style="animation-delay:.08s"></span>
-            <span style="animation-delay:.16s"></span><span style="animation-delay:.24s"></span>
-            <span style="animation-delay:.32s"></span><span style="animation-delay:.40s"></span>
-            <span style="animation-delay:.48s"></span><span style="animation-delay:.56s"></span>
-            <span style="animation-delay:.64s"></span><span style="animation-delay:.72s"></span>
-            <span style="animation-delay:.80s"></span><span style="animation-delay:.88s"></span>
-            <span style="animation-delay:.96s"></span><span style="animation-delay:1.04s"></span>
-            <span style="animation-delay:1.12s"></span>
-          </div>
-          <div class="call-footer">
-            <span>Appointment booked &middot; <b>Confirmation sent</b></span>
-            <span>Calls today: <b>47</b></span>
-          </div>
+          <div class="call-live">LIVE</div>
+          <div class="call-timer" id="callTimer">00:00</div>
+        </div>
+        <div class="call-transcript" id="callTranscript"></div>
+        <div class="call-wave">
+          <span style="animation-delay:0s"></span><span style="animation-delay:.08s"></span>
+          <span style="animation-delay:.16s"></span><span style="animation-delay:.24s"></span>
+          <span style="animation-delay:.32s"></span><span style="animation-delay:.40s"></span>
+          <span style="animation-delay:.48s"></span><span style="animation-delay:.56s"></span>
+          <span style="animation-delay:.64s"></span><span style="animation-delay:.72s"></span>
+          <span style="animation-delay:.80s"></span><span style="animation-delay:.88s"></span>
+          <span style="animation-delay:.96s"></span><span style="animation-delay:1.04s"></span>
+          <span style="animation-delay:1.12s"></span>
+        </div>
+        <div class="call-footer">
+          <span>Appointment booked &middot; <b>Confirmation sent</b></span>
+          <span>Calls today: <b>47</b></span>
         </div>
       </div>
     </div>
@@ -1066,31 +1194,27 @@ section{padding:160px 0}
   <div class="container">
     <div class="partners-inner">
       <div class="partners-label">Built on the stack you trust</div>
-      <div class="partners-row">
-        <span class="partner-mark" title="OpenAI">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
-          OpenAI
-        </span>
-        <span class="partner-mark" title="Anthropic">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 19 11 5h2l6 14h-3l-1.4-3.4H9.4L8 19H5Zm5.2-6h3.6L12 8.4 10.2 13Z"/></svg>
-          Anthropic
-        </span>
-        <span class="partner-mark" title="Twilio">
-          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="9" cy="9" r="1.8"/><circle cx="15" cy="9" r="1.8"/><circle cx="9" cy="15" r="1.8"/><circle cx="15" cy="15" r="1.8"/></svg>
-          Twilio
-        </span>
-        <span class="partner-mark" title="Stripe">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7c-1.5-1-3-1.4-4.5-1.4-2 0-3.5 1-3.5 2.6 0 3.6 8.5 2.4 8.5 6.4 0 1.6-1.5 2.8-4 2.8C9.5 17.4 8 17 6 16"/></svg>
-          Stripe
-        </span>
-        <span class="partner-mark" title="Vercel">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 22 20H2L12 3Z"/></svg>
-          Vercel
-        </span>
-        <span class="partner-mark" title="Google Cloud">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10a6 6 0 0 0-11.5-1.5A4 4 0 0 0 7 17h11a4 4 0 0 0 .5-7Z"/></svg>
-          Google Cloud
-        </span>
+      <div class="partner-marquee" aria-hidden="false">
+        <div class="partner-marquee-track" id="partnerTrack">
+          <!-- Set 1 -->
+          <span class="partner-logo"><svg viewBox="0 0 24 24" fill="#74AA9C" aria-hidden="true"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>OpenAI</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/anthropic/D97757" alt="Anthropic logo">Anthropic</span>
+          <span class="partner-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#F22F46"/><circle cx="8.4" cy="8.4" r="2.1" fill="#fff"/><circle cx="15.6" cy="8.4" r="2.1" fill="#fff"/><circle cx="8.4" cy="15.6" r="2.1" fill="#fff"/><circle cx="15.6" cy="15.6" r="2.1" fill="#fff"/></svg>Twilio</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/stripe/635BFF" alt="Stripe logo">Stripe</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/supabase/3ECF8E" alt="Supabase logo">Supabase</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/resend/FFFFFF" alt="Resend logo">Resend</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/vercel/FFFFFF" alt="Vercel logo">Vercel</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/googlecloud/4285F4" alt="Google Cloud logo">Google Cloud</span>
+          <!-- Set 2 (duplicate for seamless loop) -->
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/openai/74AA9C" alt="" aria-hidden="true">OpenAI</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/anthropic/D97757" alt="" aria-hidden="true">Anthropic</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/twilio/F22F46" alt="" aria-hidden="true">Twilio</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/stripe/635BFF" alt="" aria-hidden="true">Stripe</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/supabase/3ECF8E" alt="" aria-hidden="true">Supabase</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/resend/FFFFFF" alt="" aria-hidden="true">Resend</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/vercel/FFFFFF" alt="" aria-hidden="true">Vercel</span>
+          <span class="partner-logo"><img src="https://cdn.simpleicons.org/googlecloud/4285F4" alt="" aria-hidden="true">Google Cloud</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1441,7 +1565,7 @@ section{padding:160px 0}
         <div class="case-stat"><div class="case-stat-num">+38%</div><div class="case-stat-label">Calls captured in month one</div></div>
         <div class="case-stat"><div class="case-stat-num">2x</div><div class="case-stat-label">Web lead to booked rate</div></div>
         <div class="case-stat"><div class="case-stat-num">&lt;60s</div><div class="case-stat-label">Lead first-response time</div></div>
-        <div class="case-stat"><div class="case-stat-num">5 days</div><div class="case-stat-label">From kickoff to live</div></div>
+        <div class="case-stat"><div class="case-stat-num">0 hires</div><div class="case-stat-label">Same team, more output</div></div>
       </div>
     </div>
   </div>
@@ -1456,8 +1580,8 @@ section{padding:160px 0}
         <div class="stat-block-label">Specialized agents, one connected layer</div>
       </div>
       <div class="stat-block">
-        <div class="stat-block-num">5 <em>days</em></div>
-        <div class="stat-block-label">Average kickoff to live deployment</div>
+        <div class="stat-block-num">100<em>%</em></div>
+        <div class="stat-block-label">Custom-trained on your business, never templated</div>
       </div>
       <div class="stat-block">
         <div class="stat-block-num">24/7</div>
@@ -1476,7 +1600,7 @@ section{padding:160px 0}
   <div class="container">
     <div class="section-header fade-in">
       <span class="eyebrow">How we work</span>
-      <h2><span class="gradient-text">Three steps. <em>Five days.</em></span></h2>
+      <h2><span class="gradient-text">Three steps. <em>One partner.</em></span></h2>
       <p>No SaaS dashboard handover. No "configure your own bot." We do the research, build the agents, and run them.</p>
     </div>
     <div class="process-track">
@@ -1490,7 +1614,7 @@ section{padding:160px 0}
         <div class="step-num"><em>02</em></div>
         <h3>Build</h3>
         <p>We design and deploy your agent team, trained on your business. Every script, prompt, and integration reviewed by a human before it touches a customer.</p>
-        <span class="step-badge">5 days, typical</span>
+        <span class="step-badge">Tuned to your scope</span>
       </div>
       <div class="process-step fade-in delay-2">
         <div class="step-num"><em>03</em></div>
@@ -1553,7 +1677,7 @@ section{padding:160px 0}
           <span>How long does it take to deploy a full agent team?</span>
           <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Five business days for a typical three-agent deployment, including the audit, training data, scripts, integrations, and a human review pass before anything touches a real customer. Larger builds with custom integrations run two to three weeks.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">It depends on scope. A focused single-agent build is quick. A full nine-agent operating system with custom integrations is a deeper engagement. Either way, every prompt, script, and integration goes through a human review pass before it touches a real customer. We give you a fixed timeline after the audit, not before.</div></div>
       </div>
       <div class="faq-item fade-in">
         <button class="faq-question" type="button">
@@ -1585,10 +1709,10 @@ section{padding:160px 0}
       </div>
       <div class="faq-item fade-in">
         <button class="faq-question" type="button">
-          <span>Are you Miami-only?</span>
+          <span>Do you only work with one type of business?</span>
           <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">We're based in Miami and most of our clients are Miami operators, but we work with businesses across the US. Local market knowledge matters for SIGNAL and ORACLE, so we tune the agents to your market specifically.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">No. We work with service businesses, retail, professional services, and B2B operators across the US. Every engagement starts with research into your category, market, and customers, so the agents we build are tuned to the way your specific business actually runs.</div></div>
       </div>
     </div>
   </div>
@@ -1703,7 +1827,7 @@ section{padding:160px 0}
             </div>
           </div>
           <div class="quiz-question" data-q="9" style="display:none;">
-            <p class="q-label">If someone asks ChatGPT or Google AI to recommend a business like yours in Miami, what happens?</p>
+            <p class="q-label">If someone asks ChatGPT or Google AI to recommend a business like yours in your area, what happens?</p>
             <div class="q-options">
               <button class="q-option" data-value="shows-up">We show up, I've tested it</button>
               <button class="q-option" data-value="not-sure">Honestly not sure</button>
@@ -1759,7 +1883,7 @@ section{padding:160px 0}
     <div class="footer-grid">
       <div class="footer-brand">
         <a href="/" class="nav-logo">STILO AI PARTNERS</a>
-        <p>Custom AI agents for growing businesses. Receptionist, lead response, customer reactivation, websites, SEO, growth intelligence, and sales coaching. Built in Miami.</p>
+        <p>Custom AI agents for growing businesses. Receptionist, lead response, customer reactivation, websites, SEO, growth intelligence, and sales coaching.</p>
       </div>
       <div class="footer-col">
         <h4>The system</h4>
@@ -2311,6 +2435,29 @@ if (!canvas) { /* no-op */ } else if (reduced) {
       if (el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'});}
     });
   });
+})();
+
+// Live demo section reveal (3D cinematic entry)
+(function(){
+  var wrap = document.querySelector('.live-demo-wrap');
+  if (!wrap || !('IntersectionObserver' in window)) {
+    if (wrap) wrap.classList.add('in-view');
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting){ wrap.classList.add('in-view'); io.unobserve(wrap); }
+    });
+  }, { threshold: 0.25, rootMargin: '0px 0px -80px 0px' });
+  io.observe(wrap);
+})();
+
+// Hero video: fade in once first frame is ready (no autoplay error noise on no-src)
+(function(){
+  var v = document.getElementById('heroVideo');
+  if (!v) return;
+  if (!v.currentSrc && !v.src){ v.removeAttribute('autoplay'); return; }
+  v.addEventListener('loadeddata', function(){ v.setAttribute('data-loaded','true'); });
 })();
 
 // FAQ accordion
