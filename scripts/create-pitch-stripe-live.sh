@@ -24,8 +24,8 @@ if [ -z "${STRIPE_LIVE_KEY:-}" ]; then
   exit 1
 fi
 
-if [[ "$STRIPE_LIVE_KEY" != sk_live_* ]]; then
-  echo "ERROR: STRIPE_LIVE_KEY must start with sk_live_. Got: ${STRIPE_LIVE_KEY:0:10}..."
+if [[ "$STRIPE_LIVE_KEY" != sk_live_* ]] && [[ "$STRIPE_LIVE_KEY" != rk_live_* ]]; then
+  echo "ERROR: STRIPE_LIVE_KEY must start with sk_live_ or rk_live_. Got: ${STRIPE_LIVE_KEY:0:10}..."
   exit 1
 fi
 
@@ -40,7 +40,7 @@ PRODUCT=$(curl -s "https://api.stripe.com/v1/products" \
 PRODUCT_ID=$(echo "$PRODUCT" | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
 echo "PRODUCT_ID=$PRODUCT_ID"
 
-echo "Creating PITCH setup ($2,500) price..."
+echo "Creating PITCH setup (\$2,500) price..."
 SETUP=$(curl -s "https://api.stripe.com/v1/prices" \
   -u "${STRIPE_LIVE_KEY}:" \
   -d "product=$PRODUCT_ID" \
