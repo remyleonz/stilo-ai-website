@@ -2201,7 +2201,7 @@
             var typeNames = {
                 echo:'AI Receptionist', ignite:'Lead Response', revive:'Customer Reactivation',
                 scout:'Lead Generator', forge:'AI Website', signal:'AI SEO',
-                oracle:'Growth Intelligence', pitch:'AI Sales Coach', flux:'Custom Automations'
+                oracle:'Growth Intelligence', pitch:'AI Sales Agent', flux:'Custom Automations'
             };
             var allTypes = ['echo','ignite','revive','scout','forge','signal','oracle','pitch','flux'];
             var deployed = agents.map(function(a){ return a.agent_type; });
@@ -2584,7 +2584,7 @@
 
         var AGENT_FEES_MONTHLY = {
             echo: 45000, ignite: 65000, revive: 80000, scout: 100000,
-            forge: 20000, signal: 0, oracle: 100000, pitch: 150000, flux: 0,
+            forge: 20000, signal: 0, oracle: 100000, pitch: 200000, flux: 0,
         };
 
         async function loadAgentsTable() {
