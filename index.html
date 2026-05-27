@@ -1300,7 +1300,7 @@ section,.partners{background:transparent !important}
 .av-chart-label{position:absolute;top:14px;left:18px;font-family:var(--font-mono);font-size:0.72rem;color:var(--fg-3);letter-spacing:0.12em;text-transform:uppercase}
 .av-chart-value{position:absolute;top:14px;right:18px;font-family:'Geist',system-ui,sans-serif;font-weight:700;color:#3ECF8E;font-size:0.94rem}
 
-/* Coach (Sales Manager) */
+/* Coach (Sales Agent) */
 .av-coach{margin-bottom:14px;padding:14px 16px;border-radius:12px;background:rgba(20,22,32,0.78);border:1px solid var(--stroke);position:relative}
 .av-coach .quote{font-family:var(--font-accent);font-style:italic;color:var(--fg);font-size:0.96rem;line-height:1.5;margin-bottom:10px}
 .av-coach .note{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--accent-line);font-family:var(--font-mono);font-size:0.74rem;color:var(--accent-hi)}
@@ -1443,7 +1443,7 @@ section,.partners{background:transparent !important}
       <button class="agent-tab" data-agent="website" data-slug="forge"><span class="agent-tab-num">05</span>Website Builder</button>
       <button class="agent-tab" data-agent="seo" data-slug="signal"><span class="agent-tab-num">06</span>AI SEO</button>
       <button class="agent-tab" data-agent="growth" data-slug="oracle"><span class="agent-tab-num">07</span>Growth Intelligence</button>
-      <button class="agent-tab" data-agent="sales" data-slug="pitch"><span class="agent-tab-num">08</span>AI Sales Manager</button>
+      <button class="agent-tab" data-agent="sales" data-slug="pitch"><span class="agent-tab-num">08</span>AI Sales Agent</button>
       <button class="agent-tab" data-agent="custom" data-slug="flux"><span class="agent-tab-num">09</span>Custom Automations</button>
     </div>
 
@@ -1648,9 +1648,10 @@ section,.partners{background:transparent !important}
     <!-- 08 AI SALES MANAGER -->
     <div class="agent-panel" data-agent-panel="sales">
       <div class="agent-panel-content">
-        <h2>Coach every rep, <em>on every call</em>.</h2>
-        <p class="agent-panel-body">Listens to your sales calls and reads your email threads, ships back better openers, smarter rebuttals, and a weekly playbook on what's actually moving deals. Per-rep scorecards. Real-time deal-risk alerts.</p>
+        <h2>Sells <em>while you sleep</em>.</h2>
+        <p class="agent-panel-body">Listens to every call and email thread, rewrites your scripts and sequences against what actually closes, and sends the outbound follow-ups for you on a cadence you control. Per-rep scorecards, real-time deal-risk alerts, and a weekly playbook on what's moving deals.</p>
         <ul class="agent-panel-bullets">
+          <li>Sends the follow-up emails for you, on your schedule, in your voice</li>
           <li>Per-rep scorecards updated after every call</li>
           <li>Deal-risk alerts when momentum drops</li>
           <li>Scripts refreshed weekly on what's working now</li>
@@ -2706,7 +2707,7 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     { id: 'website', name: 'Website Builder', icon: 'WB', price: '$1,250 setup + $200/mo', desc: 'Conversion-optimized site researched and built for your exact business.', tiers: ['starter','growth','partner'] },
     { id: 'seo', name: 'AI SEO', icon: 'SE', price: '$1,000 one-time', desc: 'Get recommended by ChatGPT, Google AI, and every AI assistant in your area.', tiers: ['growth','partner'] },
     { id: 'growth-intel', name: 'Growth Intelligence', icon: 'GI', price: '$3,000 setup + $2,000/mo', desc: 'Weekly data-driven strategy: what\'s working, what\'s not, and what to do next.', tiers: ['partner'] },
-    { id: 'sales-coach', name: 'AI Sales Manager', icon: 'SM', price: '$2,500 setup + $2,000/mo', desc: 'Listens to every call and email, rewrites your scripts, and sends the follow-ups for you on a cadence you control.', tiers: ['growth','partner'] },
+    { id: 'sales-coach', name: 'AI Sales Agent', icon: 'SA', price: '$2,500 setup + $2,000/mo', desc: 'Listens to every call and email, rewrites your scripts, and sends the follow-ups for you on a cadence you control.', tiers: ['growth','partner'] },
     { id: 'custom', name: 'Custom Automations', icon: 'CA', price: 'From $1,000', desc: 'Got a specific problem? We\'ll build the AI solution for it.', tiers: ['partner'] }
   ];
 

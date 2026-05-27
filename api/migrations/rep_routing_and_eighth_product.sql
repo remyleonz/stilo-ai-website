@@ -101,14 +101,16 @@ create policy "Admins read cold-call-briefs" on storage.objects
     bucket_id = 'cold-call-briefs' and public.is_active_admin()
   );
 
+-- Mapping: A → jack, B → luke, C → alejandro. Updated 2026-05-26 to
+-- match Remy's roster order. Trigger in this file uses the same mapping.
 drop policy if exists "SDRs read own rep cold-call-briefs" on storage.objects;
 create policy "SDRs read own rep cold-call-briefs" on storage.objects
   for select using (
     bucket_id = 'cold-call-briefs'
     and (auth.jwt() #>> '{app_metadata,role}') = 'sdr'
     and (
-      (name like 'rep-a/%' and exists (select 1 from public.sdr_users s where s.auth_user_id = auth.uid() and s.sdr_key = 'luke'))
-      or (name like 'rep-b/%' and exists (select 1 from public.sdr_users s where s.auth_user_id = auth.uid() and s.sdr_key = 'jack'))
+      (name like 'rep-a/%' and exists (select 1 from public.sdr_users s where s.auth_user_id = auth.uid() and s.sdr_key = 'jack'))
+      or (name like 'rep-b/%' and exists (select 1 from public.sdr_users s where s.auth_user_id = auth.uid() and s.sdr_key = 'luke'))
       or (name like 'rep-c/%' and exists (select 1 from public.sdr_users s where s.auth_user_id = auth.uid() and s.sdr_key = 'alejandro'))
     )
   );

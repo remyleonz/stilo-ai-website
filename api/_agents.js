@@ -1761,12 +1761,14 @@ var AGENTS = {
   },
   pitch: {
     code: 'pitch',
-    // Repositioned 2026-05-26: was "AI Sales Coach" ($1,500/mo, coaching-only).
-    // Now bundles email automation on top of coaching — same codename, expanded
-    // scope, $2,000/mo. Internal code stays 'pitch' so existing client_agents
-    // rows, Stripe envs, and LEGACY_ID_MAP entries keep working.
-    name: 'PITCH - AI Sales Agent',
-    shortName: 'PITCH',
+    // Repositioned 2026-05-26: was "PITCH - AI Sales Coach" ($1,500/mo,
+    // coaching-only). Now "AI Sales Agent" at $2,000/mo bundling coaching +
+    // opt-in outbound email automation. Customer-facing copy intentionally
+    // drops the "PITCH" codename per Remy's call — the brand for this agent
+    // is just "AI Sales Agent". Internal code stays 'pitch' so client_agents
+    // rows, Stripe env var names, and LEGACY_ID_MAP entries keep working.
+    name: 'AI Sales Agent',
+    shortName: 'Sales Agent',
     setupFeeCents: 250000,
     monthlyFeeCents: 200000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_PITCH_SETUP',
@@ -1786,7 +1788,7 @@ var AGENTS = {
 
       // Step 1: Sales motion & goals ──────────────────────────────────
       { step: 1,
-        tutorial: 'PITCH is your AI Sales Agent. It listens to your cold calls + meetings + reads every email thread, rewrites scripts + email sequences against what actually converts, and (once you flip the switch in Step 6) sends the rewritten outbound emails on a cadence you control. Two halves: coaching (always on) + automation (opt-in). First job: tell us how you sell today.',
+        tutorial: 'the Sales Agent is your AI Sales Agent. It listens to your cold calls + meetings + reads every email thread, rewrites scripts + email sequences against what actually converts, and (once you flip the switch in Step 6) sends the rewritten outbound emails on a cadence you control. Two halves: coaching (always on) + automation (opt-in). First job: tell us how you sell today.',
         fields: [
         { key: 'sales_motion', label: 'How do you primarily sell?', type: 'select', required: true, editable: true,
           options: [
@@ -1797,15 +1799,15 @@ var AGENTS = {
             { value: 'demo_heavy', label: 'Demo / discovery → proposal → close' },
           ] },
         { key: 'avg_deal_value_usd', label: 'Average deal value ($)', type: 'number', editable: true,
-          help: 'PITCH uses this to weight which calls/emails matter most.' },
+          help: 'the Sales Agent uses this to weight which calls/emails matter most.' },
         { key: 'sales_cycle_days', label: 'Typical sales cycle (days from first touch to close)', type: 'number', editable: true },
         { key: 'current_close_rate_pct', label: 'Current close rate (% of qualified leads that buy)', type: 'number', editable: true,
-          help: 'Best estimate. PITCH builds a baseline and tracks lift from here.' },
+          help: 'Best estimate. the Sales Agent builds a baseline and tracks lift from here.' },
         { key: 'top_objections_today', label: 'Top 3 objections you hear right now', type: 'textarea', required: true, editable: true,
           help: 'One per line. Price, timing, "not the right person", etc.' },
         { key: 'biggest_sales_question', label: 'The one sales question you want answered every week', type: 'textarea', required: true, editable: true,
           help: 'Examples: "Why are we losing in the demo?", "Are my reps following the script?", "Which subject line gets opens?"' },
-        { key: 'success_metric', label: 'How will we know PITCH is working?', type: 'select', required: true, editable: true,
+        { key: 'success_metric', label: 'How will we know the Sales Agent is working?', type: 'select', required: true, editable: true,
           options: [
             { value: 'close_rate', label: 'Higher close rate on existing pipeline' },
             { value: 'reply_rate', label: 'Higher cold email reply rate' },
@@ -1817,7 +1819,7 @@ var AGENTS = {
 
       // Step 2: Connect your sources ──────────────────────────────────
       { step: 2, blocking: true,
-        tutorial: 'PITCH needs raw material. Connect whichever sources you have. The more it sees, the sharper the coaching. Nothing is forwarded outside of STILO; transcripts and emails are stored encrypted.\n\nMinimum: one source. Recommended: call transcripts + email.\n\n**Call transcripts**: Gong, Fathom, Otter, Fireflies, Zoom Cloud, OpenPhone, or upload .txt/.vtt files manually. Most tools have a "share with API" toggle that gives a token.\n\n**Cold email**: connect Gmail/Outlook via OAuth, or paste an Apollo/Instantly/Smartlead API key. PITCH only reads the threads tagged with the labels you specify.\n\n**CRM notes**: defaults to the CRM from your Business Profile. PITCH pulls deal stages, lost reasons, and rep notes to correlate with what was said on the call.',
+        tutorial: 'the Sales Agent needs raw material. Connect whichever sources you have. The more it sees, the sharper the coaching. Nothing is forwarded outside of STILO; transcripts and emails are stored encrypted.\n\nMinimum: one source. Recommended: call transcripts + email.\n\n**Call transcripts**: Gong, Fathom, Otter, Fireflies, Zoom Cloud, OpenPhone, or upload .txt/.vtt files manually. Most tools have a "share with API" toggle that gives a token.\n\n**Cold email**: connect Gmail/Outlook via OAuth, or paste an Apollo/Instantly/Smartlead API key. the Sales Agent only reads the threads tagged with the labels you specify.\n\n**CRM notes**: defaults to the CRM from your Business Profile. the Sales Agent pulls deal stages, lost reasons, and rep notes to correlate with what was said on the call.',
         fields: [
         { key: 'connect_call_source', label: 'Where do your call recordings/transcripts live?', type: 'select', required: true, editable: true,
           options: [
@@ -1882,12 +1884,12 @@ var AGENTS = {
           target: '/api/integration-test',
           help: 'Pulls a sample call + a sample email thread to verify access. Required before advancing.' },
         { key: 'consent_to_process_transcripts', label: 'I have authority to share these transcripts and emails with STILO for sales coaching analysis', type: 'boolean', required: true,
-          help: 'Standard. PITCH will not pull data without this.' },
+          help: 'Standard. the Sales Agent will not pull data without this.' },
       ]},
 
       // Step 3: Team & pipeline ───────────────────────────────────────
       { step: 3,
-        tutorial: 'Tell PITCH about your sales team and pipeline stages. The coaching is per-rep: each rep gets their own scorecard, strengths, and gaps. If you sell solo, just enter yourself.',
+        tutorial: 'Tell the Sales Agent about your sales team and pipeline stages. The coaching is per-rep: each rep gets their own scorecard, strengths, and gaps. If you sell solo, just enter yourself.',
         fields: [
         { key: 'sales_reps', label: 'Sales reps (one row per rep)', type: 'array-of-objects', required: true, editable: true,
           schema: [
@@ -1897,7 +1899,7 @@ var AGENTS = {
             { key: 'experience_level', label: 'Experience (new, mid, senior)', type: 'text' },
           ],
           minItems: 1,
-          help: 'PITCH builds a per-rep scorecard. Add everyone whose calls/emails you want analyzed.' },
+          help: 'the Sales Agent builds a per-rep scorecard. Add everyone whose calls/emails you want analyzed.' },
         { key: 'pipeline_stages', label: 'Your pipeline stages (in order, comma-separated)', type: 'text', required: true, editable: true,
           help: 'Default: "Cold → Connected → Discovery → Proposal → Closed Won/Lost". Match what your CRM actually uses.' },
         { key: 'qualification_framework', label: 'Qualification framework you follow (if any)', type: 'select', editable: true,
@@ -1912,35 +1914,35 @@ var AGENTS = {
         { key: 'qualification_notes', label: 'Custom qualification criteria (if not standard)', type: 'textarea', editable: true,
           showIf: { qualification_framework: 'custom' } },
         { key: 'lost_deal_reasons', label: 'The 3-5 most common reasons you lose deals', type: 'textarea', required: true, editable: true,
-          help: 'One per line. PITCH cross-checks these against call transcripts to find which losses were preventable.' },
+          help: 'One per line. the Sales Agent cross-checks these against call transcripts to find which losses were preventable.' },
       ]},
 
       // Step 4: Scripts & templates ───────────────────────────────────
       { step: 4,
-        tutorial: 'Paste what you use today. PITCH benchmarks every call/email against these baselines and rewrites weaker performers. Leave fields blank if you do not have one yet — PITCH will draft a first version from your niche playbook.',
+        tutorial: 'Paste what you use today. the Sales Agent benchmarks every call/email against these baselines and rewrites weaker performers. Leave fields blank if you do not have one yet — the Sales Agent will draft a first version from your niche playbook.',
         fields: [
         { key: 'current_cold_call_script', label: 'Current cold-call opener / script', type: 'textarea', editable: true,
-          help: 'Paste your current opener. PITCH rewrites it after the first 20 calls of data.' },
+          help: 'Paste your current opener. the Sales Agent rewrites it after the first 20 calls of data.' },
         { key: 'current_cold_email_template', label: 'Current cold email subject + body', type: 'textarea', editable: true,
-          help: 'Paste your best-performing template. PITCH generates A/B variants.' },
+          help: 'Paste your best-performing template. the Sales Agent generates A/B variants.' },
         { key: 'current_followup_sequence', label: 'Current follow-up cadence (number of touches + days)', type: 'textarea', editable: true,
           help: 'Example: "Day 1 email, Day 3 call, Day 7 email, Day 14 LinkedIn".' },
         { key: 'current_demo_outline', label: 'Demo or discovery call outline', type: 'textarea', editable: true,
-          help: 'The structure you follow. PITCH scores adherence and flags drift.' },
+          help: 'The structure you follow. the Sales Agent scores adherence and flags drift.' },
         { key: 'current_closing_questions', label: 'How you ask for the sale', type: 'textarea', editable: true,
-          help: 'Verbatim if possible. PITCH finds which phrasing converts.' },
+          help: 'Verbatim if possible. the Sales Agent finds which phrasing converts.' },
         { key: 'objection_responses', label: 'Approved responses to your top objections', type: 'array-of-objects', editable: true,
           schema: [
             { key: 'objection', label: 'Objection', type: 'text' },
             { key: 'response', label: 'Your response', type: 'textarea' },
           ] },
         { key: 'brand_voice_constraints', label: 'Words or claims your reps must NEVER say', type: 'textarea', editable: true,
-          help: 'Compliance, legal, or brand restrictions. PITCH flags any call/email that crosses them.' },
+          help: 'Compliance, legal, or brand restrictions. the Sales Agent flags any call/email that crosses them.' },
       ]},
 
       // Step 5: Coaching cadence ──────────────────────────────────────
       { step: 5,
-        tutorial: 'Pick how PITCH delivers feedback. Most clients run "weekly team digest + per-rep coaching scorecard + real-time deal-risk alerts".',
+        tutorial: 'Pick how the Sales Agent delivers feedback. Most clients run "weekly team digest + per-rep coaching scorecard + real-time deal-risk alerts".',
         fields: [
         { key: 'rep_scorecard_frequency', label: 'Per-rep scorecard frequency', type: 'select', required: true, editable: true,
           options: [
@@ -1956,8 +1958,8 @@ var AGENTS = {
             { value: 'monthly', label: 'Monthly executive review' },
           ] },
         { key: 'deal_risk_alerts', label: 'Real-time deal-risk alerts', type: 'boolean', editable: true,
-          help: 'When PITCH detects a deal slipping (missed call commitments, stalled email threads, red-flag objections), it pings the rep + manager within 15 minutes.' },
-        { key: 'script_refresh_cadence', label: 'How often should PITCH refresh your scripts and email templates?', type: 'select', editable: true,
+          help: 'When the Sales Agent detects a deal slipping (missed call commitments, stalled email threads, red-flag objections), it pings the rep + manager within 15 minutes.' },
+        { key: 'script_refresh_cadence', label: 'How often should the Sales Agent refresh your scripts and email templates?', type: 'select', editable: true,
           options: [
             { value: 'weekly', label: 'Weekly — fast iteration' },
             { value: 'biweekly', label: 'Every 2 weeks (recommended)' },
@@ -1966,7 +1968,7 @@ var AGENTS = {
           ] },
         { key: 'coaching_recipients', label: 'Recipients for coaching reports (comma-separated emails)', type: 'text', required: true, editable: true,
           help: 'Defaults to owner email plus each rep email.' },
-        { key: 'sample_size_target', label: 'Minimum calls/emails before PITCH ships a script rewrite', type: 'number', editable: true,
+        { key: 'sample_size_target', label: 'Minimum calls/emails before the Sales Agent ships a script rewrite', type: 'number', editable: true,
           help: 'Default: 20. Higher = more statistically grounded; lower = faster iteration.' },
       ]},
 
@@ -1976,14 +1978,14 @@ var AGENTS = {
       // through the mailbox connected in step 2. Defaults to OFF — safer to
       // ship coaching first, flip automation on once trust is built.
       { step: 6,
-        tutorial: 'Email automation (the "agent" half of AI Sales Agent). Optional. PITCH can send the rewritten cold emails + follow-ups from the same mailbox you connected in step 2. You set the rules; PITCH respects them. Start conservative — most clients run human-review-first for the first 30 days, then flip to auto-send once they trust the output.',
+        tutorial: 'Email automation (the "agent" half of AI Sales Agent). Optional. the Sales Agent can send the rewritten cold emails + follow-ups from the same mailbox you connected in step 2. You set the rules; the Sales Agent respects them. Start conservative — most clients run human-review-first for the first 30 days, then flip to auto-send once they trust the output.',
         fields: [
         { key: 'automation_enabled', label: 'Turn on email automation', type: 'boolean', editable: true,
-          help: 'If off, PITCH stays in coaching-only mode and you get all the analytics + rewrites without any auto-send. You can flip this on later.' },
+          help: 'If off, the Sales Agent stays in coaching-only mode and you get all the analytics + rewrites without any auto-send. You can flip this on later.' },
         { key: 'automation_mode', label: 'How aggressive should auto-send be?', type: 'select', editable: true,
           showIf: { automation_enabled: true },
           options: [
-            { value: 'review_first', label: 'Human-review-first — PITCH drafts every email and waits for your approve/edit/decline before sending (recommended for first 30 days)' },
+            { value: 'review_first', label: 'Human-review-first — the Sales Agent drafts every email and waits for your approve/edit/decline before sending (recommended for first 30 days)' },
             { value: 'auto_send_low', label: 'Auto-send conservative — sends opener + 2 follow-ups, then hands off to a human for replies' },
             { value: 'auto_send_full', label: 'Auto-send aggressive — sends full sequence including reply handling on the safe-pattern responses (price, timing, "not the right person")' },
           ] },
@@ -1998,7 +2000,7 @@ var AGENTS = {
             { value: '7_to_4', label: '7am – 4pm (early)' },
             { value: '11_to_3', label: '11am – 3pm (tight, deliverability-safe)' },
           ] },
-        { key: 'auto_reply_safe_patterns', label: 'Reply patterns PITCH may answer without asking', type: 'multi-select', editable: true,
+        { key: 'auto_reply_safe_patterns', label: 'Reply patterns the Sales Agent may answer without asking', type: 'multi-select', editable: true,
           showIf_and: { automation_enabled: true, automation_mode: 'auto_send_full' },
           options: [
             { value: 'oop', label: 'Out-of-office bounces (queue retry)' },
@@ -2013,15 +2015,15 @@ var AGENTS = {
           help: 'Default: "lawyer", "legal", "complaint", "lawsuit", "fraud", "scam". Add anything specific to your business.' },
         { key: 'dnc_list_url', label: 'URL or doc with your existing Do-Not-Contact list', type: 'text', editable: true,
           showIf: { automation_enabled: true },
-          help: 'Optional. PITCH ingests this before the first send and never emails anyone on it.' },
+          help: 'Optional. the Sales Agent ingests this before the first send and never emails anyone on it.' },
         { key: 'automation_consent', label: 'I have authority to send outbound email from these mailboxes on behalf of this business', type: 'boolean', required: true,
           showIf: { automation_enabled: true },
-          help: 'Required by law (CAN-SPAM in the US, similar elsewhere). PITCH will not auto-send without this checked.' },
+          help: 'Required by law (CAN-SPAM in the US, similar elsewhere). the Sales Agent will not auto-send without this checked.' },
         ]},
 
       // Step 7: Review & go live ──────────────────────────────────────
       { step: 7, blocking: true,
-        tutorial: 'STILO partner reviews your baseline within 1 business day: scoreboard sanity check, source pull verification, and a sample script rewrite to confirm tone. You will receive an email when PITCH is fully active.',
+        tutorial: 'STILO partner reviews your baseline within 1 business day: scoreboard sanity check, source pull verification, and a sample script rewrite to confirm tone. You will receive an email when the Sales Agent is fully active.',
         fields: [
         { key: 'review_summary', label: 'Final checklist', type: 'final-review', editable: false,
           checks: [
@@ -2033,7 +2035,7 @@ var AGENTS = {
             { key: 'rep_scorecard_frequency', label: 'Coaching cadence chosen' },
           ] },
         { key: 'baseline_review_acknowledged', label: 'I understand STILO will analyze the first 7 days of calls/emails to build a baseline before recommendations flow', type: 'boolean', required: true },
-        { key: 'ready_for_review', label: 'I am ready for STILO to activate PITCH', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I am ready for STILO to activate the Sales Agent', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
