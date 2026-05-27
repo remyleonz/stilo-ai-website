@@ -184,8 +184,14 @@ module.exports = async function handleLogLead(req, res) {
       .single();
 
     if (error) {
-      console.error('[log-lead] insert error:', error.message);
-      return res.status(200).json({ ok: false, error: 'insert_failed' });
+      console.error('[log-lead] insert error:', error.message, error.details, error.hint, error.code);
+      return res.status(200).json({
+        ok: false,
+        error: 'insert_failed',
+        detail: error.message,
+        code: error.code,
+        hint: error.hint
+      });
     }
 
     // Outbound Lead Reply — LIVE
