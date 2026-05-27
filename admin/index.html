@@ -62,6 +62,259 @@
         }
 
         /* ============================================================
+           STILO Design Language — shared admin component classes
+           Modeled on the Revenue tab redesign (2026-05-26). Use these
+           on every tab so the admin reads as one product.
+           ============================================================ */
+
+        /* Big tab page header — display font, uppercase, tight tracking. */
+        .stilo-page-h1 {
+            margin: 0;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 2.4rem;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+        .stilo-page-header-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+        .stilo-page-meta {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+        }
+
+        /* Section header — mono caps eyebrow with hairline underline
+           and a right-aligned count slot. Apply to every secondary block. */
+        .stilo-section {
+            margin-bottom: 32px;
+        }
+        .stilo-section-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 14px;
+            gap: 16px;
+        }
+        .stilo-section-title {
+            margin: 0;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 500;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+        .stilo-section-count {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .stilo-section-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        /* Hero stat card — mono eyebrow, big display number, tertiary meta line. */
+        .stilo-hero-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+            margin-bottom: 36px;
+        }
+        .stilo-hero-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 26px 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stilo-hero-eyebrow {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        .stilo-hero-value {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 2.4rem;
+            letter-spacing: -0.025em;
+            line-height: 1;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+        .stilo-hero-meta {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            margin-top: 12px;
+            line-height: 1.4;
+        }
+        .stilo-hero-card.accent::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 3px; height: 100%;
+            background: linear-gradient(180deg, var(--purple-primary), var(--purple-light));
+        }
+
+        /* List row — used for top-clients-style ranked lists. */
+        .stilo-list-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 22px;
+            align-items: center;
+            padding: 20px 4px;
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+        .stilo-list-row:hover {
+            background: rgba(255,255,255,0.018);
+        }
+        .stilo-list-rank {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            font-variant-numeric: tabular-nums;
+        }
+        .stilo-list-name {
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            letter-spacing: -0.015em;
+        }
+        .stilo-list-sub {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .stilo-list-value {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            text-align: right;
+        }
+        .stilo-list-value-suffix {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            margin-left: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Inline pill for status / count badges. Composed with --pill-color. */
+        .stilo-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--text-tertiary);
+            color: var(--text-tertiary);
+        }
+        .stilo-pill.green  { border-color: var(--green); color: var(--green); }
+        .stilo-pill.blue   { border-color: var(--purple-primary); color: var(--purple-light); }
+        .stilo-pill.orange { border-color: var(--orange); color: var(--orange); }
+        .stilo-pill.red    { border-color: var(--red); color: var(--red); }
+        .stilo-pill.yellow { border-color: var(--yellow); color: var(--yellow); }
+
+        /* Generic table inside a stilo-section. */
+        .stilo-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .stilo-table thead th {
+            padding: 12px 14px;
+            text-align: left;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .stilo-table tbody td {
+            padding: 16px 14px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+        .stilo-table tbody tr {
+            transition: background var(--transition-fast);
+            cursor: pointer;
+        }
+        .stilo-table tbody tr:hover td { background: rgba(255,255,255,0.018); }
+        .stilo-table .name {
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 1rem;
+            letter-spacing: -0.01em;
+        }
+        .stilo-table .name-sub {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.06em;
+            margin-top: 3px;
+        }
+        .stilo-table .num {
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+        .stilo-table .num.right { text-align: right; }
+
+        /* Empty state inside a section. */
+        .stilo-empty {
+            padding: 32px 0;
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 0.9rem;
+        }
+
+        /* Quick-action button row at top of a page. */
+        .stilo-actions-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        /* ============================================================
            Reset & Base
            ============================================================ */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -954,115 +1207,82 @@
                  Dashboard Page
                  ============================================================ -->
             <div class="page-content" id="page-dashboard">
-
-                <!-- Quick Actions -->
-                <div class="quick-actions">
-                    <button class="quick-action-btn" onclick="alert('Add Client: coming soon.')">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-                        </svg>
-                        Add Client
-                    </button>
-                    <button class="quick-action-btn" onclick="alert('Deploy Agent: coming soon.')">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
-                        </svg>
-                        Deploy Agent
-                    </button>
-                    <button class="quick-action-btn" onclick="alert('View Reports: coming soon.')">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
-                        </svg>
-                        View Reports
-                    </button>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">DASHBOARD</h2>
                 </div>
 
-                <!-- Summary Cards — values populated by loadDashboard() -->
-                <div class="summary-strip">
-                    <div class="summary-card">
-                        <div class="summary-card-label">Total Clients</div>
-                        <div class="summary-card-value" id="statTotalClients">—</div>
-                        <span class="summary-card-change neutral">All accounts</span>
+                <!-- Hero stat strip -->
+                <div class="stilo-hero-grid">
+                    <div class="stilo-hero-card accent">
+                        <div class="stilo-hero-eyebrow">TOTAL CLIENTS</div>
+                        <div class="stilo-hero-value" id="statTotalClients">—</div>
+                        <div class="stilo-hero-meta">All accounts on the platform</div>
                     </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Active Clients</div>
-                        <div class="summary-card-value" id="statActiveClients">—</div>
-                        <span class="summary-card-change neutral">Status: active</span>
+                    <div class="stilo-hero-card">
+                        <div class="stilo-hero-eyebrow">ACTIVE CLIENTS</div>
+                        <div class="stilo-hero-value" id="statActiveClients">—</div>
+                        <div class="stilo-hero-meta">Status = active</div>
                     </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Total Agents Deployed</div>
-                        <div class="summary-card-value" id="statTotalAgents">—</div>
-                        <span class="summary-card-change neutral">Across all clients</span>
+                    <div class="stilo-hero-card">
+                        <div class="stilo-hero-eyebrow">AGENTS DEPLOYED</div>
+                        <div class="stilo-hero-value" id="statTotalAgents">—</div>
+                        <div class="stilo-hero-meta">Across every client</div>
                     </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Agents Active</div>
-                        <div class="summary-card-value" id="statActiveAgents">—</div>
-                        <span class="summary-card-change neutral">Live right now</span>
+                    <div class="stilo-hero-card">
+                        <div class="stilo-hero-eyebrow">AGENTS LIVE</div>
+                        <div class="stilo-hero-value" id="statActiveAgents">—</div>
+                        <div class="stilo-hero-meta">Running right now</div>
                     </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Setting Up</div>
-                        <div class="summary-card-value" id="statOnboarding">—</div>
-                        <span class="summary-card-change neutral">In onboarding</span>
+                    <div class="stilo-hero-card">
+                        <div class="stilo-hero-eyebrow">ONBOARDING</div>
+                        <div class="stilo-hero-value" id="statOnboarding">—</div>
+                        <div class="stilo-hero-meta">In setup</div>
                     </div>
                 </div>
 
-                <!-- Client List -->
-                <div class="section-header">
-                    <div>
-                        <div class="section-title">Clients</div>
-                        <div class="section-subtitle">All active and onboarding accounts</div>
+                <!-- Clients -->
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">CLIENTS</h3>
+                        <span class="stilo-section-count" id="dashClientsCount"></span>
                     </div>
-                </div>
-
-                <div class="table-container">
-                    <div class="table-scroll">
-                        <table>
+                    <div style="overflow-x:auto;">
+                        <table class="stilo-table">
                             <thead>
                                 <tr>
                                     <th>Client</th>
                                     <th>Status</th>
                                     <th>Agents</th>
                                     <th>Signed Up</th>
-                                    <th>Actions</th>
+                                    <th style="text-align:right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="dashClientsBody">
-                                <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading...</td></tr>
+                                <tr><td colspan="5" class="stilo-empty">Loading…</td></tr>
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </section>
 
-                <!-- Bottom Grid: Agent Health + Activity -->
+                <!-- Bottom grid: agent health + recent activity -->
                 <div class="bottom-grid">
-                    <!-- Agent Health -->
-                    <div>
-                        <div class="section-header">
-                            <div>
-                                <div class="section-title">Agent Health</div>
-                                <div class="section-subtitle">Deployment status across all 8 agent types</div>
-                            </div>
+                    <section class="stilo-section">
+                        <div class="stilo-section-header">
+                            <h3 class="stilo-section-title">AGENT HEALTH</h3>
+                            <span class="stilo-section-count">8 types</span>
                         </div>
-
-                        <!-- Populated by loadDashboard() from real client_agents data -->
                         <div class="agent-grid" id="agentHealthGrid">
-                            <div style="color:var(--text-muted);font-size:13px;padding:12px;">Loading...</div>
+                            <div class="stilo-empty">Loading…</div>
                         </div>
-                    </div>
-
-                    <!-- Recent Activity -->
-                    <div>
-                        <div class="section-header">
-                            <div>
-                                <div class="section-title">Recent Activity</div>
-                            </div>
+                    </section>
+                    <section class="stilo-section">
+                        <div class="stilo-section-header">
+                            <h3 class="stilo-section-title">RECENT ACTIVITY</h3>
                         </div>
-
-                        <!-- Populated by loadDashboard() — shows recently joined clients -->
                         <div class="activity-feed" id="activityFeed">
-                            <div style="color:var(--text-muted);font-size:13px;padding:12px;">Loading...</div>
+                            <div class="stilo-empty">Loading…</div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </div>
 
@@ -1070,14 +1290,11 @@
                  Coming Soon Pages (Clients, Agents, Revenue, Settings)
                  ============================================================ -->
             <div class="page-content" id="page-clients">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap;">
-                    <div>
-                        <h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">Clients</h2>
-                        <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:4px;">Every active, onboarding, or churned client.</p>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <input id="clientSearch" type="search" placeholder="Search clients..." style="padding:8px 12px;background:var(--bg-elev,#1a1a2e);border:1px solid var(--border,rgba(37,99,235,0.15));border-radius:8px;color:inherit;font-size:13px;width:240px;">
-                        <select id="clientFilter" style="padding:8px 12px;background:var(--bg-elev,#1a1a2e);border:1px solid var(--border,rgba(37,99,235,0.15));border-radius:8px;color:inherit;font-size:13px;">
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">CLIENTS</h2>
+                    <div class="stilo-section-actions">
+                        <input id="clientSearch" type="search" placeholder="Search clients…" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;width:240px;font-family:var(--font-body);">
+                        <select id="clientFilter" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="">All statuses</option>
                             <option value="active">Active</option>
                             <option value="paused">Paused</option>
@@ -1085,23 +1302,30 @@
                         </select>
                     </div>
                 </div>
-                <div style="background:var(--bg-card,#1a1a2e);border:1px solid var(--border,rgba(37,99,235,0.15));border-radius:12px;overflow:hidden;">
-                    <table id="clientsTable" style="width:100%;border-collapse:collapse;font-size:14px;">
-                        <thead>
-                            <tr style="background:rgba(37,99,235,0.04);">
-                                <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);">Business</th>
-                                <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);">Contact</th>
-                                <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);">Agents</th>
-                                <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);">Status</th>
-                                <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);">Signed up</th>
-                                <th style="text-align:right;padding:12px 16px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#5a5a75);">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clientsTableBody">
-                            <tr><td colspan="6" style="padding:32px;text-align:center;color:var(--text-muted,#5a5a75);">Loading clients...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">EVERY ACCOUNT</h3>
+                        <span class="stilo-section-count" id="clientsTableCount"></span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table id="clientsTable" class="stilo-table">
+                            <thead>
+                                <tr>
+                                    <th>Business</th>
+                                    <th>Contact</th>
+                                    <th>Agents</th>
+                                    <th>Status</th>
+                                    <th>Signed up</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                <tr><td colspan="6" class="stilo-empty">Loading clients…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
 
             <!-- Client drawer -->
@@ -1123,11 +1347,11 @@
                  Backed by /api/prospects/* proxy → David's prospecting backend
                  ============================================================ -->
             <div class="page-content" id="page-prospecting" style="display:none;">
-                <!-- Page title is already shown by main-header (pageTitle h1
-                     = "Leads"). The duplicate "Leads" subhead + subtitle that
-                     used to live here was removed per Remy 2026-05-11. -->
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:12px;flex-wrap:wrap;">
-                    <p style="color:var(--text-secondary);font-size:0.875rem;margin:0;">Daily call list, cold email queue, and archive. Click a row to log an outcome.</p>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">LEADS</h2>
+                    <span class="stilo-page-meta">Daily call list · cold email queue · archive</span>
+                </div>
+                <div style="display:flex;justify-content:flex-end;align-items:flex-start;margin-bottom:18px;gap:12px;flex-wrap:wrap;">
                     <!-- SDR selector — replaces the old activity-counter row.
                          Filters every workflow card + table to the picked SDR.
                          Defaults to whoever is signed in (set in grantAdminAccess). -->
@@ -1289,27 +1513,24 @@
                 <div id="prospectTableMyHistory" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
             </div>
 
-            <!-- Agents tab: cross-cutting list of every deployment -->
+            <!-- Agents tab -->
             <div class="page-content" id="page-agents" style="display:none;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">All agent deployments</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Every (client × agent) row across the agency. Click any row to open the client drawer.</p>
-                    </div>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <select id="agentTypeFilter" onchange="loadAgentsTable()" style="padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;">
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">AGENTS</h2>
+                    <div class="stilo-section-actions">
+                        <select id="agentTypeFilter" onchange="loadAgentsTable()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="">All agents</option>
-                            <option value="echo">ECHO</option>
-                            <option value="ignite">IGNITE</option>
-                            <option value="revive">REVIVE</option>
-                            <option value="scout">SCOUT</option>
-                            <option value="forge">FORGE</option>
-                            <option value="signal">SIGNAL</option>
-                            <option value="oracle">ORACLE</option>
-                            <option value="pitch">SALES AGENT</option>
-                            <option value="flux">FLUX</option>
+                            <option value="echo">Receptionist</option>
+                            <option value="ignite">Outbound Lead Caller</option>
+                            <option value="revive">Customer Reactivation</option>
+                            <option value="scout">Lead Generator</option>
+                            <option value="forge">Website Builder</option>
+                            <option value="signal">AI SEO</option>
+                            <option value="oracle">Growth Intelligence</option>
+                            <option value="pitch">AI Sales Agent</option>
+                            <option value="flux">Custom Automations</option>
                         </select>
-                        <select id="agentStatusFilter" onchange="loadAgentsTable()" style="padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;">
+                        <select id="agentStatusFilter" onchange="loadAgentsTable()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="">All statuses</option>
                             <option value="onboarding">Onboarding</option>
                             <option value="active">Active</option>
@@ -1318,23 +1539,32 @@
                         </select>
                     </div>
                 </div>
-                <div id="agentsTableWrap" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow:hidden;">
-                    <div style="padding:24px;color:var(--text-secondary);font-size:13px;">Loading deployments...</div>
-                </div>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">EVERY DEPLOYMENT</h3>
+                        <span class="stilo-section-count" id="agentsTableCount"></span>
+                    </div>
+                    <div id="agentsTableWrap" style="overflow-x:auto;">
+                        <div class="stilo-empty">Loading deployments…</div>
+                    </div>
+                </section>
             </div>
 
-            <!-- Pending Review tab — final pre-flight before agents go live -->
+            <!-- Pending Review tab -->
             <div class="page-content" id="page-review" style="display:none;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">Pending agent review</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Clients who finished onboarding and submitted for STILO Partners final pre-flight. Approve to provision the Retell agent and go live.</p>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">PENDING REVIEW</h2>
+                    <span class="stilo-page-meta">Final pre-flight before agents go live</span>
+                </div>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">AWAITING APPROVAL</h3>
+                        <span class="stilo-section-count" id="pendingReviewCount"></span>
                     </div>
-                    <button class="quick-action-btn" onclick="loadPendingReview()">Refresh</button>
-                </div>
-                <div id="pendingReviewWrap" style="display:flex;flex-direction:column;gap:14px;">
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:24px;color:var(--text-secondary);font-size:13px;">Loading queue...</div>
-                </div>
+                    <div id="pendingReviewWrap" style="display:flex;flex-direction:column;gap:14px;">
+                        <div class="stilo-empty">Loading queue…</div>
+                    </div>
+                </section>
             </div>
 
             <!-- ============================================================
@@ -1374,36 +1604,44 @@
                  Team tab — monitor SDR cold-call team performance and DM them
                  ============================================================ -->
             <div class="page-content" id="page-team" style="display:none;">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">SDR Team</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Daily call volume, meetings booked, and commission earned per SDR. Tap a card to view their dashboard.</p>
-                    </div>
-                    <button class="quick-action-btn" onclick="loadTeamPage()">Refresh</button>
-                </div>
-                <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px;">
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;color:var(--text-secondary);font-size:13px;">Loading SDRs…</div>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">TEAM</h2>
+                    <span class="stilo-page-meta">SDR performance · commissions</span>
                 </div>
 
-                <h3 style="margin:24px 0 12px 0;font-size:14px;">Agency totals</h3>
-                <div id="teamTotalsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:14px;">
-                        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Total dials today</div>
-                        <div id="teamTotalDialsToday" style="font-family:var(--font-display);font-weight:800;font-size:1.8rem;letter-spacing:-0.02em;">—</div>
+                <!-- Agency totals: hero strip -->
+                <div class="stilo-hero-grid">
+                    <div class="stilo-hero-card accent">
+                        <div class="stilo-hero-eyebrow">DIALS TODAY</div>
+                        <div class="stilo-hero-value" id="teamTotalDialsToday">—</div>
+                        <div class="stilo-hero-meta">Across the team</div>
                     </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:14px;">
-                        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Meetings booked this week</div>
-                        <div id="teamTotalMeetingsWeek" style="font-family:var(--font-display);font-weight:800;font-size:1.8rem;letter-spacing:-0.02em;">—</div>
+                    <div class="stilo-hero-card">
+                        <div class="stilo-hero-eyebrow">MEETINGS THIS WEEK</div>
+                        <div class="stilo-hero-value" id="teamTotalMeetingsWeek">—</div>
+                        <div class="stilo-hero-meta">Booked across SDRs</div>
                     </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:14px;">
-                        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Lifetime MRR from SDRs</div>
-                        <div id="teamTotalMrr" style="font-family:var(--font-display);font-weight:800;font-size:1.8rem;letter-spacing:-0.02em;">—</div>
+                    <div class="stilo-hero-card">
+                        <div class="stilo-hero-eyebrow">LIFETIME MRR</div>
+                        <div class="stilo-hero-value" id="teamTotalMrr">—</div>
+                        <div class="stilo-hero-meta">Closed by the team</div>
                     </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:14px;">
-                        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Commission owed</div>
-                        <div id="teamTotalCommissionOwed" style="font-family:var(--font-display);font-weight:800;font-size:1.8rem;letter-spacing:-0.02em;">—</div>
+                    <div class="stilo-hero-card">
+                        <div class="stilo-hero-eyebrow">COMMISSION OWED</div>
+                        <div class="stilo-hero-value" id="teamTotalCommissionOwed">—</div>
+                        <div class="stilo-hero-meta">Pending payout</div>
                     </div>
                 </div>
+
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">SDRS</h3>
+                        <span class="stilo-section-count" id="teamGridCount"></span>
+                    </div>
+                    <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">
+                        <div class="stilo-empty">Loading SDRs…</div>
+                    </div>
+                </section>
 
                 <!-- SDR detail drawer (admin view of an SDR's snapshot) -->
                 <div id="sdrDetailDrawer" style="position:fixed;top:0;right:-820px;width:820px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 36px;">
@@ -1413,63 +1651,63 @@
                 <div id="sdrDetailOverlay" onclick="closeSdrDetailDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
             </div>
 
-            <!-- ============================================================
-                 Pipeline tab — every deal grouped by stage (kanban)
-                 ============================================================ -->
+            <!-- Pipeline tab -->
             <div class="page-content" id="page-pipeline" style="display:none;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">Pipeline</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Every deal grouped by lifecycle stage. Click a card to manage.</p>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">PIPELINE</h2>
+                    <span class="stilo-page-meta">Every deal · grouped by stage</span>
+                </div>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">STAGES</h3>
+                        <span class="stilo-section-count" id="pipelineCount"></span>
                     </div>
-                    <button class="quick-action-btn" onclick="loadPipelinePage()">Refresh</button>
-                </div>
-                <div id="pipelineGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
-                    <div style="grid-column:1/-1;padding:18px;color:var(--text-secondary);">Loading…</div>
-                </div>
+                    <div id="pipelineGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+                        <div class="stilo-empty" style="grid-column:1/-1;">Loading…</div>
+                    </div>
+                </section>
             </div>
 
-            <!-- ============================================================
-                 Deals tab — table of every deal
-                 ============================================================ -->
+            <!-- Deals tab -->
             <div class="page-content" id="page-deals" style="display:none;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">Deals</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">All closed deals. Click row for activity, mark paid for manual payments.</p>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">DEALS</h2>
+                    <span class="stilo-page-meta">Click row for activity · mark paid for wires</span>
+                </div>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">EVERY DEAL</h3>
+                        <span class="stilo-section-count" id="dealsTableCount"></span>
                     </div>
-                    <button class="quick-action-btn" onclick="loadDealsPage()">Refresh</button>
-                </div>
-                <div id="dealsTableWrap" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow-x:auto;">
-                    <div style="padding:24px;color:var(--text-secondary);">Loading…</div>
-                </div>
+                    <div id="dealsTableWrap" style="overflow-x:auto;">
+                        <div class="stilo-empty">Loading…</div>
+                    </div>
+                </section>
             </div>
 
-            <!-- ============================================================
-                 Activity Feed tab — recent deal events agency-wide
-                 ============================================================ -->
+            <!-- Activity Feed tab -->
             <div class="page-content" id="page-activity" style="display:none;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">Activity Feed</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Every deal touchpoint, newest first. Click any row to open the deal.</p>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">ACTIVITY</h2>
+                    <span class="stilo-page-meta">Every deal touchpoint · newest first</span>
+                </div>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">RECENT EVENTS</h3>
+                        <span class="stilo-section-count" id="activityFeedCount"></span>
                     </div>
-                    <button class="quick-action-btn" onclick="loadActivityFeed()">Refresh</button>
-                </div>
-                <div id="activityFeedList" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow:hidden;">
-                    <div style="padding:18px;color:var(--text-secondary);">Loading…</div>
-                </div>
+                    <div id="activityFeedList">
+                        <div class="stilo-empty">Loading…</div>
+                    </div>
+                </section>
             </div>
 
             <!-- Support inbox tab -->
             <div class="page-content" id="page-support" style="display:none;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">Support inbox</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">Threads from clients, ordered by most recent message.</p>
-                    </div>
-                    <div style="display:flex;gap:8px;">
-                        <select id="supportStatusFilter" onchange="adminLoadSupportThreads()" style="padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;">
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">SUPPORT</h2>
+                    <div class="stilo-section-actions">
+                        <select id="supportStatusFilter" onchange="adminLoadSupportThreads()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="open">Open</option>
                             <option value="resolved">Resolved</option>
                             <option value="">All</option>
@@ -1497,33 +1735,43 @@
 
             <!-- Settings tab -->
             <div class="page-content" id="page-settings" style="display:none;">
-                <h2 style="margin:0 0 6px 0;font-size:18px;">Settings</h2>
-                <p style="margin:0 0 24px 0;color:var(--text-secondary);font-size:13px;">Team access, defaults, and integration health.</p>
-
-                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;margin-bottom:14px;">
-                    <h3 style="margin:0 0 12px 0;font-size:14px;">Admin team</h3>
-                    <p style="margin:0 0 12px 0;color:var(--text-secondary);font-size:12px;">Anyone in this list can sign into <code style="background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:4px;">/admin/</code>.</p>
-                    <div id="adminTeamList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
-                    <form onsubmit="return adminAddTeamMember(event)" style="display:flex;gap:8px;">
-                        <input type="email" id="adminTeamEmail" placeholder="email@example.com" required style="flex:1;padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;" />
-                        <input type="text" id="adminTeamName" placeholder="Display name (optional)" style="flex:1;padding:8px 12px;background:var(--bg-elev,#22223a);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(37,99,235,0.2));border-radius:8px;font-size:13px;" />
-                        <button type="submit" class="quick-action-btn" style="padding:8px 16px;font-size:13px;background:#2563EB;color:#fff;border-color:#2563EB;">Add</button>
-                    </form>
-                    <div id="adminTeamMsg" style="font-size:12px;color:var(--text-secondary);margin-top:8px;min-height:1em;"></div>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">SETTINGS</h2>
+                    <span class="stilo-page-meta">Team · integrations · defaults</span>
                 </div>
 
-                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;margin-bottom:14px;">
-                    <h3 style="margin:0 0 12px 0;font-size:14px;">Integrations</h3>
-                    <div id="integrationsHealth" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;"></div>
-                </div>
-
-                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">
-                    <h3 style="margin:0 0 12px 0;font-size:14px;">About</h3>
-                    <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
-                        STILO AI Partners admin · <span id="aboutAdminEmail">--</span><br>
-                        Schema version: <code style="background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:4px;">2026.04</code>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">ADMIN TEAM</h3>
+                        <span class="stilo-section-count">Sign-in access</span>
                     </div>
-                </div>
+                    <p style="margin:0 0 16px 0;color:var(--text-tertiary);font-size:0.85rem;">Anyone in this list can sign into <code style="background:rgba(255,255,255,0.05);padding:1px 6px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;">/admin/</code>.</p>
+                    <div id="adminTeamList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+                    <form onsubmit="return adminAddTeamMember(event)" style="display:flex;gap:8px;">
+                        <input type="email" id="adminTeamEmail" placeholder="email@example.com" required style="flex:1;padding:9px 14px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:10px;font-size:0.85rem;font-family:var(--font-body);" />
+                        <input type="text" id="adminTeamName" placeholder="Display name (optional)" style="flex:1;padding:9px 14px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:10px;font-size:0.85rem;font-family:var(--font-body);" />
+                        <button type="submit" class="quick-action-btn" style="padding:9px 18px;font-size:0.85rem;background:#2563EB;color:#fff;border-color:#2563EB;">Add</button>
+                    </form>
+                    <div id="adminTeamMsg" style="font-size:0.75rem;color:var(--text-tertiary);margin-top:10px;min-height:1em;"></div>
+                </section>
+
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">INTEGRATIONS</h3>
+                        <span class="stilo-section-count">Health check</span>
+                    </div>
+                    <div id="integrationsHealth" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
+                </section>
+
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">ABOUT</h3>
+                    </div>
+                    <div style="font-size:0.85rem;color:var(--text-tertiary);line-height:1.7;">
+                        STILO AI Partners admin · <span id="aboutAdminEmail" style="color:var(--text-secondary);">—</span><br>
+                        Schema version: <code style="background:rgba(255,255,255,0.05);padding:1px 6px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;">2026.04</code>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
