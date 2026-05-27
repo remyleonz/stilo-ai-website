@@ -9,13 +9,13 @@
     <title>STILO AI PARTNERS | Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         /* ============================================================
            CSS Custom Properties
            ============================================================ */
         :root {
-            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-display: 'Saira', system-ui, sans-serif;
             --font-accent: 'Instrument Serif', Georgia, serif;
             --font-body: 'Geist', system-ui, sans-serif;
             --font-mono: 'Geist Mono', ui-monospace, monospace;
@@ -1178,6 +1178,7 @@
              ============================================================ -->
         <main class="main-content">
             <div class="main-header">
+                <h1 id="pageTitle">Dashboard</h1>
                 <span class="header-meta" id="headerDate" style="margin-left:auto;"></span>
                 <button type="button" id="supportHeaderBtn" onclick="switchPage('support')" title="Support inbox" aria-label="Support inbox" style="position:relative;margin-left:14px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-secondary);cursor:pointer;transition:all 150ms;">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;">
@@ -1191,9 +1192,6 @@
                  Dashboard Page
                  ============================================================ -->
             <div class="page-content" id="page-dashboard">
-                <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">DASHBOARD</h2>
-                </div>
 
                 <!-- Hero stat strip -->
                 <div class="stilo-hero-grid">
@@ -1275,7 +1273,6 @@
                  ============================================================ -->
             <div class="page-content" id="page-clients">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">CLIENTS</h2>
                     <div class="stilo-section-actions">
                         <input id="clientSearch" type="search" placeholder="Search clients…" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;width:240px;font-family:var(--font-body);">
                         <select id="clientFilter" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
@@ -1332,7 +1329,6 @@
                  ============================================================ -->
             <div class="page-content" id="page-prospecting" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">LEADS</h2>
                     <span class="stilo-page-meta">Daily call list · cold email queue · archive</span>
                 </div>
                 <div style="display:flex;justify-content:flex-end;align-items:flex-start;margin-bottom:18px;gap:12px;flex-wrap:wrap;">
@@ -1506,7 +1502,6 @@
             <!-- Agents tab -->
             <div class="page-content" id="page-agents" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">AGENTS</h2>
                     <div class="stilo-section-actions">
                         <select id="agentTypeFilter" onchange="loadAgentsTable()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="">All agents</option>
@@ -1556,7 +1551,6 @@
                  lives inside the Agents tab. -->
             <div class="page-content" id="page-review" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">PENDING REVIEW</h2>
                     <span class="stilo-page-meta">Final pre-flight before agents go live</span>
                 </div>
                 <section class="stilo-section">
@@ -1577,10 +1571,6 @@
                  names + counts.
                  ============================================================ -->
             <div class="page-content" id="page-revenue" style="display:none;">
-                <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">REVENUE</h2>
-                    <span class="stilo-page-meta">Lifetime · per agent · per client</span>
-                </div>
 
                 <!-- 3 hero cards -->
                 <div id="revenueGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:36px;"></div>
@@ -1609,7 +1599,6 @@
                  ============================================================ -->
             <div class="page-content" id="page-team" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">TEAM</h2>
                     <span class="stilo-page-meta">SDR performance · commissions</span>
                 </div>
 
@@ -1658,7 +1647,6 @@
             <!-- Pipeline tab — part of the unified Sales section. -->
             <div class="page-content" id="page-pipeline" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">SALES</h2>
                     <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
                 </div>
                 <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
@@ -1680,7 +1668,6 @@
             <!-- Deals tab — part of the unified Sales section. -->
             <div class="page-content" id="page-deals" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">SALES</h2>
                     <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
                 </div>
                 <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
@@ -1702,7 +1689,6 @@
             <!-- Activity Feed tab — part of the unified Sales section. -->
             <div class="page-content" id="page-activity" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">SALES</h2>
                     <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
                 </div>
                 <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
@@ -1724,7 +1710,6 @@
             <!-- Support inbox tab -->
             <div class="page-content" id="page-support" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">SUPPORT</h2>
                     <div class="stilo-section-actions">
                         <select id="supportStatusFilter" onchange="adminLoadSupportThreads()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="open">Open</option>
@@ -1755,7 +1740,6 @@
             <!-- Settings tab -->
             <div class="page-content" id="page-settings" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">SETTINGS</h2>
                     <span class="stilo-page-meta">Team · integrations · defaults</span>
                 </div>
 
@@ -2064,8 +2048,9 @@
                 }
             }
 
-            // Update browser tab title (the in-page h2 is what users see;
-            // the old sticky-header h1 was removed to kill the duplicate title).
+            // Page title: only the sticky-header h1 carries it now. The big
+            // in-page h2 was removed sitewide per Remy — kept the top one,
+            // killed the bottom one.
             var titles = {
                 dashboard: 'Dashboard',
                 clients: 'Clients',
@@ -2081,6 +2066,8 @@
                 review: 'Pending Review',
                 settings: 'Settings'
             };
+            var titleEl = document.getElementById('pageTitle');
+            if (titleEl) titleEl.textContent = titles[page] || 'Dashboard';
             document.title = 'STILO Admin — ' + (titles[page] || 'Dashboard');
 
             // Show/hide pages
@@ -3489,29 +3476,18 @@
                 };
 
                 // ============= 3 HERO CARDS =============
+                // Just eyebrow + value. Explanatory subtitles stripped per Remy
+                // — the eyebrow already names the metric.
                 var heroCards = [
-                    {
-                        eyebrow: 'SALES',
-                        value: fmtUsd(salesCents),
-                        meta: 'Setup fees + monthly retainers · lifetime'
-                    },
-                    {
-                        eyebrow: 'CURRENT MRR',
-                        value: fmtUsd(currentMrrCents),
-                        meta: 'This month\'s recurring + new setup fees'
-                    },
-                    {
-                        eyebrow: 'CLIENTS',
-                        value: clientCount.toString(),
-                        meta: clientCount === 1 ? 'Active deployment' : 'Active deployments'
-                    }
+                    { eyebrow: 'SALES',       value: fmtUsd(salesCents) },
+                    { eyebrow: 'CURRENT MRR', value: fmtUsd(currentMrrCents) },
+                    { eyebrow: 'CLIENTS',     value: clientCount.toString() }
                 ];
                 grid.innerHTML = heroCards.map(function(c){
                     return ''
                         + '<div style="background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01));border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:28px 28px 26px;position:relative;overflow:hidden;">'
                           + '<div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:500;letter-spacing:0.18em;color:var(--text-secondary);margin-bottom:18px;">' + c.eyebrow + '</div>'
                           + '<div style="font-family:var(--font-display);font-weight:600;font-size:2.6rem;letter-spacing:-0.025em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + c.value + '</div>'
-                          + '<div style="font-size:0.8rem;color:var(--text-tertiary);margin-top:14px;line-height:1.4;">' + c.meta + '</div>'
                         + '</div>';
                 }).join('');
 
@@ -3562,22 +3538,14 @@
                 if (!clientEntries.length) {
                     topClients.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No revenue yet.</div>';
                 } else {
-                    // Match the Agents row layout: name on the left, dollar amount
-                    // on top with the unit label ("LIFETIME") stacked underneath in
-                    // mono caps. Numbers above, labels below — consistent across
-                    // every row in the Revenue tab.
-                    topClients.innerHTML = clientEntries.map(function(e, i){
-                        var rank = String(i + 1).padStart(2, '0');
+                    // Name on the left, dollar on the right. No rank number
+                    // (the list order is implicit ranking), no agents-count
+                    // line — per Remy's "remove the chrome" pass.
+                    topClients.innerHTML = clientEntries.map(function(e){
                         return ''
-                            + '<div onclick="openClientDrawer(\'' + e.id + '\')" style="display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;padding:18px 22px;background:rgba(255,255,255,0.018);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:14px;cursor:pointer;transition:background var(--transition-fast);" onmouseover="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.018)\'">'
-                              + '<div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted);letter-spacing:0.1em;font-variant-numeric:tabular-nums;">' + rank + '</div>'
-                              + '<div style="min-width:0;">'
-                                + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.05rem;color:var(--text-primary);letter-spacing:-0.01em;">' + escapeAdminHtml(e.name) + '</div>'
-                              + '</div>'
-                              + '<div style="text-align:right;">'
-                                + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + fmtUsd(e.cents) + '</div>'
-                                + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);letter-spacing:0.06em;margin-top:2px;">' + e.agents + (e.agents === 1 ? ' AGENT' : ' AGENTS') + '</div>'
-                              + '</div>'
+                            + '<div onclick="openClientDrawer(\'' + e.id + '\')" style="display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;padding:18px 22px;background:rgba(255,255,255,0.018);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:14px;cursor:pointer;transition:background var(--transition-fast);" onmouseover="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.018)\'">'
+                              + '<div style="min-width:0;font-family:var(--font-display);font-weight:500;font-size:1.05rem;color:var(--text-primary);letter-spacing:-0.01em;">' + escapeAdminHtml(e.name) + '</div>'
+                              + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;text-align:right;">' + fmtUsd(e.cents) + '</div>'
                             + '</div>';
                     }).join('');
                 }
