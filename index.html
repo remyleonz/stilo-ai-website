@@ -724,8 +724,9 @@ section{padding:160px 0}
     linear-gradient(180deg, rgba(7,7,10,0.35) 0%, rgba(7,7,10,0) 30%, rgba(7,7,10,0.85) 100%);
 }
 .hero-video{
-  position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;opacity:0;
-  transition:opacity 1s ease;pointer-events:none;
+  position:absolute;left:0;top:0;z-index:0;
+  width:100%;height:112%;object-fit:cover;object-position:center top;
+  opacity:0;transition:opacity 1s ease;pointer-events:none;
 }
 .hero-video[data-loaded="true"]{opacity:1}
 .hero-canvas{opacity:0.35;mix-blend-mode:screen}
