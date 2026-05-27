@@ -2133,6 +2133,183 @@ section,.partners{background:transparent !important}
   .marquee-track{animation:none}
 }
 
+/* ============================================================
+   V3.2 polish pass (2026-05-27): hero, tabs, badge, body color,
+   partners rebuild, section spacing, sticky CTA, etc.
+   ============================================================ */
+
+/* HERO V3.2 — bigger, one-line, lower position */
+.hero{padding:240px 0 100px !important;align-items:flex-start !important}
+.hero .container{padding-top:80px}
+.hero h1{
+  font-size:clamp(2.2rem,4.6vw,4rem) !important;
+  letter-spacing:-0.02em !important;line-height:1.0 !important;
+  white-space:normal !important;
+}
+.hero h1 .line{display:inline}
+.hero h1 .line + .line::before{content:" "}
+.hero h1 .line .line-inner{display:inline}
+.hero-sub{font-size:clamp(1.05rem,1.3vw,1.3rem) !important;color:#ffffff !important;margin-top:24px !important}
+.hero-ctas{margin-top:32px !important}
+@media (max-width:760px){
+  .hero h1{font-size:clamp(1.8rem,7vw,2.6rem) !important;white-space:normal !important}
+  .hero h1 .line{display:block}
+  .hero h1 .line + .line::before{content:""}
+}
+
+/* TABS V3.2 — kill the number prefix entirely, slim down height */
+.agent-tab,.case-tab,.industry-tab{
+  min-height:54px !important;
+  padding:13px 20px !important;
+  font-size:0.82rem !important;
+  letter-spacing:0.06em !important;
+  gap:0 !important;
+}
+.agent-tab .agent-tab-num,
+.case-tab .case-tab-num,
+.industry-tab .industry-tab-num{display:none !important}
+
+/* STAT BADGE — constrain width so it doesn't eat bullet space */
+.agent-content.active{
+  grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) !important;
+  column-gap:28px !important;
+}
+.agent-panel-stat{
+  max-width:200px !important;
+  padding:14px 18px !important;
+  align-self:start !important;
+  width:100% !important;
+}
+.agent-panel-stat b{font-size:1.5rem !important;line-height:1.05 !important;display:block;margin-bottom:4px}
+.agent-panel-stat span{font-size:0.62rem !important;line-height:1.35 !important;letter-spacing:0.12em !important;display:block}
+
+/* SITEWIDE — body subhead paragraphs become white (was --fg-2 gray) */
+.section-header > p{color:#ffffff !important}
+.agent-panel-body{color:#ffffff !important}
+.partner-bio p{color:#ffffff !important}
+.industry-pain{color:#ffffff !important}
+.final-cta-sub{color:#ffffff !important}
+.faq-answer-inner{color:#ffffff !important}
+.why-card-body p{color:#ffffff !important}
+.why-card p{color:#ffffff !important}
+.partners-section .section-header p,
+.process-section .section-header p,
+.contact-section .section-header p{color:#ffffff !important}
+
+/* PARTNERS V3.2 — text title (no image), tighter padding, photos fill section */
+.partners-section{padding:80px 0 !important}
+.partners-header{margin:0 auto 56px !important;padding:0 !important}
+.partners-wordmark{display:none !important}
+.partners-header::after{
+  content:"STILO AI PARTNERS";
+  font-family:var(--font-display),'Saira',system-ui,sans-serif;
+  font-weight:800;
+  font-size:clamp(2.4rem,5.2vw,4.6rem);
+  letter-spacing:-0.02em;
+  background:linear-gradient(135deg,#5A7BE8 0%,#2D4FB8 50%,#1E3A8A 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  display:inline-block;
+}
+.partner-row{
+  padding:0 !important;
+  border:0 !important;
+  align-items:stretch !important;
+  min-height:560px;
+  margin-bottom:48px !important;
+}
+.partner-row:last-of-type{margin-bottom:0 !important;border:0 !important}
+.partner-photo{
+  aspect-ratio:auto !important;
+  height:100% !important;
+  min-height:560px;
+}
+.partner-photo img{height:100%;width:100%;object-fit:cover}
+@media (max-width:900px){
+  .partner-row{min-height:auto}
+  .partner-photo{min-height:auto;aspect-ratio:4/5 !important}
+}
+
+/* SECTION SPACING — tighter between Stats / Why / Case Study */
+.stats-section{padding:60px 0 !important}
+.why-section{padding:80px 0 !important}
+.case-section{padding:80px 0 100px !important}
+
+/* BOOKING MODAL (Google Calendar slot picker, replaces Calendly popup) */
+.booking-modal{
+  position:fixed;inset:0;z-index:200;display:none;
+  background:rgba(7,7,10,0.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;padding:24px;
+  animation:bmFade .25s var(--ease-out);
+}
+.booking-modal.open{display:flex}
+@keyframes bmFade{from{opacity:0}to{opacity:1}}
+.booking-card{
+  width:min(640px,100%);max-height:90vh;overflow-y:auto;
+  background:var(--bg-plate);border:1px solid var(--stroke-hi);
+  border-radius:18px;padding:28px;color:var(--fg);
+  box-shadow:0 40px 80px rgba(0,0,0,0.6);
+}
+.booking-card h3{
+  font-family:var(--font-display),'Saira',system-ui,sans-serif;
+  font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;
+  margin:0 0 6px;text-transform:uppercase;color:var(--fg);
+}
+.booking-card .booking-sub{color:#fff;font-size:0.92rem;margin:0 0 22px;line-height:1.45}
+.booking-close{
+  position:absolute;top:18px;right:22px;
+  width:32px;height:32px;border-radius:8px;
+  background:rgba(255,255,255,0.06);border:1px solid var(--stroke);
+  color:var(--fg);cursor:pointer;font-size:1.1rem;line-height:1;
+}
+.booking-close:hover{background:rgba(255,255,255,0.12)}
+.booking-card .day-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.booking-card .day-btn{
+  flex:1;min-width:100px;padding:10px 8px;
+  background:rgba(255,255,255,0.04);border:1px solid var(--stroke);
+  border-radius:8px;color:var(--fg);font-size:11.5px;font-weight:700;
+  cursor:pointer;text-align:center;line-height:1.3;letter-spacing:0.04em;
+  text-transform:uppercase;font-family:var(--font-display),system-ui;
+}
+.booking-card .day-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.booking-card .time-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));
+  gap:6px;max-height:200px;overflow-y:auto;padding:2px;margin-bottom:18px;
+}
+.booking-card .time-btn{
+  padding:8px 10px;background:rgba(255,255,255,0.04);
+  border:1px solid var(--stroke);border-radius:6px;color:var(--fg);
+  font-size:12px;font-weight:600;cursor:pointer;
+}
+.booking-card .time-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.booking-card .booking-form{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.booking-card input,.booking-card textarea{
+  width:100%;padding:11px 14px;
+  background:rgba(255,255,255,0.04);border:1px solid var(--stroke);
+  border-radius:8px;color:var(--fg);font-size:14px;font-family:inherit;
+}
+.booking-card textarea{min-height:74px;resize:vertical}
+.booking-card .booking-msg{font-size:12.5px;margin-top:8px;line-height:1.4}
+.booking-card .booking-msg.error{color:#ef4444}
+.booking-card .booking-msg.ok{color:#10b981}
+.booking-card .booking-confirm{margin-top:14px}
+
+/* STICKY CTA — hide on desktop, circular + smaller on mobile */
+.sticky-cta{display:none !important}
+@media (max-width:720px){
+  .sticky-cta{
+    display:flex !important;
+    width:auto !important;height:auto !important;
+    padding:8px 14px 8px 18px !important;
+    border-radius:999px !important;
+    font-size:0.78rem !important;
+    bottom:14px !important;right:14px !important;
+  }
+  .sticky-cta .btn-primary{
+    padding:8px 14px !important;font-size:0.74rem !important;
+    border-radius:999px !important;letter-spacing:0.04em !important;
+  }
+}
+
     </style>
 </head>
 <body>
@@ -2910,35 +3087,38 @@ section,.partners{background:transparent !important}
 <section class="partners-section" id="partners">
   <div class="container">
     <div class="section-header partners-header fade-in" style="text-align:center;margin:0 auto 72px;">
-      <img class="partners-wordmark" src="/assets/stilo-wordmark.png" alt="STILO AI PARTNERS" />
+      <!-- Text title rendered via .partners-header::after — old wordmark image hidden by CSS -->
+      <img class="partners-wordmark" src="/assets/stilo-wordmark.png" alt="" />
     </div>
 
-    <!-- REMY -->
+    <!-- REMY (swapped bio per V3.2 — was previously David's framing) -->
     <div class="partner-row partner-row-left fade-in">
       <div class="partner-photo">
-        <img src="/assets/remyfoundersection.png" alt="Remy Leon, Founder of STILO AI Partners" />
+        <img src="/assets/remyfoundersection.png" alt="Remy Leon, Co-Founder of STILO AI Partners" />
         <div class="partner-photo-frame"></div>
       </div>
       <div class="partner-content">
         <h3 class="partner-name">Remy Leon</h3>
         <div class="partner-bio">
-          <p>Remy founded STILO AI Partners to bring custom AI to the businesses that need it most. He grew up in Miami watching local operators run on duct tape and grit, and started STILO to give them the kind of intelligence that used to be reserved for billion-dollar enterprises.</p>
-          <p>He works directly with every STILO client through their first ninety days. He picks up the phone, runs the audit, builds the first agent with you, and stays on the engagement after launch. If your engagement is live, Remy knows your numbers.</p>
+          <p>Remy is the engineering brain of STILO AI Partners. He builds the agents, wires the integrations, and ships the systems that keep every client's stack running. His work is the reason a STILO agent can pick up a call, talk to your CRM, and book a meeting in under a second.</p>
+          <p>Before STILO he was deep in production infrastructure for high-volume consumer apps and shipping his own iOS products from scratch. He still writes most of the code that runs for STILO clients in production today. If something breaks at 2 AM, Remy is the one who knows why.</p>
+          <p>He sits in on every onboarding call so the agent we build for you is wired into your systems on day one, not three weeks later. Miami-raised, UF Computer Science, builder all the way down.</p>
         </div>
       </div>
     </div>
 
-    <!-- DAVID (inverted) -->
+    <!-- DAVID (inverted, swapped bio per V3.2 — was previously Remy's framing) -->
     <div class="partner-row partner-row-right fade-in delay-1">
       <div class="partner-content">
         <h3 class="partner-name">David Coira</h3>
         <div class="partner-bio">
-          <p>David is the engineering brain of STILO AI Partners. He builds the agents, wires the integrations, and ships the systems that keep every client's stack running. His work is the reason a STILO agent can pick up a call, talk to your CRM, and book a meeting in under a second.</p>
-          <p>Before STILO he was deep in production infrastructure for high-volume consumer apps. He still writes most of the code that runs for our clients today. If something breaks at 2 AM, David is the one who knows why.</p>
+          <p>David co-founded STILO AI Partners to bring custom AI to the businesses that need it most. He grew up in Miami watching local operators run on duct tape and grit, and started STILO to give them the kind of intelligence that used to be reserved for billion-dollar enterprises.</p>
+          <p>He works directly with every STILO client through their first ninety days. He picks up the phone, runs the audit, scopes the build with you, and stays on the engagement after launch. If your engagement is live, David knows your numbers and your customers by name.</p>
+          <p>Before STILO he ran sales and ops in three high-velocity SMB categories, so he knows the pain you feel before you say it. Calls you back the same day. Treats your business like his own.</p>
         </div>
       </div>
       <div class="partner-photo">
-        <img src="/assets/davidfoundersection.png" alt="David Coira, Partner at STILO AI Partners" />
+        <img src="/assets/davidfoundersection.png" alt="David Coira, Co-Founder of STILO AI Partners" />
         <div class="partner-photo-frame"></div>
       </div>
     </div>
@@ -3203,9 +3383,8 @@ section,.partners{background:transparent !important}
           <button id="showAllAgentsBtn" onclick="window.toggleShowAllAgents()" style="background:none;border:none;color:var(--violet-hi);font-size:0.82rem;cursor:pointer;padding:0;letter-spacing:0.02em;">+ Show all agents</button>
         </div>
         <div class="tier-switch-row">
-          <button class="tier-switch-btn" onclick="switchTier('starter')">Starter</button>
-          <button class="tier-switch-btn" onclick="switchTier('growth')">Growth</button>
-          <button class="tier-switch-btn" onclick="switchTier('partner')">Partner</button>
+          <button class="tier-switch-btn" onclick="switchTier('starter')">Starter &mdash; Top 3</button>
+          <button class="tier-switch-btn" onclick="switchTier('growth')">Growth &mdash; Top 6</button>
         </div>
         <div class="rec-total-row">
           <span class="rec-total-label">Estimated Investment</span>
@@ -3257,6 +3436,24 @@ section,.partners{background:transparent !important}
     <div class="footer-bottom">&copy; 2026 STILO AI PARTNERS. All rights reserved.</div>
   </div>
 </footer>
+
+<!-- ===== GOOGLE CALENDAR BOOKING MODAL ===== -->
+<div class="booking-modal" id="bookingModal" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
+  <div class="booking-card" style="position:relative;">
+    <button type="button" class="booking-close" id="bookingClose" aria-label="Close">&times;</button>
+    <h3 id="bookingTitle">Book a 15-min call</h3>
+    <p class="booking-sub">Pick an open slot on Remy's calendar. You'll get a Google Calendar invite with a Meet link.</p>
+    <div id="bookingSlots"><div style="padding:30px 0;text-align:center;color:rgba(255,255,255,0.7);font-size:13px;">Loading available times...</div></div>
+    <div class="booking-form" id="bookingForm" style="display:none;">
+      <input type="text" id="bookingName" placeholder="Your name *" autocomplete="name" />
+      <input type="email" id="bookingEmail" placeholder="Your work email *" autocomplete="email" />
+      <input type="text" id="bookingBusiness" placeholder="Business name (optional)" autocomplete="organization" />
+      <textarea id="bookingNotes" placeholder="Anything Remy should know before the call (optional)"></textarea>
+      <button type="button" class="btn-primary booking-confirm" id="bookingConfirmBtn">Book this time</button>
+      <div class="booking-msg" id="bookingMsg"></div>
+    </div>
+  </div>
+</div>
 
 <!-- ===== STICKY CTA ===== -->
 <div class="sticky-cta" id="stickyCta">
@@ -4256,13 +4453,22 @@ if (!canvas) { /* no-op */ } else if (reduced) {
 
   function renderTier(tier) {
     currentTier = tier;
-    var data = tierData[tier];
+    // V3.2: tier now means "top N fit-scored agents" — Starter=3, Growth=6.
+    // Re-score against current quiz answers and update recommendedIds so the
+    // grid actually re-renders with the new agent set (was a known bug:
+    // price changed but agents stayed the same).
+    var n = (tier === 'growth') ? 6 : 3;
+    var scores = computeAgentScores(quizAnswers);
+    recommendedIds = topNAgents(scores, n);
     selectedAgents = {};
-    data.agents.forEach(function(id) { selectedAgents[id] = true; });
+    recommendedIds.forEach(function(id) { selectedAgents[id] = true; });
     showingAllAgents = false;
 
     var badge = document.getElementById('tierBadge');
-    if (badge) badge.textContent = data.label;
+    if (badge) {
+      var labelMap = { starter: 'Starter', growth: 'Growth' };
+      badge.textContent = labelMap[tier] || tier;
+    }
 
     document.querySelectorAll('.tier-switch-btn').forEach(function(btn) {
       var onclick = btn.getAttribute('onclick') || '';
@@ -4363,12 +4569,15 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     } catch(e) {}
 
     if (ctaType === 'audit') {
-      if (window.Calendly && window.Calendly.initPopupWidget) {
-        window.Calendly.initPopupWidget({
-          url: 'https://calendly.com/stiloaipartners/free-ai-strategy-call?hide_gdpr_banner=1&background_color=0d0d11&text_color=f4f1ea&primary_color=3b82f6'
-        });
-      } else {
-        window.open('https://calendly.com/stiloaipartners/free-ai-strategy-call', '_blank');
+      // V3.2: replaced Calendly with Google Calendar slot picker.
+      // Pre-fill the modal with the data we already have from the quiz.
+      var prefill = {
+        name: payload.contact_name,
+        email: payload.email,
+        business: payload.business_name
+      };
+      if (window.openBookingModal) {
+        window.openBookingModal(prefill);
       }
       return false;
     }
@@ -4417,9 +4626,149 @@ if (!canvas) { /* no-op */ } else if (reduced) {
 })();
 </script>
 
-<!-- Calendly Popup Widget -->
-<link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
-<script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
+<!-- ===== GOOGLE CALENDAR BOOKING — modal logic (replaces Calendly, 2026-05-27) ===== -->
+<script>
+(function(){
+  var modal = document.getElementById('bookingModal');
+  if (!modal) return;
+  var slotsHost = document.getElementById('bookingSlots');
+  var formEl = document.getElementById('bookingForm');
+  var msgEl = document.getElementById('bookingMsg');
+  var btnConfirm = document.getElementById('bookingConfirmBtn');
+  var btnClose = document.getElementById('bookingClose');
+  var state = { slots: [], byDay: {}, dayOrder: [], expandedDay: null, selectedIso: null, prefill: {} };
+
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function dayKey(iso){return new Date(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});}
+  function timeLabel(iso){return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'});}
+
+  window.openBookingModal = function(prefill){
+    state.prefill = prefill || {};
+    msgEl.textContent = ''; msgEl.className = 'booking-msg';
+    formEl.style.display = 'none';
+    state.selectedIso = null;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (state.prefill.name)  document.getElementById('bookingName').value     = state.prefill.name;
+    if (state.prefill.email) document.getElementById('bookingEmail').value    = state.prefill.email;
+    if (state.prefill.business) document.getElementById('bookingBusiness').value = state.prefill.business;
+    loadSlots();
+  };
+  function closeModal(){
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  btnClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+  async function loadSlots(){
+    slotsHost.innerHTML = '<div style="padding:30px 0;text-align:center;color:rgba(255,255,255,0.7);font-size:13px;">Loading available times...</div>';
+    try {
+      var r = await fetch('/api/public/calendar-slots?days=7');
+      var data = await r.json();
+      if (!r.ok || !data.configured) {
+        slotsHost.innerHTML = '<div style="padding:18px;background:rgba(234,179,8,0.1);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:13px;">Online booking is being set up. Email <a href="mailto:remyleon@stiloaipartners.com" style="color:#5A7BE8;">remyleon@stiloaipartners.com</a> and we will set up a time directly.</div>';
+        return;
+      }
+      state.slots = data.slots || [];
+      state.byDay = {}; state.dayOrder = [];
+      state.slots.forEach(function(s){
+        var k = dayKey(s.start);
+        if (!state.byDay[k]) { state.byDay[k] = []; state.dayOrder.push(k); }
+        state.byDay[k].push(s);
+      });
+      state.expandedDay = state.dayOrder[0] || null;
+      renderSlots();
+    } catch (e) {
+      slotsHost.innerHTML = '<div style="padding:18px;color:#ef4444;font-size:13px;">Could not load times: ' + esc(e.message || e) + '</div>';
+    }
+  }
+
+  function renderSlots(){
+    if (!state.dayOrder.length) {
+      slotsHost.innerHTML = '<div style="padding:18px;color:rgba(255,255,255,0.7);font-size:13px;">No open slots in the next 7 business days. Email <a href="mailto:remyleon@stiloaipartners.com" style="color:#5A7BE8;">remyleon@stiloaipartners.com</a> directly.</div>';
+      return;
+    }
+    var dayRow = state.dayOrder.map(function(d){
+      var active = state.expandedDay === d ? ' active' : '';
+      return '<button type="button" class="day-btn' + active + '" data-day="' + esc(d) + '">'
+        + '<div>' + esc(d) + '</div>'
+        + '<div style="font-size:10px;font-weight:500;opacity:0.75;margin-top:2px;">' + state.byDay[d].length + ' slots</div>'
+        + '</button>';
+    }).join('');
+    var timeGrid = '';
+    if (state.expandedDay && state.byDay[state.expandedDay]) {
+      timeGrid = '<div style="font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:6px 0;">' + esc(state.expandedDay) + ' &middot; open times (ET)</div>'
+        + '<div class="time-grid">'
+        + state.byDay[state.expandedDay].map(function(s){
+            var active = state.selectedIso === s.start ? ' active' : '';
+            return '<button type="button" class="time-btn' + active + '" data-iso="' + esc(s.start) + '">' + esc(timeLabel(s.start)) + '</button>';
+          }).join('')
+        + '</div>';
+    }
+    slotsHost.innerHTML = '<div class="day-row">' + dayRow + '</div>' + timeGrid;
+    slotsHost.querySelectorAll('.day-btn').forEach(function(b){
+      b.addEventListener('click', function(){
+        state.expandedDay = b.dataset.day;
+        renderSlots();
+      });
+    });
+    slotsHost.querySelectorAll('.time-btn').forEach(function(b){
+      b.addEventListener('click', function(){
+        state.selectedIso = b.dataset.iso;
+        renderSlots();
+        formEl.style.display = 'flex';
+        msgEl.className = 'booking-msg ok';
+        msgEl.textContent = 'Selected: ' + new Date(state.selectedIso).toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}) + ' ET';
+      });
+    });
+  }
+
+  btnConfirm.addEventListener('click', async function(){
+    var name     = document.getElementById('bookingName').value.trim();
+    var email    = document.getElementById('bookingEmail').value.trim();
+    var business = document.getElementById('bookingBusiness').value.trim();
+    var notes    = document.getElementById('bookingNotes').value.trim();
+    if (!name || !email || !state.selectedIso) {
+      msgEl.className = 'booking-msg error';
+      msgEl.textContent = 'Name, email, and a selected time are all required.';
+      return;
+    }
+    btnConfirm.textContent = 'Booking...'; btnConfirm.disabled = true;
+    try {
+      var r = await fetch('/api/public/book-meeting', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_iso: state.selectedIso, email: email, name: name, business_name: business, notes: notes })
+      });
+      var data = await r.json();
+      if (!r.ok || !data.ok) {
+        msgEl.className = 'booking-msg error';
+        msgEl.textContent = 'Could not book: ' + (data.detail || data.error || 'unknown error');
+        btnConfirm.textContent = 'Book this time'; btnConfirm.disabled = false;
+        return;
+      }
+      msgEl.className = 'booking-msg ok';
+      msgEl.innerHTML = 'Booked! Check your inbox for the Google Calendar invite.' + (data.meet_link ? ' <a href="' + esc(data.meet_link) + '" target="_blank" style="color:#5A7BE8;">Meet link</a>' : '');
+      btnConfirm.textContent = 'Booked';
+      setTimeout(closeModal, 2500);
+    } catch (e) {
+      msgEl.className = 'booking-msg error';
+      msgEl.textContent = 'Network error: ' + (e.message || e);
+      btnConfirm.textContent = 'Book this time'; btnConfirm.disabled = false;
+    }
+  });
+
+  // Wire any "Book a call" link/button that hasn't been hooked into stiloCTA('audit')
+  document.querySelectorAll('a[href*="calendly.com"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      window.openBookingModal({});
+    });
+  });
+})();
+</script>
 
 
 </body>

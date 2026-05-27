@@ -133,12 +133,23 @@ module.exports = async function createCheckoutSession(req, res) {
   })();
 
   try {
+    // 2026-05-27: Stripe rejects `subscription_data.add_invoice_items` (not a
+    // valid nested key on current API). The one-time setup price IDs must be
+    // added to line_items directly. For subscription mode we mark them as
+    // setup-style line items (Stripe handles billing them once on first
+    // invoice when they're priced as one-time prices).
+    var combinedLineItems = lineItems.slice();
+    if (hasRecurring && setupInvoiceItems.length) {
+      // Each setupInvoiceItem already has shape { price, quantity }
+      setupInvoiceItems.forEach(function(item){ combinedLineItems.push(item); });
+    }
+
     const session = await stripe.checkout.sessions.create(
       Object.assign(
         {
           mode: hasRecurring ? 'subscription' : 'payment',
           payment_method_types: ['card'],
-          line_items: lineItems,
+          line_items: combinedLineItems,
           customer_email: body.email || undefined,
           allow_promotion_codes: true,
           success_url: successUrl,
@@ -146,7 +157,7 @@ module.exports = async function createCheckoutSession(req, res) {
           metadata: metadata,
         },
         hasRecurring
-          ? { subscription_data: { metadata: metadata, add_invoice_items: setupInvoiceItems } }
+          ? { subscription_data: { metadata: metadata } }
           : { payment_intent_data: { receipt_email: body.email || undefined } }
       )
     );
