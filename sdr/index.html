@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDR Dashboard | STILO AI Partners</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -28,14 +31,16 @@
             --red: #ef4444;
             --yellow: #eab308;
             --sidebar-width: 260px;
-            --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-accent: 'Instrument Serif', Georgia, serif;
+            --font-body: 'Geist', system-ui, sans-serif;
+            --font-mono: 'Geist Mono', ui-monospace, monospace;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             background: var(--bg-primary);
             color: var(--text-primary);
-            font-family: var(--font-display);
+            font-family: var(--font-body);
             font-size: 14px;
             line-height: 1.5;
             min-height: 100vh;

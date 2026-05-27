@@ -1337,24 +1337,37 @@
                 </div>
             </div>
 
-            <!-- Revenue tab -->
+            <!-- ============================================================
+                 Revenue tab — redesigned 2026-05-26 with marketing-site
+                 aesthetic. Three top cards (Sales / Current MRR / Clients),
+                 two big sections (Top Agents / Top Clients) with proper
+                 names + counts.
+                 ============================================================ -->
             <div class="page-content" id="page-revenue" style="display:none;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-                    <div>
-                        <h2 style="margin:0 0 6px 0;font-size:18px;">Revenue analytics</h2>
-                        <p style="margin:0;color:var(--text-secondary);font-size:13px;">MRR + churn computed from active subscriptions in <code style="background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:4px;font-size:12px;">client_agents</code> and the agent fee catalog.</p>
+                <div style="margin-bottom:32px;">
+                    <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:2.4rem;letter-spacing:-0.02em;text-transform:uppercase;">REVENUE</h2>
+                </div>
+
+                <!-- 3 hero cards -->
+                <div id="revenueGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:36px;"></div>
+
+                <!-- TOP AGENTS BY MRR -->
+                <section style="margin-bottom:32px;">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;border-bottom:1px solid var(--border-subtle);padding-bottom:14px;">
+                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">TOP AGENTS BY MRR</h3>
+                        <span id="revenueByAgentCount" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;"></span>
                     </div>
-                    <button class="quick-action-btn" onclick="loadRevenue()">Refresh</button>
-                </div>
-                <div id="revenueGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px;"></div>
-                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">
-                    <h3 style="margin:0 0 12px 0;font-size:14px;">MRR by agent type</h3>
-                    <div id="revenueByAgent"></div>
-                </div>
-                <div style="margin-top:16px;background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">
-                    <h3 style="margin:0 0 12px 0;font-size:14px;">Top clients by MRR</h3>
-                    <div id="revenueTopClients"></div>
-                </div>
+                    <div id="revenueByAgent" style="display:flex;flex-direction:column;gap:14px;"></div>
+                </section>
+
+                <!-- TOP CLIENTS BY MRR -->
+                <section>
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;border-bottom:1px solid var(--border-subtle);padding-bottom:14px;">
+                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">TOP CLIENTS BY MRR</h3>
+                        <span id="revenueTopClientsCount" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;"></span>
+                    </div>
+                    <div id="revenueTopClients" style="display:flex;flex-direction:column;gap:0;"></div>
+                </section>
             </div>
 
             <!-- ============================================================
@@ -1602,6 +1615,22 @@
             try {
                 ensureFriendsAndFamilyClients();
             } catch (e) { console.warn('[ensureFriendsAndFamilyClients]', e); }
+
+            // Hash routing: if the URL has #revenue or any other valid page hash,
+            // switch to that tab instead of the default dashboard. Lets refresh
+            // stay on the current tab. Lead deep-links (#lead=ID) are handled
+            // separately by openProspectDrawer; ignore those here.
+            var hashPage = (window.location.hash || '').replace(/^#/, '').split('=')[0].split('&')[0];
+            if (hashPage && hashPage !== 'dashboard' && hashPage !== 'lead' && VALID_PAGES.indexOf(hashPage) >= 0) {
+                try { switchPage(hashPage, { replaceState: false }); } catch (e) {}
+            }
+            // Honor back/forward buttons + manual hash edits.
+            window.addEventListener('hashchange', function () {
+                var p = (window.location.hash || '').replace(/^#/, '').split('=')[0].split('&')[0];
+                if (p && VALID_PAGES.indexOf(p) >= 0) {
+                    switchPage(p, { replaceState: false });
+                }
+            });
         }
 
         // Hardcoded roster of clients we onboard outside Stripe. On admin
@@ -1719,13 +1748,29 @@
         /* ===========================================================
            Sidebar Navigation
            =========================================================== */
-        function switchPage(page) {
+        // Set of valid pages — used by switchPage() and by the hash-based
+        // routing on initial load. Add new tabs here so the URL refresh
+        // behavior picks them up automatically.
+        var VALID_PAGES = ['dashboard','clients','prospecting','agents','review','revenue','team','pipeline','deals','activity','support','settings'];
+
+        function switchPage(page, opts) {
+            opts = opts || {};
             // Update nav items
             document.querySelectorAll('.nav-item[data-page]').forEach(function(item) {
                 item.classList.remove('active');
             });
             var activeBtn = document.querySelector('.nav-item[data-page="' + page + '"]');
             if (activeBtn) activeBtn.classList.add('active');
+
+            // Persist the active page in the URL hash so browser refresh stays
+            // on the same tab. Skip when called from the popstate/hashchange
+            // listener itself (replaceState=false) so we don't recurse.
+            if (opts.replaceState !== false && VALID_PAGES.indexOf(page) >= 0) {
+                var newHash = '#' + page;
+                if (window.location.hash !== newHash) {
+                    history.replaceState(null, '', newHash);
+                }
+            }
 
             // Update page title
             var titles = {
@@ -1734,6 +1779,10 @@
                 prospecting: 'Leads',
                 agents: 'Agents',
                 revenue: 'Revenue',
+                team: 'Team',
+                pipeline: 'Pipeline',
+                deals: 'Deals',
+                activity: 'Activity',
                 support: 'Support',
                 review: 'Pending Review',
                 settings: 'Settings'
@@ -2971,82 +3020,193 @@
         /* ============================================================
            Revenue tab
            ============================================================ */
+        // Human-facing display names for agent codes. Used by the Revenue tab.
+        // Keep in sync with sites/stilo-ai/api/_agents.js but no need to be exhaustive —
+        // this is purely cosmetic for the Top Agents card.
+        var AGENT_DISPLAY = {
+            echo:    { name: 'Receptionist',          note: '' },
+            ignite:  { name: 'Outbound Lead Caller',  note: '' },
+            revive:  { name: 'Customer Reactivation', note: '' },
+            scout:   { name: 'Lead Generator',        note: 'B2B leads only' },
+            forge:   { name: 'Website Builder',       note: '' },
+            signal:  { name: 'AI SEO',                note: '' },
+            oracle:  { name: 'Growth Intelligence',   note: '' },
+            flux:    { name: 'Custom Automations',    note: '' },
+            pitch:   { name: 'AI Sales Agent',        note: '' },
+            business_profile: { name: 'Business Profile', note: 'no fee' }
+        };
+
+        function monthDiff(then, now) {
+            // Whole months between two dates. April → May = 1. Same month = 0.
+            return (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
+        }
+
         async function loadRevenue() {
             var grid = document.getElementById('revenueGrid');
             var byAgent = document.getElementById('revenueByAgent');
             var topClients = document.getElementById('revenueTopClients');
+            var byAgentCount = document.getElementById('revenueByAgentCount');
+            var topClientsCount = document.getElementById('revenueTopClientsCount');
             if (!grid) return;
-            grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);font-size:13px;">Computing...</div>';
+            grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);font-size:13px;">Computing…</div>';
             byAgent.innerHTML = '';
             topClients.innerHTML = '';
 
             try {
-                // MRR is computed from active client_agents × monthly fee. This is the
-                // dashboard truth; Stripe truth is handled by the existing list-invoices
-                // endpoint, surfaced separately on each client.
-                var { data: agents, error } = await sb.from('client_agents')
-                    .select('id, client_id, agent_type, status, created_at, activated_at, clients(business_name, email)');
-                if (error) throw error;
-                var rows = (agents || []).filter(function(r){
-                    var em = (r.clients && r.clients.email) || '';
+                // Pull deals (source of truth for Sales — has setup + monthly + closed_at)
+                // and active client_agents (source of truth for who's currently live).
+                var [dealsRes, agentsRes] = await Promise.all([
+                    sb.from('deals')
+                        .select('id, client_id, agent_codes, upfront_fee_cents, monthly_retainer_cents, stage, closed_at, paid_at, clients(business_name, email)')
+                        .neq('stage', 'CLOSED_LOST'),
+                    sb.from('client_agents')
+                        .select('id, client_id, agent_type, status, clients(business_name, email)')
+                ]);
+                if (dealsRes.error) throw dealsRes.error;
+                if (agentsRes.error) throw agentsRes.error;
+                var deals = (dealsRes.data || []).filter(function(d){
+                    var em = (d.clients && d.clients.email) || '';
                     return !ADMIN_EMAILS.includes(em.toLowerCase());
                 });
-
-                var mrrCents = 0, activeCount = 0, onboardingCount = 0, pausedCount = 0;
-                var byType = {};
-                var byClient = {};
-                rows.forEach(function(r){
-                    var monthly = AGENT_FEES_MONTHLY[r.agent_type] || 0;
-                    if (r.status === 'active') {
-                        mrrCents += monthly;
-                        activeCount++;
-                        byType[r.agent_type] = (byType[r.agent_type] || 0) + monthly;
-                        var ck = r.client_id;
-                        if (!byClient[ck]) byClient[ck] = { name: (r.clients && r.clients.business_name) || (r.clients && r.clients.email) || '—', cents: 0 };
-                        byClient[ck].cents += monthly;
-                    } else if (r.status === 'onboarding') onboardingCount++;
-                    else if (r.status === 'paused') pausedCount++;
+                var agentsRows = (agentsRes.data || []).filter(function(r){
+                    var em = (r.clients && r.clients.email) || '';
+                    return r.status === 'active' && !ADMIN_EMAILS.includes(em.toLowerCase()) && r.agent_type !== 'business_profile';
                 });
 
-                var fmtUsd = function(cents){ return '$' + (cents/100).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
-                grid.innerHTML = [
-                    { label: 'Current MRR', value: fmtUsd(mrrCents), sub: 'from active subs' },
-                    { label: 'Active deployments', value: activeCount, sub: 'across all agents' },
-                    { label: 'Onboarding', value: onboardingCount, sub: 'awaiting setup' },
-                    { label: 'Paused', value: pausedCount, sub: 'temporarily off' },
-                ].map(function(c){
-                    return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;">'
-                        + '<div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">' + c.label + '</div>'
-                        + '<div style="font-size:26px;font-weight:700;margin-top:6px;">' + c.value + '</div>'
-                        + '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">' + c.sub + '</div>'
+                var now = new Date();
+                var currentMonth = now.getMonth();
+                var currentYear = now.getFullYear();
+
+                // ─── Sales (all-time): setup + monthly × months active ───
+                // Every paid deal contributes: full upfront once + monthly retainer for each
+                // calendar month since closed_at (inclusive of the close month, so a deal
+                // that closed today contributes 1 month of monthly retainer).
+                var salesCents = 0;
+                // ─── Current MRR: recurring from active clients + setup fees from
+                // deals that closed THIS calendar month.
+                var currentMrrCents = 0;
+
+                deals.forEach(function(d){
+                    var setup = d.upfront_fee_cents || 0;
+                    var monthly = d.monthly_retainer_cents || 0;
+                    var closedAt = d.closed_at ? new Date(d.closed_at) : null;
+                    if (!closedAt) return;
+
+                    var monthsSinceClose = Math.max(0, monthDiff(closedAt, now)) + 1; // include current month
+                    salesCents += setup + (monthly * monthsSinceClose);
+
+                    var closedThisMonth = closedAt.getMonth() === currentMonth && closedAt.getFullYear() === currentYear;
+                    if (closedThisMonth) currentMrrCents += setup;
+                    currentMrrCents += monthly;  // recurring counts this month for every active deal
+                });
+
+                // ─── Clients: distinct active clients (from client_agents)
+                var activeClientIds = new Set(agentsRows.map(function(r){ return r.client_id; }));
+                var clientCount = activeClientIds.size;
+
+                // ─── Top agents by MRR: sum monthly fees × active subscribers per agent
+                var perAgent = {};  // { agentType: { mrr, clientCount } }
+                agentsRows.forEach(function(r){
+                    var monthly = AGENT_FEES_MONTHLY[r.agent_type] || 0;
+                    if (!perAgent[r.agent_type]) perAgent[r.agent_type] = { mrr: 0, clients: new Set() };
+                    perAgent[r.agent_type].mrr += monthly;
+                    perAgent[r.agent_type].clients.add(r.client_id);
+                });
+
+                // ─── Top clients by MRR: sum across their active agents
+                var perClient = {};
+                agentsRows.forEach(function(r){
+                    var monthly = AGENT_FEES_MONTHLY[r.agent_type] || 0;
+                    var name = (r.clients && r.clients.business_name) || (r.clients && r.clients.email) || '—';
+                    if (!perClient[r.client_id]) perClient[r.client_id] = { name: name, cents: 0, agents: 0 };
+                    perClient[r.client_id].cents += monthly;
+                    perClient[r.client_id].agents += 1;
+                });
+
+                var fmtUsd = function(cents){
+                    var n = cents / 100;
+                    return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                };
+
+                // ============= 3 HERO CARDS =============
+                var heroCards = [
+                    {
+                        eyebrow: 'SALES',
+                        value: fmtUsd(salesCents),
+                        meta: 'Setup fees + monthly retainers · lifetime'
+                    },
+                    {
+                        eyebrow: 'CURRENT MRR',
+                        value: fmtUsd(currentMrrCents),
+                        meta: 'This month\'s recurring + new setup fees'
+                    },
+                    {
+                        eyebrow: 'CLIENTS',
+                        value: clientCount.toString(),
+                        meta: clientCount === 1 ? 'Active deployment' : 'Active deployments'
+                    }
+                ];
+                grid.innerHTML = heroCards.map(function(c){
+                    return ''
+                        + '<div style="background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01));border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:28px 28px 26px;position:relative;overflow:hidden;">'
+                          + '<div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:500;letter-spacing:0.18em;color:var(--text-secondary);margin-bottom:18px;">' + c.eyebrow + '</div>'
+                          + '<div style="font-family:var(--font-display);font-weight:600;font-size:2.6rem;letter-spacing:-0.025em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + c.value + '</div>'
+                          + '<div style="font-size:0.8rem;color:var(--text-tertiary);margin-top:14px;line-height:1.4;">' + c.meta + '</div>'
                         + '</div>';
                 }).join('');
 
-                // MRR by agent type — simple bar table
-                var typeEntries = Object.entries(byType).sort(function(a,b){ return b[1] - a[1]; });
-                if (typeEntries.length === 0) {
-                    byAgent.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">No active deployments yet.</div>';
+                // ============= TOP AGENTS BY MRR =============
+                var agentEntries = Object.entries(perAgent)
+                    .map(function(e){ return { code: e[0], mrr: e[1].mrr, clientCount: e[1].clients.size }; })
+                    .sort(function(a,b){ return b.mrr - a.mrr || b.clientCount - a.clientCount; });
+
+                byAgentCount.textContent = agentEntries.length + (agentEntries.length === 1 ? ' AGENT' : ' AGENTS');
+
+                if (!agentEntries.length) {
+                    byAgent.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No active deployments yet.</div>';
                 } else {
-                    var maxCents = typeEntries[0][1] || 1;
-                    byAgent.innerHTML = typeEntries.map(function(e){
-                        var pct = Math.round((e[1] / maxCents) * 100);
-                        return '<div style="display:grid;grid-template-columns:80px 1fr 100px;gap:10px;align-items:center;padding:6px 0;">'
-                            + '<span style="font-size:12px;font-weight:600;">' + e[0].toUpperCase() + '</span>'
-                            + '<div style="height:8px;background:rgba(37,99,235,0.08);border-radius:4px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:#2563EB;"></div></div>'
-                            + '<span style="font-size:13px;text-align:right;">' + fmtUsd(e[1]) + '</span>'
+                    var maxMrr = agentEntries[0].mrr || 1;
+                    byAgent.innerHTML = agentEntries.map(function(e){
+                        var meta = AGENT_DISPLAY[e.code] || { name: e.code, note: '' };
+                        var pct = Math.round((e.mrr / maxMrr) * 100);
+                        return ''
+                            + '<div style="display:grid;grid-template-columns:1.8fr 1fr 0.6fr;gap:24px;align-items:center;padding:18px 22px;background:rgba(255,255,255,0.018);border:1px solid var(--border-subtle);border-radius:var(--radius-md);">'
+                              + '<div style="min-width:0;">'
+                                + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.05rem;color:var(--text-primary);letter-spacing:-0.01em;">' + escapeAdminHtml(meta.name) + '</div>'
+                                + (meta.note ? '<div style="font-family:var(--font-accent);font-style:italic;font-size:0.82rem;color:var(--text-tertiary);margin-top:3px;">' + escapeAdminHtml(meta.note) + '</div>' : '')
+                              + '</div>'
+                              + '<div style="height:6px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;">'
+                                + '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,var(--purple-primary),var(--purple-light));border-radius:999px;"></div>'
+                              + '</div>'
+                              + '<div style="text-align:right;">'
+                                + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + fmtUsd(e.mrr) + '</div>'
+                                + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);letter-spacing:0.06em;margin-top:2px;">' + e.clientCount + (e.clientCount === 1 ? ' CLIENT' : ' CLIENTS') + '</div>'
+                              + '</div>'
                             + '</div>';
                     }).join('');
                 }
 
-                // Top clients
-                var clientEntries = Object.entries(byClient).sort(function(a,b){ return b[1].cents - a[1].cents; }).slice(0, 10);
-                if (clientEntries.length === 0) {
-                    topClients.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">No revenue yet.</div>';
+                // ============= TOP CLIENTS BY MRR =============
+                var clientEntries = Object.entries(perClient)
+                    .map(function(e){ return { id: e[0], name: e[1].name, cents: e[1].cents, agents: e[1].agents }; })
+                    .sort(function(a,b){ return b.cents - a.cents; })
+                    .slice(0, 12);
+
+                topClientsCount.textContent = clientEntries.length + (clientEntries.length === 1 ? ' CLIENT' : ' CLIENTS');
+
+                if (!clientEntries.length) {
+                    topClients.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No revenue yet.</div>';
                 } else {
-                    topClients.innerHTML = clientEntries.map(function(e){
-                        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(37,99,235,0.08);font-size:13px;">'
-                            + '<span style="cursor:pointer;color:var(--text-primary);" onclick="openClientDrawer(\'' + e[0] + '\')">' + escapeAdminHtml(e[1].name) + '</span>'
-                            + '<strong>' + fmtUsd(e[1].cents) + '</strong>'
+                    topClients.innerHTML = clientEntries.map(function(e, i){
+                        var rank = String(i + 1).padStart(2, '0');
+                        return ''
+                            + '<div onclick="openClientDrawer(\'' + e.id + '\')" style="display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;padding:20px 4px;border-bottom:1px solid var(--border-subtle);cursor:pointer;transition:background var(--transition-fast);" onmouseover="this.style.background=\'rgba(255,255,255,0.018)\'" onmouseout="this.style.background=\'transparent\'">'
+                              + '<div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted);letter-spacing:0.1em;font-variant-numeric:tabular-nums;">' + rank + '</div>'
+                              + '<div style="min-width:0;">'
+                                + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.25rem;color:var(--text-primary);letter-spacing:-0.015em;">' + escapeAdminHtml(e.name) + '</div>'
+                                + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-tertiary);letter-spacing:0.08em;margin-top:4px;">' + e.agents + (e.agents === 1 ? ' AGENT ACTIVE' : ' AGENTS ACTIVE') + '</div>'
+                              + '</div>'
+                              + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.4rem;color:var(--text-primary);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;text-align:right;">' + fmtUsd(e.cents) + '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;margin-left:4px;">/MO</span></div>'
                             + '</div>';
                     }).join('');
                 }
