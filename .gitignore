@@ -8,3 +8,6 @@ package-lock.json
 .claude/
 scripts/secrets.json
 .env*.local
+
+# Competitor reference screenshots — internal only, do not ship
+CompetitorSites/
