@@ -1130,13 +1130,17 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
                     </svg>
                     Agents
+                    <span id="pendingReviewBadge" style="display:none;margin-left:auto;background:#3b82f6;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;" title="Pending Review submissions"></span>
                 </button>
-                <button class="nav-item" data-page="review" onclick="switchPage('review')">
+                <!-- Sales — single nav item that lands on Pipeline by default, with
+                     a sub-tab strip rendered at the top of #page-pipeline /
+                     #page-deals / #page-activity that lets users jump between
+                     the three lifecycle views without leaving the section. -->
+                <button class="nav-item" data-page="sales" onclick="switchSalesTab('pipeline')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25Zm9.75-9.75A2.25 2.25 0 0 1 15.75 3.75H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
                     </svg>
-                    Pending Review
-                    <span id="pendingReviewBadge" style="display:none;margin-left:auto;background:#3b82f6;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;"></span>
+                    Sales
                 </button>
                 <button class="nav-item" data-page="revenue" onclick="switchPage('revenue')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -1149,31 +1153,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
                     </svg>
                     Team
-                </button>
-                <button class="nav-item" data-page="pipeline" onclick="switchPage('pipeline')">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25Zm9.75-9.75A2.25 2.25 0 0 1 15.75 3.75H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
-                    </svg>
-                    Pipeline
-                </button>
-                <button class="nav-item" data-page="deals" onclick="switchPage('deals')">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
-                    </svg>
-                    Deals
-                </button>
-                <button class="nav-item" data-page="activity" onclick="switchPage('activity')">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25"/>
-                    </svg>
-                    Activity
-                </button>
-                <button class="nav-item" data-page="support" onclick="switchPage('support')">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/>
-                    </svg>
-                    Support
-                    <span id="supportUnreadBadge" style="display:none;margin-left:auto;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;"></span>
                 </button>
                 <button class="nav-item" data-page="settings" onclick="switchPage('settings')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -1199,8 +1178,13 @@
              ============================================================ -->
         <main class="main-content">
             <div class="main-header">
-                <h1 id="pageTitle">Dashboard</h1>
-                <span class="header-meta" id="headerDate"></span>
+                <span class="header-meta" id="headerDate" style="margin-left:auto;"></span>
+                <button type="button" id="supportHeaderBtn" onclick="switchPage('support')" title="Support inbox" aria-label="Support inbox" style="position:relative;margin-left:14px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-secondary);cursor:pointer;transition:all 150ms;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/>
+                    </svg>
+                    <span id="supportUnreadBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;line-height:1;min-width:14px;text-align:center;"></span>
+                </button>
             </div>
 
             <!-- ============================================================
@@ -1357,8 +1341,8 @@
                          Defaults to whoever is signed in (set in grantAdminAccess). -->
                     <div id="sdrSelector" style="position:relative;">
                         <button id="sdrSelectorBtn" type="button" onclick="toggleSdrMenu(event)" style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;">
-                            <span id="sdrSelectorAvatar" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--blue);color:white;font-size:11px;font-weight:700;letter-spacing:0.02em;">RL</span>
-                            <span id="sdrSelectorName">Remy Leon</span>
+                            <span id="sdrSelectorAvatar" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--text-tertiary);color:white;font-size:10px;font-weight:700;letter-spacing:0.02em;">ALL</span>
+                            <span id="sdrSelectorName">All SDRs</span>
                             <span style="color:var(--text-muted);font-size:10px;">&#9662;</span>
                         </button>
                         <div id="sdrSelectorMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);min-width:200px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;padding:4px;">
@@ -1539,6 +1523,17 @@
                         </select>
                     </div>
                 </div>
+                <!-- Pending Review banner — folded into the Agents tab so it
+                     surfaces inline instead of behind a separate nav item.
+                     Auto-hidden when the queue is empty (refreshPendingReviewBadge
+                     toggles display). Clicking jumps to the Pending Review page. -->
+                <div id="agentsPendingReviewBanner" style="display:none;margin-bottom:18px;padding:14px 18px;background:linear-gradient(90deg,rgba(59,130,246,0.10),rgba(59,130,246,0.04));border:1px solid rgba(59,130,246,0.35);border-radius:10px;align-items:center;gap:14px;cursor:pointer;" onclick="switchPage('review')">
+                    <div style="flex:1;">
+                        <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Pending pre-flight review</div>
+                        <div style="font-size:12px;color:var(--text-secondary);"><span id="agentsPendingReviewCount">0</span> agents waiting for your approval before going live.</div>
+                    </div>
+                    <span style="padding:6px 12px;background:var(--blue);color:white;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;">Review →</span>
+                </div>
                 <section class="stilo-section">
                     <div class="stilo-section-header">
                         <h3 class="stilo-section-title">EVERY DEPLOYMENT</h3>
@@ -1550,7 +1545,9 @@
                 </section>
             </div>
 
-            <!-- Pending Review tab -->
+            <!-- Pending Review page — still routable at #review, but no longer
+                 in the sidebar nav. Reached via the Pending Review banner that
+                 lives inside the Agents tab. -->
             <div class="page-content" id="page-review" style="display:none;">
                 <div class="stilo-page-header-row">
                     <h2 class="stilo-page-h1">PENDING REVIEW</h2>
@@ -1574,27 +1571,28 @@
                  names + counts.
                  ============================================================ -->
             <div class="page-content" id="page-revenue" style="display:none;">
-                <div style="margin-bottom:32px;">
-                    <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:2.4rem;letter-spacing:-0.02em;text-transform:uppercase;">REVENUE</h2>
+                <div class="stilo-page-header-row">
+                    <h2 class="stilo-page-h1">REVENUE</h2>
+                    <span class="stilo-page-meta">Lifetime · per agent · per client</span>
                 </div>
 
                 <!-- 3 hero cards -->
                 <div id="revenueGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:36px;"></div>
 
                 <!-- AGENTS — lifetime revenue per agent, progress bar = % of total -->
-                <section style="margin-bottom:32px;">
-                    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;border-bottom:1px solid var(--border-subtle);padding-bottom:14px;">
-                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">AGENTS</h3>
-                        <span id="revenueByAgentCount" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;"></span>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">AGENTS</h3>
+                        <span class="stilo-section-count" id="revenueByAgentCount"></span>
                     </div>
                     <div id="revenueByAgent" style="display:flex;flex-direction:column;gap:14px;"></div>
                 </section>
 
                 <!-- CLIENTS — lifetime revenue per client -->
-                <section>
-                    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;border-bottom:1px solid var(--border-subtle);padding-bottom:14px;">
-                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">CLIENTS</h3>
-                        <span id="revenueTopClientsCount" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;"></span>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">CLIENTS</h3>
+                        <span class="stilo-section-count" id="revenueTopClientsCount"></span>
                     </div>
                     <div id="revenueTopClients" style="display:flex;flex-direction:column;gap:0;"></div>
                 </section>
@@ -1651,11 +1649,16 @@
                 <div id="sdrDetailOverlay" onclick="closeSdrDetailDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
             </div>
 
-            <!-- Pipeline tab -->
+            <!-- Pipeline tab — part of the unified Sales section. -->
             <div class="page-content" id="page-pipeline" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">PIPELINE</h2>
-                    <span class="stilo-page-meta">Every deal · grouped by stage</span>
+                    <h2 class="stilo-page-h1">SALES</h2>
+                    <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
+                </div>
+                <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
+                    <button type="button" class="sales-subtab" data-sales-tab="pipeline" onclick="switchSalesTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;">Pipeline</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="deals" onclick="switchSalesTab('deals')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Deals</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="activity" onclick="switchSalesTab('activity')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Activity</button>
                 </div>
                 <section class="stilo-section">
                     <div class="stilo-section-header">
@@ -1668,11 +1671,16 @@
                 </section>
             </div>
 
-            <!-- Deals tab -->
+            <!-- Deals tab — part of the unified Sales section. -->
             <div class="page-content" id="page-deals" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">DEALS</h2>
-                    <span class="stilo-page-meta">Click row for activity · mark paid for wires</span>
+                    <h2 class="stilo-page-h1">SALES</h2>
+                    <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
+                </div>
+                <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
+                    <button type="button" class="sales-subtab" data-sales-tab="pipeline" onclick="switchSalesTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Pipeline</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="deals" onclick="switchSalesTab('deals')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;">Deals</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="activity" onclick="switchSalesTab('activity')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Activity</button>
                 </div>
                 <section class="stilo-section">
                     <div class="stilo-section-header">
@@ -1685,11 +1693,16 @@
                 </section>
             </div>
 
-            <!-- Activity Feed tab -->
+            <!-- Activity Feed tab — part of the unified Sales section. -->
             <div class="page-content" id="page-activity" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <h2 class="stilo-page-h1">ACTIVITY</h2>
-                    <span class="stilo-page-meta">Every deal touchpoint · newest first</span>
+                    <h2 class="stilo-page-h1">SALES</h2>
+                    <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
+                </div>
+                <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
+                    <button type="button" class="sales-subtab" data-sales-tab="pipeline" onclick="switchSalesTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Pipeline</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="deals" onclick="switchSalesTab('deals')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Deals</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="activity" onclick="switchSalesTab('activity')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;">Activity</button>
                 </div>
                 <section class="stilo-section">
                     <div class="stilo-section-header">
@@ -1824,15 +1837,29 @@
             var email = session && session.user && session.user.email || null;
             var info = sdrFromEmail(email);
             CURRENT_USER = { email: email, sdrKey: info.sdrKey, displayName: info.displayName };
-            // Default the prospecting SDR filter to "me" so Remy lands on his leads.
-            if (typeof prospectState !== 'undefined' && info.sdrKey) {
-                prospectState.filters.sdr = info.sdrKey;
-                var nameEl = document.getElementById('sdrSelectorName');
-                var avEl = document.getElementById('sdrSelectorAvatar');
-                if (nameEl) nameEl.textContent = info.displayName || 'Remy Leon';
-                if (avEl) {
-                    avEl.textContent = info.sdrKey === 'david' ? 'DC' : 'RL';
-                    avEl.style.background = info.sdrKey === 'david' ? 'var(--orange)' : 'var(--blue)';
+            // Admins default to "All SDRs" so every rep's leads + booked meetings
+            // are visible the moment the page loads. They can still pick a single
+            // SDR from the selector. SDRs (non-admins) stay scoped to themselves.
+            if (typeof prospectState !== 'undefined') {
+                var isAdminUser = ADMIN_EMAILS.indexOf((email || '').toLowerCase()) >= 0;
+                if (isAdminUser) {
+                    prospectState.filters.sdr = '';
+                    var nameEl = document.getElementById('sdrSelectorName');
+                    var avEl = document.getElementById('sdrSelectorAvatar');
+                    if (nameEl) nameEl.textContent = 'All SDRs';
+                    if (avEl) {
+                        avEl.textContent = 'ALL';
+                        avEl.style.background = 'var(--text-tertiary)';
+                    }
+                } else if (info.sdrKey) {
+                    prospectState.filters.sdr = info.sdrKey;
+                    var nameEl2 = document.getElementById('sdrSelectorName');
+                    var avEl2 = document.getElementById('sdrSelectorAvatar');
+                    if (nameEl2) nameEl2.textContent = info.displayName || email;
+                    if (avEl2) {
+                        avEl2.textContent = info.sdrKey === 'david' ? 'DC' : 'RL';
+                        avEl2.style.background = info.sdrKey === 'david' ? 'var(--orange)' : 'var(--blue)';
+                    }
                 }
             }
             // Kick off data load now that we know the user is an admin
@@ -1955,9 +1982,15 @@
                 if (!resp.ok) return;
                 var data = await resp.json();
                 var badge = document.getElementById('pendingReviewBadge');
-                if (!badge) return;
-                if (data.count > 0) { badge.style.display = ''; badge.textContent = String(data.count); }
-                else { badge.style.display = 'none'; }
+                var banner = document.getElementById('agentsPendingReviewBanner');
+                var countEl = document.getElementById('agentsPendingReviewCount');
+                var show = data.count > 0;
+                if (badge) {
+                    badge.style.display = show ? '' : 'none';
+                    badge.textContent = String(data.count);
+                }
+                if (banner) banner.style.display = show ? 'flex' : 'none';
+                if (countEl) countEl.textContent = String(data.count);
             } catch (e) {}
         }
 
@@ -2003,11 +2036,16 @@
 
         function switchPage(page, opts) {
             opts = opts || {};
-            // Update nav items
+            // Update nav items. Pipeline / Deals / Activity all live under
+            // the single "Sales" nav button — highlight it for any of those.
+            // Pending Review folds under Agents.
             document.querySelectorAll('.nav-item[data-page]').forEach(function(item) {
                 item.classList.remove('active');
             });
-            var activeBtn = document.querySelector('.nav-item[data-page="' + page + '"]');
+            var navHighlightKey = page;
+            if (page === 'pipeline' || page === 'deals' || page === 'activity') navHighlightKey = 'sales';
+            if (page === 'review') navHighlightKey = 'agents';
+            var activeBtn = document.querySelector('.nav-item[data-page="' + navHighlightKey + '"]');
             if (activeBtn) activeBtn.classList.add('active');
 
             // Persist the active page in the URL hash so browser refresh stays
@@ -2020,22 +2058,24 @@
                 }
             }
 
-            // Update page title
+            // Update browser tab title (the in-page h2 is what users see;
+            // the old sticky-header h1 was removed to kill the duplicate title).
             var titles = {
                 dashboard: 'Dashboard',
                 clients: 'Clients',
                 prospecting: 'Leads',
+                sales: 'Sales',
                 agents: 'Agents',
                 revenue: 'Revenue',
                 team: 'Team',
-                pipeline: 'Pipeline',
-                deals: 'Deals',
-                activity: 'Activity',
+                pipeline: 'Sales · Pipeline',
+                deals: 'Sales · Deals',
+                activity: 'Sales · Activity',
                 support: 'Support',
                 review: 'Pending Review',
                 settings: 'Settings'
             };
-            document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+            document.title = 'STILO Admin — ' + (titles[page] || 'Dashboard');
 
             // Show/hide pages
             document.querySelectorAll('.page-content').forEach(function(el) {
@@ -2066,6 +2106,21 @@
 
             // Close sidebar on mobile after selection
             closeSidebar();
+        }
+
+        /* Sales sub-tab router — Pipeline / Deals / Activity all live under
+           the single Sales nav item now. switchSalesTab routes to the right
+           page-content panel and updates the in-page sub-tab strip styling.
+           Accepts 'pipeline' (default), 'deals', or 'activity'. */
+        function switchSalesTab(name) {
+            var target = (name === 'deals' || name === 'activity') ? name : 'pipeline';
+            switchPage(target);
+            // Style every sales sub-tab pill so only the active one is solid.
+            document.querySelectorAll('.sales-subtab').forEach(function(btn) {
+                var isActive = btn.getAttribute('data-sales-tab') === target;
+                btn.style.borderBottom = isActive ? '3px solid var(--blue)' : '3px solid transparent';
+                btn.style.opacity = isActive ? '1' : '0.55';
+            });
         }
 
 
@@ -3197,10 +3252,15 @@
                 var data = await resp.json().catch(function() { return {}; });
                 if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
                 var badge = document.getElementById('pendingReviewBadge');
+                var banner = document.getElementById('agentsPendingReviewBanner');
+                var countEl = document.getElementById('agentsPendingReviewCount');
+                var show = data.count > 0;
                 if (badge) {
-                    if (data.count > 0) { badge.style.display = ''; badge.textContent = String(data.count); }
-                    else { badge.style.display = 'none'; }
+                    badge.style.display = show ? '' : 'none';
+                    badge.textContent = String(data.count);
                 }
+                if (banner) banner.style.display = show ? 'flex' : 'none';
+                if (countEl) countEl.textContent = String(data.count);
                 if (!data.items || data.items.length === 0) {
                     wrap.innerHTML = '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:32px;text-align:center;color:var(--text-secondary);font-size:13px;">No agents waiting for review. When a client submits, it appears here.</div>';
                     return;
@@ -3496,16 +3556,22 @@
                 if (!clientEntries.length) {
                     topClients.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No revenue yet.</div>';
                 } else {
+                    // Match the Agents row layout: name on the left, dollar amount
+                    // on top with the unit label ("LIFETIME") stacked underneath in
+                    // mono caps. Numbers above, labels below — consistent across
+                    // every row in the Revenue tab.
                     topClients.innerHTML = clientEntries.map(function(e, i){
                         var rank = String(i + 1).padStart(2, '0');
                         return ''
-                            + '<div onclick="openClientDrawer(\'' + e.id + '\')" style="display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;padding:20px 4px;border-bottom:1px solid var(--border-subtle);cursor:pointer;transition:background var(--transition-fast);" onmouseover="this.style.background=\'rgba(255,255,255,0.018)\'" onmouseout="this.style.background=\'transparent\'">'
+                            + '<div onclick="openClientDrawer(\'' + e.id + '\')" style="display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;padding:18px 22px;background:rgba(255,255,255,0.018);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:14px;cursor:pointer;transition:background var(--transition-fast);" onmouseover="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.018)\'">'
                               + '<div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted);letter-spacing:0.1em;font-variant-numeric:tabular-nums;">' + rank + '</div>'
                               + '<div style="min-width:0;">'
-                                + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.25rem;color:var(--text-primary);letter-spacing:-0.015em;">' + escapeAdminHtml(e.name) + '</div>'
-                                + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-tertiary);letter-spacing:0.08em;margin-top:4px;">' + e.agents + (e.agents === 1 ? ' AGENT ACTIVE' : ' AGENTS ACTIVE') + '</div>'
+                                + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.05rem;color:var(--text-primary);letter-spacing:-0.01em;">' + escapeAdminHtml(e.name) + '</div>'
                               + '</div>'
-                              + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.4rem;color:var(--text-primary);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;text-align:right;">' + fmtUsd(e.cents) + '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;margin-left:4px;">LIFETIME</span></div>'
+                              + '<div style="text-align:right;">'
+                                + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + fmtUsd(e.cents) + '</div>'
+                                + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);letter-spacing:0.06em;margin-top:2px;">' + e.agents + (e.agents === 1 ? ' AGENT' : ' AGENTS') + '</div>'
+                              + '</div>'
                             + '</div>';
                     }).join('');
                 }
@@ -4726,7 +4792,7 @@
             } else if (mode === 'callbacks') {
                 head = '<tr><th style="' + thNarrow + '">Due</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last call</th><th style="' + thNarrow + '">Action</th></tr>';
             } else if (mode === 'booked') {
-                head = '<tr><th style="' + thNarrow + '">Booked</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">When</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Booked by</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Meeting</th><th style="' + thNarrow + '">Action</th></tr>';
             } else {
                 head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Stage</th><th style="' + thNarrow + '">Last called</th></tr>';
             }
@@ -4788,15 +4854,60 @@
                         + '</tr>';
                 }
                 if (mode === 'booked') {
-                    var bookedAtStr = r.last_called_at ? new Date(r.last_called_at).toLocaleString() : '—';
+                    // "When" shows the meeting time (the actual upcoming call),
+                    // not when it was booked. Falls back to last_called_at for
+                    // legacy rows booked before we started persisting metadata.
+                    var meetingAt = r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at) : null;
+                    var fallbackAt = r.last_called_at ? new Date(r.last_called_at) : null;
+                    var whenDate = meetingAt || fallbackAt;
+                    var whenStr  = whenDate ? whenDate.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York' }) : '—';
+                    var isFuture = meetingAt && meetingAt.getTime() > Date.now();
+                    var whenColor = isFuture ? 'var(--green,#10b981)' : 'var(--text-muted)';
+
+                    // Booked-by badge — surfaces which SDR sat the meeting on
+                    // Remy's calendar so the admin "All SDRs" view can attribute.
+                    var bookedBy = r.meeting_booked_by_sdr || r.assigned_to || '';
+                    var bookedByName = bookedBy ? (sdrFromEmail(bookedBy).displayName || bookedBy.split('@')[0]) : '—';
+                    var bookedByInitials = bookedByName !== '—'
+                        ? bookedByName.split(/\s+/).map(function(p){ return p[0]; }).join('').slice(0,2).toUpperCase()
+                        : '';
+                    var bookedByCell = bookedByName === '—'
+                        ? '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">—</td>'
+                        : '<td style="padding:11px 10px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--blue);color:white;font-size:9px;font-weight:700;">' + escapeAdminHtml(bookedByInitials) + '</span><span style="font-size:12px;color:var(--text-secondary);">' + escapeAdminHtml(bookedByName) + '</span></span></td>';
+
+                    // Meeting links — Open in Calendar + Join Meet. Show subdued
+                    // dashes for legacy rows that don't have the metadata.
+                    var meetingLinksCell;
+                    if (r.meeting_event_link || r.meeting_meet_link) {
+                        var linkBtn = function(url, label, color){
+                            return '<a href="' + escapeAdminHtml(url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-block;padding:4px 9px;background:' + color + ';color:white;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;margin-right:4px;white-space:nowrap;">' + label + '</a>';
+                        };
+                        meetingLinksCell = '<td style="padding:11px 10px;white-space:nowrap;">'
+                            + (r.meeting_meet_link ? linkBtn(r.meeting_meet_link, 'Join Meet', 'var(--green,#10b981)') : '')
+                            + (r.meeting_event_link ? linkBtn(r.meeting_event_link, 'Calendar', 'var(--blue)') : '')
+                            + '</td>';
+                    } else {
+                        meetingLinksCell = '<td style="padding:11px 10px;color:var(--text-muted);font-size:11px;font-style:italic;white-space:nowrap;">no link</td>';
+                    }
+
+                    // Close Deal — single-click straight into the deal flow.
+                    // Stops row-click from also opening the prospect drawer.
+                    var leadForCloseDeal = JSON.stringify({
+                        id: id, business_name: business, contact_name: owner,
+                        contact_email: email, contact_phone: phone, assigned_to: r.assigned_to || null
+                    });
+                    var leadEnc = encodeURIComponent(leadForCloseDeal);
+                    var closeDealBtn = '<button type="button" onclick="event.stopPropagation();openCloseDealModal(decodeURIComponent(\'' + leadEnc + '\'))" style="padding:5px 11px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Close Deal →</button>';
+
                     return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
-                        + '<td style="padding:10px 14px;font-size:12px;color:var(--green,#10b981);font-weight:600;white-space:nowrap;">' + escapeAdminHtml(bookedAtStr) + '</td>'
+                        + '<td style="padding:10px 14px;font-size:12px;color:' + whenColor + ';font-weight:600;white-space:nowrap;">' + escapeAdminHtml(whenStr) + '</td>'
                         + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                        + bookedByCell
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
-                        + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(email) + '</td>'
-                        + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                        + meetingLinksCell
+                        + '<td style="padding:11px 10px;white-space:nowrap;">' + closeDealBtn + '</td>'
                         + '</tr>';
                 }
                 // Cold Call: if the lead's been dialed in last 24h with no logged

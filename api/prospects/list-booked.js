@@ -12,7 +12,9 @@ const SELECT_COLS = [
     'id', 'name', 'owner_name', 'owner_phone', 'phone', 'owner_email', 'email',
     'category', 'prospect_tier', 'prospect_score', 'score',
     'last_called_at', 'last_called_outcome', 'call_attempts', 'call_notes',
-    'next_action_due_at', 'owner_phone_strict_pass'
+    'next_action_due_at', 'owner_phone_strict_pass', 'assigned_to',
+    'meeting_event_id', 'meeting_event_link', 'meeting_meet_link',
+    'meeting_scheduled_at', 'meeting_duration_min', 'meeting_booked_by_sdr'
 ].join(',');
 
 module.exports = async function handler(req, res) {

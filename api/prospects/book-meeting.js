@@ -157,6 +157,22 @@ module.exports = async function handler(req, res) {
             });
         } catch (e) { emailResult = { error: String(e.message || e) }; }
 
+        // Persist Calendar/Meet metadata onto the lead row so the admin
+        // Booked Meeting tab can render "Open in Calendar" and "Join Meet"
+        // buttons. Best-effort: an RLS/perm failure shouldn't break booking.
+        let persistError = null;
+        try {
+            const upd = await sb.from('leads').update({
+                meeting_event_id:      evJson.id || null,
+                meeting_event_link:    evJson.htmlLink || null,
+                meeting_meet_link:     meetLink || null,
+                meeting_scheduled_at:  startIso,
+                meeting_duration_min:  durationMin,
+                meeting_booked_by_sdr: gate.email || null
+            }).eq('id', leadId);
+            if (upd.error) persistError = upd.error.message;
+        } catch (e) { persistError = String(e.message || e); }
+
         // Flip lead lifecycle through David's API so it lands in Booked Meeting tab.
         const logResp = await forwardToProspecting({
             method: 'POST', path: '/api/prospects/' + leadId + '/log-call',
@@ -170,7 +186,8 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
             ok: true, lead_id: leadId,
             event_id: evJson.id, event_link: evJson.htmlLink, meet_link: meetLink,
-            email: emailResult, log_call: { status: logResp.status }
+            email: emailResult, log_call: { status: logResp.status },
+            persisted: !persistError, persist_error: persistError
         });
     } catch (e) {
         console.error('[book-meeting]', e);
