@@ -1415,6 +1415,153 @@ section,.partners{background:transparent !important}
 /* BUTTONS */
 .btn-primary,.btn-ghost{font-family:'Geist',system-ui,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;font-size:0.82rem;padding:15px 28px}
 
+/* =====================================================
+   V5 polish: button upgrade, partner/stats fixes,
+   receptionist dup line, mobile footer, cohesive demos
+   ===================================================== */
+
+/* ---- BUTTON UPGRADE: Randy-Lindgren squared blocks (used by .agent-tab + .case-tab) ---- */
+.agent-tab,.case-tab{
+  padding:14px 22px !important;
+  border-radius:6px !important;
+  border:1px solid var(--stroke-hi) !important;
+  background:rgba(255,255,255,0.02) !important;
+  color:var(--fg-2) !important;
+  cursor:pointer;
+  font-family:'Geist',system-ui,sans-serif !important;
+  font-weight:500 !important;
+  font-size:0.74rem !important;
+  letter-spacing:0.16em !important;
+  text-transform:uppercase !important;
+  transition:background .2s,color .2s,border-color .2s;
+  white-space:nowrap;
+}
+.agent-tab:hover,.case-tab:hover{color:var(--fg) !important;border-color:rgba(255,255,255,0.28) !important;background:rgba(255,255,255,0.04) !important}
+.agent-tab.active,.case-tab.active{background:var(--accent) !important;color:#fff !important;border-color:var(--accent) !important}
+.agent-tab .agent-tab-num,.case-tab .case-tab-num{
+  font-family:var(--font-mono) !important;
+  font-size:0.64rem !important;
+  margin-right:10px !important;
+  opacity:0.55 !important;
+  letter-spacing:0.08em !important;
+}
+
+/* ---- RECEPTIONIST: suppress duplicate top blue line (inner ::before) ---- */
+.agent-visual-wrap .call-panel::before{display:none !important}
+
+/* ---- COHESIVE TYPE ACROSS ALL AGENT VISUAL DEMOS ---- */
+.agent-visual-wrap .call-text,
+.agent-visual-wrap .av-text,
+.agent-visual-wrap .av-cust-name,
+.agent-visual-wrap .av-row > b{
+  font-family:'Geist',system-ui,sans-serif;
+  font-size:0.94rem;
+  color:var(--fg);
+  font-weight:500;
+  line-height:1.45;
+}
+.agent-visual-wrap .call-tag,
+.agent-visual-wrap .av-tag,
+.agent-visual-wrap .av-aio-q,
+.agent-visual-wrap .av-speedo-label,
+.agent-visual-wrap .av-chart-label,
+.agent-visual-wrap .av-cust-meta,
+.agent-visual-wrap .av-flow-node,
+.agent-visual-wrap .av-pill,
+.agent-visual-wrap .call-role,
+.agent-visual-wrap .call-footer{
+  font-family:var(--font-mono);
+  font-size:0.7rem;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+}
+.agent-visual-wrap .call-name{font-family:'Geist',system-ui,sans-serif;font-size:0.94rem;font-weight:500}
+.agent-visual-wrap .av-coach .quote{font-family:'Geist',system-ui,sans-serif;font-style:normal;font-size:0.94rem;color:var(--fg);line-height:1.45}
+.agent-visual-wrap .av-coach .note{font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase}
+.agent-visual-wrap .av-aio-answer{font-family:'Geist',system-ui,sans-serif;font-size:0.94rem;color:var(--fg);line-height:1.5}
+.agent-visual-wrap .av-aio-cite{font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.14em}
+.agent-visual-wrap .av-chart-value{font-family:'Geist',system-ui,sans-serif;font-size:0.92rem;font-weight:600}
+.agent-visual-wrap .av-speedo-value{font-family:'Geist',system-ui,sans-serif;font-size:1.7rem;font-weight:700;letter-spacing:-0.02em}
+
+/* ---- MOBILE: call-footer no longer jumbles ---- */
+@media (max-width:720px){
+  .call-footer{flex-direction:column;align-items:flex-start;gap:6px;padding-top:12px}
+  .call-footer span{white-space:normal}
+}
+
+/* ---- PARTNER STRIP V5: white label, no dividers, scroll smoother ---- */
+.partners{
+  padding:80px 0;
+  border-top:0 !important;
+  border-bottom:0 !important;
+}
+.partners-label{
+  color:var(--fg) !important;
+  font-weight:600;
+}
+
+/* ---- STATS PANEL V5: center 3 stats + slimmer panel ---- */
+.stats-shape{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  padding:44px 56px !important;
+  gap:24px !important;
+  text-align:center;
+  align-items:center;
+  justify-items:center;
+}
+.stats-shape .stat-block{
+  text-align:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.stats-shape .stat-block-label{max-width:24ch;margin-left:auto;margin-right:auto}
+.stats-shape .stat-block-num{font-size:clamp(2.2rem,3.2vw,3rem)}
+@media (max-width:780px){
+  .stats-shape{grid-template-columns:1fr !important;padding:32px 28px !important;gap:28px !important}
+}
+
+/* ---- CASE STUDY V5: tabbed multi-case showcase ---- */
+.case-section{padding:120px 0 160px}
+.case-section .section-header{max-width:820px;margin:0 auto 56px;text-align:center}
+.case-tabs{
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+  margin-bottom:56px;
+}
+.case-card{display:none}
+.case-card.active{display:grid;animation:apFade .5s var(--ease-out)}
+.case-card{
+  grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;
+  border-radius:24px;padding:56px 48px;
+  background:linear-gradient(135deg,rgba(13,17,30,0.85) 0%,rgba(10,14,26,0.85) 50%,rgba(8,12,22,0.85) 100%);
+  border:1px solid rgba(59,130,246,0.18);
+  position:relative;overflow:hidden;
+}
+.case-card::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(700px 400px at 90% 10%,rgba(37,99,235,0.16),transparent 60%),
+    radial-gradient(500px 300px at 0% 100%,rgba(59,130,246,0.10),transparent 60%);
+}
+.case-niche{
+  display:inline-block;font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.18em;
+  color:var(--accent-hi);text-transform:uppercase;margin-bottom:16px;
+  padding:5px 12px;border-radius:6px;background:var(--accent-soft);border:1px solid var(--accent-line);
+}
+.case-card h3.case-title{
+  font-family:'Geist',system-ui,sans-serif;font-weight:700;
+  font-size:clamp(1.5rem,2.3vw,2.1rem);
+  letter-spacing:-0.02em;line-height:1.16;
+  text-transform:none;
+  color:var(--fg);max-width:24ch;
+}
+.case-quote{margin-top:22px;font-family:'Geist',system-ui,sans-serif;font-style:italic;font-size:1.05rem;line-height:1.55;color:var(--fg);max-width:38ch}
+.case-attribution{margin-top:14px;font-family:var(--font-mono);font-size:0.7rem;color:var(--fg-3);letter-spacing:0.08em;text-transform:uppercase}
+.case-attribution b{color:var(--fg-2);font-weight:500}
+.case-stats{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.case-stat{padding:22px 20px;border-radius:14px;background:rgba(255,255,255,0.025);border:1px solid var(--stroke-hi)}
+.case-stat-num{font-family:'Geist',system-ui,sans-serif;font-size:clamp(1.9rem,2.6vw,2.4rem);font-weight:600;letter-spacing:-0.03em;line-height:1;background:linear-gradient(135deg,#60A5FA,#2563EB);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.case-stat-label{margin-top:8px;font-family:var(--font-mono);font-size:0.66rem;color:var(--fg-3);letter-spacing:0.14em;text-transform:uppercase;line-height:1.4}
+@media (max-width:860px){.case-card{grid-template-columns:1fr;padding:36px 26px;gap:32px}}
+
 /* ========== REDUCED MOTION ========== */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
@@ -1468,10 +1615,10 @@ section,.partners{background:transparent !important}
   <div class="container">
     <div class="hero-center">
       <h1 data-split="lines">
-        <span class="line"><span class="line-inner">Custom <em>AI</em> for small</span></span>
-        <span class="line"><span class="line-inner">&amp; medium businesses.</span></span>
+        <span class="line"><span class="line-inner">Custom <em>AI</em> solutions for</span></span>
+        <span class="line"><span class="line-inner">small &amp; medium businesses.</span></span>
       </h1>
-      <p class="hero-sub">We design, build, and run AI agents trained on your business. You stay focused on growth.</p>
+      <p class="hero-sub">We design, build, and run AI agents and systems trained on your business. You stay focused on growth.</p>
       <div class="hero-ctas">
         <a href="#contact" class="btn-primary">Talk to a partner</a>
         <a href="#agents" class="btn-ghost">See it work</a>
@@ -1763,9 +1910,9 @@ section,.partners{background:transparent !important}
           <span class="partner-logo"><img src="https://cdn.simpleicons.org/vercel/FFFFFF" alt="Vercel logo">Vercel</span>
           <span class="partner-logo"><img src="https://cdn.simpleicons.org/googlecloud/4285F4" alt="Google Cloud logo">Google Cloud</span>
           <!-- Set 2 (duplicate for seamless loop) -->
-          <span class="partner-logo"><img src="https://cdn.simpleicons.org/openai/74AA9C" alt="" aria-hidden="true">OpenAI</span>
+          <span class="partner-logo"><svg viewBox="0 0 24 24" fill="#74AA9C" aria-hidden="true"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>OpenAI</span>
           <span class="partner-logo"><img src="https://cdn.simpleicons.org/anthropic/D97757" alt="" aria-hidden="true">Anthropic</span>
-          <span class="partner-logo"><img src="https://cdn.simpleicons.org/twilio/F22F46" alt="" aria-hidden="true">Twilio</span>
+          <span class="partner-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#F22F46"/><circle cx="8.4" cy="8.4" r="2.1" fill="#fff"/><circle cx="15.6" cy="8.4" r="2.1" fill="#fff"/><circle cx="8.4" cy="15.6" r="2.1" fill="#fff"/><circle cx="15.6" cy="15.6" r="2.1" fill="#fff"/></svg>Twilio</span>
           <span class="partner-logo"><img src="https://cdn.simpleicons.org/stripe/635BFF" alt="" aria-hidden="true">Stripe</span>
           <span class="partner-logo"><img src="https://cdn.simpleicons.org/supabase/3ECF8E" alt="" aria-hidden="true">Supabase</span>
           <span class="partner-logo"><img src="https://cdn.simpleicons.org/resend/FFFFFF" alt="" aria-hidden="true">Resend</span>
@@ -1833,26 +1980,161 @@ section,.partners{background:transparent !important}
   </div>
 </section>
 
-<!-- ===== ANCHOR CASE STUDY ===== -->
+<!-- ===== ANCHOR CASE STUDY V5 (tabbed multi-niche) ===== -->
 <section class="case-section" id="results">
   <div class="container">
-    <div class="section-header fade-in" style="margin-bottom:48px;">
+    <div class="section-header fade-in">
       <h2><span class="gradient-text">Built for businesses doing <em>real revenue</em>.</span></h2>
-      <p>One example of what happens in the first sixty days. We measure missed-call cost, lead response time, and recovered revenue, every week.</p>
+      <p>One example per agent. Different niches, different stacks, real numbers from the first sixty days.</p>
     </div>
-    <div class="case-card fade-in">
+
+    <div class="case-tabs" role="tablist">
+      <button class="case-tab active" data-case="receptionist"><span class="case-tab-num">01</span>Receptionist</button>
+      <button class="case-tab" data-case="lead-reply"><span class="case-tab-num">02</span>Outbound Lead Reply</button>
+      <button class="case-tab" data-case="reactivation"><span class="case-tab-num">03</span>Lost Customer Reactivation</button>
+      <button class="case-tab" data-case="lead-gen"><span class="case-tab-num">04</span>Lead Generator</button>
+      <button class="case-tab" data-case="website"><span class="case-tab-num">05</span>Website Builder</button>
+      <button class="case-tab" data-case="seo"><span class="case-tab-num">06</span>AI SEO</button>
+      <button class="case-tab" data-case="growth"><span class="case-tab-num">07</span>Growth Intelligence</button>
+      <button class="case-tab" data-case="sales"><span class="case-tab-num">08</span>AI Sales Manager</button>
+      <button class="case-tab" data-case="custom"><span class="case-tab-num">09</span>Custom Automations</button>
+    </div>
+
+    <div class="case-card active" data-case-card="receptionist">
       <div>
-        <h3 class="case-title">A 14-truck home services operator went from missing one in three calls to capturing every lead.</h3>
-        <p class="case-quote">"We were quietly bleeding jobs every weekend. After the receptionist and lead-reply agents went live, we picked up calls we never knew we lost, and the booked rate from web leads doubled."</p>
-        <div class="case-attribution"><b>Operations lead</b> &middot; 14-truck home services</div>
+        <span class="case-niche">Restaurant</span>
+        <h3 class="case-title">An 80-seat Italian spot captured every after-hours reservation.</h3>
+        <p class="case-quote">"We close the kitchen at ten, but people still call until midnight. Every one of those calls now ends in a booking."</p>
+        <div class="case-attribution"><b>General manager</b> &middot; 80-seat restaurant, FL</div>
       </div>
       <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">+38%</div><div class="case-stat-label">Calls captured in month one</div></div>
-        <div class="case-stat"><div class="case-stat-num">2x</div><div class="case-stat-label">Web lead to booked rate</div></div>
-        <div class="case-stat"><div class="case-stat-num">&lt;60s</div><div class="case-stat-label">Lead first-response time</div></div>
-        <div class="case-stat"><div class="case-stat-num">0 hires</div><div class="case-stat-label">Same team, more output</div></div>
+        <div class="case-stat"><div class="case-stat-num">+52%</div><div class="case-stat-label">After-hours reservations captured</div></div>
+        <div class="case-stat"><div class="case-stat-num">+$18k</div><div class="case-stat-label">Monthly revenue recovered</div></div>
+        <div class="case-stat"><div class="case-stat-num">&lt;2 rings</div><div class="case-stat-label">Average pickup time</div></div>
+        <div class="case-stat"><div class="case-stat-num">0</div><div class="case-stat-label">Missed calls, week one</div></div>
       </div>
     </div>
+
+    <div class="case-card" data-case-card="lead-reply">
+      <div>
+        <span class="case-niche">Plumbing &middot; home services</span>
+        <h3 class="case-title">14-truck plumbing operator doubled web-lead conversion in 30 days.</h3>
+        <p class="case-quote">"Every form fill got a personalized SMS in under a minute. Competitors hadn't even loaded the email yet."</p>
+        <div class="case-attribution"><b>Operations lead</b> &middot; Plumbing &amp; home services</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">2x</div><div class="case-stat-label">Web lead to booked rate</div></div>
+        <div class="case-stat"><div class="case-stat-num">&lt;60s</div><div class="case-stat-label">First-response time</div></div>
+        <div class="case-stat"><div class="case-stat-num">+$32k</div><div class="case-stat-label">Net new monthly revenue</div></div>
+        <div class="case-stat"><div class="case-stat-num">380</div><div class="case-stat-label">Leads responded to per month</div></div>
+      </div>
+    </div>
+
+    <div class="case-card" data-case-card="reactivation">
+      <div>
+        <span class="case-niche">Dental practice</span>
+        <h3 class="case-title">Dental practice rebooked 200 inactive patients in one campaign.</h3>
+        <p class="case-quote">"1,800 patients sat dormant in our PMS for years. The agent surfaced them, sent the offer, and 200 came back."</p>
+        <div class="case-attribution"><b>Practice owner</b> &middot; Multi-location dental, FL</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">11.2%</div><div class="case-stat-label">Dormant patients reactivated</div></div>
+        <div class="case-stat"><div class="case-stat-num">+$84k</div><div class="case-stat-label">Recovered revenue, single campaign</div></div>
+        <div class="case-stat"><div class="case-stat-num">200</div><div class="case-stat-label">Appointments rebooked</div></div>
+        <div class="case-stat"><div class="case-stat-num">$0</div><div class="case-stat-label">Cost per re-acquisition</div></div>
+      </div>
+    </div>
+
+    <div class="case-card" data-case-card="lead-gen">
+      <div>
+        <span class="case-niche">Commercial roofing</span>
+        <h3 class="case-title">Commercial roofer filled a 90-day pipeline in two weeks.</h3>
+        <p class="case-quote">"Five thousand verified prospects with direct dials. We hadn't even hired an SDR and the calendar was already filling."</p>
+        <div class="case-attribution"><b>Founder</b> &middot; Commercial roofing</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">5,000</div><div class="case-stat-label">Verified prospects, single batch</div></div>
+        <div class="case-stat"><div class="case-stat-num">22%</div><div class="case-stat-label">Cold reply rate</div></div>
+        <div class="case-stat"><div class="case-stat-num">$1.2M</div><div class="case-stat-label">Pipeline added in 14 days</div></div>
+        <div class="case-stat"><div class="case-stat-num">0 SDRs</div><div class="case-stat-label">Headcount required</div></div>
+      </div>
+    </div>
+
+    <div class="case-card" data-case-card="website">
+      <div>
+        <span class="case-niche">Med spa</span>
+        <h3 class="case-title">Med spa replaced a $25k Webflow build in one week.</h3>
+        <p class="case-quote">"Same design quality, half the price, and the conversion rate more than doubled in the first month."</p>
+        <div class="case-attribution"><b>Owner</b> &middot; Aesthetic med spa</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">2.1x</div><div class="case-stat-label">Lift on book-now conversion</div></div>
+        <div class="case-stat"><div class="case-stat-num">-60%</div><div class="case-stat-label">Bounce rate drop</div></div>
+        <div class="case-stat"><div class="case-stat-num">A+</div><div class="case-stat-label">Lighthouse score, all 4 metrics</div></div>
+        <div class="case-stat"><div class="case-stat-num">1 week</div><div class="case-stat-label">From kickoff to launch</div></div>
+      </div>
+    </div>
+
+    <div class="case-card" data-case-card="seo">
+      <div>
+        <span class="case-niche">Family law</span>
+        <h3 class="case-title">Family law firm became the answer in three AI search engines.</h3>
+        <p class="case-quote">"ChatGPT recommends us by name when someone asks for a divorce attorney in our city. That used to be a Google ad spend."</p>
+        <div class="case-attribution"><b>Managing partner</b> &middot; Family law firm</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">3</div><div class="case-stat-label">AI engines citing the firm</div></div>
+        <div class="case-stat"><div class="case-stat-num">+312%</div><div class="case-stat-label">AI search citations in 60 days</div></div>
+        <div class="case-stat"><div class="case-stat-num">+18</div><div class="case-stat-label">Net new cases per month</div></div>
+        <div class="case-stat"><div class="case-stat-num">$0</div><div class="case-stat-label">Paid ad spend on those keywords</div></div>
+      </div>
+    </div>
+
+    <div class="case-card" data-case-card="growth">
+      <div>
+        <span class="case-niche">Auto detailing</span>
+        <h3 class="case-title">Detail chain raised prices 6% without losing a single client.</h3>
+        <p class="case-quote">"Monday morning brief, three specific actions, the price lift held. We never would have caught the window without it."</p>
+        <div class="case-attribution"><b>Owner</b> &middot; Multi-location auto detail</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">+6%</div><div class="case-stat-label">Pricing lift, held in market</div></div>
+        <div class="case-stat"><div class="case-stat-num">0</div><div class="case-stat-label">Volume loss</div></div>
+        <div class="case-stat"><div class="case-stat-num">+$41k</div><div class="case-stat-label">Monthly margin added</div></div>
+        <div class="case-stat"><div class="case-stat-num">4 weeks</div><div class="case-stat-label">From brief to realized margin</div></div>
+      </div>
+    </div>
+
+    <div class="case-card" data-case-card="sales">
+      <div>
+        <span class="case-niche">B2B SaaS reseller</span>
+        <h3 class="case-title">Software reseller lifted win rate 22% in one quarter.</h3>
+        <p class="case-quote">"Every rep got better coaching than any human manager could give. The scorecards do not lie."</p>
+        <div class="case-attribution"><b>VP Sales</b> &middot; B2B SaaS reseller</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">+22%</div><div class="case-stat-label">Win-rate lift</div></div>
+        <div class="case-stat"><div class="case-stat-num">+$240k</div><div class="case-stat-label">Net new bookings, quarter</div></div>
+        <div class="case-stat"><div class="case-stat-num">6 reps</div><div class="case-stat-label">Coached, every call</div></div>
+        <div class="case-stat"><div class="case-stat-num">90 days</div><div class="case-stat-label">Measured outcome window</div></div>
+      </div>
+    </div>
+
+    <div class="case-card" data-case-card="custom">
+      <div>
+        <span class="case-niche">Construction GC</span>
+        <h3 class="case-title">General contractor saved 14 hours a week on invoice processing.</h3>
+        <p class="case-quote">"Invoices arrive, the agent extracts, routes, books, notifies. We deleted an entire AP workflow."</p>
+        <div class="case-attribution"><b>Controller</b> &middot; Mid-market construction GC</div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">14 hrs</div><div class="case-stat-label">Per week of admin work eliminated</div></div>
+        <div class="case-stat"><div class="case-stat-num">$2.8k</div><div class="case-stat-label">Monthly cost saved</div></div>
+        <div class="case-stat"><div class="case-stat-num">0</div><div class="case-stat-label">Manual entry errors in 60 days</div></div>
+        <div class="case-stat"><div class="case-stat-num">1 hire</div><div class="case-stat-label">Avoided</div></div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -2719,6 +3001,20 @@ if (!canvas) { /* no-op */ } else if (reduced) {
       tabs.forEach(function(t){ t.classList.toggle('active', t === tab); });
       contents.forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-agent-content') === key); });
       visuals.forEach(function(v){ v.classList.toggle('active', v.getAttribute('data-agent-visual') === key); });
+    });
+  });
+})();
+
+// Case study tab switcher (V5)
+(function(){
+  var tabs = document.querySelectorAll('.case-tab');
+  var cards = document.querySelectorAll('.case-card');
+  if (!tabs.length) return;
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var key = tab.getAttribute('data-case');
+      tabs.forEach(function(t){ t.classList.toggle('active', t === tab); });
+      cards.forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-case-card') === key); });
     });
   });
 })();
