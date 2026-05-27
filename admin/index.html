@@ -3671,8 +3671,13 @@
                 body.innerHTML = ''
                     + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">'
                         + '<div style="width:56px;height:56px;border-radius:50%;background:' + (sdr.avatar_color || '#2563EB') + ';display:inline-flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;">' + escapeAdminHtml(sdr.initials || '?') + '</div>'
-                        + '<div><div style="font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-0.02em;">' + escapeAdminHtml(sdr.display_name) + '</div>'
+                        + '<div style="flex:1;min-width:0;"><div style="font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-0.02em;">' + escapeAdminHtml(sdr.display_name) + '</div>'
                         + '<div style="color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(sdr.email) + ' · commission ' + Math.round(Number(sdr.commission_pct || 0.25) * 1000) / 10 + '% · quota ' + (sdr.daily_call_quota || 80) + '/day</div></div>'
+                        // Open this SDR\'s dashboard in a new tab as them. Audited
+                        // server-side; banner on /sdr/ makes the impersonation
+                        // obvious. Mirrors the "Open as client" pattern on the
+                        // Clients tab.
+                        + '<a href="/sdr/?impersonate_sdr=' + encodeURIComponent(sdrId) + '" target="_blank" rel="noopener" title="Open this SDR\'s dashboard in a new tab as them. Every action is logged." style="padding:8px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;color:#ef4444;white-space:nowrap;">Open as SDR →</a>'
                     + '</div>'
                     + '<h3 style="margin:0 0 12px 0;font-size:14px;">Performance</h3>'
                     + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;">'

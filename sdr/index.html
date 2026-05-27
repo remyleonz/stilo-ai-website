@@ -7,7 +7,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -31,7 +31,7 @@
             --red: #ef4444;
             --yellow: #eab308;
             --sidebar-width: 260px;
-            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-display: 'Saira', system-ui, sans-serif;
             --font-accent: 'Instrument Serif', Georgia, serif;
             --font-body: 'Geist', system-ui, sans-serif;
             --font-mono: 'Geist Mono', ui-monospace, monospace;
@@ -923,14 +923,18 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_exRKfUY8b_1Dj5GaQsSwdA_KJG_ZtT3';
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        var CURRENT = { session: null, sdr: null };
+        // CURRENT.impersonateSdrId — set when an admin lands on
+        // /sdr/?impersonate_sdr=<uuid>. Every fetchJSON below appends
+        // sdr_id=<id> so the SDR-scoped APIs (already admin-aware via
+        // api/sdr/_shared.js resolveScope) return that SDR's data.
+        var CURRENT = { session: null, sdr: null, impersonateSdrId: null, isImpersonating: false };
         var STATE = { leadsSubtab: 'callable', historyRange: 'week' };
 
         /* ===== AUTH ===== */
         (async function init() {
             const { data: { session } } = await sb.auth.getSession();
             if (!session) {
-                localStorage.setItem('auth_redirect', '/sdr/');
+                localStorage.setItem('auth_redirect', '/sdr/' + (window.location.search || ''));
                 window.location.href = '/auth.html';
                 return;
             }
@@ -938,15 +942,25 @@
             const role = u.app_metadata && u.app_metadata.role;
             const isAdmin = role === 'admin';
             const isSdr = role === 'sdr';
-            if (!isSdr && !isAdmin) {
+
+            // Impersonation: admin can land on /sdr/?impersonate_sdr=<uuid>
+            // to see the dashboard as that SDR. Banner is rendered below so
+            // it's always obvious that this isn't your own session.
+            const urlParams = new URLSearchParams(window.location.search);
+            const impersonateId = urlParams.get('impersonate_sdr');
+            if (impersonateId && isAdmin) {
+                CURRENT.impersonateSdrId = impersonateId;
+                CURRENT.isImpersonating = true;
+                renderImpersonationBanner();
+            } else if (!isSdr && !isAdmin) {
                 window.location.href = '/app/';
                 return;
-            }
-            if (isAdmin && !isSdr) {
-                // Admin sneaking in: bounce them to admin (they have a Team tab there)
-                window.location.href = '/admin/';
+            } else if (isAdmin && !isSdr) {
+                // Admin sneaking in without impersonation: bounce to admin Team tab.
+                window.location.href = '/admin/#team';
                 return;
             }
+
             CURRENT.session = session;
             await loadProfile();
             await Promise.all([
@@ -955,14 +969,43 @@
             ]);
         })();
 
+        function renderImpersonationBanner() {
+            // Sticky red banner across the top — same vibe as the "Open as
+            // client" flow. Exit link bounces back to /admin/#team.
+            var banner = document.createElement('div');
+            banner.id = 'impersonationBanner';
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ef4444;color:white;padding:10px 18px;font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+            banner.innerHTML = '<span><strong>VIEWING AS SDR</strong> · <span id="impersonationName">…</span> · You are signed in as an admin; everything you click reads + writes this SDR’s data.</span>'
+                + '<a href="/admin/#team" style="color:white;text-decoration:underline;font-weight:700;">Exit impersonation →</a>';
+            document.body.prepend(banner);
+            document.body.style.paddingTop = '40px';
+        }
+
         async function authHeaders() {
             return { 'Authorization': 'Bearer ' + CURRENT.session.access_token };
+        }
+
+        // Append the right scoping params for the admin → SDR impersonation
+        // flow. Two endpoint families need two different params:
+        //   • /api/sdr/*       → sdr_id=<uuid>  (resolveScope in api/sdr/_shared.js)
+        //   • /api/prospects/* → assigned_to=<email> (scopedQuery in api/prospects/_shared.js)
+        // We learn the SDR's email after loadProfile() resolves the sdr_users row,
+        // so the very first call (loadProfile itself) only carries sdr_id.
+        function withImpersonationParam(path) {
+            if (!CURRENT.impersonateSdrId) return path;
+            var params = ['sdr_id=' + encodeURIComponent(CURRENT.impersonateSdrId)];
+            if (CURRENT.sdr && CURRENT.sdr.email && path.indexOf('/api/prospects/') === 0) {
+                params.push('assigned_to=' + encodeURIComponent(CURRENT.sdr.email));
+            }
+            var join = path.indexOf('?') >= 0 ? '&' : '?';
+            return path + join + params.join('&');
         }
 
         async function fetchJSON(path, opts) {
             opts = opts || {};
             const headers = Object.assign({}, await authHeaders(), opts.headers || {});
             if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+            path = withImpersonationParam(path);
             const res = await fetch(path, { method: opts.method || 'GET', headers, body: opts.body });
             const text = await res.text();
             let json;
@@ -991,6 +1034,12 @@
                 }
                 CURRENT.sdr = sdr;
                 renderSdrIdentity(sdr);
+                // Fill the impersonation banner with the SDR's real name once
+                // we've resolved them via /api/sdr/profile?sdr_id=<id>.
+                if (CURRENT.isImpersonating) {
+                    var nameSlot = document.getElementById('impersonationName');
+                    if (nameSlot) nameSlot.textContent = sdr.display_name || sdr.email || 'Unknown SDR';
+                }
                 document.getElementById('profDisplayName').value = sdr.display_name || '';
                 document.getElementById('profEmail').value = sdr.email || '';
                 document.getElementById('profSdrKey').value = sdr.sdr_key || '';
