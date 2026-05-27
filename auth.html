@@ -37,12 +37,29 @@
 
         body {
             font-family: var(--font-body);
-            background: var(--bg-primary);
+            background: #04050B;
             color: var(--text-primary);
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
         }
+
+        /* Cosmic video background (same as marketing hero) */
+        .auth-bg-video {
+            position: fixed; inset: 0; z-index: 0;
+            width: 100%; height: 112%; top: 0;
+            object-fit: cover; object-position: center top;
+            opacity: 0; transition: opacity 1s ease;
+            pointer-events: none;
+        }
+        .auth-bg-video[data-loaded="true"] { opacity: 1; }
+        .auth-bg-veil {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background:
+              radial-gradient(900px 600px at 50% 50%, rgba(7,7,10,0.45) 0%, rgba(7,7,10,0.15) 50%, rgba(7,7,10,0) 80%),
+              linear-gradient(180deg, rgba(7,7,10,0.35) 0%, rgba(7,7,10,0.1) 30%, rgba(7,7,10,0.55) 100%);
+        }
+        .auth-shell { position: relative; z-index: 2; }
 
         .auth-shell {
             display: grid;
@@ -55,10 +72,7 @@
             display: flex; align-items: center; justify-content: center;
             padding: 48px 24px;
             position: relative;
-            background:
-              radial-gradient(ellipse at 30% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 55%),
-              radial-gradient(ellipse at 70% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 55%),
-              var(--bg-primary);
+            background: transparent;
         }
         .starfield {
             position: absolute; inset: 0; opacity: 0.4; pointer-events: none;
@@ -264,9 +278,13 @@
     </style>
 </head>
 <body>
+  <video class="auth-bg-video" id="authBgVideo" autoplay muted loop playsinline preload="auto" poster="/assets/hero-poster.jpg">
+    <source src="/assets/newSTILOAIHEROVID.mp4" type="video/mp4">
+  </video>
+  <div class="auth-bg-veil" aria-hidden="true"></div>
+  <script>(function(){var v=document.getElementById('authBgVideo');if(!v)return;v.addEventListener('loadeddata',function(){v.setAttribute('data-loaded','true');});v.addEventListener('canplay',function(){v.setAttribute('data-loaded','true');});var p=v.play();if(p&&p.catch)p.catch(function(){});})();</script>
   <div class="auth-shell">
     <div class="auth-form-col">
-      <div class="starfield" aria-hidden="true"></div>
       <div class="auth-container">
         <div class="logo">
             <a href="index.html">STILO AI PARTNERS</a>
