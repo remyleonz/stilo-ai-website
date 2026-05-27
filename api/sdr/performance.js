@@ -105,7 +105,7 @@ module.exports = async function handler(req, res) {
     const closeRate = dialsAll > 0 ? (meetingsAll / dialsAll) * 100 : 0;
     const conversionRate = meetingsAll > 0 ? ((closedClients || 0) / meetingsAll) * 100 : 0;
 
-    const dailyQuota = scope.sdr && scope.sdr.daily_call_quota ? scope.sdr.daily_call_quota : 80;
+    const dailyQuota = scope.sdr && scope.sdr.daily_call_quota ? scope.sdr.daily_call_quota : 50;
 
     return res.status(200).json({
         scope: {
