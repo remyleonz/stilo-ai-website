@@ -184,15 +184,14 @@ nav.scrolled{padding:10px 0;backdrop-filter:blur(18px);-webkit-backdrop-filter:b
   color:var(--fg);transition:opacity .2s;
 }
 .nav-logo:hover{opacity:0.85}
-.nav-logo-mark{width:32px;height:32px;border-radius:7px;object-fit:cover;display:none;background:#000}
-.nav-logo-wordmark{height:30px;width:auto;display:none;object-fit:contain}
+.nav-logo-mark{width:44px;height:44px;border-radius:8px;object-fit:contain;display:none;background:transparent}
+.nav-logo-wordmark{height:46px;width:auto;display:none;object-fit:contain;filter:drop-shadow(0 1px 6px rgba(0,0,0,0.35))}
 .nav-logo.has-wordmark .nav-logo-text{display:none}
 .nav-logo.has-wordmark .nav-logo-wordmark{display:inline-block}
 .nav-logo-text{display:inline-block}
 @media (max-width:720px){
-  .nav-logo-mark{display:inline-block}
+  .nav-logo-mark{display:inline-block;width:40px;height:40px}
   .nav-logo-wordmark,.nav-logo-text{display:none !important}
-  .nav-logo{font-size:0.9rem;letter-spacing:0.02em}
 }
 .nav-links{display:flex;list-style:none;gap:6px}
 .nav-links a{
@@ -690,8 +689,8 @@ section{padding:160px 0}
 .hero-center{max-width:980px;margin:0;display:flex;flex-direction:column;align-items:flex-start}
 .hero h1{
   font-family:var(--font-display);font-weight:700;
-  font-size:clamp(2.8rem,6.8vw,5.8rem);
-  line-height:1.0;letter-spacing:-0.02em;
+  font-size:clamp(1.6rem,3.4vw,2.9rem);
+  line-height:1.05;letter-spacing:-0.015em;
   max-width:none;text-align:left;
   text-transform:uppercase;
 }
@@ -1203,31 +1202,13 @@ section{padding:160px 0}
     inset 0 -120px 120px -60px rgba(7,7,10,0.55);
 }
 .partner-content{display:flex;flex-direction:column;justify-content:center;max-width:560px}
-.partner-eyebrow{
-  font-family:var(--font-mono);
-  font-size:0.72rem;
-  letter-spacing:0.18em;
-  text-transform:uppercase;
-  color:var(--accent-hi);
-  margin-bottom:24px;
-}
 .partner-name{
   font-family:var(--font-display);
   font-size:clamp(2.4rem,4.2vw,3.6rem);
   font-weight:700;letter-spacing:-0.02em;line-height:1;
   text-transform:uppercase;
   color:var(--fg);
-  margin:0 0 8px;
-}
-.partner-tagline{
-  font-family:var(--font-accent);
-  font-style:italic;
-  font-size:clamp(1.4rem,2vw,1.8rem);
-  font-weight:400;
-  background:linear-gradient(135deg,#5A7BE8 0%,#2D4FB8 60%,#1E3A8A 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
-  margin-bottom:28px;
-  letter-spacing:-0.005em;
+  margin:0 0 28px;
 }
 .partner-bio p{
   font-size:1.02rem;
@@ -1237,18 +1218,14 @@ section{padding:160px 0}
   max-width:54ch;
 }
 .partner-bio p:last-child{margin-bottom:0}
-.partner-badges{
-  display:flex;flex-wrap:wrap;gap:8px;
-  margin-top:30px;
-}
-.partner-badge{
-  display:inline-flex;align-items:center;
-  padding:7px 14px;border-radius:999px;
-  font-family:var(--font-mono);font-size:0.7rem;
-  letter-spacing:0.12em;text-transform:uppercase;
-  color:var(--fg-2);
-  background:rgba(255,255,255,0.025);
-  border:1px solid var(--stroke);
+/* About-section big wordmark header (replaces the headline copy) */
+.partners-header{padding:0 !important}
+.partners-wordmark{
+  display:block;
+  margin:0 auto;
+  width:min(820px,92vw);
+  height:auto;
+  filter:drop-shadow(0 2px 22px rgba(45,79,184,0.18));
 }
 @media (max-width:900px){
   .partner-row{
@@ -1257,6 +1234,7 @@ section{padding:160px 0}
   .partner-row-right .partner-photo{order:1}
   .partner-row-right .partner-content{order:2}
   .partner-photo{max-width:480px;margin:0 auto}
+  .partners-wordmark{width:min(560px,92vw)}
 }
 
 /* ====== FINAL CTA BLOCK ====== */
@@ -1616,12 +1594,13 @@ section,.partners{background:transparent !important}
 .usecases-section,.live-demo-section,.agents-master,.thesis-section{background:transparent !important}
 .system-section::before,.case-section::before,.live-demo-section::before,.thesis-section::before{display:none}
 
-/* HERO V3 (2026-05-27 — Saira sitewide, brand-navy gradient on accent words) */
+/* HERO V3 (2026-05-27 — Saira sitewide, brand-navy gradient on accent words)
+   2026-05-27 V3.1: halved font size per Remy — "AI SOLUTIONS FOR YOUR BUSINESS" */
 .hero h1{
   font-family:var(--font-display),'Saira',system-ui,sans-serif;
   font-weight:700;font-style:normal;
-  font-size:clamp(2.8rem,6.8vw,5.8rem);
-  text-transform:uppercase;letter-spacing:-0.02em;line-height:1.0;
+  font-size:clamp(1.6rem,3.4vw,2.9rem);
+  text-transform:uppercase;letter-spacing:-0.015em;line-height:1.05;
   max-width:none;margin:0;
 }
 .hero h1 em,.hero h1 .ai-accent{
@@ -1732,6 +1711,34 @@ section,.partners{background:transparent !important}
 .agent-panel-body{color:var(--fg-2);font-size:1.04rem;line-height:1.6;max-width:48ch;margin-bottom:24px}
 .agent-panel-bullets{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:30px}
 .agent-panel-bullets li{padding-left:24px;position:relative;color:var(--fg-2);font-size:0.96rem;line-height:1.5}
+
+/* V3.1: bullets + stat side by side instead of stacked.
+   Grid-ifies the active agent-content so the stat badge sits to the
+   right of the bullets and lines up with their top edge. */
+.agent-content.active{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto;
+  column-gap:32px;row-gap:20px;
+  align-items:start;
+}
+.agent-content.active > h2,
+.agent-content.active > .agent-panel-body{
+  grid-column:1 / -1;
+  margin-bottom:0;
+}
+.agent-content.active > .agent-panel-bullets{
+  grid-column:1;
+  margin-bottom:0;
+}
+.agent-content.active > .agent-panel-stat{
+  grid-column:2;
+  align-self:start;
+  margin-top:0;
+}
+@media (max-width:720px){
+  .agent-content.active{grid-template-columns:1fr}
+  .agent-content.active > .agent-panel-stat{grid-column:1}
+}
 .agent-panel-bullets li::before{
   content:"";position:absolute;left:0;top:0.55em;width:10px;height:10px;border-radius:50%;
   border:1.5px solid var(--accent-hi);background:rgba(30,58,138,0.18);
@@ -1899,31 +1906,109 @@ section,.partners{background:transparent !important}
    receptionist dup line, mobile footer, cohesive demos
    ===================================================== */
 
-/* ---- BUTTON UPGRADE: Randy-Lindgren squared blocks (used by .agent-tab + .case-tab) ---- */
-.agent-tab,.case-tab{
-  padding:14px 22px !important;
-  border-radius:6px !important;
+/* ---- BUTTON SYSTEM V3.1: rectangular stacked-number tabs (number on top, label below) ----
+   Applied across agent-tab, case-tab AND industry-tab so the whole site
+   shares one button language. Active = navy fill. */
+.agent-tab,.case-tab,.industry-tab{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:6px !important;
+  padding:18px 18px !important;
+  min-height:78px !important;
+  border-radius:10px !important;
   border:1px solid var(--stroke-hi) !important;
   background:rgba(255,255,255,0.02) !important;
   color:var(--fg-2) !important;
   cursor:pointer;
-  font-family:'Geist',system-ui,sans-serif !important;
-  font-weight:500 !important;
-  font-size:0.74rem !important;
-  letter-spacing:0.16em !important;
+  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
+  font-weight:600 !important;
+  font-size:0.86rem !important;
+  letter-spacing:0.06em !important;
   text-transform:uppercase !important;
-  transition:background .2s,color .2s,border-color .2s;
-  white-space:nowrap;
+  transition:background .2s,color .2s,border-color .2s,transform .2s;
+  white-space:normal !important;
+  line-height:1.15 !important;
+  text-align:center !important;
+  width:100% !important;
 }
-.agent-tab:hover,.case-tab:hover{color:var(--fg) !important;border-color:rgba(255,255,255,0.28) !important;background:rgba(255,255,255,0.04) !important}
-.agent-tab.active,.case-tab.active{background:var(--accent) !important;color:#fff !important;border-color:var(--accent) !important}
-.agent-tab .agent-tab-num,.case-tab .case-tab-num{
+.agent-tab:hover,.case-tab:hover,.industry-tab:hover{
+  color:var(--fg) !important;
+  border-color:rgba(255,255,255,0.28) !important;
+  background:rgba(255,255,255,0.04) !important;
+  transform:translateY(-1px);
+}
+.agent-tab.active,.case-tab.active,.industry-tab.active{
+  background:var(--accent) !important;
+  color:#fff !important;
+  border-color:var(--accent) !important;
+  box-shadow:0 8px 24px rgba(30,58,138,0.32);
+}
+.agent-tab .agent-tab-num,
+.case-tab .case-tab-num,
+.industry-tab .industry-tab-num{
+  display:block !important;
   font-family:var(--font-mono) !important;
-  font-size:0.64rem !important;
-  margin-right:10px !important;
+  font-size:0.7rem !important;
+  margin:0 !important;
   opacity:0.55 !important;
-  letter-spacing:0.08em !important;
+  letter-spacing:0.12em !important;
+  font-weight:500 !important;
 }
+.agent-tab.active .agent-tab-num,
+.case-tab.active .case-tab-num,
+.industry-tab.active .industry-tab-num{opacity:0.85 !important}
+
+/* ---- CTA SYSTEM V3.1: rectangular Talk-to-a-Partner buttons sitewide ---- */
+.btn-primary{
+  border-radius:10px !important;
+  padding:15px 26px !important;
+  background:var(--accent) !important;
+  color:#fff !important;
+  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
+  font-weight:700 !important;
+  font-size:0.86rem !important;
+  letter-spacing:0.08em !important;
+  text-transform:uppercase !important;
+  box-shadow:0 6px 22px rgba(30,58,138,0.32) !important;
+}
+.btn-primary:hover{
+  background:var(--accent-hi) !important;
+  box-shadow:0 12px 32px rgba(45,79,184,0.42) !important;
+  transform:translateY(-1px) !important;
+}
+.btn-ghost{
+  border-radius:10px !important;
+  padding:14px 24px !important;
+  border:1px solid var(--stroke-hi) !important;
+  background:rgba(255,255,255,0.02) !important;
+  color:var(--fg) !important;
+  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
+  font-weight:600 !important;
+  font-size:0.86rem !important;
+  letter-spacing:0.08em !important;
+  text-transform:uppercase !important;
+}
+.btn-ghost:hover{
+  border-color:var(--accent-hi) !important;
+  background:rgba(45,79,184,0.10) !important;
+  color:var(--fg) !important;
+}
+.nav-cta{
+  border-radius:10px !important;
+  padding:11px 20px !important;
+  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
+  font-weight:700 !important;
+  font-size:0.78rem !important;
+  letter-spacing:0.08em !important;
+  text-transform:uppercase !important;
+  background:var(--accent) !important;
+  color:#fff !important;
+  border:0 !important;
+}
+.nav-cta::before,.nav-cta::after{display:none !important}
+.nav-cta:hover{background:var(--accent-hi) !important;box-shadow:0 6px 22px rgba(45,79,184,0.42)}
 
 /* ---- RECEPTIONIST: suppress duplicate top blue line (inner ::before) ---- */
 .agent-visual-wrap .call-panel::before{display:none !important}
@@ -1968,9 +2053,9 @@ section,.partners{background:transparent !important}
   .call-footer span{white-space:normal}
 }
 
-/* ---- PARTNER STRIP V5: white label, no dividers, scroll smoother ---- */
+/* ---- PARTNER STRIP V5 (tightened V3.1: less blank space top/bottom) ---- */
 .partners{
-  padding:80px 0;
+  padding:32px 0 36px !important;
   border-top:0 !important;
   border-bottom:0 !important;
 }
@@ -2056,11 +2141,9 @@ section,.partners{background:transparent !important}
 <!-- ===== NAV ===== -->
 <nav id="topNav">
   <div class="nav-inner">
-    <a href="/" class="nav-logo" id="navLogoLink" onclick="location.href='/';return false;">
-      <img class="nav-logo-mark" src="/assets/stilo-mark.jpg" alt="STILO" />
-      <img class="nav-logo-wordmark" src="/assets/stilo-wordmark.png" alt="STILO PARTNERS"
-           onload="this.closest('.nav-logo').classList.add('has-wordmark')"
-           onerror="this.style.display='none'" />
+    <a href="/" class="nav-logo has-wordmark" id="navLogoLink" onclick="location.href='/';return false;">
+      <img class="nav-logo-mark" src="/assets/stilo-mark.png" alt="STILO" />
+      <img class="nav-logo-wordmark" src="/assets/stilo-wordmark.png" alt="STILO AI PARTNERS" />
       <span class="nav-logo-text">STILO AI PARTNERS</span>
     </a>
     <ul class="nav-links">
@@ -2103,8 +2186,8 @@ section,.partners{background:transparent !important}
   <div class="container">
     <div class="hero-center">
       <h1 data-split="lines">
-        <span class="line"><span class="line-inner">CUSTOM <em>AI</em> BUILT AND</span></span>
-        <span class="line"><span class="line-inner">RUN FOR YOUR <em>BUSINESS</em></span></span>
+        <span class="line"><span class="line-inner"><em>AI</em> SOLUTIONS FOR</span></span>
+        <span class="line"><span class="line-inner">YOUR <em>BUSINESS</em></span></span>
       </h1>
       <p class="hero-sub">We design, build, and operate AI agents that handle the work your team is too small to handle.</p>
       <div class="hero-ctas">
@@ -2119,7 +2202,7 @@ section,.partners{background:transparent !important}
 <section class="agents-master" id="agents">
   <div class="container">
     <div class="section-header fade-in">
-      <h2><span class="gradient-text">A team of <em>AI</em> agents.</span></h2>
+      <h2><span class="gradient-text">A team of <em>AI</em> agents</span></h2>
     </div>
 
     <div class="agents-grid">
@@ -2419,7 +2502,7 @@ section,.partners{background:transparent !important}
 <section class="process-section" id="process">
   <div class="container">
     <div class="section-header fade-in">
-      <h2><span class="gradient-text">Three steps. <em>One partner.</em></span></h2>
+      <h2><span class="gradient-text">Three steps <em>One partner</em></span></h2>
       <p>You get a dashboard to see everything we run for you, plus a short onboarding for each agent so it knows your business cold. After that, we build it and keep it running. You stay focused on the business.</p>
     </div>
     <div class="process-track">
@@ -2448,6 +2531,159 @@ section,.partners{background:transparent !important}
   </div>
 </section>
 
+<!-- ===== INDUSTRIES (Use Cases — buyer-first cut, 2026-05-27) ===== -->
+<section class="industries-section" id="industries">
+  <div class="container">
+    <div class="section-header fade-in" style="text-align:center;margin:0 auto 56px;">
+      <span class="eyebrow">Use cases</span>
+      <h2><span class="gradient-text">AI built for <em>your industry</em></span></h2>
+      <p style="margin:14px auto 0;max-width:54ch;">Pick your business. We built systems for the SMB verticals where AI pays back fastest. Every system is a stack of agents tuned to how your customers actually buy.</p>
+    </div>
+
+    <div class="industry-tabs" role="tablist">
+      <button class="industry-tab active" data-industry="home-services"><span class="industry-tab-num">01</span>Home Services</button>
+      <button class="industry-tab" data-industry="med-spa"><span class="industry-tab-num">02</span>Med Spa &amp; Aesthetics</button>
+      <button class="industry-tab" data-industry="restaurant"><span class="industry-tab-num">03</span>Restaurants</button>
+      <button class="industry-tab" data-industry="real-estate"><span class="industry-tab-num">04</span>Real Estate</button>
+      <button class="industry-tab" data-industry="auto"><span class="industry-tab-num">05</span>Auto Services</button>
+      <button class="industry-tab" data-industry="medical"><span class="industry-tab-num">06</span>Medical &amp; Dental</button>
+    </div>
+
+    <!-- HOME SERVICES -->
+    <div class="industry-panel active" data-industry-panel="home-services">
+      <div class="industry-content">
+        <div class="industry-eyebrow">For Plumbing, HVAC, Electrical, Roofing</div>
+        <h3 class="industry-title">Stop losing jobs when you are in a customer's home.</h3>
+        <p class="industry-pain">38% of inbound calls to a home services business go to voicemail. Each call is worth $400-$3,000. The next plumber on Google gets the job.</p>
+        <div class="industry-roi">
+          <div class="industry-roi-num">+$24<em>k</em></div>
+          <div class="industry-roi-label">monthly revenue recovered, average client</div>
+        </div>
+        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>24/7 booking, even when you are under a sink</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Outbound Lead Reply</b><span>Replies to every form lead in 60 seconds</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI SEO</b><span>Wins local "near me" searches in your zip codes</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MED SPA -->
+    <div class="industry-panel" data-industry-panel="med-spa">
+      <div class="industry-content">
+        <div class="industry-eyebrow">For Aesthetics, IV Therapy, Weight Loss</div>
+        <h3 class="industry-title">Bring back the clients you already paid to acquire.</h3>
+        <p class="industry-pain">Med spa clients churn at 35% per year. Most never get a personalized reactivation. Your dormant list is the highest-margin revenue you are not capturing.</p>
+        <div class="industry-roi">
+          <div class="industry-roi-num">+$38<em>k</em></div>
+          <div class="industry-roi-label">monthly from dormant clients, average client</div>
+        </div>
+        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Books consults at 11pm when your front desk is gone</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lost Customer Reactivation</b><span>Personalized offers to dormant clients, every week</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Website Builder</b><span>Conversion-built site that turns ad clicks into consults</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESTAURANTS -->
+    <div class="industry-panel" data-industry-panel="restaurant">
+      <div class="industry-content">
+        <div class="industry-eyebrow">For Restaurants, Cafes, Bars</div>
+        <h3 class="industry-title">Capture every reservation, even after closing.</h3>
+        <p class="industry-pain">Diners call until midnight. Reservations are won and lost in seconds. Every voicemail is a table sitting empty tomorrow night.</p>
+        <div class="industry-roi">
+          <div class="industry-roi-num">+$18<em>k</em></div>
+          <div class="industry-roi-label">monthly in after-hours reservations</div>
+        </div>
+        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Reservations, hours, private events, allergies, all 24/7</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>AI SEO</b><span>Owns the local Google AI results in your neighborhood</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Custom Automations</b><span>Wait-list to text, no-shows to recovered tables</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REAL ESTATE -->
+    <div class="industry-panel" data-industry-panel="real-estate">
+      <div class="industry-content">
+        <div class="industry-eyebrow">For Realtors, Brokerages, Property Mgmt</div>
+        <h3 class="industry-title">Stop losing leads to the next agent who picks up first.</h3>
+        <p class="industry-pain">Realtors close 1 in 10 leads. The other 9 just did not get followed up with. Speed-to-lead is the entire game and you are losing it to brokers with bigger teams.</p>
+        <div class="industry-roi">
+          <div class="industry-roi-num">3<em>x</em></div>
+          <div class="industry-roi-label">more buyer appointments per month</div>
+        </div>
+        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Outbound Lead Reply</b><span>Replies in under 60 seconds, every channel</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lead Generator</b><span>Builds and ranks buyer + seller prospect lists</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI Sales Manager</b><span>Coaches calls, sends nudges, closes more deals</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUTO SERVICES -->
+    <div class="industry-panel" data-industry-panel="auto">
+      <div class="industry-content">
+        <div class="industry-eyebrow">For Auto Repair, Detailing, Body Shops</div>
+        <h3 class="industry-title">Customers call from the side of the road. Pick up first.</h3>
+        <p class="industry-pain">When a car needs work, the customer calls the first shop that answers. Voicemail means they call the next shop. You compete on speed before you compete on price.</p>
+        <div class="industry-roi">
+          <div class="industry-roi-num">+47<em>%</em></div>
+          <div class="industry-roi-label">inbound jobs booked per month</div>
+        </div>
+        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Picks up in under 2 rings, every time</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Outbound Lead Reply</b><span>Texts back form leads and missed calls instantly</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Lost Customer Reactivation</b><span>Brings back oil change + service interval customers</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDICAL / DENTAL -->
+    <div class="industry-panel" data-industry-panel="medical">
+      <div class="industry-content">
+        <div class="industry-eyebrow">For Dental, Vet, Medical Practices</div>
+        <h3 class="industry-title">Fill the chair, every chair, every day.</h3>
+        <p class="industry-pain">Dental patients miss 30% of their 6-month recall appointments because nobody calls them. Every empty chair is profit you already had on the schedule.</p>
+        <div class="industry-roi">
+          <div class="industry-roi-num">+$22<em>k</em></div>
+          <div class="industry-roi-label">monthly in recovered recall visits</div>
+        </div>
+        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Books new patients, handles insurance questions</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lost Customer Reactivation</b><span>Recall outreach, every patient, every interval</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI SEO</b><span>Wins "[procedure] near me" + Google AI recommendations</span></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- ===== STATS PANEL (moved up, 3 stats only) ===== -->
 <section class="stats-section">
   <div class="container">
@@ -2468,59 +2704,47 @@ section,.partners{background:transparent !important}
   </div>
 </section>
 
-<!-- ===== STILO PARTNERS (About — Remy + David) ===== -->
-<section class="partners-section" id="partners">
+<!-- ===== WHY US (V3 redesign 2026-05-27) ===== -->
+<section class="why-section" id="why-us">
   <div class="container">
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 64px;">
-      <span class="eyebrow">STILO Partners</span>
-      <h2><span class="gradient-text">The two people <em>behind every build</em>.</span></h2>
-      <p style="margin:14px auto 0;max-width:54ch;">No army of account managers. No outsourced agency. Two partners. We pick up the phone, we run the audit, we ship the agents.</p>
+      <span class="eyebrow">Why STILO</span>
+      <h2><span class="gradient-text">Four things <em>nobody else does</em></span></h2>
+      <p style="margin:14px auto 0;max-width:54ch;">Most AI agencies hand you a chatbot template and call it custom. We do the opposite.</p>
     </div>
-
-    <!-- REMY -->
-    <div class="partner-row partner-row-left fade-in">
-      <div class="partner-photo">
-        <img src="/assets/remy.jpg" alt="Remy Leon, Founder of STILO AI Partners" onerror="this.style.background='linear-gradient(135deg,#1E3A8A 0%,#102054 100%)';this.style.minHeight='560px';this.removeAttribute('src');this.alt='';" />
-        <div class="partner-photo-frame"></div>
-      </div>
-      <div class="partner-content">
-        <div class="partner-eyebrow">FOUNDER &middot; MIAMI</div>
-        <h3 class="partner-name">Remy Leon</h3>
-        <div class="partner-tagline">The Operator.</div>
-        <div class="partner-bio">
-          <p>Remy founded STILO AI Partners to bring custom AI to the businesses that need it most. He grew up in Miami watching local operators run on duct tape and grit, and started STILO to give them the kind of intelligence that used to be reserved for billion-dollar enterprises.</p>
-          <p>He works directly with every STILO client through their first ninety days. He picks up the phone, runs the audit, builds the first agent with you, and stays on the engagement after launch. If your engagement is live, Remy knows your numbers.</p>
-        </div>
-        <div class="partner-badges">
-          <span class="partner-badge">UF Computer Science</span>
-          <span class="partner-badge">Builder of CurateAI</span>
-          <span class="partner-badge">Miami, FL</span>
+    <div class="why-grid-v3">
+      <div class="why-card-v3 fade-in">
+        <div class="why-card-num">01</div>
+        <div class="why-card-body">
+          <h3>Custom, not configured.</h3>
+          <p>Every agent is trained on your services, your pricing, your customers. We study your market and read your reviews before we write a single prompt. What the AI says is what you'd say on your best day. Never a template with your logo glued on.</p>
         </div>
       </div>
-    </div>
-
-    <!-- DAVID (inverted) -->
-    <div class="partner-row partner-row-right fade-in delay-1">
-      <div class="partner-content">
-        <div class="partner-eyebrow">PARTNER &middot; ENGINEERING</div>
-        <h3 class="partner-name">David Coira</h3>
-        <div class="partner-tagline">The Builder.</div>
-        <div class="partner-bio">
-          <p>David is the engineering brain of STILO AI Partners. He builds the agents, wires the integrations, and ships the systems that keep every client's stack running. His work is the reason a STILO agent can pick up a call, talk to your CRM, and book a meeting in under a second.</p>
-          <p>Before STILO he was deep in production infrastructure for high-volume consumer apps. He still writes most of the code that runs for our clients today. If something breaks at 2 AM, David is the one who knows why.</p>
-        </div>
-        <div class="partner-badges">
-          <span class="partner-badge">Engineering Lead</span>
-          <span class="partner-badge">Production Infra</span>
-          <span class="partner-badge">Miami, FL</span>
+      <div class="why-card-v3 fade-in delay-1">
+        <div class="why-card-num">02</div>
+        <div class="why-card-body">
+          <h3>We run it. You don't have to.</h3>
+          <p>Most agencies hand you a dashboard and disappear. We monitor, tune, and improve every agent every week. You get a one-page report with what shipped, what moved, and the three things we're testing next.</p>
         </div>
       </div>
-      <div class="partner-photo">
-        <img src="/assets/david.jpg" alt="David Coira, Partner at STILO AI Partners" onerror="this.style.background='linear-gradient(135deg,#102054 0%,#1E3A8A 100%)';this.style.minHeight='560px';this.removeAttribute('src');this.alt='';" />
-        <div class="partner-photo-frame"></div>
+      <div class="why-card-v3 fade-in delay-2">
+        <div class="why-card-num">03</div>
+        <div class="why-card-body">
+          <h3>One connected system.</h3>
+          <p>Your receptionist talks to your lead responder. Your lead responder feeds your reactivation engine. Every agent shares context, customers, and outcomes. One layer of intelligence, not nine point solutions duct-taped together.</p>
+        </div>
+      </div>
+      <div class="why-card-v3 fade-in delay-3">
+        <div class="why-card-num">04</div>
+        <div class="why-card-body">
+          <h3>AI plus human review.</h3>
+          <p>AI drafts in minutes. A real strategist reviews every prompt, script, and message before it touches a real customer. Nothing ships without a human signoff, because we know exactly when AI gets the tone wrong.</p>
+        </div>
       </div>
     </div>
-
+    <div style="text-align:center;margin-top:64px;" class="fade-in">
+      <a href="#contact" class="btn-primary">See what we'd build for you</a>
+    </div>
   </div>
 </section>
 
@@ -2528,7 +2752,7 @@ section,.partners{background:transparent !important}
 <section class="case-section" id="results">
   <div class="container">
     <div class="section-header fade-in">
-      <h2><span class="gradient-text">Built for businesses doing <em>real revenue</em>.</span></h2>
+      <h2><span class="gradient-text">Built for businesses doing <em>real revenue</em></span></h2>
       <p>One example per agent. Different niches, different stacks, real numbers from the first sixty days.</p>
     </div>
 
@@ -2682,200 +2906,43 @@ section,.partners{background:transparent !important}
   </div>
 </section>
 
-<!-- ===== INDUSTRIES (Use Cases — buyer-first cut, 2026-05-27) ===== -->
-<section class="industries-section" id="industries">
+<!-- ===== STILO PARTNERS (About — Remy + David, V3.1 wordmark headline) ===== -->
+<section class="partners-section" id="partners">
   <div class="container">
-    <div class="section-header fade-in" style="text-align:center;margin:0 auto 56px;">
-      <span class="eyebrow">Use cases</span>
-      <h2><span class="gradient-text">AI built for <em>your industry</em>.</span></h2>
-      <p style="margin:14px auto 0;max-width:54ch;">Pick your business. We built systems for the SMB verticals where AI pays back fastest. Every system is a stack of agents tuned to how your customers actually buy.</p>
+    <div class="section-header partners-header fade-in" style="text-align:center;margin:0 auto 72px;">
+      <img class="partners-wordmark" src="/assets/stilo-wordmark.png" alt="STILO AI PARTNERS" />
     </div>
 
-    <div class="industry-tabs" role="tablist">
-      <button class="industry-tab active" data-industry="home-services"><span class="industry-tab-num">01</span>Home Services</button>
-      <button class="industry-tab" data-industry="med-spa"><span class="industry-tab-num">02</span>Med Spa &amp; Aesthetics</button>
-      <button class="industry-tab" data-industry="restaurant"><span class="industry-tab-num">03</span>Restaurants</button>
-      <button class="industry-tab" data-industry="real-estate"><span class="industry-tab-num">04</span>Real Estate</button>
-      <button class="industry-tab" data-industry="auto"><span class="industry-tab-num">05</span>Auto Services</button>
-      <button class="industry-tab" data-industry="medical"><span class="industry-tab-num">06</span>Medical &amp; Dental</button>
-    </div>
-
-    <!-- HOME SERVICES -->
-    <div class="industry-panel active" data-industry-panel="home-services">
-      <div class="industry-content">
-        <div class="industry-eyebrow">For Plumbing, HVAC, Electrical, Roofing</div>
-        <h3 class="industry-title">Stop losing jobs when you are in a customer's home.</h3>
-        <p class="industry-pain">38% of inbound calls to a home services business go to voicemail. Each call is worth $400-$3,000. The next plumber on Google gets the job.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">+$24<em>k</em></div>
-          <div class="industry-roi-label">monthly revenue recovered, average client</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+    <!-- REMY -->
+    <div class="partner-row partner-row-left fade-in">
+      <div class="partner-photo">
+        <img src="/assets/remyfoundersection.png" alt="Remy Leon, Founder of STILO AI Partners" />
+        <div class="partner-photo-frame"></div>
       </div>
-      <div class="industry-system">
-        <div class="industry-system-label">The system we'd build</div>
-        <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>24/7 booking, even when you are under a sink</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Outbound Lead Reply</b><span>Replies to every form lead in 60 seconds</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI SEO</b><span>Wins local "near me" searches in your zip codes</span></div></div>
+      <div class="partner-content">
+        <h3 class="partner-name">Remy Leon</h3>
+        <div class="partner-bio">
+          <p>Remy founded STILO AI Partners to bring custom AI to the businesses that need it most. He grew up in Miami watching local operators run on duct tape and grit, and started STILO to give them the kind of intelligence that used to be reserved for billion-dollar enterprises.</p>
+          <p>He works directly with every STILO client through their first ninety days. He picks up the phone, runs the audit, builds the first agent with you, and stays on the engagement after launch. If your engagement is live, Remy knows your numbers.</p>
         </div>
       </div>
     </div>
 
-    <!-- MED SPA -->
-    <div class="industry-panel" data-industry-panel="med-spa">
-      <div class="industry-content">
-        <div class="industry-eyebrow">For Aesthetics, IV Therapy, Weight Loss</div>
-        <h3 class="industry-title">Bring back the clients you already paid to acquire.</h3>
-        <p class="industry-pain">Med spa clients churn at 35% per year. Most never get a personalized reactivation. Your dormant list is the highest-margin revenue you are not capturing.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">+$38<em>k</em></div>
-          <div class="industry-roi-label">monthly from dormant clients, average client</div>
+    <!-- DAVID (inverted) -->
+    <div class="partner-row partner-row-right fade-in delay-1">
+      <div class="partner-content">
+        <h3 class="partner-name">David Coira</h3>
+        <div class="partner-bio">
+          <p>David is the engineering brain of STILO AI Partners. He builds the agents, wires the integrations, and ships the systems that keep every client's stack running. His work is the reason a STILO agent can pick up a call, talk to your CRM, and book a meeting in under a second.</p>
+          <p>Before STILO he was deep in production infrastructure for high-volume consumer apps. He still writes most of the code that runs for our clients today. If something breaks at 2 AM, David is the one who knows why.</p>
         </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
       </div>
-      <div class="industry-system">
-        <div class="industry-system-label">The system we'd build</div>
-        <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Books consults at 11pm when your front desk is gone</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lost Customer Reactivation</b><span>Personalized offers to dormant clients, every week</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Website Builder</b><span>Conversion-built site that turns ad clicks into consults</span></div></div>
-        </div>
+      <div class="partner-photo">
+        <img src="/assets/davidfoundersection.png" alt="David Coira, Partner at STILO AI Partners" />
+        <div class="partner-photo-frame"></div>
       </div>
     </div>
 
-    <!-- RESTAURANTS -->
-    <div class="industry-panel" data-industry-panel="restaurant">
-      <div class="industry-content">
-        <div class="industry-eyebrow">For Restaurants, Cafes, Bars</div>
-        <h3 class="industry-title">Capture every reservation, even after closing.</h3>
-        <p class="industry-pain">Diners call until midnight. Reservations are won and lost in seconds. Every voicemail is a table sitting empty tomorrow night.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">+$18<em>k</em></div>
-          <div class="industry-roi-label">monthly in after-hours reservations</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
-      </div>
-      <div class="industry-system">
-        <div class="industry-system-label">The system we'd build</div>
-        <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Reservations, hours, private events, allergies, all 24/7</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>AI SEO</b><span>Owns the local Google AI results in your neighborhood</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Custom Automations</b><span>Wait-list to text, no-shows to recovered tables</span></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- REAL ESTATE -->
-    <div class="industry-panel" data-industry-panel="real-estate">
-      <div class="industry-content">
-        <div class="industry-eyebrow">For Realtors, Brokerages, Property Mgmt</div>
-        <h3 class="industry-title">Stop losing leads to the next agent who picks up first.</h3>
-        <p class="industry-pain">Realtors close 1 in 10 leads. The other 9 just did not get followed up with. Speed-to-lead is the entire game and you are losing it to brokers with bigger teams.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">3<em>x</em></div>
-          <div class="industry-roi-label">more buyer appointments per month</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
-      </div>
-      <div class="industry-system">
-        <div class="industry-system-label">The system we'd build</div>
-        <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Outbound Lead Reply</b><span>Replies in under 60 seconds, every channel</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lead Generator</b><span>Builds and ranks buyer + seller prospect lists</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI Sales Manager</b><span>Coaches calls, sends nudges, closes more deals</span></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- AUTO SERVICES -->
-    <div class="industry-panel" data-industry-panel="auto">
-      <div class="industry-content">
-        <div class="industry-eyebrow">For Auto Repair, Detailing, Body Shops</div>
-        <h3 class="industry-title">Customers call from the side of the road. Pick up first.</h3>
-        <p class="industry-pain">When a car needs work, the customer calls the first shop that answers. Voicemail means they call the next shop. You compete on speed before you compete on price.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">+47<em>%</em></div>
-          <div class="industry-roi-label">inbound jobs booked per month</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
-      </div>
-      <div class="industry-system">
-        <div class="industry-system-label">The system we'd build</div>
-        <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Picks up in under 2 rings, every time</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Outbound Lead Reply</b><span>Texts back form leads and missed calls instantly</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Lost Customer Reactivation</b><span>Brings back oil change + service interval customers</span></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MEDICAL / DENTAL -->
-    <div class="industry-panel" data-industry-panel="medical">
-      <div class="industry-content">
-        <div class="industry-eyebrow">For Dental, Vet, Medical Practices</div>
-        <h3 class="industry-title">Fill the chair, every chair, every day.</h3>
-        <p class="industry-pain">Dental patients miss 30% of their 6-month recall appointments because nobody calls them. Every empty chair is profit you already had on the schedule.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">+$22<em>k</em></div>
-          <div class="industry-roi-label">monthly in recovered recall visits</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
-      </div>
-      <div class="industry-system">
-        <div class="industry-system-label">The system we'd build</div>
-        <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Books new patients, handles insurance questions</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lost Customer Reactivation</b><span>Recall outreach, every patient, every interval</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI SEO</b><span>Wins "[procedure] near me" + Google AI recommendations</span></div></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ===== WHY US (V3 redesign 2026-05-27) ===== -->
-<section class="why-section" id="why-us">
-  <div class="container">
-    <div class="section-header fade-in" style="text-align:center;margin:0 auto 64px;">
-      <span class="eyebrow">Why STILO</span>
-      <h2><span class="gradient-text">Four things <em>nobody else does</em>.</span></h2>
-      <p style="margin:14px auto 0;max-width:54ch;">Most AI agencies hand you a chatbot template and call it custom. We do the opposite.</p>
-    </div>
-    <div class="why-grid-v3">
-      <div class="why-card-v3 fade-in">
-        <div class="why-card-num">01</div>
-        <div class="why-card-body">
-          <h3>Custom, not configured.</h3>
-          <p>Every agent is trained on your services, your pricing, your customers. We study your market and read your reviews before we write a single prompt. What the AI says is what you'd say on your best day. Never a template with your logo glued on.</p>
-        </div>
-      </div>
-      <div class="why-card-v3 fade-in delay-1">
-        <div class="why-card-num">02</div>
-        <div class="why-card-body">
-          <h3>We run it. You don't have to.</h3>
-          <p>Most agencies hand you a dashboard and disappear. We monitor, tune, and improve every agent every week. You get a one-page report with what shipped, what moved, and the three things we're testing next.</p>
-        </div>
-      </div>
-      <div class="why-card-v3 fade-in delay-2">
-        <div class="why-card-num">03</div>
-        <div class="why-card-body">
-          <h3>One connected system.</h3>
-          <p>Your receptionist talks to your lead responder. Your lead responder feeds your reactivation engine. Every agent shares context, customers, and outcomes. One layer of intelligence, not nine point solutions duct-taped together.</p>
-        </div>
-      </div>
-      <div class="why-card-v3 fade-in delay-3">
-        <div class="why-card-num">04</div>
-        <div class="why-card-body">
-          <h3>AI plus human review.</h3>
-          <p>AI drafts in minutes. A real strategist reviews every prompt, script, and message before it touches a real customer. Nothing ships without a human signoff, because we know exactly when AI gets the tone wrong.</p>
-        </div>
-      </div>
-    </div>
-    <div style="text-align:center;margin-top:64px;" class="fade-in">
-      <a href="#contact" class="btn-primary">See what we'd build for you</a>
-    </div>
   </div>
 </section>
 
@@ -2884,7 +2951,7 @@ section,.partners{background:transparent !important}
   <div class="container">
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 48px;">
       <span class="eyebrow">FAQ</span>
-      <h2><span class="gradient-text">Questions we get from every founder.</span></h2>
+      <h2><span class="gradient-text">Questions we get from every founder</span></h2>
     </div>
     <div class="faq-list">
       <div class="faq-item fade-in">
@@ -2987,7 +3054,7 @@ section,.partners{background:transparent !important}
   <div class="container">
     <div class="final-cta-inner fade-in">
       <span class="final-cta-eyebrow">Let's get started</span>
-      <h2 class="final-cta-headline">Let's build <em>your AI</em>.</h2>
+      <h2 class="final-cta-headline">Let's build <em>your AI</em></h2>
       <p class="final-cta-sub">Fifteen minutes on a call. One page of diagnosis. A fixed quote on whichever agents fit your business. Free, no slide deck, no pressure.</p>
       <div class="final-cta-buttons">
         <a href="#contact" class="btn-primary">Take the 60-second audit</a>
@@ -3002,7 +3069,7 @@ section,.partners{background:transparent !important}
   <div class="container">
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 40px;">
       <span class="eyebrow">Get started</span>
-      <h2><span class="gradient-text">See what we'd build for <em>your business</em>.</span></h2>
+      <h2><span class="gradient-text">See what we'd build for <em>your business</em></span></h2>
       <p style="margin:14px auto 0;max-width:48ch;">Ten quick questions. You get a tailored agent team, a fixed monthly price, and the option to book a 15-minute call with Remy.</p>
     </div>
     <div class="contact-inner fade-in" id="quizContainer">
