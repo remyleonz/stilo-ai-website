@@ -1351,19 +1351,19 @@
                 <!-- 3 hero cards -->
                 <div id="revenueGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:36px;"></div>
 
-                <!-- TOP AGENTS BY MRR -->
+                <!-- AGENTS — lifetime revenue per agent, progress bar = % of total -->
                 <section style="margin-bottom:32px;">
                     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;border-bottom:1px solid var(--border-subtle);padding-bottom:14px;">
-                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">TOP AGENTS BY MRR</h3>
+                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">AGENTS</h3>
                         <span id="revenueByAgentCount" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;"></span>
                     </div>
                     <div id="revenueByAgent" style="display:flex;flex-direction:column;gap:14px;"></div>
                 </section>
 
-                <!-- TOP CLIENTS BY MRR -->
+                <!-- CLIENTS — lifetime revenue per client -->
                 <section>
                     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;border-bottom:1px solid var(--border-subtle);padding-bottom:14px;">
-                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">TOP CLIENTS BY MRR</h3>
+                        <h3 style="margin:0;font-family:var(--font-mono);font-size:0.78rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);">CLIENTS</h3>
                         <span id="revenueTopClientsCount" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;"></span>
                     </div>
                     <div id="revenueTopClients" style="display:flex;flex-direction:column;gap:0;"></div>
@@ -2635,6 +2635,13 @@
             echo: 45000, ignite: 65000, revive: 80000, scout: 100000,
             forge: 20000, signal: 0, oracle: 100000, pitch: 200000, flux: 0,
         };
+        // Used by the Revenue tab to split a multi-agent deal's upfront
+        // proportionally across the agents in agent_codes (since deals only
+        // store a single upfront total). Mirrors setupFeeCents in _agents.js.
+        var AGENT_FEES_SETUP = {
+            echo: 150000, ignite: 200000, revive: 250000, scout: 300000,
+            forge: 125000, signal: 100000, oracle: 300000, pitch: 250000, flux: 100000,
+        };
 
         async function loadAgentsTable() {
             var wrap = document.getElementById('agentsTableWrap');
@@ -3024,16 +3031,16 @@
         // Keep in sync with sites/stilo-ai/api/_agents.js but no need to be exhaustive —
         // this is purely cosmetic for the Top Agents card.
         var AGENT_DISPLAY = {
-            echo:    { name: 'Receptionist',          note: '' },
-            ignite:  { name: 'Outbound Lead Caller',  note: '' },
-            revive:  { name: 'Customer Reactivation', note: '' },
-            scout:   { name: 'Lead Generator',        note: 'B2B leads only' },
-            forge:   { name: 'Website Builder',       note: '' },
-            signal:  { name: 'AI SEO',                note: '' },
-            oracle:  { name: 'Growth Intelligence',   note: '' },
-            flux:    { name: 'Custom Automations',    note: '' },
-            pitch:   { name: 'AI Sales Agent',        note: '' },
-            business_profile: { name: 'Business Profile', note: 'no fee' }
+            echo:    { name: 'Receptionist' },
+            ignite:  { name: 'Outbound Lead Caller' },
+            revive:  { name: 'Customer Reactivation' },
+            scout:   { name: 'Lead Generator' },
+            forge:   { name: 'Website Builder' },
+            signal:  { name: 'AI SEO' },
+            oracle:  { name: 'Growth Intelligence' },
+            flux:    { name: 'Custom Automations' },
+            pitch:   { name: 'AI Sales Agent' },
+            business_profile: { name: 'Business Profile' }
         };
 
         function monthDiff(then, now) {
@@ -3104,51 +3111,61 @@
                 var activeClientIds = new Set(agentsRows.map(function(r){ return r.client_id; }));
                 var clientCount = activeClientIds.size;
 
-                // ─── Top agents by MRR: distribute each deal's monthly_retainer
-                // across the RECURRING agents in that deal (per the catalog).
-                // A deal with agent_codes=[forge, signal] where SIGNAL is
-                // one-time gets its full monthly allocated to FORGE. A bundled
-                // deal with two recurring agents splits 50/50. Tracks distinct
-                // client count from client_agents (active subscribers).
-                var perAgent = {};  // { agentType: { mrr, clients:Set } }
-
-                // Mark which agents are recurring per the catalog (AGENT_FEES_MONTHLY).
-                function isRecurring(code) { return (AGENT_FEES_MONTHLY[code] || 0) > 0; }
+                // ─── Per-agent lifetime revenue: split each deal's setup +
+                // monthly across the agents in agent_codes using catalog
+                // ratios. Setup splits by AGENT_FEES_SETUP, monthly splits
+                // by AGENT_FEES_MONTHLY. A deal with [forge, signal] where
+                // SIGNAL is one-time allocates monthly entirely to FORGE.
+                // Marcus's single-agent deal allocates fully to SCOUT.
+                // Sums to the same total as the Sales hero card.
+                var perAgent = {};  // { agentType: { lifetime, clients:Set } }
 
                 deals.forEach(function(d){
                     var codes = (d.agent_codes || []).filter(function(c){ return c !== 'business_profile'; });
-                    var recurring = codes.filter(isRecurring);
-                    var monthly = d.monthly_retainer_cents || 0;
-                    if (recurring.length === 0 || monthly === 0) {
-                        // One-time deal — register the agents so they appear in the
-                        // list with $0 MRR. Skip if no codes (data quality).
-                        codes.forEach(function(c){
-                            if (!perAgent[c]) perAgent[c] = { mrr: 0, clients: new Set() };
-                            perAgent[c].clients.add(d.client_id);
-                        });
-                        return;
-                    }
-                    var perAgentShare = Math.round(monthly / recurring.length);
-                    recurring.forEach(function(c){
-                        if (!perAgent[c]) perAgent[c] = { mrr: 0, clients: new Set() };
-                        perAgent[c].mrr += perAgentShare;
-                        perAgent[c].clients.add(d.client_id);
-                    });
-                    // Non-recurring agents in this deal (e.g. SIGNAL one-time) still
-                    // contribute to the agent's client count.
-                    codes.filter(function(c){ return !isRecurring(c); }).forEach(function(c){
-                        if (!perAgent[c]) perAgent[c] = { mrr: 0, clients: new Set() };
+                    if (codes.length === 0) return;
+                    var closedAt = d.closed_at ? new Date(d.closed_at) : null;
+                    if (!closedAt) return;
+                    var monthsSinceClose = Math.max(0, monthDiff(closedAt, now)) + 1;
+
+                    // Split setup by catalog setup ratio
+                    var setupSumCatalog = codes.reduce(function(s, c){ return s + (AGENT_FEES_SETUP[c] || 0); }, 0);
+                    var monthlySumCatalog = codes.reduce(function(s, c){ return s + (AGENT_FEES_MONTHLY[c] || 0); }, 0);
+
+                    codes.forEach(function(c){
+                        if (!perAgent[c]) perAgent[c] = { lifetime: 0, clients: new Set() };
+
+                        // Setup share — proportional to catalog price (falls back to even split if catalog
+                        // sum is 0 for every agent in the deal).
+                        var setupShare;
+                        if (setupSumCatalog > 0) {
+                            setupShare = Math.round((d.upfront_fee_cents || 0) * ((AGENT_FEES_SETUP[c] || 0) / setupSumCatalog));
+                        } else {
+                            setupShare = Math.round((d.upfront_fee_cents || 0) / codes.length);
+                        }
+
+                        // Monthly share — recurring agents only, proportional to catalog monthly.
+                        var monthlyShare = 0;
+                        if (monthlySumCatalog > 0 && (AGENT_FEES_MONTHLY[c] || 0) > 0) {
+                            monthlyShare = Math.round((d.monthly_retainer_cents || 0) * ((AGENT_FEES_MONTHLY[c] || 0) / monthlySumCatalog));
+                        }
+
+                        perAgent[c].lifetime += setupShare + (monthlyShare * monthsSinceClose);
                         perAgent[c].clients.add(d.client_id);
                     });
                 });
 
-                // ─── Top clients by MRR: actual deal monthly per client
+                // ─── Per-client lifetime revenue
                 var perClient = {};
                 deals.forEach(function(d){
                     var cid = d.client_id;
+                    if (!cid) return;
+                    var closedAt = d.closed_at ? new Date(d.closed_at) : null;
+                    if (!closedAt) return;
+                    var monthsSinceClose = Math.max(0, monthDiff(closedAt, now)) + 1;
+                    var lifetime = (d.upfront_fee_cents || 0) + ((d.monthly_retainer_cents || 0) * monthsSinceClose);
                     var name = (d.clients && d.clients.business_name) || (d.clients && d.clients.email) || '—';
                     if (!perClient[cid]) perClient[cid] = { name: name, cents: 0, agents: 0 };
-                    perClient[cid].cents += (d.monthly_retainer_cents || 0);
+                    perClient[cid].cents += lifetime;
                     perClient[cid].agents += (d.agent_codes || []).filter(function(c){ return c !== 'business_profile'; }).length;
                 });
 
@@ -3184,38 +3201,43 @@
                         + '</div>';
                 }).join('');
 
-                // ============= TOP AGENTS BY MRR =============
+                // ============= AGENTS (lifetime revenue) =============
+                // Progress bar is the agent's share of total lifetime revenue
+                // (not the share of the top-earning agent). So the bars sum
+                // visually to "the whole pie".
+                var totalLifetime = Object.values(perAgent).reduce(function(s, a){ return s + a.lifetime; }, 0) || 1;
                 var agentEntries = Object.entries(perAgent)
-                    .map(function(e){ return { code: e[0], mrr: e[1].mrr, clientCount: e[1].clients.size }; })
-                    .sort(function(a,b){ return b.mrr - a.mrr || b.clientCount - a.clientCount; });
+                    .map(function(e){ return { code: e[0], lifetime: e[1].lifetime, clientCount: e[1].clients.size }; })
+                    .sort(function(a,b){ return b.lifetime - a.lifetime || b.clientCount - a.clientCount; });
 
                 byAgentCount.textContent = agentEntries.length + (agentEntries.length === 1 ? ' AGENT' : ' AGENTS');
 
                 if (!agentEntries.length) {
-                    byAgent.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No active deployments yet.</div>';
+                    byAgent.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No agents sold yet.</div>';
                 } else {
-                    var maxMrr = agentEntries[0].mrr || 1;
                     byAgent.innerHTML = agentEntries.map(function(e){
-                        var meta = AGENT_DISPLAY[e.code] || { name: e.code, note: '' };
-                        var pct = Math.round((e.mrr / maxMrr) * 100);
+                        var meta = AGENT_DISPLAY[e.code] || { name: e.code };
+                        var pct = Math.round((e.lifetime / totalLifetime) * 100);
                         return ''
                             + '<div style="display:grid;grid-template-columns:1.8fr 1fr 0.6fr;gap:24px;align-items:center;padding:18px 22px;background:rgba(255,255,255,0.018);border:1px solid var(--border-subtle);border-radius:var(--radius-md);">'
                               + '<div style="min-width:0;">'
                                 + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.05rem;color:var(--text-primary);letter-spacing:-0.01em;">' + escapeAdminHtml(meta.name) + '</div>'
-                                + (meta.note ? '<div style="font-family:var(--font-accent);font-style:italic;font-size:0.82rem;color:var(--text-tertiary);margin-top:3px;">' + escapeAdminHtml(meta.note) + '</div>' : '')
                               + '</div>'
-                              + '<div style="height:6px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;">'
-                                + '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,var(--purple-primary),var(--purple-light));border-radius:999px;"></div>'
+                              + '<div style="display:flex;align-items:center;gap:10px;">'
+                                + '<div style="flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;">'
+                                  + '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,var(--purple-primary),var(--purple-light));border-radius:999px;"></div>'
+                                + '</div>'
+                                + '<div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-tertiary);letter-spacing:0.06em;font-variant-numeric:tabular-nums;min-width:36px;text-align:right;">' + pct + '%</div>'
                               + '</div>'
                               + '<div style="text-align:right;">'
-                                + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + fmtUsd(e.mrr) + '</div>'
+                                + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + fmtUsd(e.lifetime) + '</div>'
                                 + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);letter-spacing:0.06em;margin-top:2px;">' + e.clientCount + (e.clientCount === 1 ? ' CLIENT' : ' CLIENTS') + '</div>'
                               + '</div>'
                             + '</div>';
                     }).join('');
                 }
 
-                // ============= TOP CLIENTS BY MRR =============
+                // ============= CLIENTS (lifetime revenue) =============
                 var clientEntries = Object.entries(perClient)
                     .map(function(e){ return { id: e[0], name: e[1].name, cents: e[1].cents, agents: e[1].agents }; })
                     .sort(function(a,b){ return b.cents - a.cents; })
@@ -3235,7 +3257,7 @@
                                 + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.25rem;color:var(--text-primary);letter-spacing:-0.015em;">' + escapeAdminHtml(e.name) + '</div>'
                                 + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-tertiary);letter-spacing:0.08em;margin-top:4px;">' + e.agents + (e.agents === 1 ? ' AGENT ACTIVE' : ' AGENTS ACTIVE') + '</div>'
                               + '</div>'
-                              + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.4rem;color:var(--text-primary);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;text-align:right;">' + fmtUsd(e.cents) + '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;margin-left:4px;">/MO</span></div>'
+                              + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.4rem;color:var(--text-primary);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;text-align:right;">' + fmtUsd(e.cents) + '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;margin-left:4px;">LIFETIME</span></div>'
                             + '</div>';
                     }).join('');
                 }
