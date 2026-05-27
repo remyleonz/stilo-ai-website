@@ -3104,23 +3104,52 @@
                 var activeClientIds = new Set(agentsRows.map(function(r){ return r.client_id; }));
                 var clientCount = activeClientIds.size;
 
-                // ─── Top agents by MRR: sum monthly fees × active subscribers per agent
-                var perAgent = {};  // { agentType: { mrr, clientCount } }
-                agentsRows.forEach(function(r){
-                    var monthly = AGENT_FEES_MONTHLY[r.agent_type] || 0;
-                    if (!perAgent[r.agent_type]) perAgent[r.agent_type] = { mrr: 0, clients: new Set() };
-                    perAgent[r.agent_type].mrr += monthly;
-                    perAgent[r.agent_type].clients.add(r.client_id);
+                // ─── Top agents by MRR: distribute each deal's monthly_retainer
+                // across the RECURRING agents in that deal (per the catalog).
+                // A deal with agent_codes=[forge, signal] where SIGNAL is
+                // one-time gets its full monthly allocated to FORGE. A bundled
+                // deal with two recurring agents splits 50/50. Tracks distinct
+                // client count from client_agents (active subscribers).
+                var perAgent = {};  // { agentType: { mrr, clients:Set } }
+
+                // Mark which agents are recurring per the catalog (AGENT_FEES_MONTHLY).
+                function isRecurring(code) { return (AGENT_FEES_MONTHLY[code] || 0) > 0; }
+
+                deals.forEach(function(d){
+                    var codes = (d.agent_codes || []).filter(function(c){ return c !== 'business_profile'; });
+                    var recurring = codes.filter(isRecurring);
+                    var monthly = d.monthly_retainer_cents || 0;
+                    if (recurring.length === 0 || monthly === 0) {
+                        // One-time deal — register the agents so they appear in the
+                        // list with $0 MRR. Skip if no codes (data quality).
+                        codes.forEach(function(c){
+                            if (!perAgent[c]) perAgent[c] = { mrr: 0, clients: new Set() };
+                            perAgent[c].clients.add(d.client_id);
+                        });
+                        return;
+                    }
+                    var perAgentShare = Math.round(monthly / recurring.length);
+                    recurring.forEach(function(c){
+                        if (!perAgent[c]) perAgent[c] = { mrr: 0, clients: new Set() };
+                        perAgent[c].mrr += perAgentShare;
+                        perAgent[c].clients.add(d.client_id);
+                    });
+                    // Non-recurring agents in this deal (e.g. SIGNAL one-time) still
+                    // contribute to the agent's client count.
+                    codes.filter(function(c){ return !isRecurring(c); }).forEach(function(c){
+                        if (!perAgent[c]) perAgent[c] = { mrr: 0, clients: new Set() };
+                        perAgent[c].clients.add(d.client_id);
+                    });
                 });
 
-                // ─── Top clients by MRR: sum across their active agents
+                // ─── Top clients by MRR: actual deal monthly per client
                 var perClient = {};
-                agentsRows.forEach(function(r){
-                    var monthly = AGENT_FEES_MONTHLY[r.agent_type] || 0;
-                    var name = (r.clients && r.clients.business_name) || (r.clients && r.clients.email) || '—';
-                    if (!perClient[r.client_id]) perClient[r.client_id] = { name: name, cents: 0, agents: 0 };
-                    perClient[r.client_id].cents += monthly;
-                    perClient[r.client_id].agents += 1;
+                deals.forEach(function(d){
+                    var cid = d.client_id;
+                    var name = (d.clients && d.clients.business_name) || (d.clients && d.clients.email) || '—';
+                    if (!perClient[cid]) perClient[cid] = { name: name, cents: 0, agents: 0 };
+                    perClient[cid].cents += (d.monthly_retainer_cents || 0);
+                    perClient[cid].agents += (d.agent_codes || []).filter(function(c){ return c !== 'business_profile'; }).length;
                 });
 
                 var fmtUsd = function(cents){
