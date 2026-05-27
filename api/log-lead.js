@@ -195,17 +195,22 @@ module.exports = async function handleLogLead(req, res) {
     }
 
     // Outbound Lead Reply — LIVE
-    // 2026-05-27: on every quiz_complete, send a personalized first-touch
-    // email via Resend within seconds. Fire-and-forget so the recommendation
-    // screen doesn't wait on Resend's API.
-    if (ctaType === 'quiz_complete' && row.email && process.env.RESEND_API_KEY) {
-      // Run async without await — user gets their result page instantly
-      sendQuizLeadReplyEmail(row, data.id).catch(function(e){
+    // 2026-05-27 (V2): await the send so it actually completes before the
+    // serverless function exits. Previous fire-and-forget was being killed
+    // by Vercel after the response. Resend takes ~500ms — negligible UX hit.
+    // Send on quiz_complete, audit, and purchase so every meaningful intent
+    // triggers a first-touch.
+    var emailResult = null;
+    if (row.email && process.env.RESEND_API_KEY) {
+      try {
+        emailResult = await sendQuizLeadReplyEmail(row, data.id);
+      } catch (e) {
         console.warn('[log-lead] lead-reply email failed:', e && e.message);
-      });
+        emailResult = { ok: false, error: e && e.message };
+      }
     }
 
-    return res.status(200).json({ ok: true, lead_id: data.id });
+    return res.status(200).json({ ok: true, lead_id: data.id, email: emailResult });
   } catch (err) {
     console.error('[log-lead] unexpected:', err);
     return res.status(200).json({ ok: false, error: 'unexpected' });
