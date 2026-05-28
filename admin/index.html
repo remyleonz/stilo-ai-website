@@ -129,6 +129,85 @@
             align-items: center;
         }
 
+        /* Period segmented control on the Revenue tab — Stripe-style pill row. */
+        .rev-period {
+            padding: 7px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 999px;
+            color: var(--text-secondary);
+            font-family: var(--font-display);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: background 120ms, color 120ms;
+        }
+        .rev-period:hover { color: var(--text-primary); }
+        .rev-period.active {
+            background: var(--purple-primary);
+            color: #fff;
+        }
+
+        /* Revenue list rows — match Stripe/AppStoreConnect data-density.
+           grid: label | sparkline | number column. Numbers use tabular-nums
+           so columns align even when digits vary. */
+        .rev-row {
+            display: grid;
+            grid-template-columns: minmax(180px, 1.6fr) minmax(120px, 1.6fr) auto;
+            gap: 28px;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.018);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            transition: background 140ms, border-color 140ms;
+        }
+        .rev-row.clickable { cursor: pointer; }
+        .rev-row.clickable:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .rev-row__name {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.98rem;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+        .rev-row__sub {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+        .rev-row__value {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.15rem;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
+        .rev-row__delta {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            letter-spacing: 0.04em;
+            margin-top: 3px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .rev-row__delta.up   { color: #22c55e; }
+        .rev-row__delta.down { color: #ef4444; }
+        .rev-row__delta.flat { color: var(--text-muted); }
+        .rev-spark { width: 100%; height: 36px; display: block; }
+        @media (max-width: 720px) {
+            .rev-row { grid-template-columns: 1fr auto; gap: 16px; padding: 14px 16px; }
+            .rev-row .rev-spark { display: none; }
+        }
+
         /* Hero stat card — mono eyebrow, big display number, tertiary meta line. */
         .stilo-hero-grid {
             display: grid;
@@ -1572,25 +1651,37 @@
                  ============================================================ -->
             <div class="page-content" id="page-revenue" style="display:none;">
 
-                <!-- 3 hero cards -->
+                <!-- Period selector — Stripe/AppStoreConnect pattern. Drives every
+                     KPI + sparkline on this page. Default: Month-to-date. -->
+                <div id="revenuePeriodBar" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;">
+                    <div style="display:inline-flex;background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:999px;padding:3px;">
+                        <button type="button" class="rev-period" data-period="today" onclick="setRevenuePeriod('today')">Today</button>
+                        <button type="button" class="rev-period" data-period="week" onclick="setRevenuePeriod('week')">7 days</button>
+                        <button type="button" class="rev-period active" data-period="month" onclick="setRevenuePeriod('month')">Month</button>
+                        <button type="button" class="rev-period" data-period="all" onclick="setRevenuePeriod('all')">All time</button>
+                    </div>
+                    <div id="revenuePeriodLabel" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;"></div>
+                </div>
+
+                <!-- 3 hero cards (period-aware) -->
                 <div id="revenueGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:36px;"></div>
 
-                <!-- AGENTS — lifetime revenue per agent, progress bar = % of total -->
+                <!-- AGENTS — revenue per agent over the selected period -->
                 <section class="stilo-section">
                     <div class="stilo-section-header">
                         <h3 class="stilo-section-title">AGENTS</h3>
                         <span class="stilo-section-count" id="revenueByAgentCount"></span>
                     </div>
-                    <div id="revenueByAgent" style="display:flex;flex-direction:column;gap:14px;"></div>
+                    <div id="revenueByAgent" style="display:flex;flex-direction:column;gap:10px;"></div>
                 </section>
 
-                <!-- CLIENTS — lifetime revenue per client -->
+                <!-- CLIENTS — revenue per client over the selected period -->
                 <section class="stilo-section">
                     <div class="stilo-section-header">
                         <h3 class="stilo-section-title">CLIENTS</h3>
                         <span class="stilo-section-count" id="revenueTopClientsCount"></span>
                     </div>
-                    <div id="revenueTopClients" style="display:flex;flex-direction:column;gap:0;"></div>
+                    <div id="revenueTopClients" style="display:flex;flex-direction:column;gap:10px;"></div>
                 </section>
             </div>
 
@@ -2418,12 +2509,20 @@
                 }
             } catch (e) { c._lead_source = { gcs_prefix: '' }; }
 
-            // Fetch full agent list with config
-            var agentsRes = await sb.from('client_agents')
-                .select('id, agent_type, status, created_at, activated_at, config')
-                .eq('client_id', clientId)
-                .order('created_at');
+            // Fetch full agent list with config + deals (for pricing/lifetime/MRR)
+            var [agentsRes, dealsRes] = await Promise.all([
+                sb.from('client_agents')
+                    .select('id, agent_type, status, created_at, activated_at, config')
+                    .eq('client_id', clientId)
+                    .order('created_at'),
+                sb.from('deals')
+                    .select('id, agent_codes, upfront_fee_cents, monthly_retainer_cents, stage, closed_at, paid_at')
+                    .eq('client_id', clientId)
+                    .neq('stage', 'CLOSED_LOST')
+                    .order('closed_at')
+            ]);
             var agents = agentsRes.data || [];
+            var deals = dealsRes.data || [];
 
             // Fetch ALL onboarding steps for these agents
             var stepsMap = {};
@@ -2464,7 +2563,7 @@
                 });
             }
 
-            content.innerHTML = buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap);
+            content.innerHTML = buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap, deals);
 
             // Best-effort: if this client has a matching prospect record (by phone or
             // business_name), append a Prospecting card + Call History timeline.
@@ -2540,78 +2639,119 @@
             return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        function buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap) {
+        function buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap, deals) {
             metricsMap = metricsMap || {};
             eventsMap = eventsMap || {};
-            var typeNames = {
-                echo:'AI Receptionist', ignite:'Lead Response', revive:'Customer Reactivation',
-                scout:'Lead Generator', forge:'AI Website', signal:'AI SEO',
-                oracle:'Growth Intelligence', pitch:'AI Sales Agent', flux:'Custom Automations'
-            };
+            deals = deals || [];
             var allTypes = ['echo','ignite','revive','scout','forge','signal','oracle','pitch','flux'];
             var deployed = agents.map(function(a){ return a.agent_type; });
             var available = allTypes.filter(function(t){ return !deployed.includes(t); });
 
+            // ─── Per-agent pricing pulled from this client's deals ───
+            // Split each multi-agent deal's setup + monthly across its agents
+            // using AGENT_FEES_SETUP / AGENT_FEES_MONTHLY catalog ratios so a
+            // bundle like FORGE+SIGNAL allocates correctly. Same math as the
+            // Revenue tab — single source of truth.
+            var now = new Date();
+            var agentPricing = {};   // code → { setupCents, monthlyCents, lifetimeCents, closedAt }
+            var totalLifetimeCents = 0;
+            var totalMrrCents = 0;
+            deals.forEach(function(d){
+                var codes = (d.agent_codes || []).filter(function(x){ return x !== 'business_profile'; });
+                if (!codes.length || !d.closed_at) return;
+                var closedAt = new Date(d.closed_at);
+                var monthsSinceClose = Math.max(0, monthDiff(closedAt, now)) + 1;
+                totalMrrCents += (d.monthly_retainer_cents || 0);
+                var setupSum = codes.reduce(function(s, c){ return s + (AGENT_FEES_SETUP[c] || 0); }, 0);
+                var monthlySum = codes.reduce(function(s, c){ return s + (AGENT_FEES_MONTHLY[c] || 0); }, 0);
+                codes.forEach(function(code){
+                    if (!agentPricing[code]) agentPricing[code] = { setupCents: 0, monthlyCents: 0, lifetimeCents: 0, closedAt: closedAt };
+                    var setupShare = setupSum > 0
+                        ? Math.round((d.upfront_fee_cents || 0) * ((AGENT_FEES_SETUP[code] || 0) / setupSum))
+                        : Math.round((d.upfront_fee_cents || 0) / codes.length);
+                    var monthlyShare = (monthlySum > 0 && (AGENT_FEES_MONTHLY[code] || 0) > 0)
+                        ? Math.round((d.monthly_retainer_cents || 0) * ((AGENT_FEES_MONTHLY[code] || 0) / monthlySum))
+                        : 0;
+                    agentPricing[code].setupCents += setupShare;
+                    agentPricing[code].monthlyCents += monthlyShare;
+                    agentPricing[code].lifetimeCents += setupShare + (monthlyShare * monthsSinceClose);
+                    if (closedAt < agentPricing[code].closedAt) agentPricing[code].closedAt = closedAt;
+                    totalLifetimeCents += setupShare + (monthlyShare * monthsSinceClose);
+                });
+            });
+
+            // ─── Days as client (from earliest deal close) ───
+            var firstClose = deals.reduce(function(min, d){
+                if (!d.closed_at) return min;
+                var t = new Date(d.closed_at);
+                return (!min || t < min) ? t : min;
+            }, null);
+            var daysAsClient = firstClose ? Math.max(1, Math.floor((now - firstClose) / 86400000)) : 0;
+            var activeAgentsCount = agents.filter(function(a){ return a.status === 'active'; }).length;
+
+            var fmtCents = function(cents){
+                return '$' + (cents/100).toLocaleString('en-US', { maximumFractionDigits: 0 });
+            };
+
+            // ─── Status badge for the client (synthesized from agent states) ───
+            var anyOnboarding = agents.some(function(a){ return a.status === 'onboarding'; });
+            var anyActive     = agents.some(function(a){ return a.status === 'active'; });
+            var clientStatus  = anyOnboarding && !anyActive ? 'ONBOARDING'
+                              : anyActive ? 'ACTIVE'
+                              : 'PAUSED';
+            var statusBg = clientStatus === 'ACTIVE'     ? 'rgba(34,197,94,0.14)'
+                         : clientStatus === 'ONBOARDING' ? 'rgba(245,158,11,0.16)'
+                         : 'rgba(239,68,68,0.14)';
+            var statusFg = clientStatus === 'ACTIVE'     ? '#22c55e'
+                         : clientStatus === 'ONBOARDING' ? '#f59e0b'
+                         : '#ef4444';
+
             var h = '';
 
-            // ---- Header ----
-            h += '<div style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(37,99,235,0.1);">' +
-                 '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;">' + esc(c.business_name || '—') + '</h2>' +
-                 '<div style="font-size:13px;color:var(--text-secondary,#8a8aa0);margin-top:3px;">' + esc(c.business_type||'') + (c.business_type&&c.email?' · ':'') + esc(c.email||'') + '</div>' +
-                 '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">' +
-                   '<a href="mailto:'+esc(c.email||'')+'?subject=STILO%20AI%20Partners" style="padding:8px 16px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;">Email</a>' +
-                   (c.phone ? '<a href="tel:'+esc(c.phone)+'" style="padding:8px 16px;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:inherit;">Call</a>' : '') +
-                   '<a href="/app/leads.html?impersonate='+esc(c.id)+'" target="_blank" rel="noopener" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#ef4444;" title="Open this client\'s lead dashboard with your admin session — every action logged to impersonation_audit.">Open as client →</a>' +
-                 '</div>' +
-               '</div>';
+            // ─── HERO ───
+            h += '<div style="margin-bottom:22px;">'
+              + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:10px;">'
+                + '<div style="min-width:0;flex:1;">'
+                  + '<h2 style="font-family:var(--font-display);font-weight:600;font-size:1.85rem;letter-spacing:-0.025em;margin:0;line-height:1.1;">' + esc(c.business_name || '—') + '</h2>'
+                  + '<div style="font-size:13px;color:var(--text-secondary);margin-top:6px;">'
+                    + esc(c.contact_name || '—')
+                    + (c.email ? ' · <a href="mailto:'+esc(c.email)+'" style="color:var(--text-secondary);text-decoration:none;border-bottom:1px dotted var(--border-medium);">' + esc(c.email) + '</a>' : '')
+                    + (c.phone ? ' · <span style="font-family:var(--font-mono);">' + esc(c.phone) + '</span>' : '')
+                  + '</div>'
+                + '</div>'
+                + '<span style="padding:5px 12px;border-radius:999px;background:' + statusBg + ';color:' + statusFg + ';font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:0.08em;white-space:nowrap;">' + clientStatus + '</span>'
+              + '</div>'
+              + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + (c.email ? '<a href="mailto:'+esc(c.email)+'?subject=STILO%20AI%20Partners" style="padding:7px 14px;background:var(--purple-primary);border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;color:#fff;">Email</a>' : '')
+                + (c.phone ? '<a href="tel:'+esc(c.phone)+'" style="padding:7px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-subtle);border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;color:var(--text-primary);">Call</a>' : '')
+                + '<a href="/app/leads.html?impersonate='+esc(c.id)+'" target="_blank" rel="noopener" style="padding:7px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;color:#ef4444;" title="Open this client\'s dashboard as them — every action logged.">Open as client →</a>'
+              + '</div>'
+            + '</div>';
 
-            // ---- Edit client info ----
-            h += '<details style="margin-bottom:20px;" open>' +
-                 '<summary style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">&#9660; Client Info</summary>' +
-                 '<div style="margin-top:12px;background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.1);border-radius:10px;padding:16px;">' +
-                   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
-                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Business Name</div>' +
-                       '<input id="mi-biz" type="text" value="'+esc(c.business_name)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
-                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Contact Name</div>' +
-                       '<input id="mi-contact" type="text" value="'+esc(c.contact_name)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
-                   '</div>' +
-                   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">' +
-                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Email</div>' +
-                       '<input id="mi-email" type="email" value="'+esc(c.email)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
-                     '<div><div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-bottom:4px;">Phone</div>' +
-                       '<input id="mi-phone" type="tel" value="'+esc(c.phone)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>' +
-                   '</div>' +
-                   '<button onclick="adminSaveClientInfo(\''+c.id+'\')" id="mi-savebtn" style="padding:7px 16px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);border-radius:7px;font-size:13px;font-weight:600;color:#60a5fa;cursor:pointer;">Save Changes</button>' +
-                   '<span id="mi-savemsg" style="font-size:12px;margin-left:10px;display:none;"></span>' +
-                 '</div></details>';
+            // ─── KPI STRIP ───
+            var kpiCards = [
+                { eyebrow: 'LIFETIME REVENUE', value: fmtCents(totalLifetimeCents) },
+                { eyebrow: 'MONTHLY RETAINER', value: fmtCents(totalMrrCents) },
+                { eyebrow: 'AGENTS LIVE',      value: activeAgentsCount + ' / ' + agents.length },
+                { eyebrow: 'CUSTOMER FOR',     value: daysAsClient + (daysAsClient === 1 ? ' DAY' : ' DAYS') }
+            ];
+            h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px;">'
+              + kpiCards.map(function(k){
+                  return '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:10px;padding:12px 14px;">'
+                    + '<div style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.14em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">' + k.eyebrow + '</div>'
+                    + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.35rem;letter-spacing:-0.02em;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + k.value + '</div>'
+                    + '</div>';
+              }).join('')
+            + '</div>';
 
-            // ---- Lead source (GCS prefix) ----
-            // Per-client config so we don't need a code push every time
-            // David drops a new client's CSV into gs://stilo-cold-call-scripts/.
-            // Stored in auth.users.user_metadata.lead_source_gcs_prefix —
-            // service-role only (David doesn't need Supabase access).
-            // /api/client-leads picks the newest .csv matching this prefix
-            // automatically, so a new batch in GCS shows up without any
-            // change here.
-            h += '<details style="margin-bottom:20px;" open>' +
-                 '<summary style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">&#9660; Lead Source (GCS Prefix)</summary>' +
-                 '<div style="margin-top:12px;background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.1);border-radius:10px;padding:16px;">' +
-                   '<div style="font-size:12px;color:var(--text-secondary,#8a8aa0);margin-bottom:8px;line-height:1.5;">' +
-                     'Path inside <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">gs://stilo-cold-call-scripts/</code> that this client\'s leads CSVs share. Newest matching <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">.csv</code> auto-loads.' +
-                   '</div>' +
-                   '<div style="display:flex;gap:8px;align-items:stretch;">' +
-                     '<input id="ls-prefix" type="text" placeholder="e.g. leads/jacksonville-office-leads-" value="' + esc((c._lead_source && c._lead_source.gcs_prefix) || '') + '" style="flex:1;padding:8px 12px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:6px;color:inherit;font-size:13px;font-family:var(--font-mono,ui-monospace,monospace);">' +
-                     '<button onclick="adminSaveLeadSource(\''+c.id+'\')" id="ls-savebtn" style="padding:8px 16px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);border-radius:7px;font-size:13px;font-weight:600;color:#60a5fa;cursor:pointer;white-space:nowrap;">Save</button>' +
-                   '</div>' +
-                   '<div id="ls-savemsg" style="font-size:12px;margin-top:8px;display:none;"></div>' +
-                   ((c._lead_source && c._lead_source.updated_at) ? '<div style="font-size:11px;color:var(--text-muted,#5a5a75);margin-top:8px;">Last updated ' + new Date(c._lead_source.updated_at).toLocaleString() + (c._lead_source.updated_by ? ' by ' + esc(c._lead_source.updated_by) : '') + '</div>' : '') +
-                 '</div></details>';
-
-            // ---- Agents ----
-            h += '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);margin-bottom:12px;">Agents (' + agents.length + ')</div>';
+            // ---- Agents header ----
+            h += '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid var(--border-subtle);padding-bottom:10px;">'
+              + '<div style="font-family:var(--font-mono);font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-secondary);font-weight:500;">AGENTS</div>'
+              + '<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">' + agents.length + (agents.length === 1 ? ' DEPLOYED' : ' DEPLOYED') + '</div>'
+            + '</div>';
 
             if (!agents.length) {
-                h += '<div style="font-size:13px;color:var(--text-muted,#5a5a75);margin-bottom:20px;">No agents deployed yet. Use the form below to deploy one.</div>';
+                h += '<div style="font-size:13px;color:var(--text-muted,#5a5a75);margin-bottom:20px;">No agents deployed yet. Use the form at the bottom to deploy one.</div>';
             }
 
             agents.forEach(function(a) {
@@ -2619,18 +2759,45 @@
                 var done  = steps.filter(function(s){ return s.status === 'completed'; }).length;
                 var total = steps.length;
                 var sColor = a.status === 'active' ? '#22c55e' : (a.status === 'paused' ? '#f59e0b' : '#3b82f6');
-                var agentLabel = (a.agent_type||'').toUpperCase() + ' — ' + (typeNames[a.agent_type] || a.agent_type);
+                var meta = AGENT_DISPLAY[a.agent_type] || { name: a.agent_type, desc: '' };
+                var pricing = agentPricing[a.agent_type];
 
-                h += '<div style="border:1px solid rgba(37,99,235,0.15);border-radius:10px;margin-bottom:14px;overflow:hidden;">' +
+                // Pricing strip — only shows when this agent is on a deal.
+                // Lets Remy verify at a glance what this client is paying for
+                // this specific agent and what it's earned lifetime.
+                var pricingStripHtml = '';
+                if (pricing) {
+                    pricingStripHtml =
+                        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:rgba(0,0,0,0.18);border-top:1px solid rgba(255,255,255,0.04);">'
+                          + '<div style="padding:10px 14px;border-right:1px solid rgba(255,255,255,0.04);">'
+                            + '<div style="font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Setup</div>'
+                            + '<div style="font-family:var(--font-display);font-weight:600;font-size:0.92rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + fmtCents(pricing.setupCents) + '</div>'
+                          + '</div>'
+                          + '<div style="padding:10px 14px;border-right:1px solid rgba(255,255,255,0.04);">'
+                            + '<div style="font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Monthly</div>'
+                            + '<div style="font-family:var(--font-display);font-weight:600;font-size:0.92rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + (pricing.monthlyCents > 0 ? fmtCents(pricing.monthlyCents) + '/mo' : '—') + '</div>'
+                          + '</div>'
+                          + '<div style="padding:10px 14px;">'
+                            + '<div style="font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Lifetime</div>'
+                            + '<div style="font-family:var(--font-display);font-weight:600;font-size:0.92rem;color:#22c55e;font-variant-numeric:tabular-nums;">' + fmtCents(pricing.lifetimeCents) + '</div>'
+                          + '</div>'
+                        + '</div>';
+                }
+
+                h += '<div style="border:1px solid var(--border-subtle);border-radius:10px;margin-bottom:14px;overflow:hidden;background:rgba(255,255,255,0.012);">' +
 
                      // Agent header
-                     '<div style="padding:14px 16px;background:rgba(37,99,235,0.04);border-bottom:1px solid rgba(37,99,235,0.08);">' +
+                     '<div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);">' +
                        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
-                         '<div>' +
-                           '<div style="font-weight:700;font-size:14px;">' + esc(agentLabel) + '</div>' +
-                           (total > 0 ? '<div style="font-size:12px;color:var(--text-muted,#5a5a75);margin-top:2px;">'+done+'/'+total+' onboarding steps complete</div>' : '') +
+                         '<div style="min-width:0;flex:1;">' +
+                           '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">' +
+                             '<div style="font-family:var(--font-display);font-weight:600;font-size:1rem;letter-spacing:-0.01em;color:var(--text-primary);">' + esc(meta.name) + '</div>' +
+                             '<div style="font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.14em;color:var(--text-muted);text-transform:uppercase;">' + esc((a.agent_type||'').toUpperCase()) + '</div>' +
+                           '</div>' +
+                           (meta.desc ? '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1.4;">' + esc(meta.desc) + '</div>' : '') +
+                           (total > 0 ? '<div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-family:var(--font-mono);letter-spacing:0.04em;">' + done + '/' + total + ' ONBOARDING STEPS COMPLETE</div>' : '') +
                          '</div>' +
-                         '<span style="font-size:12px;font-weight:700;color:'+sColor+';background:'+sColor+'18;padding:4px 12px;border-radius:20px;white-space:nowrap;">'+a.status+'</span>' +
+                         '<span style="font-size:11px;font-weight:700;color:'+sColor+';background:'+sColor+'18;padding:4px 10px;border-radius:999px;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;font-family:var(--font-mono);">'+a.status+'</span>' +
                        '</div>' +
                        // Status controls
                        '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">' +
@@ -2639,7 +2806,8 @@
                          (a.status!=='onboarding'? '<button onclick="adminAgentStatus(\''+a.id+'\',\'onboarding\',\''+c.id+'\')" style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:6px;color:#60a5fa;cursor:pointer;">Reset to Setup</button>' : '') +
                          '<button onclick="adminRemoveAgent(\''+a.id+'\',\''+c.id+'\')" style="padding:5px 12px;font-size:12px;font-weight:600;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#ef4444;cursor:pointer;">Remove</button>' +
                        '</div>' +
-                     '</div>';
+                     '</div>' +
+                     pricingStripHtml;
 
                 // ---- KPI snapshot + recent events ----
                 var snap = metricsMap[a.id];
@@ -2715,24 +2883,74 @@
                 h += '</div>'; // end agent card
             });
 
-            // ---- Deploy new agent ----
-            h += '<div style="border:1px dashed rgba(37,99,235,0.2);border-radius:10px;padding:16px;margin-top:4px;">' +
-                 '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted,#5a5a75);margin-bottom:10px;">Deploy Another Agent</div>';
+            // ───── Admin tools (collapsed accordions at the bottom) ─────
+            // Edit fields + GCS prefix + Deploy live here because they're
+            // configuration, not data. Hidden by default so the drawer reads
+            // as a client profile first, an editor second.
+            h += '<div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border-subtle);">'
+              + '<div style="font-family:var(--font-mono);font-size:0.65rem;letter-spacing:0.16em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">Admin tools</div>';
 
+            // Client info edit (collapsed)
+            h += '<details style="margin-bottom:10px;">'
+              + '<summary style="cursor:pointer;list-style:none;padding:10px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">'
+                + '<span>Edit client info</span><span style="color:var(--text-muted);font-size:11px;">▾</span>'
+              + '</summary>'
+              + '<div style="margin-top:8px;background:rgba(255,255,255,0.012);border:1px solid var(--border-subtle);border-radius:10px;padding:16px;">'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+                  + '<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Business name</div><input id="mi-biz" type="text" value="'+esc(c.business_name)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid var(--border-subtle);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>'
+                  + '<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Contact name</div><input id="mi-contact" type="text" value="'+esc(c.contact_name)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid var(--border-subtle);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>'
+                + '</div>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+                  + '<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Email</div><input id="mi-email" type="email" value="'+esc(c.email)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid var(--border-subtle);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>'
+                  + '<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Phone</div><input id="mi-phone" type="tel" value="'+esc(c.phone)+'" style="width:100%;padding:7px 10px;background:#0d0d14;border:1px solid var(--border-subtle);border-radius:6px;color:inherit;font-size:13px;font-family:inherit;"></div>'
+                + '</div>'
+                + '<button onclick="adminSaveClientInfo(\''+c.id+'\')" id="mi-savebtn" style="padding:7px 16px;background:var(--purple-primary);border:none;border-radius:7px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;">Save changes</button>'
+                + '<span id="mi-savemsg" style="font-size:12px;margin-left:10px;display:none;"></span>'
+              + '</div>'
+            + '</details>';
+
+            // Lead source GCS prefix (collapsed)
+            h += '<details style="margin-bottom:10px;">'
+              + '<summary style="cursor:pointer;list-style:none;padding:10px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">'
+                + '<span>Lead source (GCS prefix)</span><span style="color:var(--text-muted);font-size:11px;">▾</span>'
+              + '</summary>'
+              + '<div style="margin-top:8px;background:rgba(255,255,255,0.012);border:1px solid var(--border-subtle);border-radius:10px;padding:16px;">'
+                + '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">'
+                  + 'Path inside <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);">gs://stilo-cold-call-scripts/</code> that this client\'s leads CSVs share. Newest matching <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);">.csv</code> auto-loads.'
+                + '</div>'
+                + '<div style="display:flex;gap:8px;align-items:stretch;">'
+                  + '<input id="ls-prefix" type="text" placeholder="e.g. leads/jacksonville-office-leads-" value="' + esc((c._lead_source && c._lead_source.gcs_prefix) || '') + '" style="flex:1;padding:8px 12px;background:#0d0d14;border:1px solid var(--border-subtle);border-radius:6px;color:inherit;font-size:13px;font-family:var(--font-mono);">'
+                  + '<button onclick="adminSaveLeadSource(\''+c.id+'\')" id="ls-savebtn" style="padding:8px 16px;background:var(--purple-primary);border:none;border-radius:7px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;white-space:nowrap;">Save</button>'
+                + '</div>'
+                + '<div id="ls-savemsg" style="font-size:12px;margin-top:8px;display:none;"></div>'
+                + ((c._lead_source && c._lead_source.updated_at) ? '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Last updated ' + new Date(c._lead_source.updated_at).toLocaleString() + (c._lead_source.updated_by ? ' by ' + esc(c._lead_source.updated_by) : '') + '</div>' : '')
+              + '</div>'
+            + '</details>';
+
+            // Deploy another agent (collapsed)
+            h += '<details style="margin-bottom:10px;">'
+              + '<summary style="cursor:pointer;list-style:none;padding:10px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">'
+                + '<span>Deploy another agent</span><span style="color:var(--text-muted);font-size:11px;">▾</span>'
+              + '</summary>'
+              + '<div style="margin-top:8px;background:rgba(255,255,255,0.012);border:1px solid var(--border-subtle);border-radius:10px;padding:16px;">';
             if (available.length > 0) {
-                h += '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-                     '<select id="deploy-type" style="flex:1;padding:8px 12px;background:#0d0d14;border:1px solid rgba(37,99,235,0.2);border-radius:7px;color:inherit;font-size:13px;font-family:inherit;">' +
-                       '<option value="">Select agent type...</option>' +
-                       available.map(function(t){ return '<option value="'+t+'">'+t.toUpperCase()+' — '+(typeNames[t]||t)+'</option>'; }).join('') +
-                     '</select>' +
-                     '<button onclick="adminDeploy(\''+c.id+'\')" style="padding:8px 18px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:7px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;white-space:nowrap;">Deploy</button>' +
-                     '</div>' +
-                     '<div id="deploy-msg" style="font-size:12px;margin-top:8px;display:none;"></div>';
+                h += '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                  + '<select id="deploy-type" style="flex:1;padding:8px 12px;background:#0d0d14;border:1px solid var(--border-subtle);border-radius:7px;color:inherit;font-size:13px;font-family:inherit;">'
+                    + '<option value="">Select agent type…</option>'
+                    + available.map(function(t){
+                        var nm = (AGENT_DISPLAY[t] && AGENT_DISPLAY[t].name) || t;
+                        return '<option value="'+t+'">'+t.toUpperCase()+' — '+nm+'</option>';
+                    }).join('')
+                  + '</select>'
+                  + '<button onclick="adminDeploy(\''+c.id+'\')" style="padding:8px 18px;background:var(--purple-primary);border:none;border-radius:7px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;white-space:nowrap;">Deploy</button>'
+                + '</div>'
+                + '<div id="deploy-msg" style="font-size:12px;margin-top:8px;display:none;"></div>';
             } else {
-                h += '<div style="font-size:13px;color:var(--text-muted,#5a5a75);">All 8 agent types are already deployed for this client.</div>';
+                h += '<div style="font-size:13px;color:var(--text-muted);">All agent types are already deployed for this client.</div>';
             }
+            h += '</div></details>';
 
-            h += '</div>';
+            h += '</div>'; // end admin tools
             return h;
         }
 
@@ -3328,25 +3546,180 @@
         /* ============================================================
            Revenue tab
            ============================================================ */
-        // Human-facing display names for agent codes. Used by the Revenue tab.
-        // Keep in sync with sites/stilo-ai/api/_agents.js but no need to be exhaustive —
-        // this is purely cosmetic for the Top Agents card.
+        // Human-facing display names + one-liner descriptions for agent codes.
+        // Used by the Revenue tab and the client drawer. Descriptions tell
+        // Remy at a glance what each agent does for that client.
         var AGENT_DISPLAY = {
-            echo:    { name: 'Receptionist' },
-            ignite:  { name: 'Outbound Lead Caller' },
-            revive:  { name: 'Customer Reactivation' },
-            scout:   { name: 'Lead Generator' },
-            forge:   { name: 'Website Builder' },
-            signal:  { name: 'AI SEO' },
-            oracle:  { name: 'Growth Intelligence' },
-            flux:    { name: 'Custom Automations' },
-            pitch:   { name: 'AI Sales Agent' },
-            business_profile: { name: 'Business Profile' }
+            echo:    { name: 'Receptionist',          desc: 'Answers every call, books on the calendar, captures messages 24/7.' },
+            ignite:  { name: 'Outbound Lead Caller',  desc: 'Calls fresh leads within 60s, qualifies them, books the meeting.' },
+            revive:  { name: 'Customer Reactivation', desc: 'Wins back lapsed customers with personalized outbound campaigns.' },
+            scout:   { name: 'Lead Generator',        desc: 'Scrapes, scores, and enriches niche-specific B2B leads weekly.' },
+            forge:   { name: 'Website Builder',       desc: 'Designs, ships, and maintains a high-converting site for the business.' },
+            signal:  { name: 'AI SEO',                desc: 'Optimizes the site for AI Overviews + Google Search — content + technical.' },
+            oracle:  { name: 'Growth Intelligence',   desc: 'Weekly strategy report: what is working, what to test, what to fix.' },
+            flux:    { name: 'Custom Automations',    desc: 'Wires existing tools (CRM, calendar, billing) so nothing falls through cracks.' },
+            pitch:   { name: 'AI Sales Agent',        desc: 'Coaches sales reps on every call and runs opt-in email automation.' },
+            business_profile: { name: 'Business Profile', desc: 'Foundational onboarding profile that gates the paid agents.' }
         };
 
         function monthDiff(then, now) {
             // Whole months between two dates. April → May = 1. Same month = 0.
             return (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
+        }
+
+        /* ============================================================
+           Revenue tab — period-aware, Stripe/AppStoreConnect-style.
+           Pulls deals + client_agents once, then renders against the
+           selected period (today/week/month/all). Each agent + client
+           row gets an inline sparkline + delta vs prior period.
+           ============================================================ */
+        var REVENUE_STATE = {
+            period: 'month',          // 'today' | 'week' | 'month' | 'all'
+            cache: null               // { deals, agentsRows, firstDealAt }
+        };
+        var REVENUE_PERIOD_LABELS = {
+            today: 'Today',
+            week:  'Last 7 days',
+            month: 'Month to date',
+            all:   'All time'
+        };
+
+        function setRevenuePeriod(p) {
+            REVENUE_STATE.period = p;
+            document.querySelectorAll('.rev-period').forEach(function(b){
+                b.classList.toggle('active', b.dataset.period === p);
+            });
+            loadRevenue();
+        }
+
+        function fmtUsd(cents) {
+            var sign = cents < 0 ? '-' : '';
+            var n = Math.abs(cents) / 100;
+            return sign + '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        }
+
+        // Compute period bounds. "all" starts at the first deal's close date
+        // (or 30 days ago if there are no deals) so the sparkline has a
+        // sensible x-axis. Returns { start, end, days }.
+        function periodWindow(period, firstDealAt) {
+            var end = new Date();
+            var start;
+            if (period === 'today') {
+                start = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+            } else if (period === 'week') {
+                start = new Date(end.getTime() - 6 * 86400000);
+                start = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            } else if (period === 'month') {
+                start = new Date(end.getFullYear(), end.getMonth(), 1);
+            } else { // all
+                start = firstDealAt ? new Date(firstDealAt) : new Date(end.getTime() - 30 * 86400000);
+                start = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            }
+            var days = Math.max(1, Math.round((end - start) / 86400000) + 1);
+            return { start: start, end: end, days: days };
+        }
+
+        // Daily revenue accrual model:
+        //   setup → counted on the exact day the deal closed (if in window)
+        //   monthly → 1/30th of monthly_retainer_cents per day for every day
+        //             on/after closed_at AND within the window
+        // Returns { totalCents, daily:[{date, cents}] }, optionally filtered
+        // to a single agent code (for per-agent rows) or client_id (for
+        // per-client rows).
+        function accruePeriod(deals, win, filter) {
+            var dayMs = 86400000;
+            var startDay = new Date(win.start);
+            startDay.setHours(0,0,0,0);
+            var daily = [];
+            for (var i = 0; i < win.days; i++) {
+                daily.push({ date: new Date(startDay.getTime() + i * dayMs), cents: 0 });
+            }
+            var total = 0;
+            deals.forEach(function(d){
+                var closedAt = d.closed_at ? new Date(d.closed_at) : null;
+                if (!closedAt) return;
+                var codes = (d.agent_codes || []).filter(function(c){ return c !== 'business_profile'; });
+                if (codes.length === 0) return;
+
+                // Compute this deal's share for the filter (agent slice or
+                // client slice or whole).
+                var setupShare = d.upfront_fee_cents || 0;
+                var monthlyShare = d.monthly_retainer_cents || 0;
+                if (filter && filter.agentCode) {
+                    if (codes.indexOf(filter.agentCode) < 0) return;
+                    var setupSum = codes.reduce(function(s, c){ return s + (AGENT_FEES_SETUP[c] || 0); }, 0);
+                    var monthlySum = codes.reduce(function(s, c){ return s + (AGENT_FEES_MONTHLY[c] || 0); }, 0);
+                    if (setupSum > 0) {
+                        setupShare = Math.round((d.upfront_fee_cents || 0) * ((AGENT_FEES_SETUP[filter.agentCode] || 0) / setupSum));
+                    } else {
+                        setupShare = Math.round((d.upfront_fee_cents || 0) / codes.length);
+                    }
+                    if (monthlySum > 0 && (AGENT_FEES_MONTHLY[filter.agentCode] || 0) > 0) {
+                        monthlyShare = Math.round((d.monthly_retainer_cents || 0) * ((AGENT_FEES_MONTHLY[filter.agentCode] || 0) / monthlySum));
+                    } else {
+                        monthlyShare = 0;
+                    }
+                } else if (filter && filter.clientId) {
+                    if (d.client_id !== filter.clientId) return;
+                }
+
+                // Setup → exact close day
+                if (closedAt >= win.start && closedAt <= win.end) {
+                    var idx = Math.floor((closedAt - startDay) / dayMs);
+                    if (idx >= 0 && idx < daily.length) {
+                        daily[idx].cents += setupShare;
+                        total += setupShare;
+                    }
+                }
+                // Monthly → 1/30 per day, every day on/after closed_at, within window
+                if (monthlyShare > 0) {
+                    var perDay = monthlyShare / 30;
+                    daily.forEach(function(d2){
+                        if (d2.date >= closedAt && d2.date <= win.end) {
+                            d2.cents += perDay;
+                            total += perDay;
+                        }
+                    });
+                }
+            });
+            return { totalCents: Math.round(total), daily: daily.map(function(x){ return Math.round(x.cents); }) };
+        }
+
+        // Inline SVG sparkline. Returns SVG markup string. Empty series
+        // returns an empty placeholder so row layout stays consistent.
+        function sparklineSvg(series, opts) {
+            opts = opts || {};
+            var w = opts.width || 120;
+            var h = opts.height || 36;
+            var stroke = opts.stroke || 'var(--purple-light)';
+            var fill = opts.fill || 'rgba(96,165,250,0.12)';
+            if (!series || series.length < 2) {
+                return '<svg class="rev-spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"><line x1="0" y1="' + (h-1) + '" x2="' + w + '" y2="' + (h-1) + '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/></svg>';
+            }
+            var max = Math.max.apply(null, series);
+            var min = Math.min.apply(null, series);
+            var range = max - min || 1;
+            var stepX = w / (series.length - 1);
+            var pts = series.map(function(v, i){
+                var x = (i * stepX).toFixed(2);
+                var y = (h - ((v - min) / range) * (h - 4) - 2).toFixed(2);
+                return x + ',' + y;
+            });
+            var line = pts.join(' ');
+            var area = 'M0,' + h + ' L' + pts.join(' L') + ' L' + w + ',' + h + ' Z';
+            return '<svg class="rev-spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+                + '<path d="' + area + '" fill="' + fill + '" />'
+                + '<polyline points="' + line + '" fill="none" stroke="' + stroke + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />'
+                + '</svg>';
+        }
+
+        function deltaBadge(curr, prev) {
+            if (!prev) return curr > 0 ? '<div class="rev-row__delta up">NEW</div>' : '<div class="rev-row__delta flat">—</div>';
+            var pct = ((curr - prev) / prev) * 100;
+            if (Math.abs(pct) < 0.05) return '<div class="rev-row__delta flat">0%</div>';
+            var cls = pct > 0 ? 'up' : 'down';
+            var arrow = pct > 0 ? '▲' : '▼';
+            return '<div class="rev-row__delta ' + cls + '">' + arrow + ' ' + Math.abs(pct).toFixed(0) + '%</div>';
         }
 
         async function loadRevenue() {
@@ -3355,198 +3728,184 @@
             var topClients = document.getElementById('revenueTopClients');
             var byAgentCount = document.getElementById('revenueByAgentCount');
             var topClientsCount = document.getElementById('revenueTopClientsCount');
+            var periodLabel = document.getElementById('revenuePeriodLabel');
             if (!grid) return;
             grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);font-size:13px;">Computing…</div>';
             byAgent.innerHTML = '';
             topClients.innerHTML = '';
 
             try {
-                // Pull deals (source of truth for Sales — has setup + monthly + closed_at)
-                // and active client_agents (source of truth for who's currently live).
-                var [dealsRes, agentsRes] = await Promise.all([
-                    sb.from('deals')
-                        .select('id, client_id, agent_codes, upfront_fee_cents, monthly_retainer_cents, stage, closed_at, paid_at, clients(business_name, email)')
-                        .neq('stage', 'CLOSED_LOST'),
-                    sb.from('client_agents')
-                        .select('id, client_id, agent_type, status, clients(business_name, email)')
-                ]);
-                if (dealsRes.error) throw dealsRes.error;
-                if (agentsRes.error) throw agentsRes.error;
-                var deals = (dealsRes.data || []).filter(function(d){
-                    var em = (d.clients && d.clients.email) || '';
-                    return !ADMIN_EMAILS.includes(em.toLowerCase());
-                });
-                var agentsRows = (agentsRes.data || []).filter(function(r){
-                    var em = (r.clients && r.clients.email) || '';
-                    return r.status === 'active' && !ADMIN_EMAILS.includes(em.toLowerCase()) && r.agent_type !== 'business_profile';
-                });
+                // Pull deals + active client_agents once; cache so period
+                // switches don't re-query.
+                if (!REVENUE_STATE.cache) {
+                    var [dealsRes, agentsRes] = await Promise.all([
+                        sb.from('deals')
+                            .select('id, client_id, agent_codes, upfront_fee_cents, monthly_retainer_cents, stage, closed_at, paid_at, clients(business_name, email)')
+                            .neq('stage', 'CLOSED_LOST'),
+                        sb.from('client_agents')
+                            .select('id, client_id, agent_type, status, clients(business_name, email)')
+                    ]);
+                    if (dealsRes.error) throw dealsRes.error;
+                    if (agentsRes.error) throw agentsRes.error;
+                    var deals = (dealsRes.data || []).filter(function(d){
+                        var em = (d.clients && d.clients.email) || '';
+                        return !ADMIN_EMAILS.includes(em.toLowerCase()) && d.closed_at;
+                    });
+                    var agentsRows = (agentsRes.data || []).filter(function(r){
+                        var em = (r.clients && r.clients.email) || '';
+                        return r.status === 'active' && !ADMIN_EMAILS.includes(em.toLowerCase()) && r.agent_type !== 'business_profile';
+                    });
+                    var firstDealAt = deals.reduce(function(min, d){
+                        var t = new Date(d.closed_at);
+                        return (!min || t < min) ? t : min;
+                    }, null);
+                    REVENUE_STATE.cache = { deals: deals, agentsRows: agentsRows, firstDealAt: firstDealAt };
+                }
+                var deals = REVENUE_STATE.cache.deals;
+                var agentsRows = REVENUE_STATE.cache.agentsRows;
+                var firstDealAt = REVENUE_STATE.cache.firstDealAt;
 
-                var now = new Date();
-                var currentMonth = now.getMonth();
-                var currentYear = now.getFullYear();
+                var period = REVENUE_STATE.period;
+                var win = periodWindow(period, firstDealAt);
+                // Prior-period window (same length, immediately preceding)
+                var priorEnd = new Date(win.start.getTime() - 1);
+                var priorStart = new Date(priorEnd.getTime() - (win.days - 1) * 86400000);
+                priorStart = new Date(priorStart.getFullYear(), priorStart.getMonth(), priorStart.getDate());
+                var priorWin = { start: priorStart, end: priorEnd, days: win.days };
 
-                // ─── Sales (all-time): setup + monthly × months active ───
-                // Every paid deal contributes: full upfront once + monthly retainer for each
-                // calendar month since closed_at (inclusive of the close month, so a deal
-                // that closed today contributes 1 month of monthly retainer).
-                var salesCents = 0;
-                // ─── Current MRR: recurring from active clients + setup fees from
-                // deals that closed THIS calendar month.
-                var currentMrrCents = 0;
+                if (periodLabel) {
+                    var fmt = { month: 'short', day: 'numeric' };
+                    var startStr = win.start.toLocaleDateString('en-US', fmt);
+                    var endStr = win.end.toLocaleDateString('en-US', fmt);
+                    periodLabel.textContent = (REVENUE_PERIOD_LABELS[period] || period) + ' · ' + startStr + ' → ' + endStr;
+                }
 
-                deals.forEach(function(d){
-                    var setup = d.upfront_fee_cents || 0;
-                    var monthly = d.monthly_retainer_cents || 0;
-                    var closedAt = d.closed_at ? new Date(d.closed_at) : null;
-                    if (!closedAt) return;
+                // ───── Period totals + prior totals ─────
+                var curr = accruePeriod(deals, win);
+                var prev = accruePeriod(deals, priorWin);
 
-                    var monthsSinceClose = Math.max(0, monthDiff(closedAt, now)) + 1; // include current month
-                    salesCents += setup + (monthly * monthsSinceClose);
-
-                    var closedThisMonth = closedAt.getMonth() === currentMonth && closedAt.getFullYear() === currentYear;
-                    if (closedThisMonth) currentMrrCents += setup;
-                    currentMrrCents += monthly;  // recurring counts this month for every active deal
-                });
-
-                // ─── Clients: distinct active clients (from client_agents)
+                // MRR snapshot — recurring revenue currently running (sum of
+                // monthly_retainer_cents on all active deals).
+                var currentMrrCents = deals.reduce(function(s, d){ return s + (d.monthly_retainer_cents || 0); }, 0);
                 var activeClientIds = new Set(agentsRows.map(function(r){ return r.client_id; }));
                 var clientCount = activeClientIds.size;
 
-                // ─── Per-agent lifetime revenue: split each deal's setup +
-                // monthly across the agents in agent_codes using catalog
-                // ratios. Setup splits by AGENT_FEES_SETUP, monthly splits
-                // by AGENT_FEES_MONTHLY. A deal with [forge, signal] where
-                // SIGNAL is one-time allocates monthly entirely to FORGE.
-                // Marcus's single-agent deal allocates fully to SCOUT.
-                // Sums to the same total as the Sales hero card.
-                var perAgent = {};  // { agentType: { lifetime, clients:Set } }
-
-                deals.forEach(function(d){
-                    var codes = (d.agent_codes || []).filter(function(c){ return c !== 'business_profile'; });
-                    if (codes.length === 0) return;
-                    var closedAt = d.closed_at ? new Date(d.closed_at) : null;
-                    if (!closedAt) return;
-                    var monthsSinceClose = Math.max(0, monthDiff(closedAt, now)) + 1;
-
-                    // Split setup by catalog setup ratio
-                    var setupSumCatalog = codes.reduce(function(s, c){ return s + (AGENT_FEES_SETUP[c] || 0); }, 0);
-                    var monthlySumCatalog = codes.reduce(function(s, c){ return s + (AGENT_FEES_MONTHLY[c] || 0); }, 0);
-
-                    codes.forEach(function(c){
-                        if (!perAgent[c]) perAgent[c] = { lifetime: 0, clients: new Set() };
-
-                        // Setup share — proportional to catalog price (falls back to even split if catalog
-                        // sum is 0 for every agent in the deal).
-                        var setupShare;
-                        if (setupSumCatalog > 0) {
-                            setupShare = Math.round((d.upfront_fee_cents || 0) * ((AGENT_FEES_SETUP[c] || 0) / setupSumCatalog));
-                        } else {
-                            setupShare = Math.round((d.upfront_fee_cents || 0) / codes.length);
-                        }
-
-                        // Monthly share — recurring agents only, proportional to catalog monthly.
-                        var monthlyShare = 0;
-                        if (monthlySumCatalog > 0 && (AGENT_FEES_MONTHLY[c] || 0) > 0) {
-                            monthlyShare = Math.round((d.monthly_retainer_cents || 0) * ((AGENT_FEES_MONTHLY[c] || 0) / monthlySumCatalog));
-                        }
-
-                        perAgent[c].lifetime += setupShare + (monthlyShare * monthsSinceClose);
-                        perAgent[c].clients.add(d.client_id);
-                    });
-                });
-
-                // ─── Per-client lifetime revenue
-                var perClient = {};
-                deals.forEach(function(d){
-                    var cid = d.client_id;
-                    if (!cid) return;
-                    var closedAt = d.closed_at ? new Date(d.closed_at) : null;
-                    if (!closedAt) return;
-                    var monthsSinceClose = Math.max(0, monthDiff(closedAt, now)) + 1;
-                    var lifetime = (d.upfront_fee_cents || 0) + ((d.monthly_retainer_cents || 0) * monthsSinceClose);
-                    var name = (d.clients && d.clients.business_name) || (d.clients && d.clients.email) || '—';
-                    if (!perClient[cid]) perClient[cid] = { name: name, cents: 0, agents: 0 };
-                    perClient[cid].cents += lifetime;
-                    perClient[cid].agents += (d.agent_codes || []).filter(function(c){ return c !== 'business_profile'; }).length;
-                });
-
-                var fmtUsd = function(cents){
-                    var n = cents / 100;
-                    return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-                };
-
-                // ============= 3 HERO CARDS =============
-                // Just eyebrow + value. Explanatory subtitles stripped per Remy
-                // — the eyebrow already names the metric.
+                // ───── 3 HERO CARDS (period-aware) ─────
                 var heroCards = [
-                    { eyebrow: 'SALES',       value: fmtUsd(salesCents) },
-                    { eyebrow: 'CURRENT MRR', value: fmtUsd(currentMrrCents) },
-                    { eyebrow: 'CLIENTS',     value: clientCount.toString() }
+                    {
+                        eyebrow: period === 'all' ? 'LIFETIME REVENUE' : 'REVENUE',
+                        value: fmtUsd(curr.totalCents),
+                        prev: prev.totalCents,
+                        spark: curr.daily
+                    },
+                    {
+                        eyebrow: 'CURRENT MRR',
+                        value: fmtUsd(currentMrrCents),
+                        prev: null,
+                        spark: null
+                    },
+                    {
+                        eyebrow: 'ACTIVE CLIENTS',
+                        value: clientCount.toString(),
+                        prev: null,
+                        spark: null
+                    }
                 ];
                 grid.innerHTML = heroCards.map(function(c){
+                    var deltaHtml = (c.prev != null) ? deltaBadge(curr.totalCents, c.prev) : '';
+                    var sparkHtml = c.spark ? sparklineSvg(c.spark, { width: 220, height: 44 }) : '';
                     return ''
-                        + '<div style="background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01));border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:28px 28px 26px;position:relative;overflow:hidden;">'
-                          + '<div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:500;letter-spacing:0.18em;color:var(--text-secondary);margin-bottom:18px;">' + c.eyebrow + '</div>'
-                          + '<div style="font-family:var(--font-display);font-weight:600;font-size:2.6rem;letter-spacing:-0.025em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + c.value + '</div>'
+                        + '<div style="background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01));border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:24px 24px 18px;position:relative;overflow:hidden;">'
+                          + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
+                            + '<div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:500;letter-spacing:0.18em;color:var(--text-secondary);">' + c.eyebrow + '</div>'
+                            + deltaHtml
+                          + '</div>'
+                          + '<div style="font-family:var(--font-display);font-weight:600;font-size:2.4rem;letter-spacing:-0.025em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + c.value + '</div>'
+                          + (sparkHtml ? '<div style="margin-top:14px;height:44px;">' + sparkHtml + '</div>' : '')
                         + '</div>';
                 }).join('');
 
-                // ============= AGENTS (lifetime revenue) =============
-                // Progress bar is the agent's share of total lifetime revenue
-                // (not the share of the top-earning agent). So the bars sum
-                // visually to "the whole pie".
-                var totalLifetime = Object.values(perAgent).reduce(function(s, a){ return s + a.lifetime; }, 0) || 1;
-                var agentEntries = Object.entries(perAgent)
-                    .map(function(e){ return { code: e[0], lifetime: e[1].lifetime, clientCount: e[1].clients.size }; })
-                    .sort(function(a,b){ return b.lifetime - a.lifetime || b.clientCount - a.clientCount; });
+                // ───── AGENTS ─────
+                // Use catalog ratios to split each deal's accrual across the
+                // agents in agent_codes; same logic per row, filtered.
+                var agentCodesPresent = {};
+                deals.forEach(function(d){
+                    (d.agent_codes || []).forEach(function(c){ if (c !== 'business_profile') agentCodesPresent[c] = true; });
+                });
+                var agentEntries = Object.keys(agentCodesPresent).map(function(code){
+                    var c = accruePeriod(deals, win, { agentCode: code });
+                    var p = accruePeriod(deals, priorWin, { agentCode: code });
+                    var clientsForAgent = new Set();
+                    deals.forEach(function(d){
+                        if ((d.agent_codes || []).indexOf(code) >= 0) clientsForAgent.add(d.client_id);
+                    });
+                    return {
+                        code: code,
+                        meta: AGENT_DISPLAY[code] || { name: code },
+                        curr: c.totalCents,
+                        prev: p.totalCents,
+                        spark: c.daily,
+                        clientCount: clientsForAgent.size
+                    };
+                }).sort(function(a, b){ return b.curr - a.curr || b.clientCount - a.clientCount; });
 
                 byAgentCount.textContent = agentEntries.length + (agentEntries.length === 1 ? ' AGENT' : ' AGENTS');
-
                 if (!agentEntries.length) {
                     byAgent.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No agents sold yet.</div>';
                 } else {
                     byAgent.innerHTML = agentEntries.map(function(e){
-                        var meta = AGENT_DISPLAY[e.code] || { name: e.code };
-                        var pct = Math.round((e.lifetime / totalLifetime) * 100);
-                        return ''
-                            + '<div style="display:grid;grid-template-columns:1.8fr 1fr 0.6fr;gap:24px;align-items:center;padding:18px 22px;background:rgba(255,255,255,0.018);border:1px solid var(--border-subtle);border-radius:var(--radius-md);">'
-                              + '<div style="min-width:0;">'
-                                + '<div style="font-family:var(--font-display);font-weight:500;font-size:1.05rem;color:var(--text-primary);letter-spacing:-0.01em;">' + escapeAdminHtml(meta.name) + '</div>'
-                              + '</div>'
-                              + '<div style="display:flex;align-items:center;gap:10px;">'
-                                + '<div style="flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;">'
-                                  + '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,var(--purple-primary),var(--purple-light));border-radius:999px;"></div>'
-                                + '</div>'
-                                + '<div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-tertiary);letter-spacing:0.06em;font-variant-numeric:tabular-nums;min-width:36px;text-align:right;">' + pct + '%</div>'
-                              + '</div>'
-                              + '<div style="text-align:right;">'
-                                + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;">' + fmtUsd(e.lifetime) + '</div>'
-                                + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);letter-spacing:0.06em;margin-top:2px;">' + e.clientCount + (e.clientCount === 1 ? ' CLIENT' : ' CLIENTS') + '</div>'
-                              + '</div>'
-                            + '</div>';
+                        return '<div class="rev-row">'
+                            + '<div style="min-width:0;">'
+                              + '<div class="rev-row__name">' + escapeAdminHtml(e.meta.name) + '</div>'
+                              + '<div class="rev-row__sub">' + e.clientCount + (e.clientCount === 1 ? ' CLIENT' : ' CLIENTS') + '</div>'
+                            + '</div>'
+                            + sparklineSvg(e.spark)
+                            + '<div style="min-width:90px;">'
+                              + '<div class="rev-row__value">' + fmtUsd(e.curr) + '</div>'
+                              + deltaBadge(e.curr, e.prev)
+                            + '</div>'
+                          + '</div>';
                     }).join('');
                 }
 
-                // ============= CLIENTS (lifetime revenue) =============
-                var clientEntries = Object.entries(perClient)
-                    .map(function(e){ return { id: e[0], name: e[1].name, cents: e[1].cents, agents: e[1].agents }; })
-                    .sort(function(a,b){ return b.cents - a.cents; })
-                    .slice(0, 12);
+                // ───── CLIENTS ─────
+                var clientEntries = Array.from(new Set(deals.map(function(d){ return d.client_id; })))
+                    .filter(Boolean)
+                    .map(function(cid){
+                        var clientDeals = deals.filter(function(d){ return d.client_id === cid; });
+                        var c = accruePeriod(deals, win, { clientId: cid });
+                        var p = accruePeriod(deals, priorWin, { clientId: cid });
+                        var name = (clientDeals[0].clients && clientDeals[0].clients.business_name)
+                            || (clientDeals[0].clients && clientDeals[0].clients.email)
+                            || '—';
+                        var mrr = clientDeals.reduce(function(s, d){ return s + (d.monthly_retainer_cents || 0); }, 0);
+                        var agentCount = 0;
+                        clientDeals.forEach(function(d){
+                            agentCount += (d.agent_codes || []).filter(function(x){ return x !== 'business_profile'; }).length;
+                        });
+                        return { id: cid, name: name, curr: c.totalCents, prev: p.totalCents, spark: c.daily, mrr: mrr, agents: agentCount };
+                    })
+                    .sort(function(a,b){ return b.curr - a.curr || b.mrr - a.mrr; });
 
                 topClientsCount.textContent = clientEntries.length + (clientEntries.length === 1 ? ' CLIENT' : ' CLIENTS');
-
                 if (!clientEntries.length) {
                     topClients.innerHTML = '<div style="padding:24px 0;color:var(--text-tertiary);font-size:0.9rem;">No revenue yet.</div>';
                 } else {
-                    // Name on the left, dollar on the right. No rank number
-                    // (the list order is implicit ranking), no agents-count
-                    // line — per Remy's "remove the chrome" pass.
                     topClients.innerHTML = clientEntries.map(function(e){
-                        return ''
-                            + '<div onclick="openClientDrawer(\'' + e.id + '\')" style="display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;padding:18px 22px;background:rgba(255,255,255,0.018);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:14px;cursor:pointer;transition:background var(--transition-fast);" onmouseover="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.018)\'">'
-                              + '<div style="min-width:0;font-family:var(--font-display);font-weight:500;font-size:1.05rem;color:var(--text-primary);letter-spacing:-0.01em;">' + escapeAdminHtml(e.name) + '</div>'
-                              + '<div style="font-family:var(--font-display);font-weight:600;font-size:1.1rem;color:var(--text-primary);font-variant-numeric:tabular-nums;text-align:right;">' + fmtUsd(e.cents) + '</div>'
-                            + '</div>';
+                        var subParts = [];
+                        subParts.push(e.agents + (e.agents === 1 ? ' AGENT' : ' AGENTS'));
+                        if (e.mrr > 0) subParts.push(fmtUsd(e.mrr) + '/MO');
+                        return '<div class="rev-row clickable" onclick="openClientDrawer(\'' + e.id + '\')">'
+                            + '<div style="min-width:0;">'
+                              + '<div class="rev-row__name">' + escapeAdminHtml(e.name) + '</div>'
+                              + '<div class="rev-row__sub">' + subParts.join(' · ') + '</div>'
+                            + '</div>'
+                            + sparklineSvg(e.spark)
+                            + '<div style="min-width:90px;">'
+                              + '<div class="rev-row__value">' + fmtUsd(e.curr) + '</div>'
+                              + deltaBadge(e.curr, e.prev)
+                            + '</div>'
+                          + '</div>';
                     }).join('');
                 }
             } catch (e) {
