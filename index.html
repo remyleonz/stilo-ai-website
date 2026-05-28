@@ -683,17 +683,45 @@ html.lenis,html.lenis body{height:auto}
 section{padding:160px 0}
 @media (max-width:960px){section{padding:96px 0}}
 
-/* Hero — left-aligned CloudIQ/Snowflake style with ambient navy background */
-.hero{padding:200px 0 140px;min-height:100vh;min-height:100svh;display:flex;align-items:center;text-align:left}
+/* Hero — left-aligned CloudIQ/Snowflake style with ambient navy background.
+   2026-05-28: copy lowered (padding-top bumped), headline forced to one line
+   via fluid clamp + nowrap, and the 3D STILO logo is added as a center-stage
+   element above the copy with a perpetual rotateX (downward tumble). */
+.hero{padding:260px 0 140px;min-height:100vh;min-height:100svh;display:flex;align-items:center;text-align:left;position:relative}
+@media (max-width:960px){.hero{padding:200px 0 120px}}
 .hero .container{position:relative;z-index:2;width:var(--container)}
-.hero-center{max-width:980px;margin:0;display:flex;flex-direction:column;align-items:flex-start}
+.hero-center{max-width:none;margin:0;display:flex;flex-direction:column;align-items:flex-start}
+/* 3D logo: lives behind the copy as a rotating focal point. Uses CSS
+   3D transforms (perspective + rotateX) on the parent so the PNG flips
+   forward like a coin. Bigger on desktop, scaled down on mobile. */
+.hero-3d-logo-wrap{
+  position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+  z-index:1;pointer-events:none;width:min(560px,72vw);
+  perspective:1200px;perspective-origin:50% 50%;
+  filter:drop-shadow(0 14px 60px rgba(45,79,184,0.45));
+}
+.hero-3d-logo{
+  width:100%;height:auto;display:block;
+  transform-style:preserve-3d;
+  animation:logoTumble 14s linear infinite;
+}
+@keyframes logoTumble{
+  0%   { transform: rotateX(0deg)   rotateY(0deg); }
+  50%  { transform: rotateX(360deg) rotateY(0deg); }
+  100% { transform: rotateX(720deg) rotateY(0deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  .hero-3d-logo{animation:none}
+}
 .hero h1{
   font-family:var(--font-display);font-weight:700;
-  font-size:clamp(1.6rem,3.4vw,2.9rem);
+  font-size:clamp(1.4rem,3.2vw,3.4rem);
   line-height:1.05;letter-spacing:-0.015em;
   max-width:none;text-align:left;
   text-transform:uppercase;
+  white-space:nowrap;       /* force single line on desktop */
 }
+@media (max-width:960px){.hero h1{white-space:normal;font-size:clamp(1.8rem,7vw,2.6rem)}}
 .hero h1 .line:first-child{margin-bottom:0.02em}
 .hero h1 em{
   font-family:var(--font-display);font-style:normal;font-weight:700;
@@ -1345,6 +1373,22 @@ section{padding:160px 0}
 .industry-panel.active{display:grid;animation:industryFade .55s var(--ease-out)}
 @keyframes industryFade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 
+/* Industry hero image — spans both columns at the top of each active
+   panel. Starter sources are stable Unsplash IDs; drop higher-fidelity
+   originals into /assets/industries/ and swap src to make these your own. */
+.industry-image{
+  grid-column:1 / -1;
+  width:100%;aspect-ratio:21/9;
+  border-radius:18px;overflow:hidden;
+  margin-bottom:8px;
+  background:linear-gradient(135deg,rgba(30,58,138,0.4),rgba(16,32,84,0.6));
+  border:1px solid rgba(45,79,184,0.18);
+  position:relative;z-index:1;
+}
+.industry-image img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .8s var(--ease-out)}
+.industry-panel.active .industry-image img{transform:scale(1.02)}
+@media (max-width:720px){.industry-image{aspect-ratio:16/9}}
+
 .industry-content{position:relative;z-index:1}
 .industry-eyebrow{
   font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.18em;
@@ -1640,69 +1684,80 @@ section,.partners{background:transparent !important}
   .partner-logo .pw{height:24px}
 }
 
-/* AGENTS MASTER V4 (Randy Lindgren pattern: left = content + tabs under, right = visual) */
+/* AGENTS MASTER V5 (2026-05-28 — Gong-style: tabs above, big center-stage
+   video, copy + badges under). Two rows of compact tab pills, then a
+   wide demo video, then the agent's copy + two KPI badges. */
 .agents-master{padding:120px 0 160px;position:relative;overflow:hidden}
-.agents-master .section-header{max-width:none;text-align:center;margin:0 auto 64px}
+.agents-master .section-header{max-width:none;text-align:center;margin:0 auto 40px}
 .agents-master .section-header h2{font-size:clamp(2rem,3.6vw,3.4rem)}
 .agents-master .section-header p{display:none}
-.agents-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
-.agents-left{display:flex;flex-direction:column;gap:36px;min-width:0}
-.agents-right{position:relative;min-height:520px}
 
-/* Active content panels stack in same slot */
-.agent-content{display:none}
-.agent-content.active{display:block;animation:apFade .5s var(--ease-out)}
-.agent-content h2{font-size:clamp(1.8rem,2.6vw,2.6rem);margin-bottom:18px;text-transform:uppercase;letter-spacing:-0.02em;line-height:1.04}
-.agent-content h2 em{color:var(--accent-hi);font-style:normal}
-
-/* Tabs: horizontal wrap under the active-agent content, NOT above */
+/* Tabs row — sits directly under the section header. Compact pills wrap
+   to two rows naturally on desktop. */
 .agents-tabs{
-  display:flex;gap:6px;flex-wrap:wrap;
-  padding-top:8px;
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+  max-width:1100px;margin:0 auto 48px;
 }
 .agent-tab{
-  padding:11px 16px;border-radius:999px;border:1px solid var(--stroke);
+  padding:9px 14px;border-radius:999px;border:1px solid var(--stroke);
   background:rgba(255,255,255,0.025);color:var(--fg-2);cursor:pointer;
-  font-family:'Geist',system-ui,sans-serif;font-weight:500;font-size:0.82rem;letter-spacing:-0.005em;
+  font-family:'Geist',system-ui,sans-serif;font-weight:500;font-size:0.78rem;letter-spacing:-0.005em;
   transition:background .2s,color .2s,border-color .2s;text-transform:none;
+  white-space:nowrap;
 }
 .agent-tab:hover{color:var(--fg);border-color:var(--stroke-hi)}
-.agent-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.agent-tab-num{font-family:var(--font-mono);font-size:0.7rem;color:inherit;margin-right:8px;opacity:.55}
+.agent-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 6px 18px rgba(30,58,138,0.45)}
+.agent-tab-num{font-family:var(--font-mono);font-size:0.62rem;color:inherit;margin-right:6px;opacity:.55}
 
-/* Visual wraps stack in right slot */
-.agent-visual-wrap{
-  display:none;position:relative;min-height:480px;border-radius:24px;
+/* Stage = big center-stage frame for the demo video. The mp4 files in
+   /assets/demos/ are the real product visuals; we replaced the old
+   bespoke HTML widgets with these. Aspect-ratio holds the layout when
+   videos swap; box-shadow + blue rim glow matches the brand. */
+.agent-stage-wrap{position:relative;max-width:1100px;margin:0 auto 40px}
+.agent-stage{
+  position:relative;width:100%;aspect-ratio:16/10;
   background:linear-gradient(180deg,rgba(15,18,28,0.78),rgba(10,12,20,0.78));
-  border:1px solid var(--stroke);padding:28px;overflow:hidden;
-  box-shadow:0 40px 100px rgba(0,0,0,0.55),0 0 0 1px rgba(45,79,184,0.10),0 0 80px rgba(30,58,138,0.12);
+  border:1px solid var(--stroke);border-radius:22px;overflow:hidden;
+  box-shadow:0 50px 120px rgba(0,0,0,0.55),0 0 0 1px rgba(45,79,184,0.15),0 0 100px rgba(30,58,138,0.18);
 }
-.agent-visual-wrap.active{display:block;animation:apFade .5s var(--ease-out)}
-.agent-visual-wrap::before{
-  content:"";position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(45,79,184,0.6),transparent);
+.agent-stage::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:1px;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(96,165,250,0.7),transparent);
 }
-.agent-visual-wrap::after{
+.agent-stage::after{
   content:"";position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(500px 320px at 50% 50%,rgba(30,58,138,0.10),transparent 65%);
+  background:radial-gradient(800px 400px at 50% 0%,rgba(45,79,184,0.15),transparent 60%);
+}
+.agent-stage video{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  opacity:0;transition:opacity .4s var(--ease-out);
+}
+.agent-stage video.active{opacity:1;z-index:1}
+
+/* Copy panel sits under the video — centered + readable. */
+.agent-copy-wrap{max-width:780px;margin:0 auto;text-align:center}
+.agent-content{display:none}
+.agent-content.active{display:block;animation:apFade .5s var(--ease-out)}
+.agent-content h2{font-size:clamp(1.6rem,2.4vw,2.4rem);margin-bottom:14px;text-transform:uppercase;letter-spacing:-0.02em;line-height:1.06}
+.agent-content h2 em{color:var(--accent-hi);font-style:normal}
+.agent-panel-body{color:var(--fg-2);font-size:1.02rem;line-height:1.6;margin:0 auto 26px;max-width:62ch}
+/* Badges row — replaces the old bullet list. Two badges per agent. */
+.agent-badges{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.agent-badge{
+  display:inline-flex;flex-direction:column;gap:4px;padding:14px 22px;
+  border-radius:14px;border:1px solid var(--accent-line);background:var(--accent-soft);
+  min-width:160px;align-items:flex-start;text-align:left;
+}
+.agent-badge b{font-family:'Geist',system-ui,sans-serif;font-size:1.6rem;font-weight:700;color:var(--fg);letter-spacing:-0.02em;line-height:1}
+.agent-badge span{font-family:var(--font-mono);font-size:0.66rem;color:var(--accent-hi);text-transform:uppercase;letter-spacing:0.14em}
+@media (max-width:720px){
+  .agent-stage{aspect-ratio:4/3}
+  .agent-badge{min-width:140px;padding:12px 16px}
+  .agent-badge b{font-size:1.3rem}
 }
 
-/* Legacy aliases kept so the rest of the visual CSS still applies */
-.agent-panel{display:none}
-.agent-panel-content{}
-.agent-panel-body{color:var(--fg-2);font-size:1.02rem;line-height:1.6;max-width:46ch;margin-bottom:22px}
-.agent-panel-bullets{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
-.agent-panel-bullets li{padding-left:24px;position:relative;color:var(--fg-2);font-size:0.94rem;line-height:1.5}
-.agent-panel-bullets li::before{
-  content:"";position:absolute;left:0;top:0.55em;width:10px;height:10px;border-radius:50%;
-  border:1.5px solid var(--accent-hi);background:rgba(30,58,138,0.18);
-}
-.agent-panel-stat{
-  display:inline-flex;flex-direction:column;gap:4px;padding:14px 20px;
-  border-radius:14px;border:1px solid var(--accent-line);background:var(--accent-soft);
-}
-.agent-panel-stat b{font-family:'Geist',system-ui,sans-serif;font-size:1.6rem;font-weight:700;color:var(--fg);letter-spacing:-0.02em}
-.agent-panel-stat span{font-family:var(--font-mono);font-size:0.68rem;color:var(--accent-hi);text-transform:uppercase;letter-spacing:0.14em}
+/* Legacy slots kept so any orphaned markup doesn't break the page */
+.agents-grid,.agents-left,.agents-right,.agent-visual-wrap,.agent-panel,.agent-panel-bullets,.agent-panel-stat{display:none !important}
 
 .agent-panel-visual{position:relative}/* visual content inside .agent-visual-wrap */
 @keyframes apFade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -2319,8 +2374,8 @@ section,.partners{background:transparent !important}
 <nav id="topNav">
   <div class="nav-inner">
     <a href="/" class="nav-logo has-wordmark" id="navLogoLink" onclick="location.href='/';return false;">
-      <img class="nav-logo-mark" src="/assets/stilo-mark.png" alt="STILO" />
-      <img class="nav-logo-wordmark" src="/assets/stilo-wordmark.png" alt="STILO AI PARTNERS" />
+      <img class="nav-logo-mark" src="/assets/3dLOGOSTILOAI.png" alt="STILO" />
+      <img class="nav-logo-wordmark" src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
       <span class="nav-logo-text">STILO AI PARTNERS</span>
     </a>
     <ul class="nav-links">
@@ -2358,11 +2413,15 @@ section,.partners{background:transparent !important}
     <source src="/assets/newSTILOAIHEROVID.mp4" type="video/mp4">
   </video>
   <div class="hero-veil"></div>
+  <!-- 3D STILO logo, center-stage over the video. Rotates forward (rotateX)
+       on a slow infinite loop. Pointer-events:none so it never blocks CTAs. -->
+  <div class="hero-3d-logo-wrap" aria-hidden="true">
+    <img class="hero-3d-logo" src="/assets/3dLOGOSTILOAI.png" alt="" loading="eager" />
+  </div>
   <div class="container">
     <div class="hero-center">
       <h1 data-split="lines">
-        <span class="line"><span class="line-inner"><em>AI</em> SOLUTIONS FOR</span></span>
-        <span class="line"><span class="line-inner">YOUR <em>BUSINESS</em></span></span>
+        <span class="line"><span class="line-inner"><em>AI</em> SOLUTIONS FOR YOUR <em>BUSINESS</em></span></span>
       </h1>
       <p class="hero-sub">We design, build, and operate AI agents that handle the work your team is too small to handle.</p>
       <div class="hero-ctas">
@@ -2373,269 +2432,130 @@ section,.partners{background:transparent !important}
   </div>
 </section>
 
-<!-- ===== AGENTS MASTER (Randy Lindgren pattern: content+tabs left, visual right) ===== -->
+<!-- ===== AGENTS MASTER V5 (Gong-style: tabs above, big center video, copy + badges) ===== -->
 <section class="agents-master" id="agents">
   <div class="container">
     <div class="section-header fade-in">
       <h2><span class="gradient-text">A team of <em>AI</em> agents</span></h2>
     </div>
 
-    <div class="agents-grid">
-      <div class="agents-left">
+    <!-- Compact tab pills above the stage. Wraps to two rows naturally. -->
+    <div class="agents-tabs" role="tablist" id="agentsTabs">
+      <button class="agent-tab active" data-agent="receptionist" data-slug="echo"><span class="agent-tab-num">01</span>Receptionist</button>
+      <button class="agent-tab" data-agent="lead-reply" data-slug="ignite"><span class="agent-tab-num">02</span>Outbound Lead Reply</button>
+      <button class="agent-tab" data-agent="reactivation" data-slug="revive"><span class="agent-tab-num">03</span>Lost Customer Reactivation</button>
+      <button class="agent-tab" data-agent="lead-gen" data-slug="scout"><span class="agent-tab-num">04</span>Lead Generator</button>
+      <button class="agent-tab" data-agent="website" data-slug="forge"><span class="agent-tab-num">05</span>Website Builder</button>
+      <button class="agent-tab" data-agent="seo" data-slug="signal"><span class="agent-tab-num">06</span>AI SEO</button>
+      <button class="agent-tab" data-agent="growth" data-slug="oracle"><span class="agent-tab-num">07</span>Growth Intelligence</button>
+      <button class="agent-tab" data-agent="sales" data-slug="pitch"><span class="agent-tab-num">08</span>AI Sales Agent</button>
+      <button class="agent-tab" data-agent="custom" data-slug="flux"><span class="agent-tab-num">09</span>Custom Automations</button>
+    </div>
 
-        <!-- Active per-agent content (only one visible at a time) -->
-        <div class="agent-content active" data-agent-content="receptionist">
-          <h2>Answer every call. <em>Book every lead.</em></h2>
-          <p class="agent-panel-body">A 24/7 voice agent trained on your hours, services, and pricing. Picks up in under two rings, qualifies the caller, books straight into your calendar, and sends a summary to your team. Transfers to a human when something needs one.</p>
-          <ul class="agent-panel-bullets">
-            <li>Books into Google, Outlook, Calendly, or your PMS</li>
-            <li>Nights, weekends, holidays, lunch</li>
-            <li>Recovers calls you would have lost to voicemail</li>
-          </ul>
-          <div class="agent-panel-stat"><b>+38%</b><span>Calls captured</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="lead-reply">
-          <h2>Reply to every lead <em>in under a minute</em>.</h2>
-          <p class="agent-panel-body">Connects to your forms, ads, and inbox. New lead lands, the agent replies via text, email, or voice within sixty seconds, qualifies the lead, and books them straight into your calendar.</p>
-          <ul class="agent-panel-bullets">
-            <li>Multichannel: SMS, email, voice, web chat</li>
-            <li>Qualifies and routes hot leads to your sales team</li>
-            <li>Connects to Meta, Google Ads, your forms, your CRM</li>
-          </ul>
-          <div class="agent-panel-stat"><b>9x</b><span>Faster than industry average</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="reactivation">
-          <h2>Bring <em>dormant customers</em> back.</h2>
-          <p class="agent-panel-body">Scans your customer history for people who haven't visited in six-plus months and sends personalized outreach with offers tailored to their past behavior, then routes the bookings straight to your calendar.</p>
-          <ul class="agent-panel-bullets">
-            <li>Segments by recency, spend, and service history</li>
-            <li>Personalized offer per customer, never a mass blast</li>
-            <li>Reports recovered revenue every week</li>
-          </ul>
-          <div class="agent-panel-stat"><b>+11%</b><span>Dormant customers recovered, month 1</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="lead-gen">
-          <h2>Find your <em>next best customers</em>.</h2>
-          <p class="agent-panel-body">Builds targeted prospect lists based on your ideal customer profile, location, and industry. Ranks leads by fit, enriches contact data, and initiates outreach sequences. Up to five thousand leads per batch.</p>
-          <ul class="agent-panel-bullets">
-            <li>Builds and ranks targeted B2B prospect lists</li>
-            <li>Enriches with verified emails and direct dials</li>
-            <li>Hands off only the leads worth your time</li>
-          </ul>
-          <div class="agent-panel-stat"><b>5,000</b><span>Verified prospects per batch</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="website">
-          <h2>A site built <em>to convert</em>.</h2>
-          <p class="agent-panel-body">Researches your market, competitors, and customers, then builds a site designed to convert visitors into booked appointments. Every page is written for your services and pricing.</p>
-          <ul class="agent-panel-bullets">
-            <li>Built on Vercel, fast everywhere</li>
-            <li>SEO and AI search optimized from day one</li>
-            <li>Lead capture wired straight into your agents</li>
-          </ul>
-          <div class="agent-panel-stat"><b>2x</b><span>Average lift on web-lead conversion</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="seo">
-          <h2>Show up in <em>ChatGPT, Google AI, Perplexity</em>.</h2>
-          <p class="agent-panel-body">Optimizes your site structure, content, and metadata so AI engines recommend your business. When someone asks "best provider near me," you show up in the answer.</p>
-          <ul class="agent-panel-bullets">
-            <li>Tuned for AI Overviews, ChatGPT search, Perplexity</li>
-            <li>Schema, structured data, and entity coverage</li>
-            <li>Tracked weekly across the new search surfaces</li>
-          </ul>
-          <div class="agent-panel-stat"><b>3x</b><span>AI search citations within 60 days</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="growth">
-          <h2>Know what to do next, <em>every week</em>.</h2>
-          <p class="agent-panel-body">Monitors your market, tracks competitor moves, and ships you a weekly brief with three specific actions. Where you're being out-positioned, what's breaking in your favor, and what to ship this week.</p>
-          <ul class="agent-panel-bullets">
-            <li>Tracks competitor pricing, offers, reviews</li>
-            <li>Flags new demand signals before peers see them</li>
-            <li>Three specific actions per week, never thirty</li>
-          </ul>
-          <div class="agent-panel-stat"><b>Weekly</b><span>Action-led growth brief</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="sales">
-          <h2>Sells <em>while you sleep</em>.</h2>
-          <p class="agent-panel-body">Listens to every call and email thread, rewrites your scripts and sequences against what actually closes, and sends the outbound follow-ups for you on a cadence you control. Per-rep scorecards, real-time deal-risk alerts, and a weekly playbook on what's moving deals.</p>
-          <ul class="agent-panel-bullets">
-            <li>Sends the follow-up emails for you, on your schedule, in your voice</li>
-            <li>Per-rep scorecards updated after every call</li>
-            <li>Deal-risk alerts when momentum drops</li>
-            <li>Scripts refreshed weekly on what's working now</li>
-          </ul>
-          <div class="agent-panel-stat"><b>+22%</b><span>Average win-rate lift in 90 days</span></div>
-        </div>
-
-        <div class="agent-content" data-agent-content="custom">
-          <h2>Tell us the problem. <em>We build the AI.</em></h2>
-          <p class="agent-panel-body">Everything that doesn't fit neatly into another agent. Invoice processing, inventory alerts, review monitoring, staff scheduling, custom integrations. If it can be automated with AI, we build it.</p>
-          <ul class="agent-panel-bullets">
-            <li>Custom integrations with your stack</li>
-            <li>Internal-tool automation, not customer-facing</li>
-            <li>Scoped and quoted off a single conversation</li>
-          </ul>
-          <div class="agent-panel-stat"><b>Open</b><span>Scope, built around your needs</span></div>
-        </div>
-
-        <!-- Tab row UNDER the content -->
-        <div class="agents-tabs" role="tablist" id="agentsTabs">
-          <button class="agent-tab active" data-agent="receptionist" data-slug="echo"><span class="agent-tab-num">01</span>Receptionist</button>
-          <button class="agent-tab" data-agent="lead-reply" data-slug="ignite"><span class="agent-tab-num">02</span>Outbound Lead Reply</button>
-          <button class="agent-tab" data-agent="reactivation" data-slug="revive"><span class="agent-tab-num">03</span>Lost Customer Reactivation</button>
-          <button class="agent-tab" data-agent="lead-gen" data-slug="scout"><span class="agent-tab-num">04</span>Lead Generator</button>
-          <button class="agent-tab" data-agent="website" data-slug="forge"><span class="agent-tab-num">05</span>Website Builder</button>
-          <button class="agent-tab" data-agent="seo" data-slug="signal"><span class="agent-tab-num">06</span>AI SEO</button>
-          <button class="agent-tab" data-agent="growth" data-slug="oracle"><span class="agent-tab-num">07</span>Growth Intelligence</button>
-          <button class="agent-tab" data-agent="sales" data-slug="pitch"><span class="agent-tab-num">08</span>AI Sales Manager</button>
-          <button class="agent-tab" data-agent="custom" data-slug="flux"><span class="agent-tab-num">09</span>Custom Automations</button>
-        </div>
-
-      </div>
-
-      <div class="agents-right">
-
-        <!-- Per-agent visuals (only one visible at a time) -->
-        <div class="agent-visual-wrap active" data-agent-visual="receptionist">
-          <div class="call-panel" id="callPanel" style="position:relative;background:transparent;border:0;box-shadow:none;padding:0">
-            <div class="call-head">
-              <div class="call-avatar">RC</div>
-              <div>
-                <div class="call-name">Incoming call &middot; <b style="color:var(--fg)">+1 (305) 555-0184</b></div>
-                <div class="call-role">Receptionist on duty</div>
-              </div>
-              <div class="call-live">LIVE</div>
-              <div class="call-timer" id="callTimer">00:00</div>
-            </div>
-            <div class="call-transcript" id="callTranscript"></div>
-            <div class="call-wave">
-              <span style="animation-delay:0s"></span><span style="animation-delay:.08s"></span>
-              <span style="animation-delay:.16s"></span><span style="animation-delay:.24s"></span>
-              <span style="animation-delay:.32s"></span><span style="animation-delay:.40s"></span>
-              <span style="animation-delay:.48s"></span><span style="animation-delay:.56s"></span>
-              <span style="animation-delay:.64s"></span><span style="animation-delay:.72s"></span>
-              <span style="animation-delay:.80s"></span><span style="animation-delay:.88s"></span>
-              <span style="animation-delay:.96s"></span><span style="animation-delay:1.04s"></span>
-              <span style="animation-delay:1.12s"></span>
-            </div>
-            <div class="call-footer">
-              <span>Appointment booked &middot; <b>Confirmation sent</b></span>
-              <span>Calls today: <b>47</b></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="lead-reply">
-          <div class="av-speedo">
-            <div class="av-speedo-arc"></div>
-            <div class="av-speedo-needle"></div>
-            <div class="av-speedo-value">0:42</div>
-            <div class="av-speedo-label">First response time</div>
-          </div>
-          <div class="av-row"><span class="av-tag muted">Form</span><span class="av-text">New lead: Maria Cruz, kitchen reno quote</span><span class="av-pill">0:00</span></div>
-          <div class="av-row"><span class="av-tag">SMS</span><span class="av-text">"Hi Maria, can I grab a quick two minutes to scope your kitchen?"</span><span class="av-pill">0:38</span></div>
-          <div class="av-row"><span class="av-tag">Calendar</span><span class="av-text">Discovery call booked, <b style="color:var(--fg)">Thursday 10:00</b></span><span class="av-pill win">1:14</span></div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="reactivation">
-          <div class="av-row"><span class="av-tag muted">Scan</span><span class="av-text">847 customers inactive over 6 months</span></div>
-          <div class="av-cust lit"><span class="av-cust-dot"></span><span class="av-cust-name">Sarah K.</span><span class="av-cust-meta">Last visit 8mo &middot; spend $1,240</span></div>
-          <div class="av-cust lit"><span class="av-cust-dot"></span><span class="av-cust-name">Marco D.</span><span class="av-cust-meta">Last visit 11mo &middot; spend $640</span></div>
-          <div class="av-cust"><span class="av-cust-dot"></span><span class="av-cust-name">Janelle T.</span><span class="av-cust-meta">Last visit 7mo &middot; spend $980</span></div>
-          <div class="av-cust"><span class="av-cust-dot"></span><span class="av-cust-name">Chris P.</span><span class="av-cust-meta">Last visit 14mo &middot; spend $310</span></div>
-          <div class="av-row" style="margin-top:14px"><span class="av-tag">Books</span><span class="av-text">41 appointments rebooked this month</span><span class="av-pill win">+$14.2k</span></div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="lead-gen">
-          <div class="av-radar">
-            <div class="av-radar-ring r3"></div>
-            <div class="av-radar-ring r2"></div>
-            <div class="av-radar-ring r1"></div>
-            <div class="av-radar-sweep"></div>
-            <div class="av-radar-blip b1"></div>
-            <div class="av-radar-blip b2"></div>
-            <div class="av-radar-blip b3"></div>
-            <div class="av-radar-blip b4"></div>
-          </div>
-          <div class="av-row"><span class="av-tag">Match</span><span class="av-text">Construction GCs, 10-50 employees, FL</span><span class="av-pill">A+ fit</span></div>
-          <div class="av-row"><span class="av-tag muted">Enrich</span><span class="av-text">Verified email, direct dial, recent funding</span></div>
-          <div class="av-row"><span class="av-tag">Send</span><span class="av-text">Outbound sequence, 3-touch warm intro</span><span class="av-pill win">22% reply</span></div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="website">
-          <div class="av-wire">
-            <div class="av-wire-bar b1"></div>
-            <div class="av-wire-bar b2"></div>
-            <div class="av-wire-bar b3"></div>
-            <div class="av-wire-bar b4"></div>
-          </div>
-          <div class="av-row"><span class="av-tag">Research</span><span class="av-text">Top competitor pages, schema, ranking gaps</span></div>
-          <div class="av-row"><span class="av-tag">Build</span><span class="av-text">Hero, services, pricing, booking flow, all conversion-tuned</span></div>
-          <div class="av-row"><span class="av-tag">Ship</span><span class="av-text">Deployed on Vercel</span><span class="av-pill win">A+ Lighthouse</span></div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="seo">
-          <div class="av-aio">
-            <div class="av-aio-q">Best home services provider in West Miami?</div>
-            <div class="av-aio-answer">For West Miami home services, customers consistently rate <b style="color:var(--fg)">your business</b> highly for fast scheduling, transparent pricing, and same-week turnaround. They specialize in kitchen and bath renovations, with a 4.9 star rating across 380+ reviews.</div>
-            <span class="av-aio-cite">yourbusiness.com</span>
-          </div>
-          <div class="av-row"><span class="av-tag">Indexed</span><span class="av-text">12 entities, 38 pages, 9 schema types</span></div>
-          <div class="av-row"><span class="av-tag">Cited by</span><span class="av-text">ChatGPT, Google AI, Perplexity</span><span class="av-pill win">+312%</span></div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="growth">
-          <div class="av-chart">
-            <div class="av-chart-label">Pipeline value, 90 days</div>
-            <div class="av-chart-value">+ 64%</div>
-            <svg viewBox="0 0 400 180" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#2D4FB8" stop-opacity="0.4"/>
-                  <stop offset="100%" stop-color="#2D4FB8" stop-opacity="0"/>
-                </linearGradient>
-              </defs>
-              <path class="av-chart-line" d="M 0 150 L 50 142 L 90 130 L 130 134 L 170 110 L 210 96 L 250 82 L 290 70 L 330 52 L 370 30 L 400 14"/>
-              <circle class="av-chart-dot" cx="400" cy="14" r="5"/>
-            </svg>
-          </div>
-          <div class="av-row"><span class="av-tag">Signal</span><span class="av-text">Top 2 competitors raised price 8% last week</span></div>
-          <div class="av-row"><span class="av-tag">Action</span><span class="av-text">Raise prices 6%, push speed in ads, refresh GMB</span><span class="av-pill">Mon 8am</span></div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="sales">
-          <div class="av-coach">
-            <div class="quote">"Look, I think your price is fair but I need to check with my partner before I commit."</div>
-            <div class="note">Offer a 48-hour soft hold instead of waiting. Win-back script v3.</div>
-          </div>
-          <div class="av-coach">
-            <div class="quote">"What does your guarantee actually cover?"</div>
-            <div class="note">High-intent signal. Pull guarantee one-pager and book follow-up same day.</div>
-          </div>
-          <div class="av-row"><span class="av-tag">Scorecard</span><span class="av-text">Rep: Carlos &middot; talk-ratio improved 18%</span><span class="av-pill win">A grade</span></div>
-        </div>
-
-        <div class="agent-visual-wrap" data-agent-visual="custom">
-          <div class="av-flow">
-            <div class="av-flow-node">Invoice arrives via email</div>
-            <div class="av-flow-arrow"></div>
-            <div class="av-flow-node">Extract line items, vendor, amount</div>
-            <div class="av-flow-arrow"></div>
-            <div class="av-flow-node">Match to project, route for approval</div>
-            <div class="av-flow-arrow"></div>
-            <div class="av-flow-node">Post to QuickBooks, notify owner</div>
-          </div>
-          <div class="av-row"><span class="av-tag">Saves</span><span class="av-text">~14 hrs per week of admin work</span><span class="av-pill win">$2.8k / mo</span></div>
-        </div>
-
+    <!-- Big center-stage demo video. One <video> per agent; fade between
+         them when the active tab changes. Real product visuals from
+         /assets/demos/ — replaces the bespoke HTML widgets that came
+         before. -->
+    <div class="agent-stage-wrap fade-in">
+      <div class="agent-stage" id="agentStage">
+        <video class="agent-stage-video active" data-agent-video="receptionist" autoplay muted loop playsinline preload="auto"><source src="/assets/demos/ai-receptionist-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="lead-reply"  muted loop playsinline preload="metadata"><source src="/assets/demos/lead-reply-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="reactivation" muted loop playsinline preload="metadata"><source src="/assets/demos/lcr-agent-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="lead-gen"     muted loop playsinline preload="metadata"><source src="/assets/demos/lead-generator-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="website"      muted loop playsinline preload="metadata"><source src="/assets/demos/custom-website-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="seo"          muted loop playsinline preload="metadata"><source src="/assets/demos/seo-agent-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="growth"       muted loop playsinline preload="metadata"><source src="/assets/demos/ontology-agent-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="sales"        muted loop playsinline preload="metadata"><source src="/assets/demos/ai-receptionist-demo.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="custom"       muted loop playsinline preload="metadata"><source src="/assets/demos/ontology-agent-demo.mp4" type="video/mp4"></video>
       </div>
     </div>
+
+    <!-- Copy + two KPI badges under the video. One block per agent;
+         only the active one is visible. Bullet lists were removed —
+         the two badges carry the proof. -->
+    <div class="agent-copy-wrap">
+      <div class="agent-content active" data-agent-content="receptionist">
+        <h2>Answer every call. <em>Book every lead.</em></h2>
+        <p class="agent-panel-body">A 24/7 voice agent trained on your hours, services, and pricing. Picks up in under two rings, qualifies the caller, books straight into your calendar, and sends a summary to your team. Transfers to a human when something needs one.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>Under 2 rings</b><span>Pickup time</span></div>
+          <div class="agent-badge"><b>24 / 7</b><span>Nights, weekends, holidays</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="lead-reply">
+        <h2>Reply to every lead <em>in under a minute</em>.</h2>
+        <p class="agent-panel-body">Connects to your forms, ads, and inbox. New lead lands, the agent replies via text, email, or voice within sixty seconds, qualifies the lead, and books them straight into your calendar.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>&lt; 60 sec</b><span>First response</span></div>
+          <div class="agent-badge"><b>SMS · Email · Voice</b><span>Multichannel reply</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="reactivation">
+        <h2>Bring <em>dormant customers</em> back.</h2>
+        <p class="agent-panel-body">Scans your customer history for people who haven&rsquo;t visited in six-plus months and sends personalized outreach with offers tailored to their past behavior, then routes the bookings straight to your calendar.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>6+ months</b><span>Inactivity threshold</span></div>
+          <div class="agent-badge"><b>Per-customer</b><span>Personalized offers</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="lead-gen">
+        <h2>Find your <em>next best customers</em>.</h2>
+        <p class="agent-panel-body">Builds targeted prospect lists based on your ideal customer profile, location, and industry. Ranks leads by fit, enriches contact data, and initiates outreach sequences.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>5,000</b><span>Verified prospects / batch</span></div>
+          <div class="agent-badge"><b>Direct dial + email</b><span>Enriched contact data</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="website">
+        <h2>A site built <em>to convert</em>.</h2>
+        <p class="agent-panel-body">Researches your market, competitors, and customers, then builds a site designed to convert visitors into booked appointments. Every page is written for your services and pricing.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>Vercel</b><span>Fast everywhere</span></div>
+          <div class="agent-badge"><b>SEO + AI search</b><span>Tuned from day one</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="seo">
+        <h2>Show up in <em>ChatGPT, Google AI, Perplexity</em>.</h2>
+        <p class="agent-panel-body">Optimizes your site structure, content, and metadata so AI engines recommend your business. When someone asks &ldquo;best provider near me,&rdquo; you show up in the answer.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>AI-first</b><span>Overviews, ChatGPT, Perplexity</span></div>
+          <div class="agent-badge"><b>Weekly</b><span>Tracked across new surfaces</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="growth">
+        <h2>Know what to do next, <em>every week</em>.</h2>
+        <p class="agent-panel-body">Monitors your market, tracks competitor moves, and ships you a weekly brief with three specific actions. Where you&rsquo;re being out-positioned, what&rsquo;s breaking in your favor, and what to ship this week.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>Weekly</b><span>Action-led growth brief</span></div>
+          <div class="agent-badge"><b>3 actions</b><span>Never thirty</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="sales">
+        <h2>Sells <em>while you sleep</em>.</h2>
+        <p class="agent-panel-body">Listens to every call and email thread, rewrites your scripts and sequences against what actually closes, and sends the outbound follow-ups for you on a cadence you control. Per-rep scorecards, real-time deal-risk alerts, and a weekly playbook on what&rsquo;s moving deals.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>Per-rep</b><span>Scorecards after every call</span></div>
+          <div class="agent-badge"><b>Always-on</b><span>Follow-ups in your voice</span></div>
+        </div>
+      </div>
+
+      <div class="agent-content" data-agent-content="custom">
+        <h2>Tell us the problem. <em>We build the AI.</em></h2>
+        <p class="agent-panel-body">Everything that doesn&rsquo;t fit neatly into another agent. Invoice processing, inventory alerts, review monitoring, staff scheduling, custom integrations. If it can be automated with AI, we build it.</p>
+        <div class="agent-badges">
+          <div class="agent-badge"><b>Open scope</b><span>Built around your needs</span></div>
+          <div class="agent-badge"><b>Single call</b><span>Scoped and quoted</span></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -2726,13 +2646,15 @@ section,.partners{background:transparent !important}
 
     <!-- HOME SERVICES -->
     <div class="industry-panel active" data-industry-panel="home-services">
+      <!-- Industry hero image. Swap to /assets/industries/home-services.jpg for an owned asset. -->
+      <div class="industry-image"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=1600&q=80" alt="Tradesperson on the job for home services" loading="lazy"></div>
       <div class="industry-content">
         <div class="industry-eyebrow">For Plumbing, HVAC, Electrical, Roofing</div>
         <h3 class="industry-title">Stop losing jobs when you are in a customer's home.</h3>
         <p class="industry-pain">38% of inbound calls to a home services business go to voicemail. Each call is worth $400-$3,000. The next plumber on Google gets the job.</p>
         <div class="industry-roi">
-          <div class="industry-roi-num">+$24<em>k</em></div>
-          <div class="industry-roi-label">monthly revenue recovered, average client</div>
+          <div class="industry-roi-num">24<em>/7</em></div>
+          <div class="industry-roi-label">Pickup, every hour you are not at the desk</div>
         </div>
         <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -2748,13 +2670,15 @@ section,.partners{background:transparent !important}
 
     <!-- MED SPA -->
     <div class="industry-panel" data-industry-panel="med-spa">
+      <!-- Industry hero image. Swap to /assets/industries/med-spa.jpg for an owned asset. -->
+      <div class="industry-image"><img src="https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=1600&q=80" alt="Med spa wellness treatment" loading="lazy"></div>
       <div class="industry-content">
         <div class="industry-eyebrow">For Aesthetics, IV Therapy, Weight Loss</div>
         <h3 class="industry-title">Bring back the clients you already paid to acquire.</h3>
         <p class="industry-pain">Med spa clients churn at 35% per year. Most never get a personalized reactivation. Your dormant list is the highest-margin revenue you are not capturing.</p>
         <div class="industry-roi">
-          <div class="industry-roi-num">+$38<em>k</em></div>
-          <div class="industry-roi-label">monthly from dormant clients, average client</div>
+          <div class="industry-roi-num">Per<em>-client</em></div>
+          <div class="industry-roi-label">Personalized reactivation, never a mass blast</div>
         </div>
         <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -2770,13 +2694,15 @@ section,.partners{background:transparent !important}
 
     <!-- RESTAURANTS -->
     <div class="industry-panel" data-industry-panel="restaurant">
+      <!-- Industry hero image. Swap to /assets/industries/restaurant.jpg for an owned asset. -->
+      <div class="industry-image"><img src="https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=1600&q=80" alt="Modern restaurant interior" loading="lazy"></div>
       <div class="industry-content">
         <div class="industry-eyebrow">For Restaurants, Cafes, Bars</div>
         <h3 class="industry-title">Capture every reservation, even after closing.</h3>
         <p class="industry-pain">Diners call until midnight. Reservations are won and lost in seconds. Every voicemail is a table sitting empty tomorrow night.</p>
         <div class="industry-roi">
-          <div class="industry-roi-num">+$18<em>k</em></div>
-          <div class="industry-roi-label">monthly in after-hours reservations</div>
+          <div class="industry-roi-num">Until<em> 12am</em></div>
+          <div class="industry-roi-label">Reservations captured after the kitchen closes</div>
         </div>
         <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -2792,13 +2718,15 @@ section,.partners{background:transparent !important}
 
     <!-- REAL ESTATE -->
     <div class="industry-panel" data-industry-panel="real-estate">
+      <!-- Industry hero image. Swap to /assets/industries/real-estate.jpg for an owned asset. -->
+      <div class="industry-image"><img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1600&q=80" alt="Modern luxury home for realtors" loading="lazy"></div>
       <div class="industry-content">
         <div class="industry-eyebrow">For Realtors, Brokerages, Property Mgmt</div>
         <h3 class="industry-title">Stop losing leads to the next agent who picks up first.</h3>
         <p class="industry-pain">Realtors close 1 in 10 leads. The other 9 just did not get followed up with. Speed-to-lead is the entire game and you are losing it to brokers with bigger teams.</p>
         <div class="industry-roi">
-          <div class="industry-roi-num">3<em>x</em></div>
-          <div class="industry-roi-label">more buyer appointments per month</div>
+          <div class="industry-roi-num">&lt;60<em>s</em></div>
+          <div class="industry-roi-label">First reply to every form, every channel</div>
         </div>
         <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -2814,13 +2742,15 @@ section,.partners{background:transparent !important}
 
     <!-- AUTO SERVICES -->
     <div class="industry-panel" data-industry-panel="auto">
+      <!-- Industry hero image. Swap to /assets/industries/auto.jpg for an owned asset. -->
+      <div class="industry-image"><img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1600&q=80" alt="Auto repair shop" loading="lazy"></div>
       <div class="industry-content">
         <div class="industry-eyebrow">For Auto Repair, Detailing, Body Shops</div>
         <h3 class="industry-title">Customers call from the side of the road. Pick up first.</h3>
         <p class="industry-pain">When a car needs work, the customer calls the first shop that answers. Voicemail means they call the next shop. You compete on speed before you compete on price.</p>
         <div class="industry-roi">
-          <div class="industry-roi-num">+47<em>%</em></div>
-          <div class="industry-roi-label">inbound jobs booked per month</div>
+          <div class="industry-roi-num">Same<em>-day</em></div>
+          <div class="industry-roi-label">Booking, even when the bays are full</div>
         </div>
         <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -2836,13 +2766,15 @@ section,.partners{background:transparent !important}
 
     <!-- MEDICAL / DENTAL -->
     <div class="industry-panel" data-industry-panel="medical">
+      <!-- Industry hero image. Swap to /assets/industries/medical.jpg for an owned asset. -->
+      <div class="industry-image"><img src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1600&q=80" alt="Modern dental and medical clinic" loading="lazy"></div>
       <div class="industry-content">
         <div class="industry-eyebrow">For Dental, Vet, Medical Practices</div>
         <h3 class="industry-title">Fill the chair, every chair, every day.</h3>
         <p class="industry-pain">Dental patients miss 30% of their 6-month recall appointments because nobody calls them. Every empty chair is profit you already had on the schedule.</p>
         <div class="industry-roi">
-          <div class="industry-roi-num">+$22<em>k</em></div>
-          <div class="industry-roi-label">monthly in recovered recall visits</div>
+          <div class="industry-roi-num">Every<em> recall</em></div>
+          <div class="industry-roi-label">Patient reached, every interval, every cycle</div>
         </div>
         <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -2950,11 +2882,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"We close the kitchen at ten, but people still call until midnight. Every one of those calls now ends in a booking."</p>
         <div class="case-attribution"><b>General manager</b> &middot; 80-seat restaurant, FL</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">+52%</div><div class="case-stat-label">After-hours reservations captured</div></div>
-        <div class="case-stat"><div class="case-stat-num">+$18k</div><div class="case-stat-label">Monthly revenue recovered</div></div>
+                  <div class="case-stats">
         <div class="case-stat"><div class="case-stat-num">&lt;2 rings</div><div class="case-stat-label">Average pickup time</div></div>
-        <div class="case-stat"><div class="case-stat-num">0</div><div class="case-stat-label">Missed calls, week one</div></div>
+        <div class="case-stat"><div class="case-stat-num">24/7</div><div class="case-stat-label">Nights, weekends, holidays</div></div>
       </div>
     </div>
 
@@ -2965,11 +2895,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"Every form fill got a personalized SMS in under a minute. Competitors hadn't even loaded the email yet."</p>
         <div class="case-attribution"><b>Operations lead</b> &middot; Plumbing &amp; home services</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">2x</div><div class="case-stat-label">Web lead to booked rate</div></div>
+                  <div class="case-stats">
         <div class="case-stat"><div class="case-stat-num">&lt;60s</div><div class="case-stat-label">First-response time</div></div>
-        <div class="case-stat"><div class="case-stat-num">+$32k</div><div class="case-stat-label">Net new monthly revenue</div></div>
-        <div class="case-stat"><div class="case-stat-num">380</div><div class="case-stat-label">Leads responded to per month</div></div>
+        <div class="case-stat"><div class="case-stat-num">SMS · Email · Voice</div><div class="case-stat-label">Multichannel reply on every form</div></div>
       </div>
     </div>
 
@@ -2980,11 +2908,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"1,800 patients sat dormant in our PMS for years. The agent surfaced them, sent the offer, and 200 came back."</p>
         <div class="case-attribution"><b>Practice owner</b> &middot; Multi-location dental, FL</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">11.2%</div><div class="case-stat-label">Dormant patients reactivated</div></div>
-        <div class="case-stat"><div class="case-stat-num">+$84k</div><div class="case-stat-label">Recovered revenue, single campaign</div></div>
-        <div class="case-stat"><div class="case-stat-num">200</div><div class="case-stat-label">Appointments rebooked</div></div>
-        <div class="case-stat"><div class="case-stat-num">$0</div><div class="case-stat-label">Cost per re-acquisition</div></div>
+                  <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">Per-customer</div><div class="case-stat-label">Personalized offer, never a mass blast</div></div>
+        <div class="case-stat"><div class="case-stat-num">Weekly</div><div class="case-stat-label">New dormant cohort surfaced</div></div>
       </div>
     </div>
 
@@ -2995,11 +2921,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"Five thousand verified prospects with direct dials. We hadn't even hired an SDR and the calendar was already filling."</p>
         <div class="case-attribution"><b>Founder</b> &middot; Commercial roofing</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">5,000</div><div class="case-stat-label">Verified prospects, single batch</div></div>
-        <div class="case-stat"><div class="case-stat-num">22%</div><div class="case-stat-label">Cold reply rate</div></div>
-        <div class="case-stat"><div class="case-stat-num">$1.2M</div><div class="case-stat-label">Pipeline added in 14 days</div></div>
-        <div class="case-stat"><div class="case-stat-num">0 SDRs</div><div class="case-stat-label">Headcount required</div></div>
+                  <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">5,000</div><div class="case-stat-label">Verified prospects per batch</div></div>
+        <div class="case-stat"><div class="case-stat-num">0 SDRs</div><div class="case-stat-label">Headcount required to operate</div></div>
       </div>
     </div>
 
@@ -3010,11 +2934,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"Same design quality, half the price, and the conversion rate more than doubled in the first month."</p>
         <div class="case-attribution"><b>Owner</b> &middot; Aesthetic med spa</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">2.1x</div><div class="case-stat-label">Lift on book-now conversion</div></div>
-        <div class="case-stat"><div class="case-stat-num">-60%</div><div class="case-stat-label">Bounce rate drop</div></div>
-        <div class="case-stat"><div class="case-stat-num">A+</div><div class="case-stat-label">Lighthouse score, all 4 metrics</div></div>
+                  <div class="case-stats">
         <div class="case-stat"><div class="case-stat-num">1 week</div><div class="case-stat-label">From kickoff to launch</div></div>
+        <div class="case-stat"><div class="case-stat-num">A+</div><div class="case-stat-label">Lighthouse score, all four metrics</div></div>
       </div>
     </div>
 
@@ -3025,11 +2947,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"ChatGPT recommends us by name when someone asks for a divorce attorney in our city. That used to be a Google ad spend."</p>
         <div class="case-attribution"><b>Managing partner</b> &middot; Family law firm</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">3</div><div class="case-stat-label">AI engines citing the firm</div></div>
-        <div class="case-stat"><div class="case-stat-num">+312%</div><div class="case-stat-label">AI search citations in 60 days</div></div>
-        <div class="case-stat"><div class="case-stat-num">+18</div><div class="case-stat-label">Net new cases per month</div></div>
-        <div class="case-stat"><div class="case-stat-num">$0</div><div class="case-stat-label">Paid ad spend on those keywords</div></div>
+                  <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">AI-first</div><div class="case-stat-label">Overviews, ChatGPT, Perplexity</div></div>
+        <div class="case-stat"><div class="case-stat-num">Weekly</div><div class="case-stat-label">Tracked across the new search surfaces</div></div>
       </div>
     </div>
 
@@ -3040,11 +2960,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"Monday morning brief, three specific actions, the price lift held. We never would have caught the window without it."</p>
         <div class="case-attribution"><b>Owner</b> &middot; Multi-location auto detail</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">+6%</div><div class="case-stat-label">Pricing lift, held in market</div></div>
-        <div class="case-stat"><div class="case-stat-num">0</div><div class="case-stat-label">Volume loss</div></div>
-        <div class="case-stat"><div class="case-stat-num">+$41k</div><div class="case-stat-label">Monthly margin added</div></div>
-        <div class="case-stat"><div class="case-stat-num">4 weeks</div><div class="case-stat-label">From brief to realized margin</div></div>
+                  <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">Weekly</div><div class="case-stat-label">Action-led growth brief</div></div>
+        <div class="case-stat"><div class="case-stat-num">3 actions</div><div class="case-stat-label">Never thirty</div></div>
       </div>
     </div>
 
@@ -3055,11 +2973,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"Every rep got better coaching than any human manager could give. The scorecards do not lie."</p>
         <div class="case-attribution"><b>VP Sales</b> &middot; B2B SaaS reseller</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">+22%</div><div class="case-stat-label">Win-rate lift</div></div>
-        <div class="case-stat"><div class="case-stat-num">+$240k</div><div class="case-stat-label">Net new bookings, quarter</div></div>
-        <div class="case-stat"><div class="case-stat-num">6 reps</div><div class="case-stat-label">Coached, every call</div></div>
-        <div class="case-stat"><div class="case-stat-num">90 days</div><div class="case-stat-label">Measured outcome window</div></div>
+                  <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">Per-rep</div><div class="case-stat-label">Scorecards updated after every call</div></div>
+        <div class="case-stat"><div class="case-stat-num">Always-on</div><div class="case-stat-label">Follow-ups sent in your voice, on your cadence</div></div>
       </div>
     </div>
 
@@ -3070,11 +2986,9 @@ section,.partners{background:transparent !important}
         <p class="case-quote">"Invoices arrive, the agent extracts, routes, books, notifies. We deleted an entire AP workflow."</p>
         <div class="case-attribution"><b>Controller</b> &middot; Mid-market construction GC</div>
       </div>
-      <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">14 hrs</div><div class="case-stat-label">Per week of admin work eliminated</div></div>
-        <div class="case-stat"><div class="case-stat-num">$2.8k</div><div class="case-stat-label">Monthly cost saved</div></div>
-        <div class="case-stat"><div class="case-stat-num">0</div><div class="case-stat-label">Manual entry errors in 60 days</div></div>
-        <div class="case-stat"><div class="case-stat-num">1 hire</div><div class="case-stat-label">Avoided</div></div>
+                  <div class="case-stats">
+        <div class="case-stat"><div class="case-stat-num">Open scope</div><div class="case-stat-label">Built around your specific workflow</div></div>
+        <div class="case-stat"><div class="case-stat-num">Single call</div><div class="case-stat-label">Scoped and quoted in one conversation</div></div>
       </div>
     </div>
 
@@ -3979,18 +3893,25 @@ if (!canvas) { /* no-op */ } else if (reduced) {
   });
 })();
 
-// Agent master tab switcher (V4 — split content/visual columns)
+// Agent master tab switcher (V5 — tabs above, center-stage video, copy below)
 (function(){
   var tabs = document.querySelectorAll('.agent-tab');
   var contents = document.querySelectorAll('.agent-content');
-  var visuals = document.querySelectorAll('.agent-visual-wrap');
+  var videos = document.querySelectorAll('.agent-stage-video');
   if (!tabs.length) return;
   tabs.forEach(function(tab){
     tab.addEventListener('click', function(){
       var key = tab.getAttribute('data-agent');
       tabs.forEach(function(t){ t.classList.toggle('active', t === tab); });
       contents.forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-agent-content') === key); });
-      visuals.forEach(function(v){ v.classList.toggle('active', v.getAttribute('data-agent-visual') === key); });
+      // Stop the previously-playing video so we don't have 9 videos
+      // running in background tabs. Activate + autoplay the chosen one.
+      videos.forEach(function(v){
+        var match = v.getAttribute('data-agent-video') === key;
+        v.classList.toggle('active', match);
+        if (match) { try { v.currentTime = 0; v.play(); } catch (e) {} }
+        else { try { v.pause(); } catch (e) {} }
+      });
     });
   });
 })();
