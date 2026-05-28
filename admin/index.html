@@ -480,6 +480,16 @@
             display: block;
             filter: drop-shadow(0 2px 8px rgba(45,99,235,0.35));
         }
+        /* Desktop = 3D wordmark logo. Mobile = the square brand mark. */
+        .sidebar-logo .sidebar-logo-mobile { display: none; }
+        @media (max-width: 768px) {
+            .sidebar-logo .sidebar-logo-desktop { display: none; }
+            .sidebar-logo .sidebar-logo-mobile { display: block; height: 36px; }
+            /* Drop the desktop-only collapse arrow + floating expand
+               handle on mobile — the hamburger + overlay handle it. */
+            .sidebar-collapse-btn,
+            .sidebar-expand-handle { display: none !important; }
+        }
 
         /* Collapse toggle — rotates ▶/◀ depending on state. Acts on
            the document root, which carries the .sidebar-collapsed class
@@ -597,13 +607,15 @@
         }
 
         .mobile-logo {
-            font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 1rem;
-            color: var(--text-primary);
+            display: flex;
+            align-items: center;
         }
-
-        .mobile-logo span { color: var(--purple-primary); }
+        .mobile-logo img {
+            height: 32px;
+            width: auto;
+            display: block;
+            filter: drop-shadow(0 2px 8px rgba(45,99,235,0.45));
+        }
 
         .hamburger {
             display: flex;
@@ -1209,7 +1221,7 @@
          Mobile Top Bar
          ============================================================ -->
     <div class="mobile-topbar">
-        <div class="mobile-logo">STILO AI PARTNERS</div>
+        <div class="mobile-logo"><img src="/assets/STILOMOBILELOGO.png" alt="STILO AI PARTNERS" /></div>
         <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
@@ -1232,7 +1244,8 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="/admin/" class="sidebar-logo" aria-label="STILO AI PARTNERS admin">
-                    <img src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
+                    <img class="sidebar-logo-desktop" src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
+                    <img class="sidebar-logo-mobile" src="/assets/STILOMOBILELOGO.png" alt="STILO AI PARTNERS" />
                 </a>
                 <button type="button" class="sidebar-collapse-btn" onclick="toggleSidebarCollapsed()" aria-label="Collapse sidebar" title="Collapse sidebar">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
@@ -1705,16 +1718,15 @@
                  ============================================================ -->
             <div class="page-content" id="page-revenue" style="display:none;">
 
-                <!-- Period selector — Stripe/AppStoreConnect pattern. Drives every
-                     KPI + sparkline on this page. Default: Month-to-date. -->
-                <div id="revenuePeriodBar" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;">
+                <!-- Period selector — center-aligned, no date label per
+                     Remy 2026-05-28. -->
+                <div id="revenuePeriodBar" style="display:flex;justify-content:center;align-items:center;gap:14px;margin-bottom:26px;flex-wrap:wrap;">
                     <div style="display:inline-flex;background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:999px;padding:3px;">
                         <button type="button" class="rev-period" data-period="today" onclick="setRevenuePeriod('today')">Today</button>
                         <button type="button" class="rev-period" data-period="week" onclick="setRevenuePeriod('week')">7 days</button>
                         <button type="button" class="rev-period active" data-period="month" onclick="setRevenuePeriod('month')">Month</button>
                         <button type="button" class="rev-period" data-period="all" onclick="setRevenuePeriod('all')">All time</button>
                     </div>
-                    <div id="revenuePeriodLabel" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;"></div>
                 </div>
 
                 <!-- 3 hero cards (period-aware) -->
@@ -3790,21 +3802,17 @@
                 + '</svg>';
         }
 
-        // Delta badge: shows ▲N% / ▼N% when there's a prior value to
-        // divide against, and falls back to the raw dollar delta (+$X)
-        // when prior is 0 — because "infinity %" isn't useful and the
-        // green NEW label hid the actual movement.
+        // Delta badge: always shows ▲N% / ▼N%. When the prior period was
+        // zero, treats it as 0 → curr = +100% (mathematically undefined
+        // but the cleanest dashboard convention — matches Stripe / GA).
+        // Falls back to "—" only when both periods are zero.
         function deltaBadge(curr, prev, opts) {
             opts = opts || {};
             if (curr === 0 && (!prev || prev === 0)) return '<div class="rev-row__delta flat">—</div>';
             if (!prev || prev === 0) {
-                // No prior to compute % against. Show raw delta in green.
-                var rawAbs = Math.abs(curr);
-                var rawSign = curr > 0 ? '+' : '−';
-                var label = opts.isCount
-                    ? rawSign + rawAbs
-                    : rawSign + fmtUsd(rawAbs).replace('$', '$');
-                return '<div class="rev-row__delta up">' + label + '</div>';
+                // No prior to divide by — treat as a fresh 0→curr jump and
+                // call it ▲ 100% so the badge always reads as a percentage.
+                return '<div class="rev-row__delta up">▲ 100%</div>';
             }
             var pct = ((curr - prev) / prev) * 100;
             if (Math.abs(pct) < 0.05) return '<div class="rev-row__delta flat">0%</div>';
@@ -3915,12 +3923,7 @@
                 priorStart = new Date(priorStart.getFullYear(), priorStart.getMonth(), priorStart.getDate());
                 var priorWin = { start: priorStart, end: priorEnd, days: win.days };
 
-                if (periodLabel) {
-                    var fmt = { month: 'short', day: 'numeric' };
-                    var startStr = win.start.toLocaleDateString('en-US', fmt);
-                    var endStr = win.end.toLocaleDateString('en-US', fmt);
-                    periodLabel.textContent = (REVENUE_PERIOD_LABELS[period] || period) + ' · ' + startStr + ' → ' + endStr;
-                }
+                // Period date label removed 2026-05-28 — selector alone carries the context.
 
                 // ───── Period totals + prior totals ─────
                 var curr = accruePeriod(deals, win);

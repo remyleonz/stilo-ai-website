@@ -688,14 +688,23 @@ section{padding:160px 0}
    BUSINESS). Subhead bigger, white, narrower. 3D logo rotates in from
    the right and lands face-on, then idles with a slow continuous spin
    so it never disappears edge-on. */
-.hero{padding:200px 0 140px;min-height:100vh;min-height:100svh;display:flex;align-items:center;text-align:left;position:relative}
-@media (max-width:960px){.hero{padding:160px 0 100px}}
+/* 2026-05-28: dropped padding-top so copy sits middle-left, not below
+   the nav. Min-height keeps the section full viewport. */
+.hero{padding:140px 0 100px;min-height:100vh;min-height:100svh;display:flex;align-items:center;text-align:left;position:relative}
+@media (max-width:960px){.hero{padding:120px 0 80px}}
 .hero .container{position:relative;z-index:2;width:var(--container)}
 .hero-grid-v6{
   display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr);
   gap:64px;align-items:center;
 }
-@media (max-width:960px){.hero-grid-v6{grid-template-columns:1fr;gap:48px}}
+/* On mobile: stack to single column AND flip order so the rotating
+   logo sits ABOVE the headline copy (the right column becomes the
+   top row via order). */
+@media (max-width:960px){
+  .hero-grid-v6{grid-template-columns:1fr;gap:36px}
+  .hero-grid-v6 .hero-copy{order:2}
+  .hero-grid-v6 .hero-3d-stage{order:1}
+}
 .hero-copy{max-width:640px;display:flex;flex-direction:column;align-items:flex-start}
 
 .hero h1{
@@ -1179,11 +1188,12 @@ flex-wrap:wrap}
   .why-card-num{font-size:2.4rem}
 }
 
-/* ====== AGENT & CASE PILL GRID SYMMETRY (2026-05-27) ====== */
+/* ====== AGENT & CASE PILL GRID — 4 × 2 (2026-05-28) ====== */
+/* Custom Automations dropped → 8 agents → 4 per row × 2 rows. */
 .agents-tabs,
 .case-tabs{
   display:grid !important;
-  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
   gap:10px !important;
   align-items:stretch !important;
 }
@@ -2409,7 +2419,56 @@ section,.partners{background:transparent !important}
   }
 }
 
-    </style>
+    
+/* 2026-05-28: section headings stay all white. Only the hero <h1>
+   keeps the blue accent on its <em> tags. Earlier compositions used
+   <em> inside section h2s to highlight words in brand blue — we no
+   longer want that. */
+section .section-header h2,
+section .section-header h2 *,
+section .section-header h2 em,
+section .section-header h2 .gradient-text,
+section .section-header h2 .gradient-text em {
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* 2026-05-28: industries — lower text under image, CTA becomes a real
+   button (was a text link). Also lower the per-agent copy under the
+   master video so it doesn't crowd the frame. */
+.industry-panel.active .industry-content,
+.industry-panel.active .industry-system {
+  margin-top: 32px;
+}
+.industry-cta {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px 22px !important;
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  border-radius: 10px !important;
+  font-family: var(--font-display),'Saira',system-ui,sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.02em !important;
+  text-decoration: none !important;
+  border: none !important;
+  margin-top: 18px !important;
+  transition: background .2s, transform .2s, box-shadow .2s !important;
+}
+.industry-cta:hover {
+  background: var(--accent-hi) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(30,58,138,0.4);
+}
+/* Lower the per-agent copy block under the master demo video. */
+.agent-copy-wrap { margin-top: 56px !important; }
+@media (max-width: 720px) { .agent-copy-wrap { margin-top: 36px !important; } }
+</style>
 </head>
 <body>
 <div class="scroll-progress" id="scrollProgress"></div>
@@ -2418,7 +2477,7 @@ section,.partners{background:transparent !important}
 <nav id="topNav">
   <div class="nav-inner">
     <a href="/" class="nav-logo has-wordmark" id="navLogoLink" onclick="location.href='/';return false;">
-      <img class="nav-logo-mark" src="/assets/3dLOGOSTILOAI.png" alt="STILO" />
+      <img class="nav-logo-mark" src="/assets/STILOMOBILELOGO.png" alt="STILO" />
       <img class="nav-logo-wordmark" src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
       <span class="nav-logo-text">STILO AI PARTNERS</span>
     </a>
@@ -2456,7 +2515,7 @@ section,.partners{background:transparent !important}
   <!-- Hero background. Primary source is the Kling-rendered galaxy.
        Falls back to the original shooting-star video if galaxy isn't
        uploaded yet (drop /assets/hero-galaxy.mp4 to swap, no code change). -->
-  <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="auto" poster="/assets/hero-galaxy-poster.jpg">
+  <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="auto" poster="/assets/galaxystillimage.png">
     <source src="/assets/hero-galaxy.mp4" type="video/mp4">
     <source src="/assets/newSTILOAIHEROVID.mp4" type="video/mp4">
   </video>
@@ -2469,7 +2528,7 @@ section,.partners{background:transparent !important}
           <span class="line"><span class="line-inner"><em>AI</em> SOLUTIONS</span></span>
           <span class="line"><span class="line-inner">FOR YOUR <em>BUSINESS</em></span></span>
         </h1>
-        <p class="hero-sub">We design, build, and operate AI agents that handle the work your team is too small to handle.</p>
+        <p class="hero-sub">We design, build, and operate AI agents that give you back your time, close more sales, and grow your business.</p>
         <div class="hero-ctas">
           <a href="#contact" class="btn-primary">Talk to a partner</a>
           <a href="#agents" class="btn-ghost">See it work</a>
@@ -2504,7 +2563,6 @@ section,.partners{background:transparent !important}
       <button class="agent-tab" data-agent="seo" data-slug="signal"><span class="agent-tab-num">06</span>AI SEO</button>
       <button class="agent-tab" data-agent="growth" data-slug="oracle"><span class="agent-tab-num">07</span>Growth Intelligence</button>
       <button class="agent-tab" data-agent="sales" data-slug="pitch"><span class="agent-tab-num">08</span>AI Sales Agent</button>
-      <button class="agent-tab" data-agent="custom" data-slug="flux"><span class="agent-tab-num">09</span>Custom Automations</button>
     </div>
 
     <!-- Big center-stage demo video. One <video> per agent; fade between
@@ -2523,7 +2581,6 @@ section,.partners{background:transparent !important}
         <video class="agent-stage-video"        data-agent-video="seo"          muted loop playsinline preload="metadata"><source src="/assets/demos/seo-v2.mp4" type="video/mp4"></video>
         <video class="agent-stage-video"        data-agent-video="growth"       muted loop playsinline preload="metadata"><source src="/assets/demos/growth-v2.mp4" type="video/mp4"></video>
         <video class="agent-stage-video"        data-agent-video="sales"        muted loop playsinline preload="metadata"><source src="/assets/demos/sales-v2.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="custom"       muted loop playsinline preload="metadata"><source src="/assets/demos/custom-v2.mp4" type="video/mp4"></video>
       </div>
     </div>
 
@@ -2676,25 +2733,7 @@ section,.partners{background:transparent !important}
         </div>
       </div>
 
-      <div class="agent-content" data-agent-content="custom">
-        <div class="agent-copy-text">
-          <h2>Tell us the problem. <em>We build the AI.</em></h2>
-          <p class="agent-panel-body">Everything that doesn&rsquo;t fit neatly into another agent. Invoice processing, inventory alerts, review monitoring, staff scheduling, custom integrations. If it can be automated with AI, we build it.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
-        </div>
-        <div class="agent-mockups">
-          <div class="agent-mockup agent-mockup-back">
-            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Custom · Time saved</div><span></span></div>
-            <div class="agent-mockup-body"><div class="label">Hours this month</div><div class="value accent">56</div><div class="row"><b>Invoices processed</b><span>312</span></div><div class="row"><b>Auto-approved</b><span>274</span></div><div class="row"><b>Routed for review</b><span>38</span></div></div>
-          </div>
-          <div class="agent-mockup agent-mockup-front">
-            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Custom · Workflow</div><span></span></div>
-            <div class="agent-mockup-body"><div class="label">Invoice automation</div><div class="value">87</div><div class="row"><b>Inbox &rarr; extract</b><span class="pill">Active</span></div><div class="row"><b>Match to project</b><span class="pill">Active</span></div><div class="row"><b>Route for approval</b><span class="pill">Active</span></div><div class="row"><b>Post to QuickBooks</b><span class="pill">Active</span></div></div>
-          </div>
-        </div>
       </div>
-
-    </div>
 
   </div>
 </section>
@@ -2782,7 +2821,7 @@ section,.partners{background:transparent !important}
     <!-- HOME SERVICES -->
     <div class="industry-panel active" data-industry-panel="home-services">
       <!-- Industry hero image. Swap to /assets/industries/home-services.jpg for an owned asset. -->
-      <div class="industry-image"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=1600&q=80" alt="Tradesperson on the job for home services" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/homeservices.png" alt="Tradesperson on the job for home services" loading="lazy"></div>
       <div class="industry-content">
         <h3 class="industry-title">Stop losing jobs when you are in a customer's home.</h3>
         <p class="industry-pain">38% of inbound calls to a home services business go to voicemail. Each call is worth $400-$3,000. The next plumber on Google gets the job.</p>
@@ -2801,7 +2840,7 @@ section,.partners{background:transparent !important}
     <!-- MED SPA -->
     <div class="industry-panel" data-industry-panel="med-spa">
       <!-- Industry hero image. Swap to /assets/industries/med-spa.jpg for an owned asset. -->
-      <div class="industry-image"><img src="https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=1600&q=80" alt="Med spa wellness treatment" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/medspas.png" alt="Med spa wellness treatment" loading="lazy"></div>
       <div class="industry-content">
         <h3 class="industry-title">Bring back the clients you already paid to acquire.</h3>
         <p class="industry-pain">Med spa clients churn at 35% per year. Most never get a personalized reactivation. Your dormant list is the highest-margin revenue you are not capturing.</p>
@@ -2820,7 +2859,7 @@ section,.partners{background:transparent !important}
     <!-- RESTAURANTS -->
     <div class="industry-panel" data-industry-panel="restaurant">
       <!-- Industry hero image. Swap to /assets/industries/restaurant.jpg for an owned asset. -->
-      <div class="industry-image"><img src="https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=1600&q=80" alt="Modern restaurant interior" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/restaurants.png" alt="Modern restaurant interior" loading="lazy"></div>
       <div class="industry-content">
         <h3 class="industry-title">Capture every reservation, even after closing.</h3>
         <p class="industry-pain">Diners call until midnight. Reservations are won and lost in seconds. Every voicemail is a table sitting empty tomorrow night.</p>
@@ -2839,7 +2878,7 @@ section,.partners{background:transparent !important}
     <!-- REAL ESTATE -->
     <div class="industry-panel" data-industry-panel="real-estate">
       <!-- Industry hero image. Swap to /assets/industries/real-estate.jpg for an owned asset. -->
-      <div class="industry-image"><img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1600&q=80" alt="Modern luxury home for realtors" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/realestate.png" alt="Modern luxury home for realtors" loading="lazy"></div>
       <div class="industry-content">
         <h3 class="industry-title">Stop losing leads to the next agent who picks up first.</h3>
         <p class="industry-pain">Realtors close 1 in 10 leads. The other 9 just did not get followed up with. Speed-to-lead is the entire game and you are losing it to brokers with bigger teams.</p>
@@ -2858,7 +2897,7 @@ section,.partners{background:transparent !important}
     <!-- AUTO SERVICES -->
     <div class="industry-panel" data-industry-panel="auto">
       <!-- Industry hero image. Swap to /assets/industries/auto.jpg for an owned asset. -->
-      <div class="industry-image"><img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1600&q=80" alt="Auto repair shop" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/AUtoServices.png" alt="Auto repair shop" loading="lazy"></div>
       <div class="industry-content">
         <h3 class="industry-title">Customers call from the side of the road. Pick up first.</h3>
         <p class="industry-pain">When a car needs work, the customer calls the first shop that answers. Voicemail means they call the next shop. You compete on speed before you compete on price.</p>
@@ -2877,7 +2916,7 @@ section,.partners{background:transparent !important}
     <!-- MEDICAL / DENTAL -->
     <div class="industry-panel" data-industry-panel="medical">
       <!-- Industry hero image. Swap to /assets/industries/medical.jpg for an owned asset. -->
-      <div class="industry-image"><img src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1600&q=80" alt="Modern dental and medical clinic" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/Medical.png" alt="Modern dental and medical clinic" loading="lazy"></div>
       <div class="industry-content">
         <h3 class="industry-title">Fill the chair, every chair, every day.</h3>
         <p class="industry-pain">Dental patients miss 30% of their 6-month recall appointments because nobody calls them. Every empty chair is profit you already had on the schedule.</p>
@@ -2975,7 +3014,6 @@ section,.partners{background:transparent !important}
       <button class="case-tab" data-case="seo"><span class="case-tab-num">06</span>AI SEO</button>
       <button class="case-tab" data-case="growth"><span class="case-tab-num">07</span>Growth Intelligence</button>
       <button class="case-tab" data-case="sales"><span class="case-tab-num">08</span>AI Sales Manager</button>
-      <button class="case-tab" data-case="custom"><span class="case-tab-num">09</span>Custom Automations</button>
     </div>
 
     <div class="case-card active" data-case-card="receptionist">
@@ -3074,19 +3112,7 @@ section,.partners{background:transparent !important}
       </div>
     </div>
 
-    <div class="case-card" data-case-card="custom">
-      <div>
-        <h3 class="case-title">General contractor saved 14 hours a week on invoice processing.</h3>
-        <p class="case-quote">"Invoices arrive, the agent extracts, routes, books, notifies. We deleted an entire AP workflow."</p>
-        <div class="case-attribution"><b>Controller</b> &middot; Mid-market construction GC</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">Open scope</div><div class="case-stat-label">Built around your specific workflow</div></div>
-        <div class="case-stat"><div class="case-stat-num">Single call</div><div class="case-stat-label">Scoped and quoted in one conversation</div></div>
-      </div>
     </div>
-
-  </div>
 </section>
 
 <!-- STILO PARTNERS founders section removed per Remy. -->

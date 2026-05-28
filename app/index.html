@@ -142,14 +142,16 @@
         }
 
         .logo {
-            font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 1.15rem;
-            letter-spacing: -0.02em;
-            color: var(--text-primary);
+            display: flex;
+            align-items: center;
         }
-
-        .logo span { color: var(--purple-primary); }
+        .logo img { display: block; filter: drop-shadow(0 2px 8px rgba(45,99,235,0.35)); }
+        .logo img.logo-desktop { height: 38px; }
+        .logo img.logo-mobile  { height: 34px; display: none; }
+        @media (max-width: 768px) {
+            .logo img.logo-desktop { display: none; }
+            .logo img.logo-mobile  { display: block; }
+        }
 
         .topbar-divider {
             width: 1px;
@@ -1310,7 +1312,10 @@
          ========================================================= -->
     <header class="topbar">
         <div class="topbar-left">
-            <div class="logo" onclick="window.location.reload()" style="cursor:pointer;" title="Refresh">STILO AI PARTNERS</div>
+            <div class="logo" onclick="window.location.reload()" style="cursor:pointer;" title="Refresh">
+                <img class="logo-desktop" src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
+                <img class="logo-mobile"  src="/assets/STILOMOBILELOGO.png" alt="STILO AI PARTNERS" />
+            </div>
         </div>
         <div class="topbar-right">
             <div class="profile-trigger" id="profileTrigger" onclick="toggleProfile()">
