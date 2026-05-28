@@ -691,24 +691,29 @@ section{padding:160px 0}
 @media (max-width:960px){.hero{padding:200px 0 120px}}
 .hero .container{position:relative;z-index:2;width:var(--container)}
 .hero-center{max-width:none;margin:0;display:flex;flex-direction:column;align-items:flex-start}
-/* 3D logo: lives behind the copy as a rotating focal point. Uses CSS
-   3D transforms (perspective + rotateX) on the parent so the PNG flips
-   forward like a coin. Bigger on desktop, scaled down on mobile. */
+/* 3D logo: focal point above the headline, slow downward tumble. Sits
+   high in the hero so it doesn't fight the copy. Drop-shadow gives it
+   real presence over the dark space video. */
 .hero-3d-logo-wrap{
-  position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
-  z-index:1;pointer-events:none;width:min(560px,72vw);
-  perspective:1200px;perspective-origin:50% 50%;
-  filter:drop-shadow(0 14px 60px rgba(45,79,184,0.45));
+  position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);
+  z-index:2;pointer-events:none;width:min(720px,82vw);
+  perspective:1400px;perspective-origin:50% 50%;
+  filter:drop-shadow(0 24px 80px rgba(45,79,184,0.65)) drop-shadow(0 4px 20px rgba(96,165,250,0.35));
 }
 .hero-3d-logo{
   width:100%;height:auto;display:block;
   transform-style:preserve-3d;
-  animation:logoTumble 14s linear infinite;
+  animation:logoTumble 24s linear infinite;
 }
+/* Slow forward tumble — one full rotation every 24s. The viewer sees
+   the face-on logo for most of the loop and a slim edge view briefly
+   at 90°/270°. */
 @keyframes logoTumble{
-  0%   { transform: rotateX(0deg)   rotateY(0deg); }
-  50%  { transform: rotateX(360deg) rotateY(0deg); }
-  100% { transform: rotateX(720deg) rotateY(0deg); }
+  0%   { transform: rotateX(0deg); }
+  100% { transform: rotateX(360deg); }
+}
+@media (max-width:960px){
+  .hero-3d-logo-wrap{top:24%;width:min(520px,78vw)}
 }
 @media (prefers-reduced-motion: reduce){
   .hero-3d-logo{animation:none}
