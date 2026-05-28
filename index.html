@@ -2414,7 +2414,11 @@ section,.partners{background:transparent !important}
     <span class="aurora-orb c"></span>
     <span class="aurora-orb d"></span>
   </div>
+  <!-- Hero background. Primary source is the Kling-rendered galaxy.
+       Falls back to the original shooting-star video if galaxy isn't
+       uploaded yet (drop /assets/hero-galaxy.mp4 to swap, no code change). -->
   <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="auto" poster="/assets/hero-poster.jpg">
+    <source src="/assets/hero-galaxy.mp4" type="video/mp4">
     <source src="/assets/newSTILOAIHEROVID.mp4" type="video/mp4">
   </video>
   <div class="hero-veil"></div>
