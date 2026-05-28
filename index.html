@@ -48,7 +48,7 @@
                 "address": { "@type": "PostalAddress", "addressLocality": "Miami", "addressRegion": "FL", "addressCountry": "US" },
                 "geo": { "@type": "GeoCoordinates", "latitude": 25.7617, "longitude": -80.1918 },
                 "priceRange": "$1,000 - $7,500+",
-                "sameAs": ["https://www.linkedin.com/company/stiloai", "https://www.instagram.com/stiloai"],
+                "sameAs": ["https://www.linkedin.com/company/stilo-ai-partners", "https://www.instagram.com/stiloaipartners/"],
                 "datePublished": "2026-01-15",
                 "dateModified": "2026-05-02"
             },
@@ -58,7 +58,7 @@
                 "name": "STILO AI PARTNERS",
                 "url": "https://stiloaipartners.com",
                 "logo": { "@type": "ImageObject", "url": "https://stiloaipartners.com/logo.png" },
-                "sameAs": ["https://www.linkedin.com/company/stiloai", "https://www.instagram.com/stiloai"],
+                "sameAs": ["https://www.linkedin.com/company/stilo-ai-partners", "https://www.instagram.com/stiloaipartners/"],
                 "contactPoint": { "@type": "ContactPoint", "telephone": "+1-786-806-7509", "contactType": "customer service", "availableLanguage": ["English", "Spanish"] }
             },
             {
@@ -184,11 +184,11 @@ nav.scrolled{padding:10px 0;backdrop-filter:blur(18px);-webkit-backdrop-filter:b
   color:var(--fg);transition:opacity .2s;
 }
 .nav-logo:hover{opacity:0.85}
-.nav-logo-mark{width:44px;height:44px;border-radius:8px;object-fit:contain;display:none;background:transparent}
-.nav-logo-wordmark{height:46px;width:auto;display:none;object-fit:contain;filter:drop-shadow(0 1px 6px rgba(0,0,0,0.35))}
-.nav-logo.has-wordmark .nav-logo-text{display:none}
+.nav-logo-mark{width:52px;height:52px;border-radius:8px;object-fit:contain;display:none;background:transparent;filter:drop-shadow(0 2px 8px rgba(45,79,184,0.45))}
+.nav-logo-wordmark{height:62px;width:auto;display:none;object-fit:contain;filter:drop-shadow(0 2px 10px rgba(45,79,184,0.5))}
+.nav-logo.has-wordmark .nav-logo-text{display:none !important}
 .nav-logo.has-wordmark .nav-logo-wordmark{display:inline-block}
-.nav-logo-text{display:inline-block}
+.nav-logo-text{display:none}
 @media (max-width:720px){
   .nav-logo-mark{display:inline-block;width:40px;height:40px}
   .nav-logo-wordmark,.nav-logo-text{display:none !important}
@@ -683,64 +683,76 @@ html.lenis,html.lenis body{height:auto}
 section{padding:160px 0}
 @media (max-width:960px){section{padding:96px 0}}
 
-/* Hero — left-aligned CloudIQ/Snowflake style with ambient navy background.
-   2026-05-28: copy lowered (padding-top bumped), headline forced to one line
-   via fluid clamp + nowrap, and the 3D STILO logo is added as a center-stage
-   element above the copy with a perpetual rotateX (downward tumble). */
-.hero{padding:260px 0 140px;min-height:100vh;min-height:100svh;display:flex;align-items:center;text-align:left;position:relative}
-@media (max-width:960px){.hero{padding:200px 0 120px}}
+/* Hero V6 — Snowflake pattern: 2-col grid, copy on the left, 3D logo
+   on the right. Heading wraps to two lines (AI SOLUTIONS / FOR YOUR
+   BUSINESS). Subhead bigger, white, narrower. 3D logo rotates in from
+   the right and lands face-on, then idles with a slow continuous spin
+   so it never disappears edge-on. */
+.hero{padding:200px 0 140px;min-height:100vh;min-height:100svh;display:flex;align-items:center;text-align:left;position:relative}
+@media (max-width:960px){.hero{padding:160px 0 100px}}
 .hero .container{position:relative;z-index:2;width:var(--container)}
-.hero-center{max-width:none;margin:0;display:flex;flex-direction:column;align-items:flex-start}
-/* 3D logo: focal point above the headline, slow downward tumble. Sits
-   high in the hero so it doesn't fight the copy. Drop-shadow gives it
-   real presence over the dark space video. */
-.hero-3d-logo-wrap{
-  position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);
-  z-index:2;pointer-events:none;width:min(720px,82vw);
-  perspective:1400px;perspective-origin:50% 50%;
-  filter:drop-shadow(0 24px 80px rgba(45,79,184,0.65)) drop-shadow(0 4px 20px rgba(96,165,250,0.35));
+.hero-grid-v6{
+  display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr);
+  gap:64px;align-items:center;
 }
-.hero-3d-logo{
-  width:100%;height:auto;display:block;
-  transform-style:preserve-3d;
-  animation:logoTumble 24s linear infinite;
-}
-/* Slow forward tumble — one full rotation every 24s. The viewer sees
-   the face-on logo for most of the loop and a slim edge view briefly
-   at 90°/270°. */
-@keyframes logoTumble{
-  0%   { transform: rotateX(0deg); }
-  100% { transform: rotateX(360deg); }
-}
-@media (max-width:960px){
-  .hero-3d-logo-wrap{top:24%;width:min(520px,78vw)}
-}
-@media (prefers-reduced-motion: reduce){
-  .hero-3d-logo{animation:none}
-}
+@media (max-width:960px){.hero-grid-v6{grid-template-columns:1fr;gap:48px}}
+.hero-copy{max-width:640px;display:flex;flex-direction:column;align-items:flex-start}
+
 .hero h1{
   font-family:var(--font-display);font-weight:700;
-  font-size:clamp(1.4rem,3.2vw,3.4rem);
-  line-height:1.05;letter-spacing:-0.015em;
-  max-width:none;text-align:left;
-  text-transform:uppercase;
-  white-space:nowrap;       /* force single line on desktop */
+  font-size:clamp(2.4rem,5vw,5.2rem);
+  line-height:1.02;letter-spacing:-0.025em;
+  text-align:left;text-transform:uppercase;margin:0;
 }
-@media (max-width:960px){.hero h1{white-space:normal;font-size:clamp(1.8rem,7vw,2.6rem)}}
-.hero h1 .line:first-child{margin-bottom:0.02em}
+.hero h1 .line{display:block;overflow:hidden;padding-bottom:0.06em}
+.hero h1 .line .line-inner{display:inline-block;transform:translateY(110%);transition:transform 1s var(--ease-out)}
+.hero h1 .line.in .line-inner{transform:translateY(0)}
 .hero h1 em{
   font-family:var(--font-display);font-style:normal;font-weight:700;
   background:linear-gradient(135deg,#5A7BE8 0%,#2D4FB8 50%,#1E3A8A 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
-  letter-spacing:-0.005em;padding-right:0.04em;
+  letter-spacing:-0.01em;padding-right:0.04em;
 }
 .hero-sub{
-  font-size:clamp(1.2rem,1.55vw,1.5rem);
-  color:#ffffff;max-width:64ch;
-  margin:32px 0 0;line-height:1.5;font-weight:400;text-align:left;
+  font-size:clamp(1.25rem,1.6vw,1.6rem);
+  color:#ffffff;max-width:38ch;
+  margin:28px 0 0;line-height:1.45;font-weight:400;text-align:left;
   text-shadow:0 1px 24px rgba(7,7,10,0.6);
 }
-.hero-ctas{display:flex;gap:14px;margin-top:40px;justify-content:flex-start;flex-wrap:wrap}
+.hero-ctas{display:flex;gap:14px;margin-top:36px;justify-content:flex-start;flex-wrap:wrap}
+
+/* Right column: 3D logo stage. */
+.hero-3d-stage{
+  position:relative;width:100%;display:flex;align-items:center;justify-content:center;
+  perspective:1600px;perspective-origin:50% 50%;min-height:420px;
+}
+@media (max-width:960px){.hero-3d-stage{min-height:260px}}
+.hero-3d-logo-wrap{
+  position:relative;width:min(560px,90%);
+  filter:drop-shadow(0 24px 80px rgba(45,79,184,0.7)) drop-shadow(0 4px 22px rgba(96,165,250,0.4));
+  transform-style:preserve-3d;
+  animation:logoEntrance 1.8s var(--ease-out) both, logoIdleSpin 28s linear 1.8s infinite;
+}
+.hero-3d-logo{width:100%;height:auto;display:block}
+/* Entrance: starts off-screen-right, rotated, scaled down, lands face-on. */
+@keyframes logoEntrance{
+  0%   { transform: translateX(60%) rotateY(-540deg) scale(0.65); opacity:0; }
+  55%  { opacity:1; }
+  100% { transform: translateX(0)    rotateY(0deg)    scale(1);    opacity:1; }
+}
+/* Idle: gentle tilt + bob so the logo "lives" without ever going edge-on. */
+@keyframes logoIdleSpin{
+  0%   { transform: rotateY(0deg)  rotateX(0deg); }
+  25%  { transform: rotateY(10deg) rotateX(-3deg); }
+  50%  { transform: rotateY(0deg)  rotateX(0deg); }
+  75%  { transform: rotateY(-10deg) rotateX(3deg); }
+  100% { transform: rotateY(0deg)  rotateX(0deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  .hero-3d-logo-wrap{animation:none}
+}
+
+flex-wrap:wrap}
 .hero-content,.hero-grid,.hero-rail,.hero-visual,.hero-eyebrow{}/* legacy slots, no longer used */
 
 /* Ambient hero background: aurora orbs + video slot */
@@ -1447,56 +1459,55 @@ section{padding:160px 0}
 .industry-cta:hover{color:var(--accent-glow);gap:14px}
 .industry-cta span{display:inline-block;transition:transform .25s var(--ease-out)}
 
+/* "The system we'd build" — restyled 2026-05-28 for more breathing
+   room, bigger type, less AI-templated feel. */
 .industry-system{
   position:relative;z-index:1;
-  padding:32px 30px;
-  border-radius:18px;
-  background:rgba(7,7,10,0.55);
-  border:1px solid var(--stroke);
+  padding:36px 32px;
+  border-radius:20px;
+  background:linear-gradient(180deg,rgba(13,17,28,0.65) 0%,rgba(8,10,18,0.65) 100%);
+  border:1px solid rgba(255,255,255,0.08);
 }
 .industry-system-label{
-  font-family:var(--font-mono);font-size:0.66rem;
-  letter-spacing:0.18em;text-transform:uppercase;
-  color:var(--fg-3);margin-bottom:22px;
+  font-family:var(--font-display);font-weight:600;font-size:1.12rem;
+  letter-spacing:-0.01em;text-transform:none;
+  color:var(--fg);margin-bottom:28px;line-height:1.2;
 }
 .industry-agent-stack{
-  display:flex;flex-direction:column;gap:12px;
+  display:flex;flex-direction:column;gap:18px;
   position:relative;
 }
-.industry-agent-stack::before{
-  content:"";position:absolute;
-  left:23px;top:30px;bottom:30px;width:1px;
-  background:linear-gradient(180deg,rgba(45,79,184,0.6) 0%,rgba(45,79,184,0.1) 100%);
-}
+.industry-agent-stack::before{display:none}
 .industry-agent{
   position:relative;z-index:1;
-  display:flex;align-items:center;gap:16px;
-  padding:14px 18px;border-radius:12px;
-  background:linear-gradient(135deg,rgba(21,21,25,0.8) 0%,rgba(15,15,20,0.8) 100%);
-  border:1px solid var(--stroke);
-  transition:border-color .25s,transform .25s;
+  display:flex;align-items:flex-start;gap:18px;
+  padding:18px 20px;border-radius:14px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  transition:border-color .25s,background .25s,transform .25s;
 }
 .industry-agent:hover{
-  border-color:var(--accent-line);
-  transform:translateX(4px);
+  border-color:rgba(96,165,250,0.35);
+  background:rgba(255,255,255,0.06);
+  transform:translateX(2px);
 }
 .industry-agent-num{
   flex-shrink:0;
   display:grid;place-items:center;
-  width:30px;height:30px;border-radius:8px;
-  background:linear-gradient(135deg,rgba(45,79,184,0.25),rgba(30,58,138,0.18));
-  border:1px solid var(--accent-line);
-  font-family:var(--font-mono);font-size:0.68rem;font-weight:600;
-  color:var(--accent-glow);
-  letter-spacing:0.04em;
+  width:34px;height:34px;border-radius:10px;
+  background:rgba(96,165,250,0.18);
+  border:1px solid rgba(96,165,250,0.35);
+  font-family:var(--font-display);font-size:0.82rem;font-weight:600;
+  color:#9CC0FF;
+  letter-spacing:-0.005em;
 }
-.industry-agent > div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.industry-agent > div{display:flex;flex-direction:column;gap:5px;min-width:0;padding-top:2px}
 .industry-agent b{
-  font-family:var(--font-display);font-weight:700;
-  font-size:0.96rem;color:var(--fg);letter-spacing:-0.005em;
+  font-family:var(--font-display);font-weight:600;
+  font-size:1.05rem;color:var(--fg);letter-spacing:-0.01em;line-height:1.2;
 }
 .industry-agent span{
-  font-size:0.82rem;color:var(--fg-2);line-height:1.4;
+  font-size:0.92rem;color:var(--fg-2);line-height:1.5;
 }
 
 @media (max-width:860px){
@@ -1573,10 +1584,12 @@ section{padding:160px 0}
 .btn-primary::before{display:none}
 .btn-primary:hover{background:var(--accent-hi);box-shadow:0 14px 40px rgba(30,58,138,0.32);transform:translateY(-1px)}
 .btn-ghost{
-  border:1px solid var(--stroke-hi);color:var(--fg);
-  background:rgba(255,255,255,0.025);
+  /* Subtle light-gray fill that actually reads against the dark hero/page
+     bg (Snowflake-style secondary). Was ~2.5% white which disappeared. */
+  border:1px solid rgba(255,255,255,0.14);color:#f4f1ea;
+  background:rgba(255,255,255,0.10);
 }
-.btn-ghost:hover{border-color:var(--accent-hi);background:rgba(30,58,138,0.10);color:var(--fg)}
+.btn-ghost:hover{border-color:rgba(255,255,255,0.28);background:rgba(255,255,255,0.16);color:#fff}
 
 /* Inline chevron link */
 .link-chevron{
@@ -1714,51 +1727,74 @@ section,.partners{background:transparent !important}
 .agent-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 6px 18px rgba(30,58,138,0.45)}
 .agent-tab-num{font-family:var(--font-mono);font-size:0.62rem;color:inherit;margin-right:6px;opacity:.55}
 
-/* Stage = big center-stage frame for the demo video. The mp4 files in
-   /assets/demos/ are the real product visuals; we replaced the old
-   bespoke HTML widgets with these. Aspect-ratio holds the layout when
-   videos swap; box-shadow + blue rim glow matches the brand. */
-.agent-stage-wrap{position:relative;max-width:1100px;margin:0 auto 40px}
+/* Stage = center-stage demo video. 2026-05-28: 15% smaller overall
+   (max-width 935px vs 1100), object-fit:contain so the mp4 never gets
+   cropped to its frame edges. Light-gray inner bg matches the
+   dashboard-mockup background below. */
+.agent-stage-wrap{position:relative;max-width:935px;margin:0 auto 56px}
 .agent-stage{
   position:relative;width:100%;aspect-ratio:16/10;
-  background:linear-gradient(180deg,rgba(15,18,28,0.78),rgba(10,12,20,0.78));
-  border:1px solid var(--stroke);border-radius:22px;overflow:hidden;
-  box-shadow:0 50px 120px rgba(0,0,0,0.55),0 0 0 1px rgba(45,79,184,0.15),0 0 100px rgba(30,58,138,0.18);
+  background:#e6e8ef; /* light-gray, contrasts vs dark page */
+  border:1px solid rgba(255,255,255,0.06);border-radius:22px;overflow:hidden;
+  box-shadow:0 50px 120px rgba(0,0,0,0.55),0 0 0 1px rgba(45,79,184,0.18),0 0 100px rgba(30,58,138,0.22);
 }
 .agent-stage::before{
   content:"";position:absolute;top:0;left:0;right:0;height:1px;z-index:2;
   background:linear-gradient(90deg,transparent,rgba(96,165,250,0.7),transparent);
 }
-.agent-stage::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(800px 400px at 50% 0%,rgba(45,79,184,0.15),transparent 60%);
-}
 .agent-stage video{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  background:#e6e8ef;
   opacity:0;transition:opacity .4s var(--ease-out);
 }
 .agent-stage video.active{opacity:1;z-index:1}
 
-/* Copy panel sits under the video — centered + readable. */
-.agent-copy-wrap{max-width:780px;margin:0 auto;text-align:center}
+/* Per-agent block: LEFT copy + Talk to a partner CTA, RIGHT two
+   stacked diagonal dashboard mockups. Replaces the bullets/badges
+   pattern. Each agent ships its own mockup pair. */
+.agent-copy-wrap{max-width:1100px;margin:0 auto}
 .agent-content{display:none}
-.agent-content.active{display:block;animation:apFade .5s var(--ease-out)}
-.agent-content h2{font-size:clamp(1.6rem,2.4vw,2.4rem);margin-bottom:14px;text-transform:uppercase;letter-spacing:-0.02em;line-height:1.06}
+.agent-content.active{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:64px;align-items:center;animation:apFade .5s var(--ease-out)}
+@media (max-width:960px){.agent-content.active{grid-template-columns:1fr;gap:36px}}
+.agent-copy-text{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.agent-content h2{font-size:clamp(1.8rem,2.6vw,2.6rem);margin:0 0 16px;text-transform:uppercase;letter-spacing:-0.02em;line-height:1.06;color:var(--fg)}
 .agent-content h2 em{color:var(--accent-hi);font-style:normal}
-.agent-panel-body{color:var(--fg-2);font-size:1.02rem;line-height:1.6;margin:0 auto 26px;max-width:62ch}
-/* Badges row — replaces the old bullet list. Two badges per agent. */
-.agent-badges{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.agent-badge{
-  display:inline-flex;flex-direction:column;gap:4px;padding:14px 22px;
-  border-radius:14px;border:1px solid var(--accent-line);background:var(--accent-soft);
-  min-width:160px;align-items:flex-start;text-align:left;
+.agent-panel-body{color:var(--fg-2);font-size:1.05rem;line-height:1.55;margin:0 0 28px;max-width:42ch}
+.agent-copy-cta{padding:12px 26px;border-radius:10px;background:var(--accent);color:#fff;font-family:var(--font-display);font-weight:600;font-size:0.92rem;letter-spacing:0.02em;text-decoration:none;transition:background .2s,transform .2s,box-shadow .2s}
+.agent-copy-cta:hover{background:var(--accent-hi);transform:translateY(-1px);box-shadow:0 12px 32px rgba(30,58,138,0.4)}
+
+/* Dashboard mockup screenshots — diagonally stacked, Snowflake pattern.
+   Same light-gray fill as the .agent-stage so the whole agent block
+   reads as one coherent UI sample. Each agent renders its own
+   mockup-front + mockup-back. */
+.agent-mockups{position:relative;width:100%;min-height:420px;perspective:1400px}
+@media (max-width:960px){.agent-mockups{min-height:360px}}
+.agent-mockup{
+  position:absolute;width:84%;background:#e6e8ef;color:#0f1320;
+  border-radius:14px;overflow:hidden;
+  box-shadow:0 30px 70px rgba(0,0,0,0.5),0 0 0 1px rgba(45,79,184,0.18);
+  border:1px solid rgba(255,255,255,0.08);
+  font-family:var(--font-display),'Saira',system-ui,sans-serif;
 }
-.agent-badge b{font-family:'Geist',system-ui,sans-serif;font-size:1.6rem;font-weight:700;color:var(--fg);letter-spacing:-0.02em;line-height:1}
-.agent-badge span{font-family:var(--font-mono);font-size:0.66rem;color:var(--accent-hi);text-transform:uppercase;letter-spacing:0.14em}
+.agent-mockup-back  {top:0;     right:0;  transform:rotate(2.5deg);  z-index:1}
+.agent-mockup-front {bottom:0;  left:0;   transform:rotate(-2.5deg); z-index:2}
+.agent-mockup-head{padding:10px 14px;background:#d6d9e3;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.06)}
+.agent-mockup-head .dots{display:flex;gap:5px}
+.agent-mockup-head .dot{width:8px;height:8px;border-radius:50%;background:#c0c4cf}
+.agent-mockup-head .title{font-size:11px;font-weight:600;color:#3a3f4f;letter-spacing:0.01em}
+.agent-mockup-body{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.agent-mockup-body .label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#5a627a}
+.agent-mockup-body .value{font-size:1.6rem;font-weight:700;color:#0f1320;letter-spacing:-0.02em;line-height:1}
+.agent-mockup-body .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(0,0,0,0.06);font-size:12px}
+.agent-mockup-body .row:first-of-type{border-top:none}
+.agent-mockup-body .row b{font-weight:600;color:#0f1320}
+.agent-mockup-body .row span{color:#5a627a;font-family:var(--font-mono);font-size:11px}
+.agent-mockup-body .accent{color:var(--accent);font-weight:700}
+.agent-mockup-body .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(45,79,184,0.12);color:var(--accent);font-size:10px;font-weight:600;letter-spacing:0.04em}
+
 @media (max-width:720px){
   .agent-stage{aspect-ratio:4/3}
-  .agent-badge{min-width:140px;padding:12px 16px}
-  .agent-badge b{font-size:1.3rem}
+  .agent-mockup{width:90%}
 }
 
 /* Legacy slots kept so any orphaned markup doesn't break the page */
@@ -1978,9 +2014,11 @@ section,.partners{background:transparent !important}
   padding:18px 18px !important;
   min-height:78px !important;
   border-radius:10px !important;
-  border:1px solid var(--stroke-hi) !important;
-  background:rgba(255,255,255,0.02) !important;
-  color:var(--fg-2) !important;
+  border:1px solid rgba(255,255,255,0.10) !important;
+  /* Inactive: subtle light-gray fill that contrasts vs the dark page.
+     2026-05-28: bumped from ~2% white to ~9% so buttons read clearly. */
+  background:rgba(255,255,255,0.09) !important;
+  color:#e8eaf2 !important;
   cursor:pointer;
   font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
   font-weight:600 !important;
@@ -1994,9 +2032,9 @@ section,.partners{background:transparent !important}
   width:100% !important;
 }
 .agent-tab:hover,.case-tab:hover,.industry-tab:hover{
-  color:var(--fg) !important;
-  border-color:rgba(255,255,255,0.28) !important;
-  background:rgba(255,255,255,0.04) !important;
+  color:#fff !important;
+  border-color:rgba(255,255,255,0.20) !important;
+  background:rgba(255,255,255,0.14) !important;
   transform:translateY(-1px);
 }
 .agent-tab.active,.case-tab.active,.industry-tab.active{
@@ -2422,20 +2460,27 @@ section,.partners{background:transparent !important}
     <source src="/assets/newSTILOAIHEROVID.mp4" type="video/mp4">
   </video>
   <div class="hero-veil"></div>
-  <!-- 3D STILO logo, center-stage over the video. Rotates forward (rotateX)
-       on a slow infinite loop. Pointer-events:none so it never blocks CTAs. -->
-  <div class="hero-3d-logo-wrap" aria-hidden="true">
-    <img class="hero-3d-logo" src="/assets/3dLOGOSTILOAI.png" alt="" loading="eager" />
-  </div>
   <div class="container">
-    <div class="hero-center">
-      <h1 data-split="lines">
-        <span class="line"><span class="line-inner"><em>AI</em> SOLUTIONS FOR YOUR <em>BUSINESS</em></span></span>
-      </h1>
-      <p class="hero-sub">We design, build, and operate AI agents that handle the work your team is too small to handle.</p>
-      <div class="hero-ctas">
-        <a href="#contact" class="btn-primary">Talk to a partner</a>
-        <a href="#agents" class="btn-ghost">See it work</a>
+    <div class="hero-grid-v6">
+      <!-- LEFT: copy + CTAs. 2-line headline (Snowflake pattern). -->
+      <div class="hero-copy">
+        <h1 data-split="lines">
+          <span class="line"><span class="line-inner"><em>AI</em> SOLUTIONS</span></span>
+          <span class="line"><span class="line-inner">FOR YOUR <em>BUSINESS</em></span></span>
+        </h1>
+        <p class="hero-sub">We design, build, and operate AI agents that handle the work your team is too small to handle.</p>
+        <div class="hero-ctas">
+          <a href="#contact" class="btn-primary">Talk to a partner</a>
+          <a href="#agents" class="btn-ghost">See it work</a>
+        </div>
+      </div>
+      <!-- RIGHT: 3D STILO logo. Entrance: rotates in from off-screen
+           right and lands face-on. Idle: gentle tilt+bob so it stays
+           alive and never goes invisible edge-on. -->
+      <div class="hero-3d-stage" aria-hidden="true">
+        <div class="hero-3d-logo-wrap">
+          <img class="hero-3d-logo" src="/assets/3dLOGOSTILOAI.png" alt="" loading="eager" />
+        </div>
       </div>
     </div>
   </div>
@@ -2479,90 +2524,173 @@ section,.partners{background:transparent !important}
       </div>
     </div>
 
-    <!-- Copy + two KPI badges under the video. One block per agent;
-         only the active one is visible. Bullet lists were removed —
-         the two badges carry the proof. -->
+    <!-- Per-agent panel: LEFT text + CTA, RIGHT two diagonal dashboard
+         mockup screenshots. Replaces the old badge row. Each mockup
+         uses the same light-gray UI as the demo videos so the whole
+         block reads as a coherent product sample. -->
     <div class="agent-copy-wrap">
       <div class="agent-content active" data-agent-content="receptionist">
-        <h2>Answer every call. <em>Book every lead.</em></h2>
-        <p class="agent-panel-body">A 24/7 voice agent trained on your hours, services, and pricing. Picks up in under two rings, qualifies the caller, books straight into your calendar, and sends a summary to your team. Transfers to a human when something needs one.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>Under 2 rings</b><span>Pickup time</span></div>
-          <div class="agent-badge"><b>24 / 7</b><span>Nights, weekends, holidays</span></div>
+        <div class="agent-copy-text">
+          <h2>Answer every call. <em>Book every lead.</em></h2>
+          <p class="agent-panel-body">A 24/7 voice agent trained on your hours, services, and pricing. Picks up in under two rings, qualifies the caller, books straight into your calendar, and sends a summary to your team. Transfers to a human when something needs one.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Receptionist · Performance</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Pickup rate</div><div class="value accent">100%</div><div class="row"><b>Calls answered</b><span>47 / 47</span></div><div class="row"><b>Bookings made</b><span>31</span></div><div class="row"><b>Transferred to team</b><span>4</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Receptionist · Live calls</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Calls today</div><div class="value">47</div><div class="row"><b>Maria · 3:42 PM</b><span>Booked &middot; 4/12 10am</span></div><div class="row"><b>James · 3:18 PM</b><span>Booked &middot; 4/15 2pm</span></div><div class="row"><b>Diana · 2:51 PM</b><span class="pill">Transferred</span></div><div class="row"><b>Theo · 2:14 PM</b><span>Booked &middot; 4/12 4pm</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="lead-reply">
-        <h2>Reply to every lead <em>in under a minute</em>.</h2>
-        <p class="agent-panel-body">Connects to your forms, ads, and inbox. New lead lands, the agent replies via text, email, or voice within sixty seconds, qualifies the lead, and books them straight into your calendar.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>&lt; 60 sec</b><span>First response</span></div>
-          <div class="agent-badge"><b>SMS · Email · Voice</b><span>Multichannel reply</span></div>
+        <div class="agent-copy-text">
+          <h2>Reply to every lead <em>in under a minute</em>.</h2>
+          <p class="agent-panel-body">Connects to your forms, ads, and inbox. New lead lands, the agent replies via text, email, or voice within sixty seconds, qualifies the lead, and books them straight into your calendar.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Outbound Lead Reply · Speed</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Median first response</div><div class="value accent">42s</div><div class="row"><b>Replies sent</b><span>128</span></div><div class="row"><b>Meetings booked</b><span>34</span></div><div class="row"><b>Hot leads passed</b><span>11</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Outbound Lead Reply · Inbox</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Last 24h</div><div class="value">128 replies</div><div class="row"><b>Maria Cruz</b><span class="pill">SMS &middot; 38s</span></div><div class="row"><b>Jordan Lin</b><span class="pill">Email &middot; 51s</span></div><div class="row"><b>Sam Park</b><span class="pill">SMS &middot; 22s</span></div><div class="row"><b>Lila Vega</b><span class="pill">Voice &middot; 47s</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="reactivation">
-        <h2>Bring <em>dormant customers</em> back.</h2>
-        <p class="agent-panel-body">Scans your customer history for people who haven&rsquo;t visited in six-plus months and sends personalized outreach with offers tailored to their past behavior, then routes the bookings straight to your calendar.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>6+ months</b><span>Inactivity threshold</span></div>
-          <div class="agent-badge"><b>Per-customer</b><span>Personalized offers</span></div>
+        <div class="agent-copy-text">
+          <h2>Bring <em>dormant customers</em> back.</h2>
+          <p class="agent-panel-body">Scans your customer history for people who haven&rsquo;t visited in six-plus months and sends personalized outreach with offers tailored to their past behavior, then routes the bookings straight to your calendar.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Reactivation · Outcomes</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Recovered this month</div><div class="value accent">41</div><div class="row"><b>Sent</b><span>312</span></div><div class="row"><b>Replied</b><span>89</span></div><div class="row"><b>Booked</b><span>41</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Reactivation · Cohort</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Dormant customers</div><div class="value">847</div><div class="row"><b>Sarah K.</b><span>8 mo &middot; $1,240</span></div><div class="row"><b>Marco D.</b><span>11 mo &middot; $640</span></div><div class="row"><b>Janelle T.</b><span>7 mo &middot; $980</span></div><div class="row"><b>Chris P.</b><span>14 mo &middot; $310</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="lead-gen">
-        <h2>Find your <em>next best customers</em>.</h2>
-        <p class="agent-panel-body">Builds targeted prospect lists based on your ideal customer profile, location, and industry. Ranks leads by fit, enriches contact data, and initiates outreach sequences.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>5,000</b><span>Verified prospects / batch</span></div>
-          <div class="agent-badge"><b>Direct dial + email</b><span>Enriched contact data</span></div>
+        <div class="agent-copy-text">
+          <h2>Find your <em>next best customers</em>.</h2>
+          <p class="agent-panel-body">Builds targeted prospect lists based on your ideal customer profile, location, and industry. Ranks leads by fit, enriches contact data, and initiates outreach sequences.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Lead Generator · Enrichment</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Verified contacts</div><div class="value accent">4,812</div><div class="row"><b>Direct dial found</b><span>4,201</span></div><div class="row"><b>Verified email</b><span>4,812</span></div><div class="row"><b>Decision-maker</b><span>3,907</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Lead Generator · Batch</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Prospects this batch</div><div class="value">5,000</div><div class="row"><b>Dental Group</b><span>$95k/mo &middot; A+</span></div><div class="row"><b>Performance Gym</b><span>$31k/mo &middot; A</span></div><div class="row"><b>Auto Detail</b><span>$24k/mo &middot; B+</span></div><div class="row"><b>HVAC Co.</b><span>$67k/mo &middot; A</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="website">
-        <h2>A site built <em>to convert</em>.</h2>
-        <p class="agent-panel-body">Researches your market, competitors, and customers, then builds a site designed to convert visitors into booked appointments. Every page is written for your services and pricing.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>Vercel</b><span>Fast everywhere</span></div>
-          <div class="agent-badge"><b>SEO + AI search</b><span>Tuned from day one</span></div>
+        <div class="agent-copy-text">
+          <h2>A site built <em>to convert</em>.</h2>
+          <p class="agent-panel-body">Researches your market, competitors, and customers, then builds a site designed to convert visitors into booked appointments. Every page is written for your services and pricing.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Website · Lighthouse</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Performance</div><div class="value accent">98</div><div class="row"><b>Accessibility</b><span>100</span></div><div class="row"><b>Best Practices</b><span>100</span></div><div class="row"><b>SEO</b><span>100</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Website · Live preview</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Pages shipped</div><div class="value">12</div><div class="row"><b>Home</b><span class="pill">Live</span></div><div class="row"><b>Services</b><span class="pill">Live</span></div><div class="row"><b>Pricing</b><span class="pill">Live</span></div><div class="row"><b>Book now</b><span class="pill">Live</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="seo">
-        <h2>Show up in <em>ChatGPT, Google AI, Perplexity</em>.</h2>
-        <p class="agent-panel-body">Optimizes your site structure, content, and metadata so AI engines recommend your business. When someone asks &ldquo;best provider near me,&rdquo; you show up in the answer.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>AI-first</b><span>Overviews, ChatGPT, Perplexity</span></div>
-          <div class="agent-badge"><b>Weekly</b><span>Tracked across new surfaces</span></div>
+        <div class="agent-copy-text">
+          <h2>Show up in <em>ChatGPT, Google AI, Perplexity</em>.</h2>
+          <p class="agent-panel-body">Optimizes your site structure, content, and metadata so AI engines recommend your business. When someone asks &ldquo;best provider near me,&rdquo; you show up in the answer.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">AI SEO · Coverage</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Entity coverage</div><div class="value accent">100%</div><div class="row"><b>Pages indexed</b><span>38</span></div><div class="row"><b>Schema types</b><span>9</span></div><div class="row"><b>Knowledge graph</b><span>complete</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">AI SEO · Citations</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Cited by</div><div class="value">3 engines</div><div class="row"><b>ChatGPT</b><span class="pill">12 mentions</span></div><div class="row"><b>Google AI</b><span class="pill">8 mentions</span></div><div class="row"><b>Perplexity</b><span class="pill">5 mentions</span></div><div class="row"><b>Bing AI</b><span>monitoring</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="growth">
-        <h2>Know what to do next, <em>every week</em>.</h2>
-        <p class="agent-panel-body">Monitors your market, tracks competitor moves, and ships you a weekly brief with three specific actions. Where you&rsquo;re being out-positioned, what&rsquo;s breaking in your favor, and what to ship this week.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>Weekly</b><span>Action-led growth brief</span></div>
-          <div class="agent-badge"><b>3 actions</b><span>Never thirty</span></div>
+        <div class="agent-copy-text">
+          <h2>Know what to do next, <em>every week</em>.</h2>
+          <p class="agent-panel-body">Monitors your market, tracks competitor moves, and ships you a weekly brief with three specific actions. Where you&rsquo;re being out-positioned, what&rsquo;s breaking in your favor, and what to ship this week.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Growth · Signals</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Tracked competitors</div><div class="value accent">12</div><div class="row"><b>Price changes</b><span>2 this week</span></div><div class="row"><b>New offers</b><span>4 this week</span></div><div class="row"><b>Review velocity</b><span>+18%</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Growth · This week</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Actions</div><div class="value">3</div><div class="row"><b>Raise prices 6%</b><span class="pill">High</span></div><div class="row"><b>Refresh GMB photos</b><span class="pill">Mid</span></div><div class="row"><b>Run speed ad on Meta</b><span class="pill">High</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="sales">
-        <h2>Sells <em>while you sleep</em>.</h2>
-        <p class="agent-panel-body">Listens to every call and email thread, rewrites your scripts and sequences against what actually closes, and sends the outbound follow-ups for you on a cadence you control. Per-rep scorecards, real-time deal-risk alerts, and a weekly playbook on what&rsquo;s moving deals.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>Per-rep</b><span>Scorecards after every call</span></div>
-          <div class="agent-badge"><b>Always-on</b><span>Follow-ups in your voice</span></div>
+        <div class="agent-copy-text">
+          <h2>Sells <em>while you sleep</em>.</h2>
+          <p class="agent-panel-body">Listens to every call and email thread, rewrites your scripts and sequences against what actually closes, and sends the outbound follow-ups for you on a cadence you control. Per-rep scorecards, real-time deal-risk alerts, and a weekly playbook on what&rsquo;s moving deals.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Sales · Follow-ups sent</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">This week</div><div class="value accent">142</div><div class="row"><b>SMS</b><span>61</span></div><div class="row"><b>Email</b><span>74</span></div><div class="row"><b>Voicemail drop</b><span>7</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Sales · Rep scorecard</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Carlos &middot; this week</div><div class="value">A</div><div class="row"><b>Talk-ratio</b><span>54%</span></div><div class="row"><b>Discovery questions</b><span>9 / call</span></div><div class="row"><b>Next-step rate</b><span>78%</span></div><div class="row"><b>Deal-risk alerts</b><span>2 open</span></div></div>
+          </div>
         </div>
       </div>
 
       <div class="agent-content" data-agent-content="custom">
-        <h2>Tell us the problem. <em>We build the AI.</em></h2>
-        <p class="agent-panel-body">Everything that doesn&rsquo;t fit neatly into another agent. Invoice processing, inventory alerts, review monitoring, staff scheduling, custom integrations. If it can be automated with AI, we build it.</p>
-        <div class="agent-badges">
-          <div class="agent-badge"><b>Open scope</b><span>Built around your needs</span></div>
-          <div class="agent-badge"><b>Single call</b><span>Scoped and quoted</span></div>
+        <div class="agent-copy-text">
+          <h2>Tell us the problem. <em>We build the AI.</em></h2>
+          <p class="agent-panel-body">Everything that doesn&rsquo;t fit neatly into another agent. Invoice processing, inventory alerts, review monitoring, staff scheduling, custom integrations. If it can be automated with AI, we build it.</p>
+          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
+        </div>
+        <div class="agent-mockups">
+          <div class="agent-mockup agent-mockup-back">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Custom · Time saved</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Hours this month</div><div class="value accent">56</div><div class="row"><b>Invoices processed</b><span>312</span></div><div class="row"><b>Auto-approved</b><span>274</span></div><div class="row"><b>Routed for review</b><span>38</span></div></div>
+          </div>
+          <div class="agent-mockup agent-mockup-front">
+            <div class="agent-mockup-head"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="title">Custom · Workflow</div><span></span></div>
+            <div class="agent-mockup-body"><div class="label">Invoice automation</div><div class="value">87</div><div class="row"><b>Inbox &rarr; extract</b><span class="pill">Active</span></div><div class="row"><b>Match to project</b><span class="pill">Active</span></div><div class="row"><b>Route for approval</b><span class="pill">Active</span></div><div class="row"><b>Post to QuickBooks</b><span class="pill">Active</span></div></div>
+          </div>
         </div>
       </div>
+
     </div>
 
   </div>
@@ -2602,31 +2730,27 @@ section,.partners{background:transparent !important}
 <!-- THESIS section removed in V3 -->
 
 
-<!-- ===== PROCESS (moved up) ===== -->
+<!-- ===== PROCESS ===== -->
 <section class="process-section" id="process">
   <div class="container">
-    <div class="section-header fade-in">
+    <div class="section-header fade-in" style="text-align:center;margin:0 auto 64px;max-width:none;">
       <h2><span class="gradient-text">Three steps <em>One partner</em></span></h2>
-      <p>You get a dashboard to see everything we run for you, plus a short onboarding for each agent so it knows your business cold. After that, we build it and keep it running. You stay focused on the business.</p>
     </div>
     <div class="process-track">
       <div class="process-step fade-in">
         <div class="step-num"><em>01</em></div>
         <h3>Audit</h3>
         <p>A focused 15-minute call. We map your call flow, lead path, customer history, and competitive position. You walk out with a one-page diagnosis and a fixed price.</p>
-        <span class="step-badge">15 minutes &middot; free</span>
       </div>
       <div class="process-step fade-in delay-1">
         <div class="step-num"><em>02</em></div>
         <h3>Build</h3>
         <p>We design and deploy your agent team, trained on your business. Every script, prompt, and integration reviewed by a human before it touches a customer.</p>
-        <span class="step-badge">Tuned to your scope</span>
       </div>
       <div class="process-step fade-in delay-2">
         <div class="step-num"><em>03</em></div>
         <h3>Run</h3>
         <p>We monitor, tune, and improve every agent every week. You get a weekly report with what shipped, what moved, and the three things we're testing next.</p>
-        <span class="step-badge">Weekly, ongoing</span>
       </div>
     </div>
     <div style="text-align:center;margin-top:60px;" class="fade-in">
@@ -2641,7 +2765,6 @@ section,.partners{background:transparent !important}
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 56px;">
       <span class="eyebrow">Use cases</span>
       <h2><span class="gradient-text">AI built for <em>your industry</em></span></h2>
-      <p style="margin:14px auto 0;max-width:54ch;">Pick your business. We built systems for the SMB verticals where AI pays back fastest. Every system is a stack of agents tuned to how your customers actually buy.</p>
     </div>
 
     <div class="industry-tabs" role="tablist">
@@ -2658,14 +2781,9 @@ section,.partners{background:transparent !important}
       <!-- Industry hero image. Swap to /assets/industries/home-services.jpg for an owned asset. -->
       <div class="industry-image"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=1600&q=80" alt="Tradesperson on the job for home services" loading="lazy"></div>
       <div class="industry-content">
-        <div class="industry-eyebrow">For Plumbing, HVAC, Electrical, Roofing</div>
         <h3 class="industry-title">Stop losing jobs when you are in a customer's home.</h3>
         <p class="industry-pain">38% of inbound calls to a home services business go to voicemail. Each call is worth $400-$3,000. The next plumber on Google gets the job.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">24<em>/7</em></div>
-          <div class="industry-roi-label">Pickup, every hour you are not at the desk</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
       <div class="industry-system">
         <div class="industry-system-label">The system we'd build</div>
@@ -2682,14 +2800,9 @@ section,.partners{background:transparent !important}
       <!-- Industry hero image. Swap to /assets/industries/med-spa.jpg for an owned asset. -->
       <div class="industry-image"><img src="https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=1600&q=80" alt="Med spa wellness treatment" loading="lazy"></div>
       <div class="industry-content">
-        <div class="industry-eyebrow">For Aesthetics, IV Therapy, Weight Loss</div>
         <h3 class="industry-title">Bring back the clients you already paid to acquire.</h3>
         <p class="industry-pain">Med spa clients churn at 35% per year. Most never get a personalized reactivation. Your dormant list is the highest-margin revenue you are not capturing.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">Per<em>-client</em></div>
-          <div class="industry-roi-label">Personalized reactivation, never a mass blast</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
       <div class="industry-system">
         <div class="industry-system-label">The system we'd build</div>
@@ -2706,14 +2819,9 @@ section,.partners{background:transparent !important}
       <!-- Industry hero image. Swap to /assets/industries/restaurant.jpg for an owned asset. -->
       <div class="industry-image"><img src="https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=1600&q=80" alt="Modern restaurant interior" loading="lazy"></div>
       <div class="industry-content">
-        <div class="industry-eyebrow">For Restaurants, Cafes, Bars</div>
         <h3 class="industry-title">Capture every reservation, even after closing.</h3>
         <p class="industry-pain">Diners call until midnight. Reservations are won and lost in seconds. Every voicemail is a table sitting empty tomorrow night.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">Until<em> 12am</em></div>
-          <div class="industry-roi-label">Reservations captured after the kitchen closes</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
       <div class="industry-system">
         <div class="industry-system-label">The system we'd build</div>
@@ -2730,14 +2838,9 @@ section,.partners{background:transparent !important}
       <!-- Industry hero image. Swap to /assets/industries/real-estate.jpg for an owned asset. -->
       <div class="industry-image"><img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1600&q=80" alt="Modern luxury home for realtors" loading="lazy"></div>
       <div class="industry-content">
-        <div class="industry-eyebrow">For Realtors, Brokerages, Property Mgmt</div>
         <h3 class="industry-title">Stop losing leads to the next agent who picks up first.</h3>
         <p class="industry-pain">Realtors close 1 in 10 leads. The other 9 just did not get followed up with. Speed-to-lead is the entire game and you are losing it to brokers with bigger teams.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">&lt;60<em>s</em></div>
-          <div class="industry-roi-label">First reply to every form, every channel</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
       <div class="industry-system">
         <div class="industry-system-label">The system we'd build</div>
@@ -2754,14 +2857,9 @@ section,.partners{background:transparent !important}
       <!-- Industry hero image. Swap to /assets/industries/auto.jpg for an owned asset. -->
       <div class="industry-image"><img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1600&q=80" alt="Auto repair shop" loading="lazy"></div>
       <div class="industry-content">
-        <div class="industry-eyebrow">For Auto Repair, Detailing, Body Shops</div>
         <h3 class="industry-title">Customers call from the side of the road. Pick up first.</h3>
         <p class="industry-pain">When a car needs work, the customer calls the first shop that answers. Voicemail means they call the next shop. You compete on speed before you compete on price.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">Same<em>-day</em></div>
-          <div class="industry-roi-label">Booking, even when the bays are full</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
       <div class="industry-system">
         <div class="industry-system-label">The system we'd build</div>
@@ -2778,14 +2876,9 @@ section,.partners{background:transparent !important}
       <!-- Industry hero image. Swap to /assets/industries/medical.jpg for an owned asset. -->
       <div class="industry-image"><img src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1600&q=80" alt="Modern dental and medical clinic" loading="lazy"></div>
       <div class="industry-content">
-        <div class="industry-eyebrow">For Dental, Vet, Medical Practices</div>
         <h3 class="industry-title">Fill the chair, every chair, every day.</h3>
         <p class="industry-pain">Dental patients miss 30% of their 6-month recall appointments because nobody calls them. Every empty chair is profit you already had on the schedule.</p>
-        <div class="industry-roi">
-          <div class="industry-roi-num">Every<em> recall</em></div>
-          <div class="industry-roi-label">Patient reached, every interval, every cycle</div>
-        </div>
-        <a href="#contact" class="industry-cta">See what we'd build for you<span aria-hidden="true">&rarr;</span></a>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
       <div class="industry-system">
         <div class="industry-system-label">The system we'd build</div>
@@ -2826,7 +2919,6 @@ section,.partners{background:transparent !important}
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 64px;">
       <span class="eyebrow">Why STILO</span>
       <h2><span class="gradient-text">Four things <em>nobody else does</em></span></h2>
-      <p style="margin:14px auto 0;max-width:54ch;">Most AI agencies hand you a chatbot template and call it custom. We do the opposite.</p>
     </div>
     <div class="why-grid-v3">
       <div class="why-card-v3 fade-in">
@@ -2869,7 +2961,6 @@ section,.partners{background:transparent !important}
   <div class="container">
     <div class="section-header fade-in">
       <h2><span class="gradient-text">Built for businesses doing <em>real revenue</em></span></h2>
-      <p>One example per agent. Different niches, different stacks, real numbers from the first sixty days.</p>
     </div>
 
     <div class="case-tabs" role="tablist">
@@ -2886,21 +2977,19 @@ section,.partners{background:transparent !important}
 
     <div class="case-card active" data-case-card="receptionist">
       <div>
-        <span class="case-niche">Restaurant</span>
-        <h3 class="case-title">An 80-seat Italian spot captured every after-hours reservation.</h3>
+        <h3 class="case-title">The phone never goes to voicemail again.</h3>
         <p class="case-quote">"We close the kitchen at ten, but people still call until midnight. Every one of those calls now ends in a booking."</p>
         <div class="case-attribution"><b>General manager</b> &middot; 80-seat restaurant, FL</div>
       </div>
                   <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">&lt;2 rings</div><div class="case-stat-label">Average pickup time</div></div>
+        <div class="case-stat"><div class="case-stat-num">2 rings</div><div class="case-stat-label">Average pickup time</div></div>
         <div class="case-stat"><div class="case-stat-num">24/7</div><div class="case-stat-label">Nights, weekends, holidays</div></div>
       </div>
     </div>
 
     <div class="case-card" data-case-card="lead-reply">
       <div>
-        <span class="case-niche">Plumbing &middot; home services</span>
-        <h3 class="case-title">14-truck plumbing operator doubled web-lead conversion in 30 days.</h3>
+        <h3 class="case-title">Form leads get a text back before they put the phone down.</h3>
         <p class="case-quote">"Every form fill got a personalized SMS in under a minute. Competitors hadn't even loaded the email yet."</p>
         <div class="case-attribution"><b>Operations lead</b> &middot; Plumbing &amp; home services</div>
       </div>
@@ -2912,8 +3001,7 @@ section,.partners{background:transparent !important}
 
     <div class="case-card" data-case-card="reactivation">
       <div>
-        <span class="case-niche">Dental practice</span>
-        <h3 class="case-title">Dental practice rebooked 200 inactive patients in one campaign.</h3>
+        <h3 class="case-title">Patients who quietly drifted off the schedule are back on it.</h3>
         <p class="case-quote">"1,800 patients sat dormant in our PMS for years. The agent surfaced them, sent the offer, and 200 came back."</p>
         <div class="case-attribution"><b>Practice owner</b> &middot; Multi-location dental, FL</div>
       </div>
@@ -2925,8 +3013,7 @@ section,.partners{background:transparent !important}
 
     <div class="case-card" data-case-card="lead-gen">
       <div>
-        <span class="case-niche">Commercial roofing</span>
-        <h3 class="case-title">Commercial roofer filled a 90-day pipeline in two weeks.</h3>
+        <h3 class="case-title">A pipeline built without picking up a single phone.</h3>
         <p class="case-quote">"Five thousand verified prospects with direct dials. We hadn't even hired an SDR and the calendar was already filling."</p>
         <div class="case-attribution"><b>Founder</b> &middot; Commercial roofing</div>
       </div>
@@ -2938,8 +3025,7 @@ section,.partners{background:transparent !important}
 
     <div class="case-card" data-case-card="website">
       <div>
-        <span class="case-niche">Med spa</span>
-        <h3 class="case-title">Med spa replaced a $25k Webflow build in one week.</h3>
+        <h3 class="case-title">A real site, built in a week, that actually books.</h3>
         <p class="case-quote">"Same design quality, half the price, and the conversion rate more than doubled in the first month."</p>
         <div class="case-attribution"><b>Owner</b> &middot; Aesthetic med spa</div>
       </div>
@@ -2951,8 +3037,7 @@ section,.partners{background:transparent !important}
 
     <div class="case-card" data-case-card="seo">
       <div>
-        <span class="case-niche">Family law</span>
-        <h3 class="case-title">Family law firm became the answer in three AI search engines.</h3>
+        <h3 class="case-title">When someone asks ChatGPT for help, your name shows up.</h3>
         <p class="case-quote">"ChatGPT recommends us by name when someone asks for a divorce attorney in our city. That used to be a Google ad spend."</p>
         <div class="case-attribution"><b>Managing partner</b> &middot; Family law firm</div>
       </div>
@@ -2964,8 +3049,7 @@ section,.partners{background:transparent !important}
 
     <div class="case-card" data-case-card="growth">
       <div>
-        <span class="case-niche">Auto detailing</span>
-        <h3 class="case-title">Detail chain raised prices 6% without losing a single client.</h3>
+        <h3 class="case-title">Three things to ship this week, every Monday morning.</h3>
         <p class="case-quote">"Monday morning brief, three specific actions, the price lift held. We never would have caught the window without it."</p>
         <div class="case-attribution"><b>Owner</b> &middot; Multi-location auto detail</div>
       </div>
@@ -2977,7 +3061,6 @@ section,.partners{background:transparent !important}
 
     <div class="case-card" data-case-card="sales">
       <div>
-        <span class="case-niche">B2B SaaS reseller</span>
         <h3 class="case-title">Software reseller lifted win rate 22% in one quarter.</h3>
         <p class="case-quote">"Every rep got better coaching than any human manager could give. The scorecards do not lie."</p>
         <div class="case-attribution"><b>VP Sales</b> &middot; B2B SaaS reseller</div>
@@ -2990,7 +3073,6 @@ section,.partners{background:transparent !important}
 
     <div class="case-card" data-case-card="custom">
       <div>
-        <span class="case-niche">Construction GC</span>
         <h3 class="case-title">General contractor saved 14 hours a week on invoice processing.</h3>
         <p class="case-quote">"Invoices arrive, the agent extracts, routes, books, notifies. We deleted an entire AP workflow."</p>
         <div class="case-attribution"><b>Controller</b> &middot; Mid-market construction GC</div>
@@ -3109,20 +3191,8 @@ section,.partners{background:transparent !important}
   </div>
 </section>
 
-<!-- ===== FINAL CTA BLOCK (2026-05-27 — CloudIQ-style closer) ===== -->
-<section class="final-cta-section">
-  <div class="container">
-    <div class="final-cta-inner fade-in">
-      <span class="final-cta-eyebrow">Let's get started</span>
-      <h2 class="final-cta-headline">Let's build <em>your AI</em></h2>
-      <p class="final-cta-sub">Fifteen minutes on a call. One page of diagnosis. A fixed quote on whichever agents fit your business. Free, no slide deck, no pressure.</p>
-      <div class="final-cta-buttons">
-        <a href="#contact" class="btn-primary">Take the 60-second audit</a>
-        <a href="https://calendly.com/remyleon11/30min" class="btn-ghost" target="_blank" rel="noopener">Book a call with Remy</a>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- Final CTA block removed per Remy. Quiz/contact section below
+     handles the close. -->
 
 <!-- ===== CONTACT / QUIZ ===== -->
 <section class="contact-section" id="contact">
@@ -3308,8 +3378,8 @@ section,.partners{background:transparent !important}
           <li><span style="color:var(--fg-3);font-size:0.9rem;">Miami, FL</span></li>
         </ul>
         <div class="footer-social">
-          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+          <a href="https://www.linkedin.com/company/stilo-ai-partners" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+          <a href="https://www.instagram.com/stiloaipartners/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
         </div>
       </div>
     </div>
