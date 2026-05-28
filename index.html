@@ -1733,7 +1733,8 @@ section,.partners{background:transparent !important}
    dashboard-mockup background below. */
 .agent-stage-wrap{position:relative;max-width:935px;margin:0 auto 56px}
 .agent-stage{
-  position:relative;width:100%;aspect-ratio:16/10;
+  /* 16:9 matches the Remotion V2 renders (1920x1080) — no letterbox, no crop. */
+  position:relative;width:100%;aspect-ratio:16/9;
   background:#e6e8ef; /* light-gray, contrasts vs dark page */
   border:1px solid rgba(255,255,255,0.06);border-radius:22px;overflow:hidden;
   box-shadow:0 50px 120px rgba(0,0,0,0.55),0 0 0 1px rgba(45,79,184,0.18),0 0 100px rgba(30,58,138,0.22);
@@ -2512,15 +2513,17 @@ section,.partners{background:transparent !important}
          before. -->
     <div class="agent-stage-wrap fade-in">
       <div class="agent-stage" id="agentStage">
-        <video class="agent-stage-video active" data-agent-video="receptionist" autoplay muted loop playsinline preload="auto"><source src="/assets/demos/ai-receptionist-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="lead-reply"  muted loop playsinline preload="metadata"><source src="/assets/demos/lead-reply-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="reactivation" muted loop playsinline preload="metadata"><source src="/assets/demos/lcr-agent-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="lead-gen"     muted loop playsinline preload="metadata"><source src="/assets/demos/lead-generator-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="website"      muted loop playsinline preload="metadata"><source src="/assets/demos/custom-website-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="seo"          muted loop playsinline preload="metadata"><source src="/assets/demos/seo-agent-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="growth"       muted loop playsinline preload="metadata"><source src="/assets/demos/ontology-agent-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="sales"        muted loop playsinline preload="metadata"><source src="/assets/demos/ai-receptionist-demo.mp4" type="video/mp4"></video>
-        <video class="agent-stage-video"        data-agent-video="custom"       muted loop playsinline preload="metadata"><source src="/assets/demos/ontology-agent-demo.mp4" type="video/mp4"></video>
+        <!-- V2 demos (brand blue + dashboard chrome + Gong-style single focal motion).
+             Each agent now has its OWN mp4; sales + custom are no longer fallbacks. -->
+        <video class="agent-stage-video active" data-agent-video="receptionist" autoplay muted loop playsinline preload="auto"><source src="/assets/demos/receptionist-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="lead-reply"   muted loop playsinline preload="metadata"><source src="/assets/demos/lead-reply-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="reactivation" muted loop playsinline preload="metadata"><source src="/assets/demos/lcr-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="lead-gen"     muted loop playsinline preload="metadata"><source src="/assets/demos/lead-gen-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="website"      muted loop playsinline preload="metadata"><source src="/assets/demos/website-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="seo"          muted loop playsinline preload="metadata"><source src="/assets/demos/seo-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="growth"       muted loop playsinline preload="metadata"><source src="/assets/demos/growth-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="sales"        muted loop playsinline preload="metadata"><source src="/assets/demos/sales-v2.mp4" type="video/mp4"></video>
+        <video class="agent-stage-video"        data-agent-video="custom"       muted loop playsinline preload="metadata"><source src="/assets/demos/custom-v2.mp4" type="video/mp4"></video>
       </div>
     </div>
 
