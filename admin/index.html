@@ -455,8 +455,13 @@
         }
 
         .sidebar-header {
-            padding: 1.5rem 1.25rem;
+            padding: 1.25rem 1.25rem;
             border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-height: 64px;
         }
 
         .sidebar-logo {
@@ -465,18 +470,58 @@
             font-size: 1.15rem;
             letter-spacing: -0.02em;
             color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            min-width: 0;
+        }
+        .sidebar-logo img {
+            height: 38px;
+            width: auto;
+            display: block;
+            filter: drop-shadow(0 2px 8px rgba(45,99,235,0.35));
         }
 
-        .sidebar-logo span { color: var(--purple-primary); }
-
-        .sidebar-label {
-            font-size: 0.6875rem;
-            font-weight: 600;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-top: 0.25rem;
+        /* Collapse toggle — rotates ▶/◀ depending on state. Acts on
+           the document root, which carries the .sidebar-collapsed class
+           when active. Persisted to localStorage in JS. */
+        .sidebar-collapse-btn {
+            flex-shrink: 0;
+            width: 28px; height: 28px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 120ms, color 120ms, transform 120ms;
         }
+        .sidebar-collapse-btn:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+        .sidebar-collapse-btn svg { width: 14px; height: 14px; transition: transform 200ms; }
+
+        /* Collapsed state — sidebar slides off-canvas to the left and
+           the main content reclaims the full width. A floating "expand"
+           hotspot stays visible on the far-left so the user can bring
+           it back. */
+        body.sidebar-collapsed .sidebar { transform: translateX(-100%); }
+        body.sidebar-collapsed .main-content { margin-left: 0; }
+        body.sidebar-collapsed .sidebar-expand-handle { display: flex; }
+
+        .sidebar-expand-handle {
+            display: none;
+            position: fixed;
+            top: 14px; left: 14px;
+            z-index: 300;
+            width: 36px; height: 36px;
+            align-items: center; justify-content: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 120ms;
+        }
+        .sidebar-expand-handle:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+        .sidebar-expand-handle svg { width: 16px; height: 16px; }
 
         .sidebar-nav {
             flex: 1;
@@ -1179,10 +1224,19 @@
         <!-- ============================================================
              Sidebar
              ============================================================ -->
+        <!-- Floating expand button — only visible when the sidebar is
+             collapsed. Lets the user bring it back without hunting. -->
+        <button type="button" class="sidebar-expand-handle" id="sidebarExpandHandle" onclick="toggleSidebarCollapsed(false)" aria-label="Show sidebar" title="Show sidebar">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+        </button>
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="sidebar-logo">STILO AI PARTNERS</div>
-                <div class="sidebar-label">Admin Panel</div>
+                <a href="/admin/" class="sidebar-logo" aria-label="STILO AI PARTNERS admin">
+                    <img src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
+                </a>
+                <button type="button" class="sidebar-collapse-btn" onclick="toggleSidebarCollapsed()" aria-label="Collapse sidebar" title="Collapse sidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+                </button>
             </div>
 
             <nav class="sidebar-nav">
@@ -2226,6 +2280,26 @@
             overlay.classList.remove('open');
             document.body.style.overflow = '';
         }
+
+        /* Desktop sidebar collapse toggle. Persists to localStorage so
+           the choice survives navigation. Two affordances: the chevron
+           inside the sidebar header collapses; the floating handle in
+           the top-left expands. */
+        function toggleSidebarCollapsed(forceState) {
+            var willCollapse = (forceState === undefined)
+                ? !document.body.classList.contains('sidebar-collapsed')
+                : !!forceState;
+            document.body.classList.toggle('sidebar-collapsed', willCollapse);
+            try { localStorage.setItem('admin_sidebar_collapsed', willCollapse ? '1' : '0'); } catch (e) {}
+        }
+        // Restore on load.
+        (function(){
+            try {
+                if (localStorage.getItem('admin_sidebar_collapsed') === '1') {
+                    document.body.classList.add('sidebar-collapsed');
+                }
+            } catch (e) {}
+        })();
 
 
         /* ===========================================================
@@ -3589,8 +3663,11 @@
             document.querySelectorAll('.rev-period').forEach(function(b){
                 b.classList.toggle('active', b.dataset.period === p);
             });
+            // Don't bust the cache on period switches; only on explicit reload.
             loadRevenue();
         }
+        // Optional helper to force a fresh fetch from the server.
+        function reloadRevenue() { REVENUE_STATE.cache = null; loadRevenue(); }
 
         function fmtUsd(cents) {
             var sign = cents < 0 ? '-' : '';
@@ -3713,13 +3790,78 @@
                 + '</svg>';
         }
 
-        function deltaBadge(curr, prev) {
-            if (!prev) return curr > 0 ? '<div class="rev-row__delta up">NEW</div>' : '<div class="rev-row__delta flat">—</div>';
+        // Delta badge: shows ▲N% / ▼N% when there's a prior value to
+        // divide against, and falls back to the raw dollar delta (+$X)
+        // when prior is 0 — because "infinity %" isn't useful and the
+        // green NEW label hid the actual movement.
+        function deltaBadge(curr, prev, opts) {
+            opts = opts || {};
+            if (curr === 0 && (!prev || prev === 0)) return '<div class="rev-row__delta flat">—</div>';
+            if (!prev || prev === 0) {
+                // No prior to compute % against. Show raw delta in green.
+                var rawAbs = Math.abs(curr);
+                var rawSign = curr > 0 ? '+' : '−';
+                var label = opts.isCount
+                    ? rawSign + rawAbs
+                    : rawSign + fmtUsd(rawAbs).replace('$', '$');
+                return '<div class="rev-row__delta up">' + label + '</div>';
+            }
             var pct = ((curr - prev) / prev) * 100;
             if (Math.abs(pct) < 0.05) return '<div class="rev-row__delta flat">0%</div>';
             var cls = pct > 0 ? 'up' : 'down';
             var arrow = pct > 0 ? '▲' : '▼';
             return '<div class="rev-row__delta ' + cls + '">' + arrow + ' ' + Math.abs(pct).toFixed(0) + '%</div>';
+        }
+
+        // Cumulative series helper: given a daily series, returns a
+        // running total at each day. Used so sparklines tell a clear
+        // "growth through the period" story instead of a noisy
+        // setup-spike + tiny baseline (which read as "one short rise
+        // and fall").
+        function cumulativeSeries(daily) {
+            var run = 0;
+            return daily.map(function(v){ run += v; return run; });
+        }
+
+        // MRR snapshot at the END of each day in the window. For each
+        // day D, sum monthly_retainer_cents for all deals whose
+        // closed_at <= D and (no churned_at OR churned_at > D).
+        function mrrSeries(deals, win) {
+            var dayMs = 86400000;
+            var startDay = new Date(win.start); startDay.setHours(0,0,0,0);
+            var out = [];
+            for (var i = 0; i < win.days; i++) {
+                var d = new Date(startDay.getTime() + (i + 1) * dayMs - 1); // end of day
+                var s = 0;
+                deals.forEach(function(deal){
+                    if (!deal.closed_at) return;
+                    if (new Date(deal.closed_at) > d) return;
+                    if (deal.churned_at && new Date(deal.churned_at) <= d) return;
+                    s += (deal.monthly_retainer_cents || 0);
+                });
+                out.push(s);
+            }
+            return out;
+        }
+
+        // Active-client count at the END of each day in the window.
+        // A client is "active" if any deal closed_at <= D and not churned.
+        function clientCountSeries(deals, win) {
+            var dayMs = 86400000;
+            var startDay = new Date(win.start); startDay.setHours(0,0,0,0);
+            var out = [];
+            for (var i = 0; i < win.days; i++) {
+                var d = new Date(startDay.getTime() + (i + 1) * dayMs - 1);
+                var set = new Set();
+                deals.forEach(function(deal){
+                    if (!deal.closed_at) return;
+                    if (new Date(deal.closed_at) > d) return;
+                    if (deal.churned_at && new Date(deal.churned_at) <= d) return;
+                    if (deal.client_id) set.add(deal.client_id);
+                });
+                out.push(set.size);
+            }
+            return out;
         }
 
         async function loadRevenue() {
@@ -3790,30 +3932,45 @@
                 var activeClientIds = new Set(agentsRows.map(function(r){ return r.client_id; }));
                 var clientCount = activeClientIds.size;
 
-                // ───── 3 HERO CARDS (period-aware) ─────
+                // ───── 3 HERO CARDS (period-aware, all three carry sparklines) ─────
+                // Revenue card: cumulative running total over the window so
+                // the sparkline shows growth (Stripe-style) rather than the
+                // noisy daily slice (which read as "one short rise and fall").
+                // MRR + Clients: end-of-day snapshots over the window.
+                var mrrSpark = mrrSeries(deals, win);
+                var mrrPrevSpark = mrrSeries(deals, priorWin);
+                var mrrPrevEnd = mrrPrevSpark.length ? mrrPrevSpark[mrrPrevSpark.length - 1] : 0;
+
+                var clientSpark = clientCountSeries(deals, win);
+                var clientPrevSpark = clientCountSeries(deals, priorWin);
+                var clientPrevEnd = clientPrevSpark.length ? clientPrevSpark[clientPrevSpark.length - 1] : 0;
+                var clientCurr = clientSpark.length ? clientSpark[clientSpark.length - 1] : clientCount;
+
                 var heroCards = [
                     {
                         eyebrow: period === 'all' ? 'LIFETIME REVENUE' : 'REVENUE',
                         value: fmtUsd(curr.totalCents),
                         prev: prev.totalCents,
-                        spark: curr.daily
+                        spark: cumulativeSeries(curr.daily)
                     },
                     {
                         eyebrow: 'CURRENT MRR',
                         value: fmtUsd(currentMrrCents),
-                        prev: null,
-                        spark: null
+                        prev: mrrPrevEnd,
+                        spark: mrrSpark
                     },
                     {
                         eyebrow: 'ACTIVE CLIENTS',
-                        value: clientCount.toString(),
-                        prev: null,
-                        spark: null
+                        value: clientCurr.toString(),
+                        prev: clientPrevEnd,
+                        spark: clientSpark,
+                        isCount: true
                     }
                 ];
                 grid.innerHTML = heroCards.map(function(c){
-                    var deltaHtml = (c.prev != null) ? deltaBadge(curr.totalCents, c.prev) : '';
-                    var sparkHtml = c.spark ? sparklineSvg(c.spark, { width: 220, height: 44 }) : '';
+                    var cardCurr = c.isCount ? clientCurr : (c.eyebrow === 'CURRENT MRR' ? currentMrrCents : curr.totalCents);
+                    var deltaHtml = (c.prev != null) ? deltaBadge(cardCurr, c.prev, { isCount: !!c.isCount }) : '';
+                    var sparkHtml = c.spark && c.spark.length > 1 ? sparklineSvg(c.spark, { width: 220, height: 44 }) : '';
                     return ''
                         + '<div style="background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01));border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:24px 24px 18px;position:relative;overflow:hidden;">'
                           + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
@@ -3844,7 +4001,7 @@
                         meta: AGENT_DISPLAY[code] || { name: code },
                         curr: c.totalCents,
                         prev: p.totalCents,
-                        spark: c.daily,
+                        spark: cumulativeSeries(c.daily),  // running total for clearer growth viz
                         clientCount: clientsForAgent.size
                     };
                 }).sort(function(a, b){ return b.curr - a.curr || b.clientCount - a.clientCount; });
@@ -3883,7 +4040,7 @@
                         clientDeals.forEach(function(d){
                             agentCount += (d.agent_codes || []).filter(function(x){ return x !== 'business_profile'; }).length;
                         });
-                        return { id: cid, name: name, curr: c.totalCents, prev: p.totalCents, spark: c.daily, mrr: mrr, agents: agentCount };
+                        return { id: cid, name: name, curr: c.totalCents, prev: p.totalCents, spark: cumulativeSeries(c.daily), mrr: mrr, agents: agentCount };
                     })
                     .sort(function(a,b){ return b.curr - a.curr || b.mrr - a.mrr; });
 
