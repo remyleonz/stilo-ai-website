@@ -30,6 +30,12 @@
     <meta name="twitter:image" content="https://stiloaipartners.com/og-image.png">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="keywords" content="AI agency Miami, AI receptionist, AI lead response, AI for small business, AI consulting, custom AI agents, AI website, AI SEO, GEO, AI customer reactivation">
+    <link rel="preload" as="image" href="/assets/homeservices.png">
+    <link rel="preload" as="image" href="/assets/medspas.png">
+    <link rel="preload" as="image" href="/assets/restaurants.png">
+    <link rel="preload" as="image" href="/assets/realestate.png">
+    <link rel="preload" as="image" href="/assets/AUtoServices.png">
+    <link rel="preload" as="image" href="/assets/Medical.png">
 
     <script type="application/ld+json">
     {
@@ -1806,26 +1812,22 @@ section,.partners{background:transparent !important}
 
 @media (max-width:720px){
   .agent-stage{aspect-ratio:4/3}
-  .agent-content.active{gap:22px}
+  .agent-content.active{gap:24px}
   .agent-copy-text{display:contents}
   .agent-copy-text h2{order:1}
   .agent-copy-text .agent-panel-body{order:2}
   .agent-mockups{
     order:3;
-    min-height:0;
-    display:grid;
-    gap:14px;
-    perspective:none;
+    min-height:430px;
+    display:block;
+    perspective:1000px;
   }
   .agent-mockup{
-    position:relative;
-    width:100%;
-    top:auto;
-    right:auto;
-    bottom:auto;
-    left:auto;
-    transform:none;
+    position:absolute;
+    width:96%;
   }
+  .agent-mockup-back{top:0;right:0;transform:rotate(2deg);z-index:1}
+  .agent-mockup-front{top:128px;left:0;bottom:auto;transform:rotate(-2deg);z-index:2}
   .agent-copy-cta{order:4;justify-self:start}
 }
 
@@ -2467,17 +2469,16 @@ section,.partners{background:transparent !important}
   .agent-copy-text .agent-panel-body{order:2}
   .agent-mockups{
     order:3;
-    min-height:0 !important;
-    display:grid !important;
-    gap:14px !important;
-    perspective:none !important;
+    min-height:430px !important;
+    display:block !important;
+    perspective:1000px !important;
   }
   .agent-mockup{
-    position:relative !important;
-    width:100% !important;
-    top:auto !important;right:auto !important;bottom:auto !important;left:auto !important;
-    transform:none !important;
+    position:absolute !important;
+    width:96% !important;
   }
+  .agent-mockup-back{top:0 !important;right:0 !important;bottom:auto !important;left:auto !important;transform:rotate(2deg) !important;z-index:1}
+  .agent-mockup-front{top:128px !important;left:0 !important;right:auto !important;bottom:auto !important;transform:rotate(-2deg) !important;z-index:2}
   .agent-copy-cta{order:4;justify-self:start}
 }
 
@@ -2540,7 +2541,7 @@ section .section-header h2 .gradient-text em {
   <div class="nav-inner">
     <a href="/" class="nav-logo has-wordmark" id="navLogoLink" onclick="location.href='/';return false;">
       <img class="nav-logo-mark" src="/assets/STILOMOBILELOGO.png" alt="STILO" />
-      <img class="nav-logo-wordmark" src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
+      <img class="nav-logo-wordmark" src="/assets/new3DLogoSTILOAI.png" alt="STILO AI PARTNERS" />
       <span class="nav-logo-text">STILO AI PARTNERS</span>
     </a>
     <ul class="nav-links">
@@ -2601,7 +2602,7 @@ section .section-header h2 .gradient-text em {
            alive and never goes invisible edge-on. -->
       <div class="hero-3d-stage" aria-hidden="true">
         <div class="hero-3d-logo-wrap">
-          <img class="hero-3d-logo" src="/assets/3dLOGOSTILOAI.png" alt="" loading="eager" />
+          <img class="hero-3d-logo" src="/assets/new3DLogoSTILOAI.png" alt="" loading="eager" />
         </div>
       </div>
     </div>
@@ -2883,7 +2884,7 @@ section .section-header h2 .gradient-text em {
     <!-- HOME SERVICES -->
     <div class="industry-panel active" data-industry-panel="home-services">
       <!-- Industry hero image. Swap to /assets/industries/home-services.jpg for an owned asset. -->
-      <div class="industry-image"><img src="/assets/homeservices.png" alt="Tradesperson on the job for home services" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/homeservices.png" alt="Tradesperson on the job for home services" loading="eager" decoding="async"></div>
       <div class="industry-content">
         <h3 class="industry-title">Stop losing jobs when you are in a customer's home.</h3>
         <p class="industry-pain">38% of inbound calls to a home services business go to voicemail. Each call is worth $400-$3,000. The next plumber on Google gets the job.</p>
@@ -2902,7 +2903,7 @@ section .section-header h2 .gradient-text em {
     <!-- MED SPA -->
     <div class="industry-panel" data-industry-panel="med-spa">
       <!-- Industry hero image. Swap to /assets/industries/med-spa.jpg for an owned asset. -->
-      <div class="industry-image"><img src="/assets/medspas.png" alt="Med spa wellness treatment" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/medspas.png" alt="Med spa wellness treatment" loading="eager" decoding="async"></div>
       <div class="industry-content">
         <h3 class="industry-title">Bring back the clients you already paid to acquire.</h3>
         <p class="industry-pain">Med spa clients churn at 35% per year. Most never get a personalized reactivation. Your dormant list is the highest-margin revenue you are not capturing.</p>
@@ -2921,7 +2922,7 @@ section .section-header h2 .gradient-text em {
     <!-- RESTAURANTS -->
     <div class="industry-panel" data-industry-panel="restaurant">
       <!-- Industry hero image. Swap to /assets/industries/restaurant.jpg for an owned asset. -->
-      <div class="industry-image"><img src="/assets/restaurants.png" alt="Modern restaurant interior" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/restaurants.png" alt="Modern restaurant interior" loading="eager" decoding="async"></div>
       <div class="industry-content">
         <h3 class="industry-title">Capture every reservation, even after closing.</h3>
         <p class="industry-pain">Diners call until midnight. Reservations are won and lost in seconds. Every voicemail is a table sitting empty tomorrow night.</p>
@@ -2940,7 +2941,7 @@ section .section-header h2 .gradient-text em {
     <!-- REAL ESTATE -->
     <div class="industry-panel" data-industry-panel="real-estate">
       <!-- Industry hero image. Swap to /assets/industries/real-estate.jpg for an owned asset. -->
-      <div class="industry-image"><img src="/assets/realestate.png" alt="Modern luxury home for realtors" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/realestate.png" alt="Modern luxury home for realtors" loading="eager" decoding="async"></div>
       <div class="industry-content">
         <h3 class="industry-title">Stop losing leads to the next agent who picks up first.</h3>
         <p class="industry-pain">Realtors close 1 in 10 leads. The other 9 just did not get followed up with. Speed-to-lead is the entire game and you are losing it to brokers with bigger teams.</p>
@@ -2959,7 +2960,7 @@ section .section-header h2 .gradient-text em {
     <!-- AUTO SERVICES -->
     <div class="industry-panel" data-industry-panel="auto">
       <!-- Industry hero image. Swap to /assets/industries/auto.jpg for an owned asset. -->
-      <div class="industry-image"><img src="/assets/AUtoServices.png" alt="Auto repair shop" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/AUtoServices.png" alt="Auto repair shop" loading="eager" decoding="async"></div>
       <div class="industry-content">
         <h3 class="industry-title">Customers call from the side of the road. Pick up first.</h3>
         <p class="industry-pain">When a car needs work, the customer calls the first shop that answers. Voicemail means they call the next shop. You compete on speed before you compete on price.</p>
@@ -2978,7 +2979,7 @@ section .section-header h2 .gradient-text em {
     <!-- MEDICAL / DENTAL -->
     <div class="industry-panel" data-industry-panel="medical">
       <!-- Industry hero image. Swap to /assets/industries/medical.jpg for an owned asset. -->
-      <div class="industry-image"><img src="/assets/Medical.png" alt="Modern dental and medical clinic" loading="lazy"></div>
+      <div class="industry-image"><img src="/assets/Medical.png" alt="Modern dental and medical clinic" loading="eager" decoding="async"></div>
       <div class="industry-content">
         <h3 class="industry-title">Fill the chair, every chair, every day.</h3>
         <p class="industry-pain">Dental patients miss 30% of their 6-month recall appointments because nobody calls them. Every empty chair is profit you already had on the schedule.</p>
@@ -4114,6 +4115,13 @@ if (!canvas) { /* no-op */ } else if (reduced) {
   var tabs = document.querySelectorAll('.industry-tab');
   var panels = document.querySelectorAll('.industry-panel');
   if (!tabs.length) return;
+  panels.forEach(function(panel){
+    var img = panel.querySelector('.industry-image img');
+    if (!img || !img.src) return;
+    var preload = new Image();
+    preload.src = img.src;
+    if (preload.decode) preload.decode().catch(function(){});
+  });
   tabs.forEach(function(tab){
     tab.addEventListener('click', function(){
       var key = tab.getAttribute('data-industry');
