@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-05-05">
+    <title>STILO AI PARTNERS | Receptionist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+    /* ============================================================
+       STILO AI PARTNERS : DASHBOARD DESIGN CONTRACT
+       Tokens + base/reset. --purple-primary is LEGACY: value is BLUE.
+       ============================================================ */
+    :root {
+        --font-display: 'Saira', system-ui, sans-serif;
+        --font-body: 'Geist', system-ui, sans-serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #111118;
+        --bg-card: #16161f;
+        --bg-card-hover: #1c1c28;
+        --bg-elevated: #1e1e2a;
+        --bg-input: #12121a;
+
+        --border-subtle: rgba(255,255,255,0.06);
+        --border-medium: rgba(255,255,255,0.1);
+        --border-focus: rgba(37,99,235,0.5);
+
+        --text-primary: #f0f0f5;
+        --text-secondary: #9898a8;
+        --text-tertiary: #65657a;
+        --text-muted: #4a4a5c;
+
+        --purple-primary: #2563eb;
+        --purple-dark: #2563eb;
+        --purple-light: #60a5fa;
+        --purple-glow: rgba(37,99,235,0.15);
+        --purple-subtle: rgba(37,99,235,0.08);
+        --blue: #3b82f6;
+        --blue-strong: #2563eb;
+        --blue-bg: rgba(59,130,246,0.1);
+
+        --green: #22c55e;  --green-bg: rgba(34,197,94,0.1);
+        --yellow: #eab308; --yellow-bg: rgba(234,179,8,0.1);
+        --red: #ef4444;    --red-bg: rgba(239,68,68,0.1);
+
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --radius-xl: 18px;
+
+        --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px var(--border-subtle);
+        --shadow-elevated: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--border-subtle);
+        --shadow-modal: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px var(--border-medium);
+
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-med: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        font-family: var(--font-body);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        line-height: 1.5;
+    }
+
+    h1, h2, h3, h4 {
+        font-family: var(--font-display);
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    button {
+        font-family: inherit;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: inherit;
+    }
+
+    input, select, textarea {
+        font-family: inherit;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+        background: var(--bg-input);
+        border: 1px solid var(--border-medium);
+        border-radius: var(--radius-sm);
+        padding: 0.625rem 0.875rem;
+        outline: none;
+        transition: border-color var(--transition-fast);
+        width: 100%;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px var(--purple-glow);
+    }
+
+    select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239898a8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        padding-right: 2rem;
+    }
+
+    a { color: var(--purple-primary); text-decoration: none; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 100px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.5s cubic-bezier(0.4,0,0.2,1) forwards; opacity: 0; }
+    .delay-1 { animation-delay: 0.05s; }
+    .delay-2 { animation-delay: 0.1s; }
+    .delay-3 { animation-delay: 0.15s; }
+    .delay-4 { animation-delay: 0.2s; }
+    .delay-5 { animation-delay: 0.25s; }
+    .delay-6 { animation-delay: 0.3s; }
+    /* If a viewer has motion turned off, skip the entrance fade and just show content. */
+    @media (prefers-reduced-motion: reduce) {
+        .animate-in { animation: none; opacity: 1; }
+    }
+    </style>
+
+    <!-- ============ SHELL CSS ============ -->
+    <style>
+    .app-frame { display: flex; min-height: 100vh; }
+
+    .rail {
+        position: fixed; top: 0; left: 0; bottom: 0;
+        width: 248px;
+        background: var(--bg-secondary);
+        border-right: 1px solid var(--border-subtle);
+        display: flex; flex-direction: column;
+        padding: 18px 14px;
+        z-index: 40;
+        overflow-y: auto;
+    }
+    .rail-brand {
+        display: flex; align-items: center; gap: 10px;
+        padding: 6px 10px 18px;
+    }
+    .rail-brand .mark {
+        width: 30px; height: 30px; border-radius: var(--radius-sm);
+        background: linear-gradient(135deg, var(--purple-primary), var(--purple-light));
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-display); font-weight: 800; font-size: 14px; color: #fff;
+    }
+    .rail-brand .name { font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 0.02em; }
+    .rail-brand .sub  { font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px; }
+
+    .rail-section { font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; padding: 14px 12px 6px; }
+
+    .nav-item {
+        position: relative;
+        display: flex; align-items: center; gap: 11px;
+        padding: 9px 12px; margin-bottom: 2px;
+        border-radius: var(--radius-sm);
+        font-size: 0.8125rem; font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: all var(--transition-fast);
+    }
+    .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.8; }
+    .nav-item:hover { background: var(--purple-subtle); color: var(--text-primary); }
+    .nav-item.active {
+        background: var(--purple-subtle);
+        color: var(--purple-light);
+    }
+    .nav-item.active::before {
+        content: ''; position: absolute; left: -14px; top: 6px; bottom: 6px;
+        width: 3px; border-radius: 0 3px 3px 0; background: var(--purple-primary);
+    }
+    .nav-item.active svg { opacity: 1; }
+
+    .rail-foot { margin-top: auto; padding-top: 14px; }
+    .rail-foot a { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 0.8125rem; color: var(--text-tertiary); transition: all var(--transition-fast); }
+    .rail-foot a:hover { background: var(--purple-subtle); color: var(--text-primary); }
+
+    .content { flex: 1; margin-left: 248px; display: flex; flex-direction: column; min-width: 0; }
+
+    .topbar {
+        position: sticky; top: 0; z-index: 30;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; padding: 0 28px; height: 64px;
+        background: rgba(10,10,15,0.85);
+        backdrop-filter: blur(20px) saturate(1.2);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .topbar h1 { font-size: 1.25rem; letter-spacing: -0.02em; }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+    .topbar-date { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-tertiary); }
+    .account-chip {
+        display: flex; align-items: center; gap: 9px;
+        padding: 6px 14px 6px 6px;
+        border: 1px solid var(--border-medium); border-radius: 999px;
+        cursor: pointer; transition: background var(--transition-fast);
+    }
+    .account-chip:hover { background: var(--purple-subtle); }
+    .account-chip .avatar {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--purple-primary), var(--purple-light));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.75rem; font-weight: 700; color: #fff; font-family: var(--font-display);
+    }
+    .account-chip .who { font-size: 0.8125rem; color: var(--text-secondary); }
+
+    .main { padding: 28px; max-width: 1280px; width: 100%; margin: 0 auto; }
+    .page-intro { margin-bottom: 22px; }
+    .page-intro h2 { font-size: 1.5rem; letter-spacing: -0.025em; margin-bottom: 4px; }
+    .page-intro p { color: var(--text-secondary); font-size: 0.9rem; }
+
+    .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 26px; }
+    .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .content-grid .col-span-2 { grid-column: 1 / -1; }
+
+    @media (max-width: 1100px) {
+        .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 900px) {
+        .app-frame { flex-direction: column; }
+        .rail {
+            position: static; width: 100%; height: auto; flex: 0 0 auto; flex-direction: row;
+            align-items: center; gap: 4px; padding: 10px 12px; overflow-x: auto;
+            border-right: 0; border-bottom: 1px solid var(--border-subtle);
+        }
+        .rail-brand { padding: 0 12px 0 4px; }
+        .rail-brand .sub { display: none; }
+        .rail-section, .rail-foot { display: none; }
+        .nav-item { white-space: nowrap; }
+        .nav-item.active::before { left: 0; right: 0; top: auto; bottom: -10px; width: auto; height: 3px; border-radius: 3px 3px 0 0; }
+        .content { margin-left: 0; }
+        .kpi-strip { grid-template-columns: 1fr 1fr; }
+        .content-grid { grid-template-columns: 1fr; }
+        .main { padding: 18px; }
+    }
+    @media (max-width: 480px) {
+        .kpi-strip { grid-template-columns: 1fr; }
+        .topbar h1 { font-size: 1.05rem; }
+        .topbar-date { display: none; }
+    }
+    </style>
+
+    <!-- ============ COMPONENT CSS ============ -->
+    <style>
+    /* KPI CARD */
+    .kpi-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        padding: 18px 20px;
+        transition: all var(--transition-med);
+    }
+    .kpi-card:hover { border-color: var(--border-medium); background: var(--bg-card-hover); }
+    .kpi-card .kpi-label {
+        font-size: 0.72rem; font-weight: 500; color: var(--text-tertiary);
+        text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;
+    }
+    .kpi-card .kpi-value {
+        font-family: var(--font-display); font-size: 1.75rem; font-weight: 800;
+        letter-spacing: -0.03em; color: var(--text-primary); line-height: 1.1;
+    }
+    .kpi-card .kpi-delta {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 0.72rem; font-weight: 600; margin-top: 8px;
+        padding: 2px 8px; border-radius: 100px;
+    }
+    .kpi-card .kpi-delta.up   { color: var(--green); background: var(--green-bg); }
+    .kpi-card .kpi-delta.down { color: var(--red);   background: var(--red-bg); }
+    .kpi-card .kpi-delta.flat { color: var(--text-tertiary); background: rgba(255,255,255,0.04); }
+    .kpi-card.highlight {
+        border-color: rgba(37,99,235,0.4);
+        background: linear-gradient(180deg, rgba(37,99,235,0.08), var(--bg-card));
+        box-shadow: 0 0 0 1px rgba(37,99,235,0.25), 0 0 26px rgba(37,99,235,0.18);
+    }
+    .kpi-card.highlight .kpi-value { color: var(--purple-light); }
+    .kpi-card.highlight .kpi-label { color: var(--purple-light); opacity: 0.85; }
+
+    /* PANEL + DATA TABLE */
+    .panel {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        overflow-x: auto;
+    }
+    .panel-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 18px; border-bottom: 1px solid var(--border-subtle);
+    }
+    .panel-head h3 { font-size: 0.95rem; font-weight: 700; }
+    .panel-head .panel-sub { font-size: 0.75rem; color: var(--text-tertiary); }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+    .data-table thead th {
+        text-align: left; padding: 11px 16px; color: var(--text-secondary);
+        font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+        border-bottom: 1px solid var(--border-subtle);
+        background: rgba(255,255,255,0.02); white-space: nowrap; font-weight: 600;
+    }
+    .data-table tbody tr { border-top: 1px solid var(--border-subtle); transition: background 100ms; cursor: pointer; }
+    .data-table tbody tr:first-child { border-top: 0; }
+    .data-table tbody tr:hover { background: rgba(37,99,235,0.06); }
+    .data-table tbody td { padding: 11px 16px; vertical-align: middle; }
+    .data-table td.num { font-family: var(--font-mono); white-space: nowrap; }
+    .data-table td .muted { color: var(--text-muted); }
+    .caller-cell { display: flex; flex-direction: column; gap: 1px; }
+    .caller-cell .c-name { font-weight: 600; color: var(--text-primary); }
+    .caller-cell .c-phone { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+    .ah-flag { font-size: 10px; color: var(--purple-light); font-weight: 600; letter-spacing: 0.04em; }
+
+    /* STATUS / OUTCOME PILL */
+    .pill-status {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 2px 10px; border-radius: 100px;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .pill-status::before { content:''; width:6px; height:6px; border-radius:50%; background: currentColor; }
+    .pill-green  { background: var(--green-bg);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+    .pill-yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+    .pill-red    { background: var(--red-bg);    color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+    .pill-blue   { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+    .pill-muted  { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-subtle); }
+    .pill-muted::before { display:none; }
+
+    /* CARD (generic surface for non-table panels) */
+    .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        padding: 18px 20px;
+    }
+    .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-head h3 { font-size: 0.95rem; font-weight: 700; }
+    .card-head .card-sub { font-size: 0.72rem; color: var(--text-tertiary); }
+
+    /* COVERAGE CARD */
+    .coverage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .coverage-stat {
+        background: var(--bg-input); border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md); padding: 14px 16px;
+    }
+    .coverage-stat .cs-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 6px; }
+    .coverage-stat .cs-value { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+    .coverage-stat .cs-note { font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px; }
+    .uptime-bar { display: flex; gap: 2px; margin-top: 4px; }
+    .uptime-tick { flex: 1; height: 26px; border-radius: 2px; background: var(--green); opacity: 0.85; }
+    .uptime-tick.gap { background: var(--border-medium); }
+    .uptime-legend { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); margin-top: 6px; }
+
+    /* TODAY CALENDAR MINI-VIEW */
+    .cal-list { display: flex; flex-direction: column; }
+    .cal-row {
+        display: flex; align-items: center; gap: 14px;
+        padding: 12px 8px; border-top: 1px solid var(--border-subtle);
+        transition: background var(--transition-fast); border-radius: var(--radius-sm);
+    }
+    .cal-row:first-child { border-top: 0; }
+    .cal-row:hover { background: rgba(255,255,255,0.02); }
+    .cal-time { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); width: 64px; flex-shrink: 0; text-align: right; }
+    .cal-bar { width: 3px; align-self: stretch; border-radius: 3px; background: var(--purple-primary); flex-shrink: 0; }
+    .cal-bar.done { background: var(--green); }
+    .cal-bar.tent { background: var(--yellow); }
+    .cal-body { flex: 1; min-width: 0; }
+    .cal-body .cal-name { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); }
+    .cal-body .cal-svc { font-size: 0.72rem; color: var(--text-tertiary); }
+    .cal-tag { font-size: 9px; color: var(--purple-light); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+
+    /* FEED */
+    .feed { padding: 8px; }
+    .feed-row {
+        display: flex; align-items: flex-start; gap: 12px;
+        padding: 11px 12px; border-radius: var(--radius-sm);
+        transition: background var(--transition-fast);
+    }
+    .feed-row:hover { background: rgba(255,255,255,0.02); }
+    .feed-row .feed-icon {
+        width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-sm);
+        background: var(--purple-subtle); color: var(--purple-light);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .feed-row .feed-icon svg { width: 16px; height: 16px; }
+    .feed-row .feed-body { flex: 1; min-width: 0; }
+    .feed-row .feed-title { font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); }
+    .feed-row .feed-desc  { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+    .feed-row .feed-time  { font-size: 0.7rem; color: var(--text-tertiary); white-space: nowrap; font-family: var(--font-mono); }
+
+    /* AI SKELETON-TO-TEXT */
+    .ai-block {
+        background: var(--bg-card); border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg); padding: 18px 20px; position: relative;
+    }
+    .ai-block .ai-tag {
+        display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--purple-light);
+    }
+    .ai-block .ai-tag::before { content:''; width:6px; height:6px; border-radius:50%; background: var(--purple-light); box-shadow: 0 0 8px var(--purple-light); }
+    .ai-skeleton { display: grid; gap: 9px; }
+    .ai-skeleton .bar {
+        height: 11px; border-radius: 6px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 37%, rgba(255,255,255,0.05) 63%);
+        background-size: 400% 100%;
+        animation: aiShimmer 1.4s ease-in-out infinite, aiSkelOut 0.5s ease forwards;
+    }
+    .ai-skeleton .bar:nth-child(1) { width: 92%; animation-delay: 0s,    2.0s; }
+    .ai-skeleton .bar:nth-child(2) { width: 80%; animation-delay: 0.15s, 2.2s; }
+    .ai-skeleton .bar:nth-child(3) { width: 96%; animation-delay: 0.3s,  2.4s; }
+    .ai-skeleton .bar:nth-child(4) { width: 64%; animation-delay: 0.45s, 2.6s; }
+    .ai-text {
+        font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary);
+        opacity: 0; animation: aiTextIn 0.6s ease forwards; animation-delay: 2.4s;
+    }
+    .ai-text b { color: var(--text-primary); font-weight: 600; }
+    @keyframes aiShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+    @keyframes aiSkelOut { to { opacity: 0; height: 0; margin: 0; } }
+    @keyframes aiTextIn  { to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+        .ai-skeleton { display: none; }
+        .ai-text { opacity: 1; animation: none; }
+    }
+
+    /* DRAWER */
+    .drawer-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99;
+        opacity: 0; pointer-events: none; transition: opacity 200ms;
+    }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+    .drawer {
+        position: fixed; top: 0; right: 0; height: 100vh;
+        width: 520px; max-width: 100vw;
+        background: var(--bg-card); border-left: 1px solid var(--border-subtle);
+        box-shadow: -16px 0 40px rgba(0,0,0,0.4);
+        transform: translateX(100%); transition: transform 220ms cubic-bezier(.4,0,.2,1);
+        overflow-y: auto; z-index: 100; padding: 28px 32px 80px;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer .drawer-close {
+        position: absolute; top: 14px; right: 16px; width: 32px; height: 32px;
+        border-radius: 8px; background: transparent; border: 1px solid var(--border-medium);
+        color: var(--text-secondary); font-size: 20px; line-height: 1; cursor: pointer;
+    }
+    .drawer .drawer-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .drawer h2 { font-size: 22px; letter-spacing: -0.02em; margin-right: 40px; }
+    .drawer .drawer-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+    .drawer .drawer-meta .dm-phone { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); }
+    .drawer .drawer-meta .dm-dot { color: var(--text-muted); }
+    .drawer-section { margin-top: 22px; }
+    .drawer-section h3 {
+        font-family: var(--font-body); font-size: 11px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px;
+    }
+    .drawer-btn-primary {
+        width: 100%; padding: 10px 14px; background: var(--blue-strong);
+        color: #fff; border: 0; border-radius: 8px; font-size: 13px; font-weight: 600;
+        cursor: pointer; margin-top: 12px;
+    }
+    .drawer-btn-primary:hover { filter: brightness(1.1); }
+    .drawer-btn-ghost {
+        width: 100%; padding: 10px 14px; background: transparent;
+        color: var(--text-secondary); border: 1px solid var(--border-medium); border-radius: 8px;
+        font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px;
+    }
+    .drawer-btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    @media (max-width: 540px) { .drawer { width: 100vw; padding: 22px 22px 80px; } }
+
+    /* AUDIO PLAYER (inside drawer) */
+    .audio-player {
+        background: var(--bg-input); border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md); padding: 14px 16px;
+    }
+    .audio-controls { display: flex; align-items: center; gap: 12px; }
+    .audio-play-btn {
+        width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%;
+        background: var(--blue-strong); color: #fff;
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+        transition: filter var(--transition-fast);
+    }
+    .audio-play-btn:hover { filter: brightness(1.12); }
+    .audio-play-btn svg { width: 16px; height: 16px; }
+    .audio-track { flex: 1; min-width: 0; }
+    .audio-bar {
+        height: 5px; border-radius: 100px; background: var(--border-medium);
+        position: relative; overflow: hidden; cursor: pointer;
+    }
+    .audio-bar .audio-fill {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 38%;
+        background: linear-gradient(90deg, var(--purple-primary), var(--purple-light));
+        border-radius: 100px;
+    }
+    .audio-bar .audio-knob {
+        position: absolute; top: 50%; left: 38%; transform: translate(-50%, -50%);
+        width: 11px; height: 11px; border-radius: 50%; background: #fff;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.4);
+    }
+    .audio-times { display: flex; justify-content: space-between; margin-top: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+
+    /* TRANSCRIPT */
+    .transcript { display: flex; flex-direction: column; gap: 14px; }
+    .turn { display: flex; gap: 10px; }
+    .turn .turn-av {
+        width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: 700; font-family: var(--font-display);
+    }
+    .turn.agent .turn-av { background: var(--purple-subtle); color: var(--purple-light); border: 1px solid rgba(37,99,235,0.35); }
+    .turn.caller .turn-av { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
+    .turn .turn-body { flex: 1; min-width: 0; }
+    .turn .turn-who { font-size: 11px; font-weight: 600; color: var(--text-tertiary); display: flex; gap: 8px; align-items: baseline; }
+    .turn .turn-who .turn-ts { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+    .turn .turn-text { font-size: 0.84rem; line-height: 1.5; margin-top: 3px; color: var(--text-primary); }
+    .turn.caller .turn-text { color: var(--text-secondary); }
+
+    /* BOOKED CONFIRMATION */
+    .booked-confirm {
+        display: flex; gap: 12px; align-items: flex-start;
+        background: var(--green-bg); border: 1px solid rgba(34,197,94,0.3);
+        border-radius: var(--radius-md); padding: 14px 16px;
+    }
+    .booked-confirm .bc-icon {
+        width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%;
+        background: rgba(34,197,94,0.18); color: var(--green);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .booked-confirm .bc-icon svg { width: 18px; height: 18px; }
+    .booked-confirm .bc-title { font-size: 0.84rem; font-weight: 700; color: var(--text-primary); }
+    .booked-confirm .bc-detail { font-size: 0.76rem; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
+    .booked-confirm .bc-detail b { color: var(--text-primary); font-weight: 600; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 22px; }
+    .tab {
+        padding: 9px 14px; font-size: 0.82rem; font-weight: 600; color: var(--text-tertiary);
+        border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all var(--transition-fast);
+    }
+    .tab:hover { color: var(--text-secondary); }
+    .tab.active { color: var(--purple-light); border-bottom-color: var(--purple-primary); }
+    .tab .tab-count {
+        font-family: var(--font-mono); font-size: 10px; margin-left: 6px;
+        background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 100px; color: var(--text-secondary);
+    }
+    .tab.active .tab-count { background: var(--purple-subtle); color: var(--purple-light); }
+
+    /* small util */
+    .live-dot {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 0.7rem; font-weight: 600; color: var(--green); letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .live-dot::before {
+        content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+        box-shadow: 0 0 0 0 rgba(34,197,94,0.5); animation: livePulse 2s infinite;
+    }
+    @keyframes livePulse {
+        0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+        70%  { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+        100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+    .row-arrow { color: var(--text-muted); }
+    .data-table tbody tr:hover .row-arrow { color: var(--purple-light); }
+    </style>
+</head>
+
+<body>
+<div class="app-frame">
+
+    <!-- LEFT NAV RAIL -->
+    <nav class="rail">
+        <div class="rail-brand">
+            <div class="mark">S</div>
+            <div>
+                <div class="name">STILO AI PARTNERS</div>
+                <div class="sub">Client Console</div>
+            </div>
+        </div>
+
+        <div class="rail-section">Overview</div>
+        <a class="nav-item" data-nav="dashboard" href="/app/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+        </a>
+
+        <div class="rail-section">Agents</div>
+        <a class="nav-item" data-nav="echo" href="echo.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Receptionist
+        </a>
+        <a class="nav-item" data-nav="ignite" href="ignite.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+            Outbound Lead Reply
+        </a>
+        <a class="nav-item" data-nav="revive" href="revive.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Lost Customer Reactivation
+        </a>
+        <a class="nav-item" data-nav="leads" href="leads.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Lead Generator
+        </a>
+        <a class="nav-item" data-nav="forge" href="forge.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Website Builder
+        </a>
+        <a class="nav-item" data-nav="signal" href="signal.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            AI SEO
+        </a>
+        <a class="nav-item" data-nav="oracle" href="oracle.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Growth Intelligence
+        </a>
+        <a class="nav-item" data-nav="pitch" href="pitch.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            AI Sales Agent
+        </a>
+
+        <div class="rail-foot">
+            <a href="/app/">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign out
+            </a>
+        </div>
+    </nav>
+
+    <!-- CONTENT COLUMN -->
+    <div class="content">
+        <header class="topbar">
+            <h1>Receptionist</h1>
+            <div class="topbar-right">
+                <span class="topbar-date" id="topbarDate"></span>
+                <div class="account-chip">
+                    <span class="avatar">M</span>
+                    <span class="who">Marcus Lindsey</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="page-intro animate-in">
+                <h2>Receptionist</h2>
+                <p>Your AI answers every call at Lindsey Plumbing &amp; Air, day or night. Here's what it handled today.</p>
+            </div>
+
+            <!-- KPI STRIP -->
+            <div class="kpi-strip">
+                <div class="kpi-card highlight animate-in delay-1">
+                    <div class="kpi-label">Calls Answered</div>
+                    <div class="kpi-value">47</div>
+                    <div class="kpi-delta up">&#9650; 9 vs yesterday</div>
+                </div>
+                <div class="kpi-card animate-in delay-2">
+                    <div class="kpi-label">Pickup Rate</div>
+                    <div class="kpi-value">100%</div>
+                    <div class="kpi-delta flat">0 missed</div>
+                </div>
+                <div class="kpi-card animate-in delay-3">
+                    <div class="kpi-label">Bookings Made</div>
+                    <div class="kpi-value">31</div>
+                    <div class="kpi-delta up">&#9650; 6 vs yesterday</div>
+                </div>
+                <div class="kpi-card animate-in delay-4">
+                    <div class="kpi-label">Transferred to Human</div>
+                    <div class="kpi-value">4</div>
+                    <div class="kpi-delta flat">8.5% of calls</div>
+                </div>
+                <div class="kpi-card animate-in delay-5">
+                    <div class="kpi-label">Avg Call Length</div>
+                    <div class="kpi-value">2m 14s</div>
+                    <div class="kpi-delta down">&#9660; 11s vs avg</div>
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs animate-in delay-2">
+                <div class="tab active">Call Log <span class="tab-count">47</span></div>
+                <div class="tab">Bookings <span class="tab-count">31</span></div>
+                <div class="tab">Coverage</div>
+                <div class="tab">Settings</div>
+            </div>
+
+            <!-- CONTENT GRID -->
+            <div class="content-grid">
+
+                <!-- LIVE CALL FEED (full width) -->
+                <div class="panel col-span-2 animate-in delay-3">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Live Call Log</h3>
+                            <span class="panel-sub">Today, since 12:00 AM &middot; click any row to open the call</span>
+                        </div>
+                        <span class="live-dot">Listening</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Caller</th>
+                                <th>Time</th>
+                                <th>Reason</th>
+                                <th>Outcome</th>
+                                <th class="num">Length</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr onclick="openCall('c1')">
+                                <td><div class="caller-cell"><span class="c-name">Danielle Ferraro</span><span class="c-phone">(305) 555-0142</span></div></td>
+                                <td class="num">3:48 PM</td>
+                                <td>Water heater leaking</td>
+                                <td><span class="pill-status pill-green">Booked</span></td>
+                                <td class="num">3:41</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c2')">
+                                <td><div class="caller-cell"><span class="c-name">Theo Whitfield</span><span class="c-phone">(786) 555-0190</span></div></td>
+                                <td class="num">3:12 PM</td>
+                                <td>AC not cooling</td>
+                                <td><span class="pill-status pill-green">Booked</span></td>
+                                <td class="num">2:58</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c3')">
+                                <td><div class="caller-cell"><span class="c-name">Priya Nadkarni</span><span class="c-phone">(305) 555-0177</span></div></td>
+                                <td class="num">2:39 PM</td>
+                                <td>Quote on repipe</td>
+                                <td><span class="pill-status pill-blue">Info</span></td>
+                                <td class="num">1:52</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c4')">
+                                <td><div class="caller-cell"><span class="c-name">Robert Kowalski</span><span class="c-phone">(954) 555-0118</span></div></td>
+                                <td class="num">1:55 PM</td>
+                                <td>Burst pipe, garage flooding</td>
+                                <td><span class="pill-status pill-yellow">Transferred</span></td>
+                                <td class="num">1:14</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c5')">
+                                <td><div class="caller-cell"><span class="c-name">Amara Boateng</span><span class="c-phone">(305) 555-0163</span></div></td>
+                                <td class="num">1:08 PM</td>
+                                <td>Reschedule Thursday visit</td>
+                                <td><span class="pill-status pill-green">Booked</span></td>
+                                <td class="num">1:33</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c6')">
+                                <td><div class="caller-cell"><span class="c-name">Greg Tanaka</span><span class="c-phone">(786) 555-0205</span></div></td>
+                                <td class="num">12:21 PM</td>
+                                <td>Thermostat install pricing</td>
+                                <td><span class="pill-status pill-blue">Info</span></td>
+                                <td class="num">2:07</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c7')">
+                                <td><div class="caller-cell"><span class="c-name">Sofia Marchetti</span><span class="c-phone">(305) 555-0149</span></div></td>
+                                <td class="num">11:42 AM</td>
+                                <td>Clogged kitchen drain</td>
+                                <td><span class="pill-status pill-green">Booked</span></td>
+                                <td class="num">2:26</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c8')">
+                                <td><div class="caller-cell"><span class="c-name">Unknown caller</span><span class="c-phone">(305) 555-0288</span></div></td>
+                                <td class="num">7:14 AM <span class="ah-flag">&middot; AFTER HOURS</span></td>
+                                <td>No hot water, whole house</td>
+                                <td><span class="pill-status pill-green">Booked</span></td>
+                                <td class="num">3:09</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                            <tr onclick="openCall('c9')">
+                                <td><div class="caller-cell"><span class="c-name">Marcus Bell</span><span class="c-phone">(954) 555-0173</span></div></td>
+                                <td class="num">2:51 AM <span class="ah-flag">&middot; AFTER HOURS</span></td>
+                                <td>Sewage smell, possible backup</td>
+                                <td><span class="pill-status pill-yellow">Transferred</span></td>
+                                <td class="num">1:47</td>
+                                <td class="row-arrow">&rsaquo;</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- AI SUMMARY (skeleton-to-text) -->
+                <div class="ai-block animate-in delay-4">
+                    <span class="ai-tag">Daily AI Summary</span>
+                    <div class="ai-skeleton" aria-hidden="true"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+                    <p class="ai-text">Your receptionist answered all <b>47 calls</b> today and booked <b>31 jobs</b>, worth roughly <b>$11,400</b> in scheduled work. Two emergencies came in overnight and got routed to your on-call line within seconds. Call volume spikes <b>Tuesday and Wednesday mornings</b>, so the 8 to 11 AM window is your busiest stretch.</p>
+                </div>
+
+                <!-- COVERAGE CARD -->
+                <div class="card animate-in delay-4">
+                    <div class="card-head">
+                        <h3>Coverage</h3>
+                        <span class="card-sub">Last 24 hours</span>
+                    </div>
+                    <div class="coverage-grid">
+                        <div class="coverage-stat">
+                            <div class="cs-label">Hours Covered</div>
+                            <div class="cs-value" style="color: var(--green);">24 / 24</div>
+                            <div class="cs-note">No gaps. Every hour answered.</div>
+                        </div>
+                        <div class="coverage-stat">
+                            <div class="cs-label">After-Hours Caught</div>
+                            <div class="cs-value">11</div>
+                            <div class="cs-note">Calls between 6 PM and 8 AM.</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:14px;">
+                        <div class="cs-label" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:6px;">Hourly answer status</div>
+                        <div class="uptime-bar" id="uptimeBar"></div>
+                        <div class="uptime-legend"><span>12 AM</span><span>12 PM</span><span>11 PM</span></div>
+                    </div>
+                </div>
+
+                <!-- TODAY CALENDAR MINI-VIEW -->
+                <div class="card animate-in delay-5">
+                    <div class="card-head">
+                        <h3>Today on the Calendar</h3>
+                        <span class="card-sub">Booked by ECHO</span>
+                    </div>
+                    <div class="cal-list">
+                        <div class="cal-row">
+                            <div class="cal-time">8:30 AM</div>
+                            <div class="cal-bar done"></div>
+                            <div class="cal-body">
+                                <div class="cal-name">Unknown caller &middot; Brickell</div>
+                                <div class="cal-svc">Water heater replacement</div>
+                            </div>
+                            <div class="cal-tag" style="color:var(--green);">Done</div>
+                        </div>
+                        <div class="cal-row">
+                            <div class="cal-time">10:00 AM</div>
+                            <div class="cal-bar done"></div>
+                            <div class="cal-body">
+                                <div class="cal-name">Sofia Marchetti &middot; Coral Gables</div>
+                                <div class="cal-svc">Drain clear, kitchen</div>
+                            </div>
+                            <div class="cal-tag" style="color:var(--green);">Done</div>
+                        </div>
+                        <div class="cal-row">
+                            <div class="cal-time">1:30 PM</div>
+                            <div class="cal-bar"></div>
+                            <div class="cal-body">
+                                <div class="cal-name">Amara Boateng &middot; Doral</div>
+                                <div class="cal-svc">Maintenance follow-up</div>
+                            </div>
+                            <div class="cal-tag">Confirmed</div>
+                        </div>
+                        <div class="cal-row">
+                            <div class="cal-time">3:00 PM</div>
+                            <div class="cal-bar"></div>
+                            <div class="cal-body">
+                                <div class="cal-name">Theo Whitfield &middot; Kendall</div>
+                                <div class="cal-svc">AC diagnostic, not cooling</div>
+                            </div>
+                            <div class="cal-tag">Confirmed</div>
+                        </div>
+                        <div class="cal-row">
+                            <div class="cal-time">4:45 PM</div>
+                            <div class="cal-bar"></div>
+                            <div class="cal-body">
+                                <div class="cal-name">Danielle Ferraro &middot; Brickell</div>
+                                <div class="cal-svc">Water heater leak, emergency slot</div>
+                            </div>
+                            <div class="cal-tag">Confirmed</div>
+                        </div>
+                        <div class="cal-row">
+                            <div class="cal-time">5:30 PM</div>
+                            <div class="cal-bar tent"></div>
+                            <div class="cal-body">
+                                <div class="cal-name">Wendell Pierce &middot; Miami Beach</div>
+                                <div class="cal-svc">Disposal install, awaiting parts</div>
+                            </div>
+                            <div class="cal-tag" style="color:var(--yellow);">Tentative</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACTIVITY FEED -->
+                <div class="panel animate-in delay-5">
+                    <div class="panel-head">
+                        <h3>Recent Activity</h3>
+                        <span class="panel-sub">last few hours</span>
+                    </div>
+                    <div class="feed">
+                        <div class="feed-row">
+                            <div class="feed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                            <div class="feed-body"><div class="feed-title">Appointment booked</div><div class="feed-desc">Danielle Ferraro &middot; water heater &middot; tomorrow 4:45 PM</div></div>
+                            <div class="feed-time">12m ago</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon" style="background: var(--yellow-bg); color: var(--yellow);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+                            <div class="feed-body"><div class="feed-title">Transferred to on-call tech</div><div class="feed-desc">Robert Kowalski &middot; burst pipe flagged as emergency</div></div>
+                            <div class="feed-time">2:01 PM</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon" style="background: var(--blue-bg); color: var(--blue);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                            <div class="feed-body"><div class="feed-title">Quote question answered</div><div class="feed-desc">Priya Nadkarni asked about repipe pricing, texted estimate range</div></div>
+                            <div class="feed-time">2:39 PM</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+                            <div class="feed-body"><div class="feed-title">After-hours emergency captured</div><div class="feed-desc">No hot water call at 7:14 AM &middot; booked first morning slot</div></div>
+                            <div class="feed-time">7:14 AM</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+                            <div class="feed-body"><div class="feed-title">Appointment booked</div><div class="feed-desc">Sofia Marchetti &middot; drain clear &middot; today 10:00 AM</div></div>
+                            <div class="feed-time">11:42 AM</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ===================== CALL DETAIL DRAWER ===================== -->
+<div class="drawer-overlay" id="callOverlay" onclick="closeCall()"></div>
+<aside class="drawer" id="callDrawer" aria-label="Call detail">
+    <button class="drawer-close" onclick="closeCall()" aria-label="Close">&times;</button>
+    <div id="callDrawerBody"></div>
+</aside>
+
+<script>
+    /* ---- Active nav + date stamp ---- */
+    (function () {
+        var active = 'echo';
+        var el = document.querySelector('.nav-item[data-nav="' + active + '"]');
+        if (el) el.classList.add('active');
+        var d = new Date();
+        var dt = document.getElementById('topbarDate');
+        if (dt) dt.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    })();
+
+    /* ---- Coverage uptime bar: 24 hourly ticks, all answered ---- */
+    (function () {
+        var bar = document.getElementById('uptimeBar');
+        if (!bar) return;
+        // Hours with logged call volume get a slightly stronger tick; quiet overnight hours stay lighter but still answered.
+        var quietHours = { 0:1, 1:1, 4:1, 5:1 };
+        for (var h = 0; h < 24; h++) {
+            var t = document.createElement('div');
+            t.className = 'uptime-tick';
+            if (quietHours[h]) t.style.opacity = '0.45';
+            t.title = (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM') + ' · answered';
+            bar.appendChild(t);
+        }
+    })();
+
+    /* ---- Call detail data + drawer ---- */
+    var CALLS = {
+        c1: {
+            name: 'Danielle Ferraro', phone: '(305) 555-0142', time: 'Today, 3:48 PM',
+            outcome: 'Booked', reason: 'Water heater leaking', dur: '3:41', durSec: '0:00 / 3:41',
+            booked: { svc: 'Water heater leak inspection', when: 'Tomorrow, 4:45 PM', tech: 'Carlos R.', cal: 'Lindsey Plumbing &middot; Service Calendar' },
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Thanks for calling Lindsey Plumbing and Air, this is the front desk. How can I help?' },
+                { who: 'caller', t: '0:05', text: 'Hi, my water heater is leaking pretty bad in the garage. There\'s water all over the floor.' },
+                { who: 'agent',  t: '0:12', text: 'Sorry to hear that. First, is it leaking from the bottom of the tank or near the top fittings?' },
+                { who: 'caller', t: '0:19', text: 'Looks like the bottom. It\'s a steady drip, not spraying or anything.' },
+                { who: 'agent',  t: '0:27', text: 'Got it. A steady drip from the bottom usually means the tank itself, so we\'ll want a tech out to look. Can I grab your address and book the first slot?' },
+                { who: 'caller', t: '0:38', text: 'Yeah, 1420 Brickell Bay Drive, unit 9.' },
+                { who: 'agent',  t: '0:45', text: 'Perfect. I have tomorrow at 4:45 PM open with Carlos. In the meantime, shut the cold water valve on top of the heater to slow the leak. Want me to lock in 4:45?' },
+                { who: 'caller', t: '0:58', text: 'Yes please, that works.' },
+                { who: 'agent',  t: '1:02', text: 'Done. You\'re booked for tomorrow at 4:45 PM. You\'ll get a text confirmation in a minute. Anything else?' },
+                { who: 'caller', t: '1:10', text: 'No, that\'s it. Thank you so much.' }
+            ]
+        },
+        c2: {
+            name: 'Theo Whitfield', phone: '(786) 555-0190', time: 'Today, 3:12 PM',
+            outcome: 'Booked', reason: 'AC not cooling', dur: '2:58', durSec: '0:00 / 2:58',
+            booked: { svc: 'AC diagnostic, not cooling', when: 'Today, 3:00 PM', tech: 'Devon M.', cal: 'Lindsey Plumbing &middot; Service Calendar' },
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Lindsey Plumbing and Air, how can I help today?' },
+                { who: 'caller', t: '0:04', text: 'My AC is running but it\'s blowing warm air. House is sitting at 81.' },
+                { who: 'agent',  t: '0:11', text: 'Let\'s get someone out. Is the outdoor unit running, the big fan outside?' },
+                { who: 'caller', t: '0:18', text: 'Let me check... yeah it\'s spinning.' },
+                { who: 'agent',  t: '0:24', text: 'Okay, so it\'s likely low refrigerant or a frozen coil, both need a tech. I have a diagnostic slot today at 3 PM in Kendall. That work?' },
+                { who: 'caller', t: '0:35', text: 'Today would be great, it\'s brutal in here.' },
+                { who: 'agent',  t: '0:40', text: 'Booking it now. Devon will be out at 3. Diagnostic is $89 and it goes toward the repair if you move forward. Confirm?' },
+                { who: 'caller', t: '0:52', text: 'Yep, confirmed.' },
+                { who: 'agent',  t: '0:55', text: 'You\'re all set for 3 PM today. Text confirmation is on the way. Try turning the system off for now so the coil can thaw.' }
+            ]
+        },
+        c3: {
+            name: 'Priya Nadkarni', phone: '(305) 555-0177', time: 'Today, 2:39 PM',
+            outcome: 'Info', reason: 'Quote on repipe', dur: '1:52', durSec: '0:00 / 1:52',
+            booked: null,
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Lindsey Plumbing and Air, how can I help?' },
+                { who: 'caller', t: '0:03', text: 'I\'m thinking about repiping my house and wanted a ballpark before scheduling anything.' },
+                { who: 'agent',  t: '0:10', text: 'Happy to help. How many bathrooms, and do you know if it\'s copper or polybutylene now?' },
+                { who: 'caller', t: '0:18', text: 'Two bath, single story, I think it\'s the old gray poly pipe.' },
+                { who: 'agent',  t: '0:25', text: 'For a two-bath single story repipe off poly, most jobs land between $4,800 and $7,500 depending on access and drywall work. A tech would confirm with an in-home estimate, which is free.' },
+                { who: 'caller', t: '0:40', text: 'Okay, that\'s helpful. Let me talk to my husband and call back.' },
+                { who: 'agent',  t: '0:46', text: 'Of course. I\'ll text you that range and our estimate link so it\'s handy. Whenever you\'re ready, we can get you on the calendar.' },
+                { who: 'caller', t: '0:55', text: 'Great, thanks.' }
+            ]
+        },
+        c4: {
+            name: 'Robert Kowalski', phone: '(954) 555-0118', time: 'Today, 1:55 PM',
+            outcome: 'Transferred', reason: 'Burst pipe, garage flooding', dur: '1:14', durSec: '0:00 / 1:14',
+            booked: null,
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Lindsey Plumbing and Air, how can I help?' },
+                { who: 'caller', t: '0:03', text: 'A pipe just burst in my garage, water is shooting everywhere, I need someone now!' },
+                { who: 'agent',  t: '0:08', text: 'Okay, this is an emergency, I\'ll get you to our on-call tech right away. First, where\'s your main water shutoff, usually by the street or in the garage?' },
+                { who: 'caller', t: '0:16', text: 'I think by the front, near the meter.' },
+                { who: 'agent',  t: '0:21', text: 'Go shut that off now if you safely can, turn it clockwise. I\'m connecting you to Mike on call so he can dispatch immediately. Stay on the line.' },
+                { who: 'caller', t: '0:31', text: 'Okay, transferring me now?' },
+                { who: 'agent',  t: '0:34', text: 'Yes, connecting you to Mike right now. Help is on the way.' }
+            ]
+        },
+        c5: {
+            name: 'Amara Boateng', phone: '(305) 555-0163', time: 'Today, 1:08 PM',
+            outcome: 'Booked', reason: 'Reschedule Thursday visit', dur: '1:33', durSec: '0:00 / 1:33',
+            booked: { svc: 'Maintenance follow-up (rescheduled)', when: 'Today, 1:30 PM', tech: 'Carlos R.', cal: 'Lindsey Plumbing &middot; Service Calendar' },
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Lindsey Plumbing and Air, how can I help?' },
+                { who: 'caller', t: '0:03', text: 'I have a maintenance visit booked Thursday but something came up. Can I move it?' },
+                { who: 'agent',  t: '0:10', text: 'Sure. I see your Thursday 2 PM follow-up. We actually had a cancellation today at 1:30, or I have Friday morning open. Which is easier?' },
+                { who: 'caller', t: '0:21', text: 'Oh, today at 1:30 is perfect actually.' },
+                { who: 'agent',  t: '0:26', text: 'Done, moved you to today at 1:30 with Carlos and released the Thursday slot. Confirmation text is on the way.' },
+                { who: 'caller', t: '0:35', text: 'You\'re the best, thank you.' }
+            ]
+        },
+        c6: {
+            name: 'Greg Tanaka', phone: '(786) 555-0205', time: 'Today, 12:21 PM',
+            outcome: 'Info', reason: 'Thermostat install pricing', dur: '2:07', durSec: '0:00 / 2:07',
+            booked: null,
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Lindsey Plumbing and Air, how can I help?' },
+                { who: 'caller', t: '0:03', text: 'How much do you charge to install a smart thermostat if I already bought the unit?' },
+                { who: 'agent',  t: '0:10', text: 'If you\'ve got the thermostat already, install is a flat $145 for a standard setup, more only if we need to run a C-wire. Which model did you get?' },
+                { who: 'caller', t: '0:21', text: 'A Nest. Pretty sure I have a C-wire, the old one had four wires.' },
+                { who: 'agent',  t: '0:29', text: 'Four wires usually means you\'re good, so $145 flat. Want me to schedule it, or just text you the info for now?' },
+                { who: 'caller', t: '0:38', text: 'Just text me for now, I\'ll call back to book.' },
+                { who: 'agent',  t: '0:43', text: 'You got it, sending the pricing and our booking link now.' }
+            ]
+        },
+        c7: {
+            name: 'Sofia Marchetti', phone: '(305) 555-0149', time: 'Today, 11:42 AM',
+            outcome: 'Booked', reason: 'Clogged kitchen drain', dur: '2:26', durSec: '0:00 / 2:26',
+            booked: { svc: 'Drain clear, kitchen', when: 'Today, 10:00 AM', tech: 'Devon M.', cal: 'Lindsey Plumbing &middot; Service Calendar' },
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Lindsey Plumbing and Air, how can I help?' },
+                { who: 'caller', t: '0:03', text: 'My kitchen sink is completely backed up, water won\'t drain at all.' },
+                { who: 'agent',  t: '0:09', text: 'Got it. Both sides of the sink, or just one? And do you have a disposal?' },
+                { who: 'caller', t: '0:16', text: 'Both sides, and yes there\'s a disposal but it just hums.' },
+                { who: 'agent',  t: '0:23', text: 'Sounds like a clog past the disposal. A standard drain clear is $129. I can get Devon out today at 10 AM in Coral Gables. Work for you?' },
+                { who: 'caller', t: '0:35', text: 'Yes, 10 is great.' },
+                { who: 'agent',  t: '0:39', text: 'Booked for 10 AM today. Confirmation text incoming. Skip the disposal until he\'s out so it doesn\'t overflow.' }
+            ]
+        },
+        c8: {
+            name: 'Unknown caller', phone: '(305) 555-0288', time: 'Today, 7:14 AM',
+            outcome: 'Booked', reason: 'No hot water, whole house', dur: '3:09', durSec: '0:00 / 3:09', ah: true,
+            booked: { svc: 'Water heater replacement', when: 'Today, 8:30 AM', tech: 'Carlos R.', cal: 'Lindsey Plumbing &middot; Service Calendar' },
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Thanks for calling Lindsey Plumbing and Air. We\'re open and I can help right now. What\'s going on?' },
+                { who: 'caller', t: '0:06', text: 'No hot water anywhere in the house this morning. Trying to get the kids ready for school.' },
+                { who: 'agent',  t: '0:13', text: 'Let\'s fix that fast. Is your water heater gas or electric, and do you see any error light on it?' },
+                { who: 'caller', t: '0:21', text: 'Electric I think. No lights at all on it.' },
+                { who: 'agent',  t: '0:27', text: 'No lights on an electric unit usually means a tripped breaker or a failed element. Either way a tech should look. I have the very first morning slot at 8:30. Want it?' },
+                { who: 'caller', t: '0:40', text: 'Yes, please, that\'s great. Didn\'t expect anyone to pick up this early.' },
+                { who: 'agent',  t: '0:47', text: 'We answer around the clock. You\'re booked for 8:30 with Carlos. Try flipping the water heater breaker off and back on, that fixes it sometimes. Confirmation text is on the way.' }
+            ]
+        },
+        c9: {
+            name: 'Marcus Bell', phone: '(954) 555-0173', time: 'Today, 2:51 AM',
+            outcome: 'Transferred', reason: 'Sewage smell, possible backup', dur: '1:47', durSec: '0:00 / 1:47', ah: true,
+            booked: null,
+            transcript: [
+                { who: 'agent',  t: '0:00', text: 'Lindsey Plumbing and Air, I can help right now. What\'s the issue?' },
+                { who: 'caller', t: '0:04', text: 'There\'s a strong sewage smell and the downstairs toilet is gurgling. I\'m worried it\'s about to back up.' },
+                { who: 'agent',  t: '0:12', text: 'Gurgling plus sewage odor can mean a main line backup, so I\'ll connect you with our on-call tech right away. Have you run any water or flushed in the last few minutes?' },
+                { who: 'caller', t: '0:23', text: 'No, I stopped using everything once I smelled it.' },
+                { who: 'agent',  t: '0:28', text: 'Good call, keep everything off so it doesn\'t overflow. I\'m transferring you to Mike on call now so he can assess and dispatch. One moment.' },
+                { who: 'caller', t: '0:39', text: 'Okay, thank you.' }
+            ]
+        }
+    };
+
+    function outcomePill(o) {
+        if (o === 'Booked')      return '<span class="pill-status pill-green">Booked</span>';
+        if (o === 'Transferred') return '<span class="pill-status pill-yellow">Transferred</span>';
+        return '<span class="pill-status pill-blue">Info</span>';
+    }
+
+    function escapeHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function buildTranscript(turns) {
+        return turns.map(function (turn) {
+            var who = turn.who === 'agent' ? 'Receptionist' : 'Caller';
+            var initial = turn.who === 'agent' ? 'AI' : 'C';
+            return '<div class="turn ' + turn.who + '">' +
+                '<div class="turn-av">' + initial + '</div>' +
+                '<div class="turn-body">' +
+                    '<div class="turn-who">' + who + ' <span class="turn-ts">' + turn.t + '</span></div>' +
+                    '<div class="turn-text">' + escapeHtml(turn.text) + '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function buildBooked(b) {
+        if (!b) return '';
+        return '<div class="drawer-section"><h3>Outcome</h3>' +
+            '<div class="booked-confirm">' +
+                '<div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>' +
+                '<div>' +
+                    '<div class="bc-title">Added to calendar</div>' +
+                    '<div class="bc-detail"><b>' + b.svc + '</b><br>' + b.when + ' &middot; with ' + b.tech + '<br>' + b.cal + '</div>' +
+                '</div>' +
+            '</div></div>';
+    }
+
+    function openCall(id) {
+        var c = CALLS[id];
+        if (!c) return;
+        var ahBadge = c.ah ? ' <span class="pill-status pill-muted" style="color:var(--purple-light);border-color:rgba(37,99,235,0.3);">After hours</span>' : '';
+        var html =
+            '<h2>' + c.name + '</h2>' +
+            '<div class="drawer-meta">' +
+                '<span class="dm-phone">' + c.phone + '</span>' +
+                '<span class="dm-dot">&middot;</span>' +
+                '<span style="font-size:0.8rem;color:var(--text-secondary);">' + c.time + '</span>' +
+                outcomePill(c.outcome) + ahBadge +
+            '</div>' +
+
+            '<div class="drawer-section"><h3>Listen to the call</h3>' +
+                '<div class="audio-player">' +
+                    '<div class="audio-controls">' +
+                        '<button class="audio-play-btn" onclick="toggleAudio(this)" aria-label="Play recording"><svg id="audioIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>' +
+                        '<div class="audio-track">' +
+                            '<div class="audio-bar" id="audioBar"><div class="audio-fill"></div><div class="audio-knob"></div></div>' +
+                            '<div class="audio-times"><span>' + c.durSec.split(' / ')[0] + '</span><span>' + c.durSec.split(' / ')[1] + '</span></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+
+            buildBooked(c.booked) +
+
+            '<div class="drawer-section"><h3>AI Summary</h3>' +
+                '<div class="ai-block" style="padding:16px 18px;">' +
+                    '<span class="ai-tag">Generated</span>' +
+                    '<div class="ai-skeleton" aria-hidden="true"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>' +
+                    '<p class="ai-text">' + c.summary + '</p>' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="drawer-section"><h3>Transcript</h3>' +
+                '<div class="transcript">' + buildTranscript(c.transcript) + '</div>' +
+            '</div>' +
+
+            '<button class="drawer-btn-primary">Open in calendar</button>' +
+            '<button class="drawer-btn-ghost">Add a note to this call</button>';
+
+        document.getElementById('callDrawerBody').innerHTML = html;
+        document.getElementById('callOverlay').classList.add('open');
+        document.getElementById('callDrawer').classList.add('open');
+    }
+
+    function closeCall() {
+        document.getElementById('callOverlay').classList.remove('open');
+        document.getElementById('callDrawer').classList.remove('open');
+    }
+
+    function toggleAudio(btn) {
+        var icon = btn.querySelector('svg');
+        var playing = btn.getAttribute('data-playing') === '1';
+        if (playing) {
+            btn.setAttribute('data-playing', '0');
+            icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+        } else {
+            btn.setAttribute('data-playing', '1');
+            icon.innerHTML = '<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>';
+        }
+    }
+
+    // Per-call AI summaries (kept out of the data object above for readability)
+    CALLS.c1.summary = 'Caller reported a <b>steady bottom-tank leak</b> on her water heater. The receptionist walked her through shutting the cold-water valve, then booked a leak inspection for <b>tomorrow at 4:45 PM</b> with Carlos.';
+    CALLS.c2.summary = 'AC blowing warm air, house at 81 degrees, outdoor unit confirmed running. Likely low refrigerant or a frozen coil. Booked a <b>same-day 3 PM diagnostic</b> and advised the caller to shut the system off to let the coil thaw.';
+    CALLS.c3.summary = 'Pricing question on a <b>two-bath single-story repipe</b> off old poly pipe. Gave a $4,800 to $7,500 range, offered a free in-home estimate, and texted the range plus the booking link. Caller will check with her husband and call back.';
+    CALLS.c4.summary = '<b>Emergency:</b> burst pipe flooding the garage. The receptionist directed the caller to the main shutoff and <b>transferred to Mike on call</b> within 30 seconds for immediate dispatch.';
+    CALLS.c5.summary = 'Caller needed to move a Thursday maintenance visit. The receptionist found a same-day cancellation, <b>rescheduled to today at 1:30 PM</b> with Carlos, and released the old Thursday slot.';
+    CALLS.c6.summary = 'Quote for a <b>customer-supplied smart thermostat</b> install. Quoted the $145 flat rate, confirmed the four-wire setup likely covers a C-wire, and texted pricing plus the booking link. Caller will book later.';
+    CALLS.c7.summary = 'Kitchen sink fully backed up on both sides with a humming disposal, pointing to a clog past the disposal. Quoted the $129 drain clear and booked <b>Devon for 10 AM today</b> in Coral Gables.';
+    CALLS.c8.summary = '<b>After-hours call at 7:14 AM:</b> no hot water house-wide, electric unit with no lights. The receptionist grabbed the <b>first 8:30 AM slot</b>, suggested cycling the breaker, and confirmed by text. Caller was surprised someone answered that early.';
+    CALLS.c9.summary = '<b>Overnight emergency:</b> sewage odor and a gurgling toilet suggesting a possible main-line backup. The receptionist told the caller to stop running water and <b>transferred to Mike on call</b> for assessment and dispatch.';
+</script>
+</body>
+</html>

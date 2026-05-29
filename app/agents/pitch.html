@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Sales Agent &middot; STILO AI Partners</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- ============================================================
+     STILO AI PARTNERS DASHBOARD DESIGN CONTRACT
+     Tokens + base/reset. --purple-primary is LEGACY: value is brand BLUE.
+     ============================================================ -->
+<style>
+:root {
+    /* Fonts */
+    --font-display: 'Saira', system-ui, sans-serif;
+    --font-body: 'Geist', system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+    /* Dark surfaces */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #111118;
+    --bg-card: #16161f;
+    --bg-card-hover: #1c1c28;
+    --bg-elevated: #1e1e2a;
+    --bg-input: #12121a;
+
+    /* Borders */
+    --border-subtle: rgba(255,255,255,0.06);
+    --border-medium: rgba(255,255,255,0.1);
+    --border-focus: rgba(37,99,235,0.5);
+
+    /* Text */
+    --text-primary: #f0f0f5;
+    --text-secondary: #9898a8;
+    --text-tertiary: #65657a;
+    --text-muted: #4a4a5c;
+
+    /* Accent BLUE (legacy purple-* names, blue values) */
+    --purple-primary: #2563eb;
+    --purple-dark: #2563eb;
+    --purple-light: #60a5fa;
+    --purple-glow: rgba(37,99,235,0.15);
+    --purple-subtle: rgba(37,99,235,0.08);
+    --blue: #3b82f6;
+    --blue-strong: #2563eb;
+    --blue-bg: rgba(59,130,246,0.1);
+
+    /* Status colors + tinted backgrounds */
+    --green: #22c55e;  --green-bg: rgba(34,197,94,0.1);
+    --yellow: #eab308; --yellow-bg: rgba(234,179,8,0.1);
+    --red: #ef4444;    --red-bg: rgba(239,68,68,0.1);
+
+    /* Radii */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+
+    /* Shadows */
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px var(--border-subtle);
+    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--border-subtle);
+    --shadow-modal: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px var(--border-medium);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-med: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-body);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+}
+
+input, select, textarea {
+    font-family: inherit;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    background: var(--bg-input);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    padding: 0.625rem 0.875rem;
+    outline: none;
+    transition: border-color var(--transition-fast);
+    width: 100%;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--purple-glow);
+}
+
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239898a8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+}
+
+a { color: var(--purple-primary); text-decoration: none; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeInUp 0.5s cubic-bezier(0.4,0,0.2,1) forwards; opacity: 0; }
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+.delay-6 { animation-delay: 0.3s; }
+</style>
+
+<!-- ============ SHELL CSS ============ -->
+<style>
+.app-frame { display: flex; min-height: 100vh; }
+
+.rail {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 248px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column;
+    padding: 18px 14px;
+    z-index: 40;
+    overflow-y: auto;
+}
+.rail-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 10px 18px;
+}
+.rail-brand .mark {
+    width: 30px; height: 30px; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--purple-primary), var(--purple-light));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 14px; color: #fff;
+}
+.rail-brand .name { font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 0.02em; }
+.rail-brand .sub  { font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px; }
+
+.rail-section { font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; padding: 14px 12px 6px; }
+
+.nav-item {
+    position: relative;
+    display: flex; align-items: center; gap: 11px;
+    padding: 9px 12px; margin-bottom: 2px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem; font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+.nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.8; }
+.nav-item:hover { background: var(--purple-subtle); color: var(--text-primary); }
+.nav-item.active {
+    background: var(--purple-subtle);
+    color: var(--purple-light);
+}
+.nav-item.active::before {
+    content: ''; position: absolute; left: -14px; top: 6px; bottom: 6px;
+    width: 3px; border-radius: 0 3px 3px 0; background: var(--purple-primary);
+}
+.nav-item.active svg { opacity: 1; }
+
+.rail-foot { margin-top: auto; padding-top: 14px; }
+.rail-foot a { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 0.8125rem; color: var(--text-tertiary); transition: all var(--transition-fast); }
+.rail-foot a:hover { background: var(--purple-subtle); color: var(--text-primary); }
+
+.content { flex: 1; margin-left: 248px; display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 0 28px; height: 64px;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px) saturate(1.2);
+    border-bottom: 1px solid var(--border-subtle);
+}
+.topbar h1 { font-size: 1.25rem; letter-spacing: -0.02em; }
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.topbar-date { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-tertiary); }
+.account-chip {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 14px 6px 6px;
+    border: 1px solid var(--border-medium); border-radius: 999px;
+    cursor: pointer; transition: background var(--transition-fast);
+}
+.account-chip:hover { background: var(--purple-subtle); }
+.account-chip .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple-primary), var(--purple-light));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; color: #fff; font-family: var(--font-display);
+}
+.account-chip .who { font-size: 0.8125rem; color: var(--text-secondary); }
+
+.main { padding: 28px; max-width: 1280px; width: 100%; margin: 0 auto; }
+.page-intro { margin-bottom: 22px; }
+.page-intro h2 { font-size: 1.5rem; letter-spacing: -0.025em; margin-bottom: 4px; }
+.page-intro p { color: var(--text-secondary); font-size: 0.9rem; }
+
+.kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 26px; }
+.content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.content-grid .col-span-2 { grid-column: 1 / -1; }
+
+@media (max-width: 900px) {
+    .app-frame { flex-direction: column; }
+    .rail {
+        position: static; width: 100%; height: auto; flex: 0 0 auto; flex-direction: row;
+        align-items: center; gap: 4px; padding: 10px 12px; overflow-x: auto;
+        border-right: 0; border-bottom: 1px solid var(--border-subtle);
+    }
+    .rail-brand { padding: 0 12px 0 4px; }
+    .rail-brand .sub { display: none; }
+    .rail-section, .rail-foot { display: none; }
+    .nav-item { white-space: nowrap; }
+    .nav-item.active::before { left: 0; right: 0; top: auto; bottom: -10px; width: auto; height: 3px; border-radius: 3px 3px 0 0; }
+    .content { margin-left: 0; }
+    .kpi-strip { grid-template-columns: 1fr 1fr; }
+    .content-grid { grid-template-columns: 1fr; }
+    .main { padding: 18px; }
+}
+@media (max-width: 480px) {
+    .kpi-strip { grid-template-columns: 1fr; }
+    .topbar h1 { font-size: 1.05rem; }
+    .topbar-date { display: none; }
+}
+</style>
+
+<!-- ============ COMPONENT CSS ============ -->
+<style>
+/* ----- KPI cards ----- */
+.kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    transition: all var(--transition-med);
+}
+.kpi-card:hover { border-color: var(--border-medium); background: var(--bg-card-hover); }
+.kpi-card .kpi-label {
+    font-size: 0.72rem; font-weight: 500; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;
+}
+.kpi-card .kpi-value {
+    font-family: var(--font-display); font-size: 1.75rem; font-weight: 800;
+    letter-spacing: -0.03em; color: var(--text-primary); line-height: 1.1;
+}
+.kpi-card .kpi-delta {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.72rem; font-weight: 600; margin-top: 8px;
+    padding: 2px 8px; border-radius: 100px;
+}
+.kpi-card .kpi-delta.up   { color: var(--green); background: var(--green-bg); }
+.kpi-card .kpi-delta.down { color: var(--red);   background: var(--red-bg); }
+.kpi-card .kpi-delta.flat { color: var(--text-tertiary); background: rgba(255,255,255,0.04); }
+.kpi-card.highlight {
+    border-color: rgba(37,99,235,0.4);
+    background: linear-gradient(180deg, rgba(37,99,235,0.08), var(--bg-card));
+    box-shadow: 0 0 0 1px rgba(37,99,235,0.25), 0 0 26px rgba(37,99,235,0.18);
+}
+.kpi-card.highlight .kpi-value { color: var(--purple-light); }
+.kpi-card.highlight .kpi-label { color: var(--purple-light); opacity: 0.85; }
+
+/* ----- Tabs ----- */
+.tabs { display: flex; gap: 4px; margin-bottom: 22px; border-bottom: 1px solid var(--border-subtle); }
+.tab {
+    position: relative; padding: 10px 16px; font-size: 0.85rem; font-weight: 600;
+    color: var(--text-tertiary); background: none; border: 0; cursor: pointer;
+    transition: color var(--transition-fast);
+}
+.tab:hover { color: var(--text-secondary); }
+.tab.active { color: var(--text-primary); }
+.tab.active::after {
+    content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px;
+    height: 2px; background: var(--purple-primary); border-radius: 2px 2px 0 0;
+}
+
+/* ----- Panels ----- */
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    overflow-x: auto;
+}
+.panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; border-bottom: 1px solid var(--border-subtle); gap: 12px;
+}
+.panel-head h3 { font-size: 0.95rem; font-weight: 700; }
+.panel-head .panel-sub { font-size: 0.75rem; color: var(--text-tertiary); }
+
+/* ----- Data table ----- */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+.data-table thead th {
+    text-align: left; padding: 11px 16px; color: var(--text-secondary);
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(255,255,255,0.02); white-space: nowrap; font-weight: 600;
+}
+.data-table tbody tr { border-top: 1px solid var(--border-subtle); transition: background 100ms; }
+.data-table tbody tr:first-child { border-top: 0; }
+.data-table tbody tr:hover { background: rgba(37,99,235,0.06); cursor: pointer; }
+.data-table tbody td { padding: 11px 16px; vertical-align: middle; }
+.data-table td.num { font-family: var(--font-mono); white-space: nowrap; }
+.data-table td .muted { color: var(--text-muted); }
+
+/* ----- Status pills ----- */
+.pill-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 10px; border-radius: 100px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.pill-status::before { content:''; width:6px; height:6px; border-radius:50%; background: currentColor; }
+.pill-green  { background: var(--green-bg);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+.pill-yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+.pill-red    { background: var(--red-bg);    color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+.pill-blue   { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+.pill-muted  { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-subtle); }
+.pill-muted::before { display:none; }
+
+/* ----- Feed ----- */
+.feed { padding: 8px; }
+.feed-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 12px; border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+}
+.feed-row:hover { background: rgba(255,255,255,0.02); }
+.feed-row .feed-icon {
+    width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-sm);
+    background: var(--purple-subtle); color: var(--purple-light);
+    display: flex; align-items: center; justify-content: center;
+}
+.feed-row .feed-icon svg { width: 16px; height: 16px; }
+.feed-row .feed-icon.green { background: var(--green-bg); color: var(--green); }
+.feed-row .feed-body { flex: 1; min-width: 0; }
+.feed-row .feed-title { font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); }
+.feed-row .feed-desc  { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+.feed-row .feed-time  { font-size: 0.7rem; color: var(--text-tertiary); white-space: nowrap; font-family: var(--font-mono); }
+
+/* ----- AI skeleton-to-text block ----- */
+.ai-block {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding: 18px 20px; position: relative;
+}
+.ai-block .ai-tag {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--purple-light);
+}
+.ai-block .ai-tag::before { content:''; width:6px; height:6px; border-radius:50%; background: var(--purple-light); box-shadow: 0 0 8px var(--purple-light); }
+.ai-skeleton { display: grid; gap: 9px; }
+.ai-skeleton .bar {
+    height: 11px; border-radius: 6px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 37%, rgba(255,255,255,0.05) 63%);
+    background-size: 400% 100%;
+    animation: aiShimmer 1.4s ease-in-out infinite, aiSkelOut 0.5s ease forwards;
+}
+.ai-skeleton .bar:nth-child(1) { width: 92%; animation-delay: 0s,    2.0s; }
+.ai-skeleton .bar:nth-child(2) { width: 80%; animation-delay: 0.15s, 2.2s; }
+.ai-skeleton .bar:nth-child(3) { width: 96%; animation-delay: 0.3s,  2.4s; }
+.ai-skeleton .bar:nth-child(4) { width: 64%; animation-delay: 0.45s, 2.6s; }
+.ai-text {
+    font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary);
+    opacity: 0; animation: aiTextIn 0.6s ease forwards; animation-delay: 2.4s;
+}
+.ai-text b { color: var(--text-primary); font-weight: 600; }
+@keyframes aiShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+@keyframes aiSkelOut { to { opacity: 0; height: 0; margin: 0; } }
+@keyframes aiTextIn  { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+    .ai-skeleton { display: none; }
+    .ai-text { opacity: 1; animation: none; }
+}
+
+/* ----- Pipeline board (Kanban) ----- */
+.board-wrap { padding: 16px 18px 20px; overflow-x: auto; }
+.board { display: grid; grid-template-columns: repeat(5, minmax(196px, 1fr)); gap: 12px; min-width: 920px; }
+.board-col {
+    background: var(--bg-secondary); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 10px; display: flex; flex-direction: column;
+}
+.board-col-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 10px; }
+.board-col-head .col-name { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); }
+.board-col-head .col-name .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+.board-col-head .col-count {
+    font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary);
+    background: rgba(255,255,255,0.04); border-radius: 100px; padding: 1px 8px;
+}
+.board-col-total { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: var(--text-primary); padding: 0 6px 10px; letter-spacing: -0.02em; }
+.board-col-total.accent { color: var(--purple-light); }
+.deal-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); padding: 11px 12px; margin-bottom: 8px;
+    cursor: pointer; transition: all var(--transition-fast);
+}
+.deal-card:hover { border-color: var(--border-medium); background: var(--bg-card-hover); transform: translateY(-1px); }
+.deal-card:last-child { margin-bottom: 0; }
+.deal-card .deal-name { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.deal-card .deal-meta { font-size: 0.7rem; color: var(--text-tertiary); margin-bottom: 9px; }
+.deal-card .deal-foot { display: flex; align-items: center; justify-content: space-between; }
+.deal-card .deal-val { font-family: var(--font-display); font-size: 0.85rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+.deal-card .deal-age { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); }
+.deal-avatar {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.56rem; font-weight: 700; color: #fff; font-family: var(--font-display);
+    background: linear-gradient(135deg, #3a3a4a, #2a2a38); margin-left: 6px;
+}
+
+/* ----- Scorecard ----- */
+.scorecard { padding: 4px 18px 18px; display: grid; gap: 14px; }
+.score-head {
+    display: flex; align-items: center; gap: 12px; padding: 14px 0 4px;
+}
+.score-head .score-ring {
+    position: relative; width: 64px; height: 64px; flex-shrink: 0;
+}
+.score-head .score-ring .score-num {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--purple-light);
+}
+.score-head .score-who .name { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+.score-head .score-who .ctx { font-size: 0.74rem; color: var(--text-tertiary); margin-top: 2px; }
+.score-rows { display: grid; gap: 11px; }
+.score-row .score-row-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.score-row .score-row-top .lbl { font-size: 0.78rem; color: var(--text-secondary); }
+.score-row .score-row-top .lbl .ico { display: inline-flex; vertical-align: -3px; margin-right: 6px; color: var(--text-tertiary); }
+.score-row .score-row-top .lbl .ico svg { width: 14px; height: 14px; }
+.score-row .score-row-top .val { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-primary); }
+.score-row .score-row-top .val.good { color: var(--green); }
+.score-row .score-row-top .val.warn { color: var(--yellow); }
+.score-bar { height: 6px; border-radius: 100px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.score-bar > span { display: block; height: 100%; border-radius: 100px; background: var(--purple-primary); }
+.score-bar > span.good { background: var(--green); }
+.score-bar > span.warn { background: var(--yellow); }
+
+/* ----- Win/loss chart ----- */
+.chart-wrap { padding: 18px 20px 20px; }
+.chart-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+.chart-legend .lg { display: inline-flex; align-items: center; gap: 7px; font-size: 0.74rem; color: var(--text-secondary); }
+.chart-legend .lg .swatch { width: 12px; height: 4px; border-radius: 2px; }
+.chart-legend .lg .swatch.dot { width: 8px; height: 8px; border-radius: 50%; }
+.chart-foot {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-subtle);
+}
+.chart-stat { display: flex; flex-direction: column; gap: 2px; }
+.chart-stat .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); }
+.chart-stat .val { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+.chart-stat .val.accent { color: var(--purple-light); }
+
+/* ----- Panel utility rows ----- */
+.panel-foot {
+    padding: 12px 18px; border-top: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.74rem; color: var(--text-tertiary);
+}
+.panel-foot .auto-on { display: inline-flex; align-items: center; gap: 6px; color: var(--green); font-weight: 600; }
+.panel-foot .auto-on .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 7px var(--green); }
+.tiny-btn {
+    font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);
+    border: 1px solid var(--border-medium); border-radius: var(--radius-sm);
+    padding: 5px 11px; transition: all var(--transition-fast);
+}
+.tiny-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+/* ----- Drawer ----- */
+.drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99;
+    opacity: 0; pointer-events: none; transition: opacity 200ms;
+}
+.drawer-overlay.open { opacity: 1; pointer-events: auto; }
+.drawer {
+    position: fixed; top: 0; right: 0; height: 100vh;
+    width: 480px; max-width: 100vw;
+    background: var(--bg-card); border-left: 1px solid var(--border-subtle);
+    box-shadow: -16px 0 40px rgba(0,0,0,0.4);
+    transform: translateX(100%); transition: transform 220ms cubic-bezier(.4,0,.2,1);
+    overflow-y: auto; z-index: 100; padding: 28px 32px 80px;
+}
+.drawer.open { transform: translateX(0); }
+.drawer .drawer-close {
+    position: absolute; top: 14px; right: 16px; width: 32px; height: 32px;
+    border-radius: 8px; background: transparent; border: 1px solid var(--border-medium);
+    color: var(--text-secondary); font-size: 20px; line-height: 1; cursor: pointer;
+}
+.drawer .drawer-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.drawer .drawer-eyebrow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.drawer h2 { font-size: 22px; letter-spacing: -0.02em; margin-right: 40px; }
+.drawer .drawer-sub { font-size: 0.8rem; color: var(--text-tertiary); margin-top: 4px; }
+.drawer-section { margin-top: 22px; }
+.drawer-section h3 {
+    font-family: var(--font-body); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px;
+}
+.drawer-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.drawer-kv .kv {
+    background: var(--bg-secondary); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 11px 13px;
+}
+.drawer-kv .kv .k { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 4px; }
+.drawer-kv .kv .v { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+.drawer-prose { font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); }
+.drawer-prose b { color: var(--text-primary); font-weight: 600; }
+.drawer-prose + .drawer-prose { margin-top: 10px; }
+.drawer-timeline { list-style: none; display: grid; gap: 0; }
+.drawer-timeline li {
+    position: relative; padding: 0 0 16px 22px; font-size: 0.82rem; color: var(--text-secondary);
+}
+.drawer-timeline li::before {
+    content: ''; position: absolute; left: 3px; top: 4px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--purple-primary);
+}
+.drawer-timeline li::after {
+    content: ''; position: absolute; left: 6px; top: 14px; bottom: 0; width: 1px; background: var(--border-medium);
+}
+.drawer-timeline li:last-child { padding-bottom: 0; }
+.drawer-timeline li:last-child::after { display: none; }
+.drawer-timeline li .t-when { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-tertiary); display: block; margin-bottom: 2px; }
+.drawer-timeline li b { color: var(--text-primary); font-weight: 600; }
+.drawer-btn-primary {
+    width: 100%; padding: 11px 14px; background: var(--blue-strong);
+    color: #fff; border: 0; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; margin-top: 16px;
+}
+.drawer-btn-primary:hover { filter: brightness(1.1); }
+.drawer-btn-ghost {
+    width: 100%; padding: 11px 14px; background: transparent; border: 1px solid var(--border-medium);
+    color: var(--text-secondary); border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; margin-top: 10px;
+}
+.drawer-btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+@media (max-width: 540px) {
+    .drawer { width: 100vw; padding: 22px 22px 80px; }
+    .chart-foot { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+
+<!-- ===================== BODY ===================== -->
+<body>
+<div class="app-frame">
+
+    <!-- LEFT NAV RAIL -->
+    <nav class="rail">
+        <div class="rail-brand">
+            <div class="mark">S</div>
+            <div>
+                <div class="name">STILO AI PARTNERS</div>
+                <div class="sub">Client Console</div>
+            </div>
+        </div>
+
+        <div class="rail-section">Overview</div>
+        <a class="nav-item" data-nav="dashboard" href="/app/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+        </a>
+
+        <div class="rail-section">Agents</div>
+        <a class="nav-item" data-nav="echo" href="echo.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Receptionist
+        </a>
+        <a class="nav-item" data-nav="ignite" href="ignite.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+            Outbound Lead Reply
+        </a>
+        <a class="nav-item" data-nav="revive" href="revive.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Lost Customer Reactivation
+        </a>
+        <a class="nav-item" data-nav="leads" href="leads.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Lead Generator
+        </a>
+        <a class="nav-item" data-nav="forge" href="forge.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Website Builder
+        </a>
+        <a class="nav-item" data-nav="signal" href="signal.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            AI SEO
+        </a>
+        <a class="nav-item" data-nav="oracle" href="oracle.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Growth Intelligence
+        </a>
+        <a class="nav-item" data-nav="pitch" href="pitch.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            AI Sales Agent
+        </a>
+
+        <div class="rail-foot">
+            <a href="/app/">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign out
+            </a>
+        </div>
+    </nav>
+
+    <!-- CONTENT COLUMN -->
+    <div class="content">
+        <header class="topbar">
+            <h1>AI Sales Agent</h1>
+            <div class="topbar-right">
+                <span class="topbar-date" id="topbarDate"></span>
+                <div class="account-chip">
+                    <span class="avatar">M</span>
+                    <span class="who">Marcus Lindsey</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="page-intro animate-in">
+                <h2>AI Sales Agent</h2>
+                <p>Your pipeline, plus coaching on every consult call your team books. Marcus Lindsey Aesthetics &middot; Coral Gables, FL.</p>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs animate-in delay-1" role="tablist">
+                <button class="tab active" role="tab" aria-selected="true">Pipeline &amp; Coaching</button>
+                <button class="tab" role="tab" aria-selected="false">Call Library</button>
+                <button class="tab" role="tab" aria-selected="false">Follow-ups</button>
+                <button class="tab" role="tab" aria-selected="false">Settings</button>
+            </div>
+
+            <!-- KPI_STRIP -->
+            <div class="kpi-strip">
+                <div class="kpi-card highlight animate-in delay-1">
+                    <div class="kpi-label">Deals influenced</div>
+                    <div class="kpi-value">$42k</div>
+                    <div class="kpi-delta up">&#9650; 18% vs last month</div>
+                </div>
+                <div class="kpi-card animate-in delay-2">
+                    <div class="kpi-label">Calls coached</div>
+                    <div class="kpi-value">58</div>
+                    <div class="kpi-delta up">&#9650; 11 vs last month</div>
+                </div>
+                <div class="kpi-card animate-in delay-3">
+                    <div class="kpi-label">Talk-ratio</div>
+                    <div class="kpi-value">43%</div>
+                    <div class="kpi-delta up">&#9660; 9 pts, closer to target</div>
+                </div>
+                <div class="kpi-card animate-in delay-4">
+                    <div class="kpi-label">Follow-ups sent</div>
+                    <div class="kpi-value">120</div>
+                    <div class="kpi-delta flat">Auto &middot; within 6 min of call</div>
+                </div>
+                <div class="kpi-card animate-in delay-5">
+                    <div class="kpi-label">Win rate</div>
+                    <div class="kpi-value">28%</div>
+                    <div class="kpi-delta up">&#9650; 5 pts vs last month</div>
+                </div>
+            </div>
+
+            <!-- PIPELINE BOARD -->
+            <div class="panel col-span-2 animate-in delay-2" style="margin-bottom:16px;">
+                <div class="panel-head">
+                    <div>
+                        <h3>Pipeline</h3>
+                        <span class="panel-sub">22 open deals &middot; $96,400 weighted &middot; updated 8 min ago</span>
+                    </div>
+                    <button class="tiny-btn">Stage settings</button>
+                </div>
+                <div class="board-wrap">
+                    <div class="board">
+
+                        <!-- New inquiry -->
+                        <div class="board-col">
+                            <div class="board-col-head">
+                                <span class="col-name"><span class="dot" style="background:var(--text-tertiary)"></span>New inquiry</span>
+                                <span class="col-count">6</span>
+                            </div>
+                            <div class="board-col-total">$11,200</div>
+                            <div class="deal-card" data-deal="d1">
+                                <div class="deal-name">Daniela Rojas</div>
+                                <div class="deal-meta">Lip filler consult &middot; Instagram</div>
+                                <div class="deal-foot"><span class="deal-val">$1,400</span><span class="deal-age">2d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d2">
+                                <div class="deal-name">Priya Venkat</div>
+                                <div class="deal-meta">Botox + filler &middot; Referral</div>
+                                <div class="deal-foot"><span class="deal-val">$2,100</span><span class="deal-age">1d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d3">
+                                <div class="deal-name">Hannah Brooks</div>
+                                <div class="deal-meta">Morpheus8 &middot; Google</div>
+                                <div class="deal-foot"><span class="deal-val">$2,600</span><span class="deal-age">4d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d4">
+                                <div class="deal-name">Sofia Marchetti</div>
+                                <div class="deal-meta">Lip filler &middot; Walk-in</div>
+                                <div class="deal-foot"><span class="deal-val">$1,400</span><span class="deal-age">6d</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Consult booked -->
+                        <div class="board-col">
+                            <div class="board-col-head">
+                                <span class="col-name"><span class="dot" style="background:var(--blue)"></span>Consult booked</span>
+                                <span class="col-count">5</span>
+                            </div>
+                            <div class="board-col-total">$19,800</div>
+                            <div class="deal-card" data-deal="d5">
+                                <div class="deal-name">Renee Caldwell</div>
+                                <div class="deal-meta">Tox + filler package &middot; Tue 11:00</div>
+                                <div class="deal-foot"><span class="deal-val">$3,200</span><span class="deal-age">3d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d6">
+                                <div class="deal-name">Marisol Tejada</div>
+                                <div class="deal-meta">Morpheus8 series &middot; Wed 2:30</div>
+                                <div class="deal-foot"><span class="deal-val">$4,800</span><span class="deal-age">5d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d7">
+                                <div class="deal-name">Olivia Chen</div>
+                                <div class="deal-meta">Laser + skin plan &middot; Thu 9:30</div>
+                                <div class="deal-foot"><span class="deal-val">$3,600</span><span class="deal-age">2d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d8">
+                                <div class="deal-name">Gabriela Soto</div>
+                                <div class="deal-meta">Filler refresh &middot; Fri 1:00</div>
+                                <div class="deal-foot"><span class="deal-val">$1,800</span><span class="deal-age">1d</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Consulted -->
+                        <div class="board-col">
+                            <div class="board-col-head">
+                                <span class="col-name"><span class="dot" style="background:var(--purple-light)"></span>Consulted</span>
+                                <span class="col-count">5</span>
+                            </div>
+                            <div class="board-col-total">$26,300</div>
+                            <div class="deal-card" data-deal="d9">
+                                <div class="deal-name">Jordan Whitfield</div>
+                                <div class="deal-meta">Tox maintenance &middot; quote sent</div>
+                                <div class="deal-foot"><span class="deal-val">$2,400</span><span class="deal-age">2d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d10">
+                                <div class="deal-name">Camila Duarte</div>
+                                <div class="deal-meta">Morpheus8 series &middot; deciding</div>
+                                <div class="deal-foot"><span class="deal-val">$5,400</span><span class="deal-age">4d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d11">
+                                <div class="deal-name">Ashley Nguyen</div>
+                                <div class="deal-meta">Filler + tox &middot; weighing budget</div>
+                                <div class="deal-foot"><span class="deal-val">$3,100</span><span class="deal-age">7d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d12">
+                                <div class="deal-name">Bianca Russo</div>
+                                <div class="deal-meta">Skin resurfacing &middot; quote sent</div>
+                                <div class="deal-foot"><span class="deal-val">$4,200</span><span class="deal-age">3d</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Proposal sent -->
+                        <div class="board-col">
+                            <div class="board-col-head">
+                                <span class="col-name"><span class="dot" style="background:var(--yellow)"></span>Proposal sent</span>
+                                <span class="col-count">4</span>
+                            </div>
+                            <div class="board-col-total">$21,400</div>
+                            <div class="deal-card" data-deal="d13">
+                                <div class="deal-name">Natalie Park</div>
+                                <div class="deal-meta">Membership + tox &middot; follow-up 2</div>
+                                <div class="deal-foot"><span class="deal-val">$4,900</span><span class="deal-age">5d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d14">
+                                <div class="deal-name">Valeria Ortiz</div>
+                                <div class="deal-meta">Morpheus8 package &middot; awaiting reply</div>
+                                <div class="deal-foot"><span class="deal-val">$5,600</span><span class="deal-age">6d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d15">
+                                <div class="deal-name">Megan Foster</div>
+                                <div class="deal-meta">Full-face plan &middot; deposit pending</div>
+                                <div class="deal-foot"><span class="deal-val">$6,800</span><span class="deal-age">2d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d16">
+                                <div class="deal-name">Carmen Diaz</div>
+                                <div class="deal-meta">Tox + lip &middot; follow-up 1</div>
+                                <div class="deal-foot"><span class="deal-val">$4,100</span><span class="deal-age">3d</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Won -->
+                        <div class="board-col">
+                            <div class="board-col-head">
+                                <span class="col-name"><span class="dot" style="background:var(--green)"></span>Won this month</span>
+                                <span class="col-count">9</span>
+                            </div>
+                            <div class="board-col-total accent">$28,700</div>
+                            <div class="deal-card" data-deal="d17">
+                                <div class="deal-name">Isabella Greer</div>
+                                <div class="deal-meta">Morpheus8 series &middot; closed Mon</div>
+                                <div class="deal-foot"><span class="deal-val">$5,400</span><span class="deal-age">3d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d18">
+                                <div class="deal-name">Taylor Brennan</div>
+                                <div class="deal-meta">Tox + filler &middot; closed Wed</div>
+                                <div class="deal-foot"><span class="deal-val">$3,300</span><span class="deal-age">1d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d19">
+                                <div class="deal-name">Lucia Ramirez</div>
+                                <div class="deal-meta">Membership &middot; closed Fri</div>
+                                <div class="deal-foot"><span class="deal-val">$2,900</span><span class="deal-age">5d</span></div>
+                            </div>
+                            <div class="deal-card" data-deal="d20">
+                                <div class="deal-name">Erin Maxwell</div>
+                                <div class="deal-meta">Laser package &middot; closed Tue</div>
+                                <div class="deal-foot"><span class="deal-val">$4,600</span><span class="deal-age">2d</span></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW: Scorecard + Win/loss chart -->
+            <div class="content-grid">
+
+                <!-- CALL COACHING SCORECARD -->
+                <div class="panel animate-in delay-3">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Latest call coached</h3>
+                            <span class="panel-sub">Renee Caldwell &middot; Tox + filler package</span>
+                        </div>
+                        <span class="pill-status pill-green">Strong call</span>
+                    </div>
+                    <div class="scorecard">
+                        <div class="score-head">
+                            <div class="score-ring">
+                                <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+                                    <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="6"/>
+                                    <circle cx="32" cy="32" r="27" fill="none" stroke="#60a5fa" stroke-width="6"
+                                            stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="32"
+                                            transform="rotate(-90 32 32)"/>
+                                </svg>
+                                <span class="score-num">81</span>
+                            </div>
+                            <div class="score-who">
+                                <div class="name">Coaching score: 81 / 100</div>
+                                <div class="ctx">Closed by Dana R. &middot; 14 min call &middot; Tue 11:04 AM</div>
+                            </div>
+                        </div>
+
+                        <div class="score-rows">
+                            <div class="score-row">
+                                <div class="score-row-top">
+                                    <span class="lbl"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Talk ratio (rep)</span>
+                                    <span class="val good">43%</span>
+                                </div>
+                                <div class="score-bar"><span class="good" style="width:43%"></span></div>
+                            </div>
+                            <div class="score-row">
+                                <div class="score-row-top">
+                                    <span class="lbl"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>Discovery questions</span>
+                                    <span class="val good">9 asked</span>
+                                </div>
+                                <div class="score-bar"><span class="good" style="width:75%"></span></div>
+                            </div>
+                            <div class="score-row">
+                                <div class="score-row-top">
+                                    <span class="lbl"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Next step set</span>
+                                    <span class="val good">Yes</span>
+                                </div>
+                                <div class="score-bar"><span class="good" style="width:100%"></span></div>
+                            </div>
+                            <div class="score-row">
+                                <div class="score-row-top">
+                                    <span class="lbl"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Price framed before quote</span>
+                                    <span class="val warn">Late</span>
+                                </div>
+                                <div class="score-bar"><span class="warn" style="width:55%"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- THE ONE AI SKELETON-TO-TEXT MOMENT -->
+                        <div class="ai-block" style="margin-top:4px;">
+                            <span class="ai-tag">Coach feedback</span>
+                            <div class="ai-skeleton" aria-hidden="true"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+                            <p class="ai-text">Dana ran a clean discovery, 9 questions before pitching, and locked a same-week follow-up. The one miss: price came up <b>11 minutes in</b>, after Renee had already asked twice. Frame the package range earlier next time so the close feels expected, not negotiated. Renee leaned in hardest on <b>downtime</b>, so lead the proposal with the recovery timeline, not the price.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WIN / LOSS TREND CHART -->
+                <div class="panel animate-in delay-4">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Win rate trend</h3>
+                            <span class="panel-sub">consults to closed, last 8 weeks</span>
+                        </div>
+                        <span class="pill-status pill-blue">Up 5 pts</span>
+                    </div>
+                    <div class="chart-wrap">
+                        <div class="chart-legend">
+                            <span class="lg"><span class="swatch" style="background:#60a5fa"></span>Win rate</span>
+                            <span class="lg"><span class="swatch" style="background:var(--text-muted)"></span>Consults held</span>
+                            <span class="lg"><span class="swatch dot" style="background:#60a5fa"></span>This week</span>
+                        </div>
+                        <svg viewBox="0 0 560 200" width="100%" height="200" preserveAspectRatio="none" role="img" aria-label="Weekly win rate climbing from 19 percent eight weeks ago to 28 percent this week">
+                            <defs>
+                                <filter id="lineGlow" x="-20%" y="-40%" width="140%" height="180%">
+                                    <feGaussianBlur stdDeviation="2.2" result="b"/>
+                                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                </filter>
+                                <linearGradient id="winFill" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#2563eb" stop-opacity="0.22"/>
+                                    <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+
+                            <!-- horizontal grid lines -->
+                            <line x1="0" y1="40" x2="560" y2="40" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+                            <line x1="0" y1="90" x2="560" y2="90" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+                            <line x1="0" y1="140" x2="560" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+
+                            <!-- consults-held muted reference line -->
+                            <path d="M0,128 L80,120 L160,132 L240,112 L320,118 L400,108 L480,114 L560,104"
+                                  fill="none" stroke="var(--text-muted)" stroke-width="1.5"
+                                  stroke-dasharray="4 5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                            <!-- win-rate area fill -->
+                            <path d="M0,150 L80,142 L160,134 L240,118 L320,110 L400,96 L480,84 L560,70 L560,200 L0,200 Z" fill="url(#winFill)"/>
+                            <!-- win-rate line -->
+                            <path d="M0,150 L80,142 L160,134 L240,118 L320,110 L400,96 L480,84 L560,70"
+                                  fill="none" stroke="#60a5fa" stroke-width="2.5"
+                                  stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>
+
+                            <!-- points -->
+                            <g fill="#60a5fa">
+                                <circle cx="0" cy="150" r="3"/>
+                                <circle cx="80" cy="142" r="3"/>
+                                <circle cx="160" cy="134" r="3"/>
+                                <circle cx="240" cy="118" r="3"/>
+                                <circle cx="320" cy="110" r="3"/>
+                                <circle cx="400" cy="96" r="3"/>
+                                <circle cx="480" cy="84" r="3"/>
+                                <circle cx="560" cy="70" r="4" filter="url(#lineGlow)"/>
+                            </g>
+
+                            <!-- x-axis week labels -->
+                            <g fill="#65657a" font-family="Geist Mono, monospace" font-size="9">
+                                <text x="0" y="194">Apr 7</text>
+                                <text x="150" y="194">Apr 21</text>
+                                <text x="305" y="194">May 5</text>
+                                <text x="455" y="194">May 19</text>
+                            </g>
+                        </svg>
+                        <div class="chart-foot">
+                            <div class="chart-stat">
+                                <span class="label">Win rate</span>
+                                <span class="val accent">28%</span>
+                            </div>
+                            <div class="chart-stat">
+                                <span class="label">8 weeks ago</span>
+                                <span class="val">19%</span>
+                            </div>
+                            <div class="chart-stat">
+                                <span class="label">Consults held</span>
+                                <span class="val">58</span>
+                            </div>
+                            <div class="chart-stat">
+                                <span class="label">Closed won</span>
+                                <span class="val">16</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW: Recent calls table + Follow-up feed -->
+            <div class="content-grid" style="margin-top:16px;">
+
+                <!-- RECENT COACHED CALLS -->
+                <div class="panel animate-in delay-5">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Recent coached calls</h3>
+                            <span class="panel-sub">last 7 days</span>
+                        </div>
+                        <span class="panel-sub">tap a row for the breakdown</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Prospect</th><th>Score</th><th>Talk %</th><th class="num">Length</th><th>Next step</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr data-deal="d5">
+                                <td><strong>Renee Caldwell</strong><br><span class="muted" style="font-size:11px">Dana R. &middot; Tue 11:04</span></td>
+                                <td><span class="pill-status pill-green">81</span></td>
+                                <td class="num">43%</td>
+                                <td class="num">14:08</td>
+                                <td>Booked Tue</td>
+                            </tr>
+                            <tr data-deal="d10">
+                                <td><strong>Camila Duarte</strong><br><span class="muted" style="font-size:11px">Dana R. &middot; Mon 3:20</span></td>
+                                <td><span class="pill-status pill-green">76</span></td>
+                                <td class="num">49%</td>
+                                <td class="num">17:42</td>
+                                <td>Deciding</td>
+                            </tr>
+                            <tr data-deal="d9">
+                                <td><strong>Jordan Whitfield</strong><br><span class="muted" style="font-size:11px">Alex M. &middot; Mon 10:15</span></td>
+                                <td><span class="pill-status pill-yellow">62</span></td>
+                                <td class="num">58%</td>
+                                <td class="num">9:31</td>
+                                <td>Quote sent</td>
+                            </tr>
+                            <tr data-deal="d11">
+                                <td><strong>Ashley Nguyen</strong><br><span class="muted" style="font-size:11px">Alex M. &middot; Sun 1:48</span></td>
+                                <td><span class="pill-status pill-yellow">59</span></td>
+                                <td class="num">61%</td>
+                                <td class="num">8:12</td>
+                                <td><span class="muted">None set</span></td>
+                            </tr>
+                            <tr data-deal="d6">
+                                <td><strong>Marisol Tejada</strong><br><span class="muted" style="font-size:11px">Dana R. &middot; Sat 12:30</span></td>
+                                <td><span class="pill-status pill-green">79</span></td>
+                                <td class="num">45%</td>
+                                <td class="num">15:55</td>
+                                <td>Consult Wed</td>
+                            </tr>
+                            <tr data-deal="d8">
+                                <td><strong>Gabriela Soto</strong><br><span class="muted" style="font-size:11px">Alex M. &middot; Fri 4:02</span></td>
+                                <td><span class="pill-status pill-green">73</span></td>
+                                <td class="num">51%</td>
+                                <td class="num">11:20</td>
+                                <td>Consult Fri</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="panel-foot">
+                        <span>58 calls coached this month</span>
+                        <button class="tiny-btn">Open call library</button>
+                    </div>
+                </div>
+
+                <!-- FOLLOW-UP AUTOMATION FEED -->
+                <div class="panel animate-in delay-6">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Follow-ups sent</h3>
+                            <span class="panel-sub">auto-sent after each call</span>
+                        </div>
+                        <span class="panel-sub">120 this month</span>
+                    </div>
+                    <div class="feed">
+                        <div class="feed-row">
+                            <div class="feed-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+                            <div class="feed-body">
+                                <div class="feed-title">Recap email to Renee Caldwell</div>
+                                <div class="feed-desc">Package summary plus downtime guide &middot; opened twice</div>
+                            </div>
+                            <div class="feed-time">6m ago</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></div>
+                            <div class="feed-body">
+                                <div class="feed-title">Text nudge to Camila Duarte</div>
+                                <div class="feed-desc">Before/after gallery for Morpheus8 &middot; replied "love these"</div>
+                            </div>
+                            <div class="feed-time">52m ago</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+                            <div class="feed-body">
+                                <div class="feed-title">Proposal sent to Megan Foster</div>
+                                <div class="feed-desc">Full-face plan with deposit link &middot; sequence step 1 of 3</div>
+                            </div>
+                            <div class="feed-time">3h ago</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+                            <div class="feed-body">
+                                <div class="feed-title">Day-2 check-in to Jordan Whitfield</div>
+                                <div class="feed-desc">Quote recap plus financing option &middot; not opened yet</div>
+                            </div>
+                            <div class="feed-time">Yesterday</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+                            <div class="feed-body">
+                                <div class="feed-title">Booking confirmed: Marisol Tejada</div>
+                                <div class="feed-desc">Replied to reminder, consult set for Wed 2:30</div>
+                            </div>
+                            <div class="feed-time">Yesterday</div>
+                        </div>
+                        <div class="feed-row">
+                            <div class="feed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></div>
+                            <div class="feed-body">
+                                <div class="feed-title">Re-engage text to Ashley Nguyen</div>
+                                <div class="feed-desc">No next step on call, nudged with consult times &middot; 2 days</div>
+                            </div>
+                            <div class="feed-time">2d ago</div>
+                        </div>
+                    </div>
+                    <div class="panel-foot">
+                        <span class="auto-on"><span class="pulse"></span>Automation on</span>
+                        <button class="tiny-btn">Edit sequences</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ===================== DEAL DRAWER ===================== -->
+<div class="drawer-overlay" id="ov"></div>
+<aside class="drawer" id="dw" aria-hidden="true">
+    <button class="drawer-close" id="dwClose" aria-label="Close panel">&times;</button>
+    <div class="drawer-eyebrow"><span class="pill-status" id="dwPill">In progress</span><span class="drawer-sub" id="dwStage"></span></div>
+    <h2 id="dwName">Deal</h2>
+    <div class="drawer-sub" id="dwService"></div>
+
+    <div class="drawer-section">
+        <h3>Deal snapshot</h3>
+        <div class="drawer-kv" id="dwKvs"></div>
+    </div>
+
+    <div class="drawer-section">
+        <h3>What the agent heard</h3>
+        <div id="dwWhy"></div>
+    </div>
+
+    <div class="drawer-section">
+        <h3>Activity</h3>
+        <ul class="drawer-timeline" id="dwTimeline"></ul>
+    </div>
+
+    <div class="drawer-section">
+        <h3>Recommended next move</h3>
+        <div class="drawer-prose" id="dwAction"></div>
+        <button class="drawer-btn-primary" id="dwPrimaryBtn">Send follow-up</button>
+        <button class="drawer-btn-ghost">View full transcript</button>
+    </div>
+</aside>
+
+<script>
+    // ---- Active nav + topbar date ----
+    (function () {
+        var active = 'pitch';
+        var el = document.querySelector('.nav-item[data-nav="' + active + '"]');
+        if (el) el.classList.add('active');
+        var d = new Date();
+        var dt = document.getElementById('topbarDate');
+        if (dt) dt.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    })();
+
+    // ---- Tab bar (visual only; Pipeline & Coaching is the live tab) ----
+    (function () {
+        var tabs = document.querySelectorAll('.tab');
+        tabs.forEach(function (t) {
+            t.addEventListener('click', function () {
+                tabs.forEach(function (x) { x.classList.remove('active'); x.setAttribute('aria-selected', 'false'); });
+                t.classList.add('active');
+                t.setAttribute('aria-selected', 'true');
+            });
+        });
+    })();
+
+    // ---- Deal drawer ----
+    (function () {
+        var ov = document.getElementById('ov');
+        var dw = document.getElementById('dw');
+        var close = document.getElementById('dwClose');
+
+        var data = {
+            d5: {
+                pill: 'pill-blue', pillText: 'Consult booked', stage: 'Consult booked &middot; Tue 11:00',
+                name: 'Renee Caldwell', service: 'Tox + filler package &middot; first visit',
+                kvs: [['Deal value', '$3,200'], ['Probability', '70%'], ['Source', 'Referral'], ['Owner', 'Dana R.']],
+                why: '<p class="drawer-prose">Renee asked about <b>downtime</b> twice and mentioned an event in <b>three weeks</b>. Budget never came up as a blocker, so the package price should land fine once the recovery timeline is clear.</p>',
+                timeline: [
+                    ['Tue 11:04 AM', 'Consult call coached, scored <b>81</b>'],
+                    ['Tue 11:11 AM', 'Recap email sent, opened twice'],
+                    ['Tue, today', 'Booked for Tuesday treatment']
+                ],
+                action: '<p class="drawer-prose">Send the <b>downtime guide</b> a day before her appointment and confirm the event date so the plan fits her timeline. High intent, keep it warm.</p>',
+                btn: 'Send downtime guide'
+            },
+            d10: {
+                pill: 'pill-yellow', pillText: 'Consulted', stage: 'Consulted &middot; deciding',
+                name: 'Camila Duarte', service: 'Morpheus8 series &middot; 3 sessions',
+                kvs: [['Deal value', '$5,400'], ['Probability', '55%'], ['Source', 'Instagram'], ['Owner', 'Dana R.']],
+                why: '<p class="drawer-prose">Camila loved the before/after results and replied "love these" to the gallery text. She is weighing the <b>3-session commitment</b>, not the price. Social proof is what moves her.</p>',
+                timeline: [
+                    ['Mon 3:20 PM', 'Consult call coached, scored <b>76</b>'],
+                    ['Mon 3:31 PM', 'Before/after gallery sent by text'],
+                    ['52 min ago', 'Replied "love these"']
+                ],
+                action: '<p class="drawer-prose">Offer to split the series into a <b>pay-per-session</b> start so the commitment feels smaller. Add one more local before/after that matches her concern.</p>',
+                btn: 'Offer per-session start'
+            },
+            d9: {
+                pill: 'pill-yellow', pillText: 'Consulted', stage: 'Consulted &middot; quote sent',
+                name: 'Jordan Whitfield', service: 'Tox maintenance &middot; quarterly',
+                kvs: [['Deal value', '$2,400'], ['Probability', '45%'], ['Source', 'Google'], ['Owner', 'Alex M.']],
+                why: '<p class="drawer-prose">Talk ratio ran high at <b>58%</b>, so Alex did most of the talking and asked few questions. Jordan went quiet after the quote and has not opened the day-2 email.</p>',
+                timeline: [
+                    ['Mon 10:15 AM', 'Consult call coached, scored <b>62</b>'],
+                    ['Mon 10:40 AM', 'Quote sent with financing option'],
+                    ['Yesterday', 'Day-2 check-in sent, not opened']
+                ],
+                action: '<p class="drawer-prose">Switch channels. A short <b>text</b> tends to land when email goes cold. Ask one open question about what is holding the decision, then stop.</p>',
+                btn: 'Send text nudge'
+            },
+            d15: {
+                pill: 'pill-yellow', pillText: 'Proposal sent', stage: 'Proposal sent &middot; deposit pending',
+                name: 'Megan Foster', service: 'Full-face plan &middot; tox, filler, skin',
+                kvs: [['Deal value', '$6,800'], ['Probability', '60%'], ['Source', 'Referral'], ['Owner', 'Dana R.']],
+                why: '<p class="drawer-prose">Biggest open deal in the pipeline. Megan asked for a <b>phased plan</b> she could start this month and finish over the summer. Strong fit, just needs the deposit step made easy.</p>',
+                timeline: [
+                    ['Sat 1:00 PM', 'Consult call coached, scored <b>83</b>'],
+                    ['3 hours ago', 'Proposal sent with deposit link'],
+                    ['Sequence', 'Step 1 of 3, reminders queued']
+                ],
+                action: '<p class="drawer-prose">Call to walk her through the <b>phased schedule</b> in person. A live 5-minute call on a deal this size beats another email. Confirm the start date and take the deposit on the call.</p>',
+                btn: 'Schedule the call'
+            }
+        };
+
+        function openDeal(id) {
+            var d = data[id];
+            if (!d) return;
+            var pill = document.getElementById('dwPill');
+            pill.className = 'pill-status ' + d.pill;
+            pill.textContent = d.pillText;
+            document.getElementById('dwStage').innerHTML = d.stage;
+            document.getElementById('dwName').textContent = d.name;
+            document.getElementById('dwService').innerHTML = d.service;
+            document.getElementById('dwKvs').innerHTML = d.kvs.map(function (kv) {
+                return '<div class="kv"><div class="k">' + kv[0] + '</div><div class="v">' + kv[1] + '</div></div>';
+            }).join('');
+            document.getElementById('dwWhy').innerHTML = d.why;
+            document.getElementById('dwTimeline').innerHTML = d.timeline.map(function (t) {
+                return '<li><span class="t-when">' + t[0] + '</span>' + t[1] + '</li>';
+            }).join('');
+            document.getElementById('dwAction').innerHTML = d.action;
+            document.getElementById('dwPrimaryBtn').textContent = d.btn;
+            dw.setAttribute('aria-hidden', 'false');
+            ov.classList.add('open');
+            dw.classList.add('open');
+        }
+        function closeDeal() {
+            ov.classList.remove('open');
+            dw.classList.remove('open');
+            dw.setAttribute('aria-hidden', 'true');
+        }
+
+        document.querySelectorAll('[data-deal]').forEach(function (el) {
+            el.addEventListener('click', function () {
+                var id = el.getAttribute('data-deal');
+                if (data[id]) openDeal(id);
+            });
+        });
+        ov.addEventListener('click', closeDeal);
+        close.addEventListener('click', closeDeal);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDeal(); });
+    })();
+</script>
+</body>
+</html>

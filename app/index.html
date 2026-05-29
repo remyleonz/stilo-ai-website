@@ -1313,7 +1313,7 @@
     <header class="topbar">
         <div class="topbar-left">
             <div class="logo" onclick="window.location.reload()" style="cursor:pointer;" title="Refresh">
-                <img class="logo-desktop" src="/assets/3dLOGOSTILOAI.png" alt="STILO AI PARTNERS" />
+                <img class="logo-desktop" src="/assets/new3DLogoSTILOAI.png" alt="STILO AI PARTNERS" />
                 <img class="logo-mobile"  src="/assets/STILOMOBILELOGO.png" alt="STILO AI PARTNERS" />
             </div>
         </div>
@@ -1966,12 +1966,14 @@
                 // SCOUT (Lead Generator) has its own dedicated leads dashboard
                 // at /app/leads.html — that's the actual product, not the
                 // generic /app/agents/?agent=scout config page.
-                var primaryHref = (agent.agent_type === 'scout' || agent.agent_type === 'lead_generator')
-                    ? '/app/leads.html'
-                    : '/app/agents/?agent=' + agent.agent_type;
-                var primaryLabel = (agent.agent_type === 'scout' || agent.agent_type === 'lead_generator')
-                    ? 'Open lead dashboard'
-                    : 'Configure';
+                // Each agent now has its own rich dashboard page under
+                // /app/agents/<type>.html (SCOUT keeps the original leads.html).
+                // Anything without a dedicated page falls back to the generic config.
+                var DASH_PAGES = { echo: '/app/agents/echo.html', ignite: '/app/agents/ignite.html', revive: '/app/agents/revive.html', forge: '/app/agents/forge.html', signal: '/app/agents/signal.html', oracle: '/app/agents/oracle.html', pitch: '/app/agents/pitch.html' };
+                var scoutLike = (agent.agent_type === 'scout' || agent.agent_type === 'lead_generator');
+                var dashHref = scoutLike ? '/app/leads.html' : DASH_PAGES[agent.agent_type];
+                var primaryHref = dashHref || ('/app/agents/?agent=' + agent.agent_type);
+                var primaryLabel = dashHref ? 'Open dashboard' : 'Configure';
                 body = '<div class="agent-stats">'
                     + '<div style="color:var(--text-tertiary);font-size:0.8125rem;padding:4px 0;">Stats appear once this agent has handled events.</div>'
                 + '</div>'
