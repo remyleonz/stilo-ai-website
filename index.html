@@ -185,7 +185,7 @@ nav.scrolled{padding:10px 0;backdrop-filter:blur(18px);-webkit-backdrop-filter:b
 }
 .nav-logo:hover{opacity:0.85}
 .nav-logo-mark{width:52px;height:52px;border-radius:8px;object-fit:contain;display:none;background:transparent;filter:drop-shadow(0 2px 8px rgba(45,79,184,0.45))}
-.nav-logo-wordmark{height:62px;width:auto;display:none;object-fit:contain;filter:drop-shadow(0 2px 10px rgba(45,79,184,0.5))}
+.nav-logo-wordmark{height:62px;width:auto;display:none;object-fit:contain;filter:brightness(1.5) contrast(1.06) saturate(1.1) drop-shadow(0 2px 10px rgba(45,79,184,0.55))}
 .nav-logo.has-wordmark .nav-logo-text{display:none !important}
 .nav-logo.has-wordmark .nav-logo-wordmark{display:inline-block}
 .nav-logo-text{display:none}
@@ -718,7 +718,7 @@ section{padding:160px 0}
 .hero h1 .line.in .line-inner{transform:translateY(0)}
 .hero h1 em{
   font-family:var(--font-display);font-style:normal;font-weight:700;
-  background:linear-gradient(135deg,#5A7BE8 0%,#2D4FB8 50%,#1E3A8A 100%);
+  background:linear-gradient(135deg,#7DA2FF 0%,#4F7BFF 50%,#2563EB 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
   letter-spacing:-0.01em;padding-right:0.04em;
 }
@@ -737,25 +737,25 @@ section{padding:160px 0}
 }
 @media (max-width:960px){.hero-3d-stage{min-height:260px}}
 .hero-3d-logo-wrap{
-  position:relative;width:min(560px,90%);
-  filter:drop-shadow(0 24px 80px rgba(45,79,184,0.7)) drop-shadow(0 4px 22px rgba(96,165,250,0.4));
-  transform-style:preserve-3d;
-  animation:logoEntrance 1.8s var(--ease-out) both, logoIdleSpin 28s linear 1.8s infinite;
+  position:relative;width:min(680px,100%);
+  filter:brightness(1.55) contrast(1.06) saturate(1.1) drop-shadow(0 24px 80px rgba(45,79,184,0.7)) drop-shadow(0 4px 22px rgba(96,165,250,0.45));
+  transform-style:preserve-3d;backface-visibility:visible;
+  animation:logoDropIn 1.5s var(--ease-out) both, logoSpinLoop 13s ease-in-out 1.6s infinite;
 }
 .hero-3d-logo{width:100%;height:auto;display:block}
-/* Entrance: starts off-screen-right, rotated, scaled down, lands face-on. */
-@keyframes logoEntrance{
-  0%   { transform: translateX(60%) rotateY(-540deg) scale(0.65); opacity:0; }
+/* Entrance: drops in from above the top edge of the screen and lands face-on. */
+@keyframes logoDropIn{
+  0%   { transform: translateY(-60vh) rotateY(0deg) scale(0.7); opacity:0; }
   55%  { opacity:1; }
-  100% { transform: translateX(0)    rotateY(0deg)    scale(1);    opacity:1; }
+  100% { transform: translateY(0)     rotateY(0deg) scale(1);   opacity:1; }
 }
-/* Idle: gentle tilt + bob so the logo "lives" without ever going edge-on. */
-@keyframes logoIdleSpin{
-  0%   { transform: rotateY(0deg)  rotateX(0deg); }
-  25%  { transform: rotateY(10deg) rotateX(-3deg); }
-  50%  { transform: rotateY(0deg)  rotateX(0deg); }
-  75%  { transform: rotateY(-10deg) rotateX(3deg); }
-  100% { transform: rotateY(0deg)  rotateX(0deg); }
+/* Loop: rest face-on for ~5s, do a quick full Y-axis turn, rest again, repeat.
+   Long holds keep the wordmark readable; the turn is a brief flourish.
+   720deg renders identically to 0deg, so the loop restarts seamlessly. */
+@keyframes logoSpinLoop{
+  0%,   42%  { transform: rotateY(0deg); }
+  50%,  92%  { transform: rotateY(360deg); }
+  100%       { transform: rotateY(720deg); }
 }
 @media (prefers-reduced-motion: reduce){
   .hero-3d-logo-wrap{animation:none}
@@ -1325,7 +1325,7 @@ flex-wrap:wrap}
 }
 .final-cta-headline em{
   font-family:var(--font-display);font-style:normal;font-weight:700;
-  background:linear-gradient(135deg,#5A7BE8 0%,#2D4FB8 50%,#1E3A8A 100%);
+  background:linear-gradient(135deg,#7DA2FF 0%,#4F7BFF 50%,#2563EB 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
 }
 .final-cta-sub{
@@ -1386,7 +1386,7 @@ flex-wrap:wrap}
   padding:48px 44px;
   border-radius:24px;
   background:linear-gradient(135deg,rgba(13,17,30,0.85) 0%,rgba(10,14,26,0.85) 50%,rgba(8,12,22,0.85) 100%);
-  border:1px solid rgba(45,79,184,0.18);
+  border:1px solid transparent; /* outer frame removed so only the image box reads */
   position:relative;overflow:hidden;
 }
 .industry-panel::before{
@@ -1678,7 +1678,7 @@ section,.partners{background:transparent !important}
 .hero h1 em,.hero h1 .ai-accent{
   font-family:var(--font-display),'Saira',system-ui,sans-serif;
   font-style:normal;font-weight:700;
-  background:linear-gradient(135deg,#5A7BE8 0%,#2D4FB8 50%,#1E3A8A 100%);
+  background:linear-gradient(135deg,#7DA2FF 0%,#4F7BFF 50%,#2563EB 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
   letter-spacing:-0.005em;
   text-shadow:none;
@@ -1745,8 +1745,8 @@ section,.partners{background:transparent !important}
 .agent-stage{
   /* 16:9 matches the Remotion V2 renders (1920x1080) — no letterbox, no crop. */
   position:relative;width:100%;aspect-ratio:16/9;
-  background:#e6e8ef; /* light-gray, contrasts vs dark page */
-  border:1px solid rgba(255,255,255,0.06);border-radius:22px;overflow:hidden;
+  background:#14141c; /* dark dashboard surface, matches the app dark theme */
+  border:1px solid rgba(96,165,250,0.14);border-radius:22px;overflow:hidden;
   box-shadow:0 50px 120px rgba(0,0,0,0.55),0 0 0 1px rgba(45,79,184,0.18),0 0 100px rgba(30,58,138,0.22);
 }
 .agent-stage::before{
@@ -1755,7 +1755,7 @@ section,.partners{background:transparent !important}
 }
 .agent-stage video{
   position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-  background:#e6e8ef;
+  background:#14141c;
   opacity:0;transition:opacity .4s var(--ease-out);
 }
 .agent-stage video.active{opacity:1;z-index:1}
@@ -1781,27 +1781,27 @@ section,.partners{background:transparent !important}
 .agent-mockups{position:relative;width:100%;min-height:420px;perspective:1400px}
 @media (max-width:960px){.agent-mockups{min-height:360px}}
 .agent-mockup{
-  position:absolute;width:84%;background:#e6e8ef;color:#0f1320;
+  position:absolute;width:84%;background:#14141c;color:#e7e9f2;
   border-radius:14px;overflow:hidden;
-  box-shadow:0 30px 70px rgba(0,0,0,0.5),0 0 0 1px rgba(45,79,184,0.18);
-  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 30px 70px rgba(0,0,0,0.6),0 0 0 1px rgba(96,165,250,0.22);
+  border:1px solid rgba(96,165,250,0.16);
   font-family:var(--font-display),'Saira',system-ui,sans-serif;
 }
 .agent-mockup-back  {top:0;     right:0;  transform:rotate(2.5deg);  z-index:1}
 .agent-mockup-front {bottom:0;  left:0;   transform:rotate(-2.5deg); z-index:2}
-.agent-mockup-head{padding:10px 14px;background:#d6d9e3;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.06)}
+.agent-mockup-head{padding:10px 14px;background:#1c1c28;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06)}
 .agent-mockup-head .dots{display:flex;gap:5px}
-.agent-mockup-head .dot{width:8px;height:8px;border-radius:50%;background:#c0c4cf}
-.agent-mockup-head .title{font-size:11px;font-weight:600;color:#3a3f4f;letter-spacing:0.01em}
+.agent-mockup-head .dot{width:8px;height:8px;border-radius:50%;background:#39394d}
+.agent-mockup-head .title{font-size:11px;font-weight:600;color:#aeb4c7;letter-spacing:0.01em}
 .agent-mockup-body{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
-.agent-mockup-body .label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#5a627a}
-.agent-mockup-body .value{font-size:1.6rem;font-weight:700;color:#0f1320;letter-spacing:-0.02em;line-height:1}
-.agent-mockup-body .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(0,0,0,0.06);font-size:12px}
+.agent-mockup-body .label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#8b93ad}
+.agent-mockup-body .value{font-size:1.6rem;font-weight:700;color:#ffffff;letter-spacing:-0.02em;line-height:1}
+.agent-mockup-body .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:12px}
 .agent-mockup-body .row:first-of-type{border-top:none}
-.agent-mockup-body .row b{font-weight:600;color:#0f1320}
-.agent-mockup-body .row span{color:#5a627a;font-family:var(--font-mono);font-size:11px}
-.agent-mockup-body .accent{color:var(--accent);font-weight:700}
-.agent-mockup-body .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(45,79,184,0.12);color:var(--accent);font-size:10px;font-weight:600;letter-spacing:0.04em}
+.agent-mockup-body .row b{font-weight:600;color:#e7e9f2}
+.agent-mockup-body .row span{color:#8b93ad;font-family:var(--font-mono);font-size:11px}
+.agent-mockup-body .accent{color:var(--accent-hi);font-weight:700}
+.agent-mockup-body .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(96,165,250,0.16);color:var(--accent-hi);font-size:10px;font-weight:600;letter-spacing:0.04em}
 
 @media (max-width:720px){
   .agent-stage{aspect-ratio:4/3}
@@ -1826,7 +1826,7 @@ section,.partners{background:transparent !important}
   display:grid !important;
   grid-template-columns:minmax(0,1fr) auto;
   column-gap:32px;row-gap:20px;
-  align-items:start;
+  align-items:center;
 }
 .agent-content.active > h2,
 .agent-content.active > .agent-panel-body{
@@ -2205,7 +2205,7 @@ section,.partners{background:transparent !important}
   grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;
   border-radius:24px;padding:56px 48px;
   background:linear-gradient(135deg,rgba(13,17,30,0.85) 0%,rgba(10,14,26,0.85) 50%,rgba(8,12,22,0.85) 100%);
-  border:1px solid rgba(45,79,184,0.18);
+  border:1px solid transparent; /* outer frame removed so only the image box reads */
   position:relative;overflow:hidden;
 }
 .case-card::before{
@@ -2248,7 +2248,7 @@ section,.partners{background:transparent !important}
    ============================================================ */
 
 /* HERO V3.2 — bigger, one-line, lower position */
-.hero{padding:240px 0 100px !important;align-items:flex-start !important}
+.hero{padding:96px 0 80px !important;align-items:center !important}
 .hero .container{padding-top:80px}
 .hero h1{
   font-size:clamp(2.2rem,4.6vw,4rem) !important;
@@ -2315,7 +2315,7 @@ section,.partners{background:transparent !important}
   font-weight:800;
   font-size:clamp(2.4rem,5.2vw,4.6rem);
   letter-spacing:-0.02em;
-  background:linear-gradient(135deg,#5A7BE8 0%,#2D4FB8 50%,#1E3A8A 100%);
+  background:linear-gradient(135deg,#7DA2FF 0%,#4F7BFF 50%,#2563EB 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
   display:inline-block;
 }

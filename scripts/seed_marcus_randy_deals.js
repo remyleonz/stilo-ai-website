@@ -2,7 +2,7 @@
 /**
  * Seed demo deals for Marcus Lindsey Cleaning + Randy Rejuvenation Clinic.
  *
- * Marcus (last month):  SCOUT (lead_generator)  $4,000 + $1,750/mo
+ * Marcus (last month, the 10th):  SCOUT (lead_generator)  $4,000 + $2,000/mo
  * Randy  (this month):  FORGE (website)         $3,000 + $500/mo
  *                       SIGNAL (ai_seo)         $1,500 one-time
  *
@@ -154,8 +154,8 @@ async function ensureDeal(opts) {
 // ------------------------------------------------------------------
 async function main() {
     const now = new Date();
-    // "Last month" close date for Marcus — middle of April (one month prior)
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 18, 14, 0, 0).toISOString();
+    // "Last month" close date for Marcus — the 10th of the prior month
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 10, 14, 0, 0).toISOString();
     // "This month" for Randy — week ago in current month
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), Math.max(1, now.getDate() - 7), 11, 30, 0).toISOString();
 
@@ -185,11 +185,11 @@ async function main() {
         contact_email: 'marcuslindsey8@gmail.com',
         agent_codes: ['scout'],
         upfront_fee_cents: 400000,
-        monthly_retainer_cents: 175000,
+        monthly_retainer_cents: 200000,
         stage: 'ONBOARDING',
         closed_at: lastMonth,
         paid_at: lastMonth,
-        notes: SEED_TAG + ' — Marcus Lindsey Cleaning, SCOUT (Lead Generator), $4,000 + $1,750/mo. Friends-and-family. Eventually make this agent free per Remy.'
+        notes: SEED_TAG + ' — Marcus Lindsey Cleaning, SCOUT (Lead Generator), $4,000 + $2,000/mo. Friends-and-family. Eventually make this agent free per Remy.'
     });
     console.log('  → deal', marcusDealId);
     console.log();

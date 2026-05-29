@@ -514,7 +514,11 @@
            it back. */
         body.sidebar-collapsed .sidebar { transform: translateX(-100%); }
         body.sidebar-collapsed .main-content { margin-left: 0; }
-        body.sidebar-collapsed .sidebar-expand-handle { display: flex; }
+        /* When collapsed, the expand affordance lives INSIDE the page header
+           (see .header-expand-btn) so it sits inline to the left of the page
+           title instead of floating on top of it. The old floating handle is
+           kept in the DOM but intentionally never shown. */
+        body.sidebar-collapsed .header-expand-btn { display: inline-flex; }
 
         .sidebar-expand-handle {
             display: none;
@@ -672,6 +676,29 @@
             font-size: 1.125rem;
             font-weight: 700;
         }
+
+        /* Inline expand button — shown in the page header (left of the title)
+           only when the sidebar is collapsed. Replaces the old floating handle
+           so the control reads as part of the page header row. */
+        .header-expand-btn {
+            display: none;
+            flex-shrink: 0;
+            width: 34px; height: 34px;
+            align-items: center; justify-content: center;
+            margin-right: 14px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 120ms, color 120ms, border-color 120ms;
+        }
+        .header-expand-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+            border-color: var(--border-medium);
+        }
+        .header-expand-btn svg { width: 18px; height: 18px; }
 
         .header-meta {
             font-size: 0.8125rem;
@@ -1324,6 +1351,9 @@
              ============================================================ -->
         <main class="main-content">
             <div class="main-header">
+                <button type="button" class="header-expand-btn" id="headerExpandBtn" onclick="toggleSidebarCollapsed(false)" aria-label="Show sidebar" title="Show sidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                </button>
                 <h1 id="pageTitle">Dashboard</h1>
                 <span class="header-meta" id="headerDate" style="margin-left:auto;"></span>
                 <button type="button" id="supportHeaderBtn" onclick="switchPage('support')" title="Support inbox" aria-label="Support inbox" style="position:relative;margin-left:14px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-secondary);cursor:pointer;transition:all 150ms;">
