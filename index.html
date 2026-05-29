@@ -1775,11 +1775,36 @@ section,.partners{background:transparent !important}
 .agent-content.active{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:64px;align-items:center;animation:apFade .5s var(--ease-out)}
 @media (max-width:960px){.agent-content.active{grid-template-columns:1fr;gap:36px}}
 .agent-copy-text{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
-.agent-content h2{font-size:clamp(1.8rem,2.6vw,2.6rem);margin:0 0 16px;text-transform:uppercase;letter-spacing:-0.02em;line-height:1.06;color:var(--fg)}
+.agent-content h2{
+  font-size:clamp(1.8rem,2.6vw,2.6rem);
+  margin:0 0 16px;
+  text-transform:uppercase;
+  letter-spacing:-0.02em;
+  line-height:1.06;
+  color:#fff;
+  text-shadow:none;
+  filter:none;
+}
 .agent-content h2 em{color:var(--accent-hi);font-style:normal}
 .agent-panel-body{color:var(--fg-2);font-size:1.05rem;line-height:1.55;margin:0 0 28px;max-width:42ch}
-.agent-copy-cta{padding:12px 26px;border-radius:10px;background:var(--accent);color:#fff;font-family:var(--font-display);font-weight:600;font-size:0.92rem;letter-spacing:0.02em;text-decoration:none;transition:background .2s,transform .2s,box-shadow .2s}
-.agent-copy-cta:hover{background:var(--accent-hi);transform:translateY(-1px);box-shadow:0 12px 32px rgba(30,58,138,0.4)}
+.agent-copy-cta{
+  padding:12px 26px;
+  border-radius:10px;
+  background:linear-gradient(135deg,var(--accent-hi),var(--accent));
+  color:#fff;
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:0.92rem;
+  letter-spacing:0.02em;
+  text-decoration:none;
+  box-shadow:none;
+  transition:background .2s,transform .2s,box-shadow .2s;
+}
+.agent-copy-cta:hover{
+  background:linear-gradient(135deg,var(--accent-glow),var(--accent-hi));
+  transform:translateY(-1px);
+  box-shadow:none;
+}
 
 /* Dashboard mockup screenshots — diagonally stacked, Snowflake pattern.
    Same light-gray fill as the .agent-stage so the whole agent block
@@ -1828,7 +1853,7 @@ section,.partners{background:transparent !important}
   }
   .agent-mockup-back{top:0;right:0;transform:rotate(2deg);z-index:1}
   .agent-mockup-front{top:128px;left:0;bottom:auto;transform:rotate(-2deg);z-index:2}
-  .agent-copy-cta{order:4;justify-self:start}
+  .agent-copy-cta{order:4;justify-self:start;margin-top:34px}
 }
 
 /* Legacy slots kept so any orphaned markup doesn't break the page */
@@ -2479,7 +2504,7 @@ section,.partners{background:transparent !important}
   }
   .agent-mockup-back{top:0 !important;right:0 !important;bottom:auto !important;left:auto !important;transform:rotate(2deg) !important;z-index:1}
   .agent-mockup-front{top:128px !important;left:0 !important;right:auto !important;bottom:auto !important;transform:rotate(-2deg) !important;z-index:2}
-  .agent-copy-cta{order:4;justify-self:start}
+  .agent-copy-cta{order:4;justify-self:start;margin-top:34px}
 }
 
     

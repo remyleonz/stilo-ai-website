@@ -49,10 +49,10 @@
             position: fixed; inset: 0; z-index: 0;
             width: 100%; height: 112%; top: 0;
             object-fit: cover; object-position: center top;
-            opacity: 0; transition: opacity 1s ease;
+            opacity: 0.42; transition: opacity 1s ease;
             pointer-events: none;
         }
-        .auth-bg-video[data-loaded="true"] { opacity: 1; }
+        .auth-bg-video[data-loaded="true"] { opacity: 0.48; }
         .auth-bg-veil {
             position: fixed; inset: 0; z-index: 1; pointer-events: none;
             background:
@@ -278,7 +278,8 @@
     </style>
 </head>
 <body>
-  <video class="auth-bg-video" id="authBgVideo" autoplay muted loop playsinline preload="auto" poster="/assets/hero-poster.jpg">
+  <video class="auth-bg-video" id="authBgVideo" autoplay muted loop playsinline preload="auto" poster="/assets/galaxystillimage.png">
+    <source src="/assets/hero-galaxy.mp4" type="video/mp4">
     <source src="/assets/newSTILOAIHEROVID.mp4" type="video/mp4">
   </video>
   <div class="auth-bg-veil" aria-hidden="true"></div>
