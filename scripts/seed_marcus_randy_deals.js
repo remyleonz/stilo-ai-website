@@ -3,7 +3,7 @@
  * Seed demo deals for Marcus Lindsey Cleaning + Randy Rejuvenation Clinic.
  *
  * Marcus (last month, the 10th):  SCOUT (lead_generator)  $4,000 + $2,000/mo
- * Randy  (this month):  FORGE (website)         $3,000 + $500/mo
+ * Randy  (this month):  FORGE (website)         $6,000 + $500/mo
  *                       SIGNAL (ai_seo)         $1,500 one-time
  *
  * Both flagged with notes='SEED:2026-05-26 — temporary; see memory note
@@ -213,12 +213,12 @@ async function main() {
         contact_name: 'Dr. Randy Lindgren',
         contact_email: 'randy@randyrejuvenation.com',
         agent_codes: ['forge', 'signal'],
-        upfront_fee_cents: 450000,           // 3000 + 1500
+        upfront_fee_cents: 750000,           // 6000 + 1500
         monthly_retainer_cents: 50000,       // 500 (only website is recurring)
         stage: 'ONBOARDING',
         closed_at: thisMonth,
         paid_at: thisMonth,
-        notes: SEED_TAG + ' — Randy Rejuvenation Clinic, FORGE Website ($3,000 + $500/mo) + SIGNAL AI SEO ($1,500 one-time). Closed this month. Eventually remove this client entirely per Remy.'
+        notes: SEED_TAG + ' — Randy Rejuvenation Clinic, FORGE Website ($6,000 + $500/mo) + SIGNAL AI SEO ($1,500 one-time). Closed this month. Eventually remove this client entirely per Remy.'
     });
     console.log('  → deal', randyDealId);
     console.log();

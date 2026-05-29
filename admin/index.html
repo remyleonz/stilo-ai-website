@@ -2755,6 +2755,16 @@
             return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
+        function getDealAgentPriceOverride(deal, agentCode, clientName) {
+            var name = (clientName || (deal && deal.clients && deal.clients.business_name) || deal && deal.business_name || '').toLowerCase();
+            var codes = (deal && deal.agent_codes || []).filter(function(x){ return x !== 'business_profile'; });
+            if (name.indexOf('randy rejuvenation') !== -1 && codes.indexOf('forge') !== -1 && codes.indexOf('signal') !== -1) {
+                if (agentCode === 'forge') return { setupCents: 600000, monthlyCents: 50000 };
+                if (agentCode === 'signal') return { setupCents: 150000, monthlyCents: 0 };
+            }
+            return null;
+        }
+
         function buildMgmtHtml(c, agents, stepsMap, metricsMap, eventsMap, deals) {
             metricsMap = metricsMap || {};
             eventsMap = eventsMap || {};
@@ -2782,12 +2792,13 @@
                 var monthlySum = codes.reduce(function(s, c){ return s + (AGENT_FEES_MONTHLY[c] || 0); }, 0);
                 codes.forEach(function(code){
                     if (!agentPricing[code]) agentPricing[code] = { setupCents: 0, monthlyCents: 0, lifetimeCents: 0, closedAt: closedAt };
-                    var setupShare = setupSum > 0
+                    var override = getDealAgentPriceOverride(d, code, c.business_name);
+                    var setupShare = override ? override.setupCents : (setupSum > 0
                         ? Math.round((d.upfront_fee_cents || 0) * ((AGENT_FEES_SETUP[code] || 0) / setupSum))
-                        : Math.round((d.upfront_fee_cents || 0) / codes.length);
-                    var monthlyShare = (monthlySum > 0 && (AGENT_FEES_MONTHLY[code] || 0) > 0)
+                        : Math.round((d.upfront_fee_cents || 0) / codes.length));
+                    var monthlyShare = override ? override.monthlyCents : ((monthlySum > 0 && (AGENT_FEES_MONTHLY[code] || 0) > 0)
                         ? Math.round((d.monthly_retainer_cents || 0) * ((AGENT_FEES_MONTHLY[code] || 0) / monthlySum))
-                        : 0;
+                        : 0);
                     agentPricing[code].setupCents += setupShare;
                     agentPricing[code].monthlyCents += monthlyShare;
                     agentPricing[code].lifetimeCents += setupShare + (monthlyShare * monthsSinceClose);
@@ -3766,16 +3777,21 @@
                 var monthlyShare = d.monthly_retainer_cents || 0;
                 if (filter && filter.agentCode) {
                     if (codes.indexOf(filter.agentCode) < 0) return;
+                    var override = getDealAgentPriceOverride(d, filter.agentCode);
                     var setupSum = codes.reduce(function(s, c){ return s + (AGENT_FEES_SETUP[c] || 0); }, 0);
                     var monthlySum = codes.reduce(function(s, c){ return s + (AGENT_FEES_MONTHLY[c] || 0); }, 0);
-                    if (setupSum > 0) {
+                    if (override) {
+                        setupShare = override.setupCents;
+                        monthlyShare = override.monthlyCents;
+                    } else if (setupSum > 0) {
                         setupShare = Math.round((d.upfront_fee_cents || 0) * ((AGENT_FEES_SETUP[filter.agentCode] || 0) / setupSum));
+                        if (monthlySum > 0 && (AGENT_FEES_MONTHLY[filter.agentCode] || 0) > 0) {
+                            monthlyShare = Math.round((d.monthly_retainer_cents || 0) * ((AGENT_FEES_MONTHLY[filter.agentCode] || 0) / monthlySum));
+                        } else {
+                            monthlyShare = 0;
+                        }
                     } else {
                         setupShare = Math.round((d.upfront_fee_cents || 0) / codes.length);
-                    }
-                    if (monthlySum > 0 && (AGENT_FEES_MONTHLY[filter.agentCode] || 0) > 0) {
-                        monthlyShare = Math.round((d.monthly_retainer_cents || 0) * ((AGENT_FEES_MONTHLY[filter.agentCode] || 0) / monthlySum));
-                    } else {
                         monthlyShare = 0;
                     }
                 } else if (filter && filter.clientId) {
@@ -3832,17 +3848,15 @@
                 + '</svg>';
         }
 
-        // Delta badge: always shows ▲N% / ▼N%. When the prior period was
-        // zero, treats it as 0 → curr = +100% (mathematically undefined
-        // but the cleanest dashboard convention — matches Stripe / GA).
-        // Falls back to "—" only when both periods are zero.
+        // Delta badge: show a percentage only when there is a real prior
+        // period to compare against. A zero prior period is a new baseline,
+        // not a mathematically meaningful +100%.
         function deltaBadge(curr, prev, opts) {
             opts = opts || {};
             if (curr === 0 && (!prev || prev === 0)) return '<div class="rev-row__delta flat">—</div>';
             if (!prev || prev === 0) {
-                // No prior to divide by — treat as a fresh 0→curr jump and
-                // call it ▲ 100% so the badge always reads as a percentage.
-                return '<div class="rev-row__delta up">▲ 100%</div>';
+                var label = opts.isCount ? '+' + Math.round(curr).toLocaleString() : 'New';
+                return '<div class="rev-row__delta up">' + label + '</div>';
             }
             var pct = ((curr - prev) / prev) * 100;
             if (Math.abs(pct) < 0.05) return '<div class="rev-row__delta flat">0%</div>';
