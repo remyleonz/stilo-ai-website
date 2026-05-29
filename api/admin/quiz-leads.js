@@ -31,7 +31,7 @@ module.exports = async function handleQuizLeads(req, res) {
 
   let q = gate.sb
     .from('quiz_submissions')
-    .select('id, created_at, cta_type, contact_name, email, phone, business_name, website, quiz_answers, tier, selected_agents, agent_scores, estimated_price, page_url, referrer')
+    .select('id, created_at, cta_type, contact_name, email, phone, business_name, website, quiz_answers, tier, selected_agents, agent_scores, estimated_price, page_url, referrer, meeting_booked_at, meeting_event_id, meeting_start_iso, meeting_meet_link')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(limit);

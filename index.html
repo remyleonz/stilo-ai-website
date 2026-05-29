@@ -4753,6 +4753,23 @@ if (!canvas) { /* no-op */ } else if (reduced) {
       window.openBookingModal({});
     });
   });
+
+  // Deep-link: when someone arrives at /?book=1, auto-open the booking modal
+  // with name/email/business pre-filled from URL params. This is the link the
+  // first-touch email from the Lead Reply Agent sends people to.
+  (function autoOpenFromUrl(){
+    var qp = new URLSearchParams(window.location.search);
+    if (qp.get('book') !== '1') return;
+    var prefill = {
+      name:     qp.get('name')     || '',
+      email:    qp.get('email')    || '',
+      business: qp.get('business') || ''
+    };
+    // Defer one frame to make sure the modal HTML is in place
+    requestAnimationFrame(function(){
+      window.openBookingModal(prefill);
+    });
+  })();
 })();
 </script>
 

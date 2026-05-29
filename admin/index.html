@@ -5602,11 +5602,24 @@
                     var businessLink = l.website
                         ? '<a href="' + esc(l.website.startsWith('http') ? l.website : 'https://' + l.website) + '" target="_blank" style="color:var(--blue);">' + esc(l.business_name || l.website) + '</a>'
                         : esc(l.business_name || '—');
+                    // V2: surface meeting bookings inline so the admin can see at a glance
+                    // who has already grabbed a slot vs who still needs a nudge.
+                    var meetingBlock = '';
+                    if (l.meeting_booked_at) {
+                        var mt = l.meeting_start_iso ? new Date(l.meeting_start_iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
+                        meetingBlock = ''
+                          + '<div style="margin-top:6px;padding:5px 10px;border-radius:6px;background:rgba(16,185,129,0.14);color:#10b981;font-size:11px;font-weight:600;display:inline-block;letter-spacing:0.02em;">'
+                          +    '✓ Booked'
+                          +    (mt ? ' · ' + esc(mt) + ' ET' : '')
+                          + '</div>'
+                          + (l.meeting_meet_link ? '<div style="margin-top:4px;"><a href="' + esc(l.meeting_meet_link) + '" target="_blank" style="font-size:11px;color:#5A7BE8;">Open Meet link</a></div>' : '');
+                    }
                     return [
                         '<tr style="border-top:1px solid var(--border-subtle);">',
                           '<td style="padding:14px 16px;vertical-align:top;white-space:nowrap;">',
                             '<div style="font-weight:600;color:var(--text-primary);font-size:13.5px;">', esc(l.contact_name || '—'), '</div>',
                             '<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">', quizRelativeTime(l.created_at), '</div>',
+                            meetingBlock,
                           '</td>',
                           '<td style="padding:14px 16px;vertical-align:top;">',
                             '<div style="font-size:13px;color:var(--text-primary);">', businessLink, '</div>',
@@ -5618,7 +5631,9 @@
                             l.phone ? '<a href="tel:' + esc(l.phone) + '" style="color:var(--text-secondary);font-size:11.5px;">' + esc(l.phone) + '</a>' : '',
                           '</td>',
                           '<td style="padding:14px 16px;vertical-align:top;">', agentChips, '</td>',
-                          '<td style="padding:14px 16px;vertical-align:top;white-space:nowrap;">', quizCtaPill(l.cta_type), '</td>',
+                          '<td style="padding:14px 16px;vertical-align:top;white-space:nowrap;">',
+                            l.meeting_booked_at ? '<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:rgba(16,185,129,0.18);color:#10b981;font-size:11px;font-weight:600;letter-spacing:0.02em;">Booked</span>' : quizCtaPill(l.cta_type),
+                          '</td>',
                           '<td style="padding:14px 16px;vertical-align:top;white-space:nowrap;">',
                             '<div style="display:flex;gap:6px;">',
                               l.email  ? '<a href="mailto:' + esc(l.email) + '?subject=' + encodeURIComponent('Re: ' + (l.business_name || 'AI for your business')) + '" style="padding:6px 10px;background:rgba(45,79,184,0.18);color:#5A7BE8;border-radius:6px;font-size:11.5px;font-weight:600;text-decoration:none;">Email</a>' : '',

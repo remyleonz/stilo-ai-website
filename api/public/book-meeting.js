@@ -111,22 +111,44 @@ module.exports = async function handler(req, res) {
     }
     const ev = await createResp.json();
 
-    // Best-effort: log the booking to Supabase so it shows up alongside quiz leads
+    // Booking tracking: find the most-recent quiz_complete row for this
+    // email and stamp the booking details onto it. That way the admin sees
+    // ONE row per lead with a "Booked" pill, instead of a fresh audit row
+    // disconnected from the quiz answers. If no quiz_complete exists yet
+    // (someone got the email and clicked the link from a different inbox),
+    // we insert a new audit row as a fallback.
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
       try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
           auth: { autoRefreshToken: false, persistSession: false }
         });
-        await sb.from('quiz_submissions').insert({
-          cta_type: 'audit',
-          contact_name: name,
-          email: email,
-          business_name: businessName || null,
-          page_url: 'booking-modal',
-          quiz_answers: { source: 'book_meeting_modal', notes: notes || '' },
-          tier: null,
-          selected_agents: []
-        });
+        const bookingPatch = {
+          meeting_booked_at: new Date().toISOString(),
+          meeting_event_id: ev.id || null,
+          meeting_start_iso: ev.start && ev.start.dateTime,
+          meeting_meet_link: ev.hangoutLink || null
+        };
+        const { data: existing, error: lookupErr } = await sb
+          .from('quiz_submissions')
+          .select('id, created_at')
+          .ilike('email', email)
+          .eq('cta_type', 'quiz_complete')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (!lookupErr && existing && existing[0]) {
+          await sb.from('quiz_submissions').update(bookingPatch).eq('id', existing[0].id);
+        } else {
+          await sb.from('quiz_submissions').insert(Object.assign({
+            cta_type: 'audit',
+            contact_name: name,
+            email: email,
+            business_name: businessName || null,
+            page_url: 'booking-modal',
+            quiz_answers: { source: 'book_meeting_modal', notes: notes || '' },
+            tier: null,
+            selected_agents: []
+          }, bookingPatch));
+        }
       } catch (e) { console.warn('[public/book-meeting] supabase log failed:', e && e.message); }
     }
 

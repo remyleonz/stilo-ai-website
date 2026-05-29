@@ -66,35 +66,50 @@ function firstName(full) {
   return String(full).trim().split(/\s+/)[0] || 'there';
 }
 
+// Build a deep-link URL that lands the recipient directly on the booking modal
+// of the marketing site with their name/email/business pre-filled. The page's
+// ?book=1 handler reads these params and opens openBookingModal() on load.
+function buildBookingUrl(row) {
+  var params = new URLSearchParams();
+  params.set('book', '1');
+  if (row.contact_name)  params.set('name', row.contact_name);
+  if (row.email)         params.set('email', row.email);
+  if (row.business_name) params.set('business', row.business_name);
+  return 'https://stiloaipartners.com/?' + params.toString();
+}
+
 function buildQuizReplyHtml(row) {
   var name = firstName(row.contact_name);
   var biz = row.business_name || 'your business';
   var agents = (row.selected_agents || []).map(function(id){ return AGENT_NAME[id] || id; });
-  var agentList = agents.length
-    ? '<ul style="margin:14px 0 14px 18px;padding:0;color:#0a0a0f;">' +
-        agents.map(function(a){ return '<li style="margin:6px 0;font-size:15px;">' + a + '</li>'; }).join('') +
-      '</ul>'
-    : '';
-  var calendly = 'https://calendly.com/remyleon11/30min';
+  // Format agent names as an inline natural list ("X, Y, and Z") rather than a
+  // bullet list — reads more like a real founder note and less like a brochure.
+  var agentsInline;
+  if (agents.length === 0)      agentsInline = 'the three agents';
+  else if (agents.length === 1) agentsInline = 'the ' + agents[0];
+  else if (agents.length === 2) agentsInline = 'the ' + agents[0] + ' and the ' + agents[1];
+  else                          agentsInline = 'the ' + agents.slice(0, -1).join(', the ') + ', and the ' + agents[agents.length - 1];
+
+  var bookingUrl = buildBookingUrl(row);
+
   return [
-    '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;color:#0a0a0f;max-width:560px;margin:0 auto;line-height:1.6;font-size:15px;">',
+    '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;color:#0a0a0f;max-width:560px;margin:0 auto;line-height:1.6;font-size:15.5px;">',
     '<p>Hey ' + name + ',</p>',
-    '<p>Remy here, founder of STILO AI Partners. Saw you just ran our quiz for ' + biz + ' — appreciate you taking the time.</p>',
-    '<p>Based on what you shared, the three agents that would move the needle fastest for you:</p>',
-    agentList,
-    '<p>I wrote those out for you because they\'re the same three I would actually recommend in an audit call. Most owners think they need all nine. They don\'t. We get faster ROI starting with the right three.</p>',
-    '<p>I\'d love to walk you through what we\'d build, plus the realistic numbers for your business. Fifteen minutes, no slide deck, no pressure.</p>',
-    '<p style="margin:22px 0;"><a href="' + calendly + '" style="display:inline-block;padding:13px 24px;background:#1E3A8A;color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Book a 15-minute call with Remy</a></p>',
+    '<p>Thanks for running the quiz for ' + biz + '. I went through your answers and the three agents the site recommended (' + agentsInline + ') are the same three I would actually start with.</p>',
+    '<p>I would love to walk you through what we would build, the realistic numbers for ' + biz + ', and what the first 30 days looks like. Fifteen minutes, no slide deck.</p>',
+    '<p style="margin:22px 0;"><a href="' + bookingUrl + '" style="display:inline-block;padding:13px 24px;background:#1E3A8A;color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Pick a time on my calendar</a></p>',
     '<p>If a call is overkill, just reply to this email with your top question. I read every one.</p>',
-    '<p>— Remy<br/><span style="color:#6c6a66;font-size:14px;">Founder, STILO AI Partners</span><br/><a href="https://stiloaipartners.com" style="color:#1E3A8A;font-size:14px;">stiloaipartners.com</a></p>',
+    '<p>Remy<br/><span style="color:#6c6a66;font-size:13.5px;">Founder, STILO AI Partners</span></p>',
     '</div>'
   ].join('');
 }
 
 async function sendQuizLeadReplyEmail(row, leadId) {
   var html = buildQuizReplyHtml(row);
-  var subject = 'Quick note about ' + (row.business_name || 'your business');
-  var from = 'Remy from STILO <hello@stiloaipartners.com>';
+  var subject = 'Your AI plan for ' + (row.business_name || 'your business');
+  // Sender: real Workspace user remy@stiloaipartners.com so Gmail recipients
+  // see a profile picture (hello@ has no Workspace mailbox, no pfp).
+  var from = 'Remy Leon <remy@stiloaipartners.com>';
   var to = row.email;
   if (!to) return { ok: false, reason: 'no_email' };
 
