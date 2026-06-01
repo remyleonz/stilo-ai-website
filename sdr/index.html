@@ -1607,6 +1607,13 @@
                 + '<div id="sdrBookingPicker" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'
                 + '<div class="section-title" style="font-size:13px;margin-bottom:4px;">Pick a time on Remy\'s calendar</div>'
                 + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">Books the meeting, emails the prospect the Google Meet link, and adds it to Remy\'s calendar.</div>'
+                // Confirm-the-email block: the SDR verifies this address on the call before sending.
+                + '<div style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:10px 12px;margin-bottom:14px;">'
+                + '<div class="stat-label" style="margin-bottom:4px;">Invite + confirmation will be emailed to</div>'
+                + ((r.owner_email || r.email)
+                    ? '<div style="font-size:14px;font-weight:600;word-break:break-all;">' + escapeHtml(r.owner_email || r.email) + '</div><div style="font-size:11px;color:var(--text-tertiary);margin-top:3px;">Confirm this is right on the call before you book.</div>'
+                    : '<div style="font-size:13px;color:var(--orange);">No email on file. Ask for it on the call. (Booking still works, but no confirmation email is sent.)</div>')
+                + '</div>'
                 + '<div id="sdrBookingSlots"></div>'
                 + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
                 + '<button id="sdrBookBtn" onclick="confirmBooking(' + r.id + ')" disabled style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'

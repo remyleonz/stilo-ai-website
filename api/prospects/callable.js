@@ -19,13 +19,14 @@ async function callableFromSupabase(opts) {
         db: { schema: 'prospecting' }
     });
 
-    // "Callable" = there is SOME phone we can dial. David's batches put the
-    // business line in `phone` and often leave owner_name/owner_phone null
-    // (you call the business and ask for the owner), so requiring owner_phone
-    // hid his 250-per-rep leads. Accept owner_phone OR phone; don't require
-    // owner_name.
+    // "Callable" = a named owner AND a phone we can dial. Per Remy: only show
+    // leads that are genuinely workable. The phone may live in owner_phone OR
+    // the business `phone` column (David's batches use `phone`), but the owner
+    // name must be present (it's not hiding in another column — when missing,
+    // David's research simply failed for that lead).
     let q = sb.from('leads')
         .select('*')
+        .not('owner_name', 'is', null).neq('owner_name', '')
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false');
 
