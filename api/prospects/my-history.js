@@ -96,7 +96,7 @@ module.exports = async function handler(req, res) {
 
         // Stage 2: pull the freshest call per scoped lead (any logger).
         let detailQuery = sb.from('lead_calls')
-            .select('lead_id, called_at, outcome, notes, logged_by')
+            .select('lead_id, called_at, outcome, notes, logged_by, transcript, transcript_summary, recording_url, duration_seconds')
             .in('lead_id', scopedLeadIds)
             .order('called_at', { ascending: false })
             .limit(2000);
@@ -146,7 +146,13 @@ module.exports = async function handler(req, res) {
                 // not the global one.
                 last_called_at: call.called_at || lead.last_called_at,
                 last_called_outcome: call.outcome || lead.last_called_outcome,
-                logged_by: call.logged_by || null
+                logged_by: call.logged_by || null,
+                // Carry the call's transcript/summary/recording so the Call
+                // History tab can show them inline (parity with admin).
+                transcript: call.transcript || null,
+                transcript_summary: call.transcript_summary || null,
+                recording_url: call.recording_url || null,
+                duration_seconds: call.duration_seconds || null
             };
         }).filter(Boolean);
 

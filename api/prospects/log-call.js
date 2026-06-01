@@ -35,7 +35,8 @@ module.exports = async function handler(req, res) {
     const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
     const body = await readJsonBody(req);
-    const id = safeNumberId(body.id);
+    // Admin sends `id`; the SDR dashboard sends `lead_id`. Accept either.
+    const id = safeNumberId(body.id != null ? body.id : body.lead_id);
     if (id == null) return res.status(400).json({ error: 'missing_id' });
     if (!body.outcome) return res.status(400).json({ error: 'missing_outcome' });
     const callbackAt = body.callback_at || body.next_callback_at || null;
@@ -46,17 +47,9 @@ module.exports = async function handler(req, res) {
     const override = body.logged_by_override && String(body.logged_by_override).trim().toLowerCase();
     const loggedBy = (override && ADMIN_SDRS.includes(override)) ? override : gate.email;
 
-    const upstream = await forwardToProspecting({
-        method: 'POST',
-        path: '/api/prospects/' + id + '/log-call',
-        body: {
-            outcome: body.outcome,
-            notes: body.notes || '',
-            callback_at: callbackAt,
-            logged_by: loggedBy
-        }
-    });
-
+    // Supabase is the source of truth the dashboards read. Do those writes
+    // FIRST, then forward to David's backend best-effort (with a timeout) so a
+    // slow/hanging Cloud Run never blocks the SDR's outcome from being logged.
     const calledAtIso = new Date().toISOString();
     const client = sb();
 
@@ -160,6 +153,17 @@ module.exports = async function handler(req, res) {
                 last_called_outcome: body.outcome
             };
             if (nextStage) update.stage = nextStage;
+            // Callback outcomes with a scheduled time: stamp the lead so it
+            // lands in the Callbacks tab (callbacks.js reads next_action_type +
+            // next_action_due_at). Clearing a callback when a terminal outcome
+            // is logged keeps the tab honest.
+            if (callbackAt && (body.outcome === 'callback_requested' || body.outcome === 'interested_followup')) {
+                update.next_action_type = 'callback';
+                update.next_action_due_at = callbackAt;
+            } else if (['booked_meeting', 'do_not_call', 'dnc_request', 'not_interested', 'owner_uninterested', 'wrong_number'].includes(body.outcome)) {
+                update.next_action_type = null;
+                update.next_action_due_at = null;
+            }
             const { error } = await client.from('leads').update(update).eq('id', id);
             leadUpdate = error ? { error: error.message } : { ok: true, stage: nextStage || 'unchanged' };
         } catch (e) {
@@ -167,9 +171,28 @@ module.exports = async function handler(req, res) {
         }
     }
 
-    return res.status(upstream.status).json({
+    // 3. Best-effort forward to David's backend for lifecycle bookkeeping
+    //    (auto-decay, his own scheduling). Capped at 6s so it can never hang
+    //    the SDR's outcome logging — the dashboard already reflects the writes
+    //    above. We don't fail the request if this times out or errors.
+    let upstream = { status: 0, json: null };
+    try {
+        upstream = await Promise.race([
+            forwardToProspecting({
+                method: 'POST',
+                path: '/api/prospects/' + id + '/log-call',
+                body: { outcome: body.outcome, notes: body.notes || '', callback_at: callbackAt, logged_by: loggedBy }
+            }),
+            new Promise(resolve => setTimeout(() => resolve({ status: 0, json: { skipped: 'upstream_timeout' } }), 6000))
+        ]);
+    } catch (e) {
+        upstream = { status: 0, json: { error: String(e && e.message || e) } };
+    }
+
+    return res.status(200).json({
         ...(upstream.json || {}),
         _stilo_call_insert: callInsert,
-        _stilo_lead_update: leadUpdate
+        _stilo_lead_update: leadUpdate,
+        _upstream_status: upstream.status
     });
 };
