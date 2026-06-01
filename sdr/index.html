@@ -59,23 +59,59 @@
             display: flex; flex-direction: column;
             z-index: 50;
         }
+        .sidebar { transition: transform 0.25s ease; }
         .sidebar-header {
-            padding: 22px 22px 18px;
+            padding: 18px 18px 16px;
             border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-height: 64px;
         }
-        .sidebar-logo {
-            font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 15px;
-            letter-spacing: 0.02em;
+        .sidebar-logo { display: flex; align-items: center; min-width: 0; }
+        .sidebar-logo img {
+            height: 38px; width: auto; display: block;
+            filter: drop-shadow(0 2px 8px rgba(37,99,235,0.35));
         }
-        .sidebar-logo span { color: var(--blue); }
-        .sidebar-label {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 4px;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
+        .sidebar-logo .sidebar-logo-mobile { display: none; }
+        /* Collapse arrow (desktop) — dismisses the side panel. */
+        .sidebar-collapse-btn {
+            flex-shrink: 0;
+            width: 28px; height: 28px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 120ms, color 120ms;
+        }
+        .sidebar-collapse-btn:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+        .sidebar-collapse-btn svg { width: 14px; height: 14px; }
+        /* Collapsed (desktop): slide the panel off and reclaim the width. */
+        body.sidebar-collapsed .sidebar { transform: translateX(-100%); }
+        body.sidebar-collapsed main { margin-left: 0; }
+        body.sidebar-collapsed .header-expand-btn { display: inline-flex; }
+        /* 3-line expand button in the topbar — shown only when collapsed. */
+        .header-expand-btn {
+            display: none;
+            flex-shrink: 0;
+            width: 36px; height: 36px;
+            align-items: center; justify-content: center;
+            background: none;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 120ms;
+        }
+        .header-expand-btn:hover { background: rgba(255,255,255,0.04); }
+        @media (max-width: 900px) {
+            .sidebar-logo .sidebar-logo-desktop { display: none; }
+            .sidebar-logo .sidebar-logo-mobile { display: block; height: 34px; }
+            .sidebar-collapse-btn { display: none; }
+            .header-expand-btn { display: none !important; }
         }
         .sidebar-nav {
             flex: 1;
@@ -248,6 +284,11 @@
             font-size: 0.78rem;
             color: var(--text-tertiary);
             margin-top: 8px;
+        }
+        .stat-sub {
+            font-size: 0.74rem;
+            color: var(--text-tertiary);
+            margin-top: 6px;
         }
         /* Calm, uniform cards. The old colored left-borders read as clutter;
            the numbers + mono eyebrows carry the hierarchy now (Revenue-tab
@@ -567,8 +608,13 @@
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <div class="sidebar-logo">STILO AI <span>PARTNERS</span></div>
-            <div class="sidebar-label">SDR Panel</div>
+            <a href="/sdr/" class="sidebar-logo" aria-label="STILO AI PARTNERS">
+                <img class="sidebar-logo-desktop" src="/assets/new3DLogoSTILOAI.png" alt="STILO AI PARTNERS" />
+                <img class="sidebar-logo-mobile" src="/assets/STILOMOBILELOGO.png" alt="STILO AI PARTNERS" />
+            </a>
+            <button type="button" class="sidebar-collapse-btn" onclick="toggleSidebarCollapsed()" aria-label="Collapse sidebar" title="Collapse sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+            </button>
         </div>
         <nav class="sidebar-nav">
             <button class="nav-item active" data-page="overview" onclick="switchPage('overview')">
@@ -582,6 +628,10 @@
             <button class="nav-item" data-page="performance" onclick="switchPage('performance')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Performance
+            </button>
+            <button class="nav-item" data-page="revenue" onclick="switchPage('revenue')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Revenue
             </button>
             <button class="nav-item" data-page="messages" onclick="switchPage('messages')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -653,6 +703,9 @@
     <main>
         <div class="topbar">
             <div style="display:flex;align-items:center;gap:12px;">
+                <button type="button" class="header-expand-btn" onclick="toggleSidebarCollapsed(false)" aria-label="Show sidebar" title="Show sidebar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
                 <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
@@ -728,7 +781,6 @@
         <!-- ============ LEADS ============ -->
         <section class="page-content hidden" id="page-leads">
             <div class="section-title">My Leads</div>
-            <div class="section-subtitle">Cold call queue + callbacks. Click any row to log a call.</div>
 
             <!-- Workflow cards -->
             <div class="stat-grid" id="leadsWorkflowCards" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
@@ -871,6 +923,47 @@
                     </tbody>
                 </table>
             </div>
+        </section>
+
+        <!-- ============ REVENUE ============ -->
+        <section class="page-content hidden" id="page-revenue">
+            <div class="section-title">Revenue</div>
+            <div class="section-subtitle" id="revCommissionNote">Your commission: 25% of setup fees + 10% of monthly retainer, while the client stays active.</div>
+
+            <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin:18px 0;">
+                <div class="stat-card accent-green">
+                    <div class="stat-label">Commission earned</div>
+                    <div class="stat-value money" id="revCommissionLifetime">$0</div>
+                    <div class="stat-sub" id="revCommissionPending">$0 pending payout</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Monthly MRR closed</div>
+                    <div class="stat-value money" id="revMrr">$0</div>
+                    <div class="stat-sub">active retainers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total sales</div>
+                    <div class="stat-value money" id="revSales">$0</div>
+                    <div class="stat-sub">lifetime setup fees</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Clients closed</div>
+                    <div class="stat-value" id="revClients">0</div>
+                    <div class="stat-sub" id="revAwaiting">0 awaiting payment</div>
+                </div>
+            </div>
+
+            <div class="section-title" style="font-size:15px;margin-top:8px;">Your clients</div>
+            <div class="table-wrap" style="margin-bottom:24px;">
+                <table>
+                    <thead><tr><th>Client</th><th>Setup fee</th><th>Monthly</th><th>Your commission</th><th>Status</th></tr></thead>
+                    <tbody id="revClientsBody"><tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);">Loading…</td></tr></tbody>
+                </table>
+            </div>
+
+            <div class="section-title" style="font-size:15px;">Agents you sold</div>
+            <div class="section-subtitle">AI agents deployed for the clients you closed.</div>
+            <div id="revAgentsBody" style="margin-top:12px;"><div style="color:var(--text-tertiary);font-size:13px;">Loading…</div></div>
         </section>
 
         <!-- ============ MESSAGES ============ -->
@@ -1107,11 +1200,12 @@
             if (target) target.classList.remove('hidden');
             document.getElementById('pageTitle').textContent = {
                 overview: 'Dashboard', leads: 'Leads', performance: 'Performance',
-                messages: 'Messages', history: 'Call History'
+                revenue: 'Revenue', messages: 'Messages', history: 'Call History'
             }[page] || 'Dashboard';
 
             if (page === 'leads') { if (!STATE._leadsLoaded) loadLeads(); }
             else if (page === 'performance') loadPerformance();
+            else if (page === 'revenue') loadRevenue();
             else if (page === 'messages') loadMessages();
             else if (page === 'history') loadHistory();
         }
@@ -1139,6 +1233,19 @@
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
         }
+
+        // Desktop collapse — slides the panel off and shows the 3-line expand
+        // button in the topbar. Persisted so the choice survives navigation.
+        function toggleSidebarCollapsed(forceState) {
+            var willCollapse = (forceState === undefined)
+                ? !document.body.classList.contains('sidebar-collapsed')
+                : !!forceState;
+            document.body.classList.toggle('sidebar-collapsed', willCollapse);
+            try { localStorage.setItem('sdr_sidebar_collapsed', willCollapse ? '1' : '0'); } catch (e) {}
+        }
+        (function () {
+            try { if (localStorage.getItem('sdr_sidebar_collapsed') === '1') document.body.classList.add('sidebar-collapsed'); } catch (e) {}
+        })();
 
         /* ===== OVERVIEW ===== */
         async function loadOverview() {
@@ -1841,6 +1948,64 @@
             });
             loadHistory();
         }
+        /* ===== REVENUE ===== */
+        async function loadRevenue() {
+            try {
+                const data = await fetchJSON('/api/sdr/earnings');
+                const t = data.totals || {};
+                const scope = data.scope || {};
+                const pct = Math.round((scope.commission_pct != null ? scope.commission_pct : 0.25) * 1000) / 10;
+                const mrrPct = Math.round((scope.commission_mrr_pct != null ? scope.commission_mrr_pct : 0.10) * 1000) / 10;
+                document.getElementById('revCommissionNote').textContent = 'Your commission: ' + pct + '% of setup fees + ' + mrrPct + '% of monthly retainer, while the client stays active.';
+                document.getElementById('revCommissionLifetime').textContent = formatMoney(t.commission_lifetime_cents);
+                document.getElementById('revCommissionPending').textContent = formatMoney(t.commission_pending_cents) + ' pending payout';
+                document.getElementById('revMrr').textContent = formatMoney(t.mrr_closed_cents);
+                document.getElementById('revSales').textContent = formatMoney(t.lifetime_revenue_cents);
+                document.getElementById('revClients').textContent = t.client_count || 0;
+                document.getElementById('revAwaiting').textContent = (t.awaiting_payment_count || 0) + ' awaiting payment';
+
+                // Clients table
+                const cb = document.getElementById('revClientsBody');
+                const clients = (data.clients || []).filter(c => c.role === 'primary' || !c.role);
+                if (!clients.length) {
+                    cb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:18px;">No closed clients yet. Book meetings and close deals to start earning commission.</td></tr>';
+                } else {
+                    cb.innerHTML = clients.map(c => {
+                        const comm = (c.commission_upfront_cents || 0);
+                        const paid = c.payout_status && c.payout_status !== 'pending';
+                        const statusBadge = paid
+                            ? '<span class="badge" style="background:rgba(16,185,129,0.14);color:var(--green);">Paid</span>'
+                            : '<span class="badge" style="background:var(--bg-card);color:var(--text-tertiary);">Awaiting payment</span>';
+                        const monthly = c.monthly_retainer_cents ? ' <span style="color:var(--text-tertiary);font-weight:400;">+ ' + formatMoney(c.commission_monthly_cents) + '/mo</span>' : '';
+                        return '<tr>'
+                            + '<td><strong>' + escapeHtml(c.business_name || '—') + '</strong>' + (c.contact_name ? '<div style="font-size:11px;color:var(--text-tertiary);">' + escapeHtml(c.contact_name) + '</div>' : '') + '</td>'
+                            + '<td>' + formatMoney(c.upfront_fee_cents) + '</td>'
+                            + '<td>' + (c.monthly_retainer_cents ? formatMoney(c.monthly_retainer_cents) + '/mo' : '—') + '</td>'
+                            + '<td style="color:var(--green);font-weight:600;">' + formatMoney(comm) + monthly + '</td>'
+                            + '<td>' + statusBadge + '</td>'
+                            + '</tr>';
+                    }).join('');
+                }
+
+                // Agents section — agent types deployed for the clients they sold.
+                const ab = document.getElementById('revAgentsBody');
+                const summary = data.agents_summary || {};
+                const types = Object.keys(summary);
+                if (!types.length) {
+                    ab.innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;">No agents yet. Agents show up here once the clients you closed have their AI agents deployed.</div>';
+                } else {
+                    ab.innerHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+                        + types.map(k => '<div style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;padding:12px 16px;min-width:120px;">'
+                            + '<div style="font-family:var(--font-display);font-size:20px;font-weight:800;">' + summary[k] + '</div>'
+                            + '<div style="font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;">' + escapeHtml(String(k).replace(/_/g, ' ')) + '</div></div>').join('')
+                        + '</div>';
+                }
+            } catch (e) {
+                const cb = document.getElementById('revClientsBody');
+                if (cb) cb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--red);">Failed: ' + escapeHtml(e.message || 'unknown') + '</td></tr>';
+            }
+        }
+
         async function loadHistory() {
             const body = document.getElementById('historyBody');
             body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);">Loading…</td></tr>';

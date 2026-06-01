@@ -126,6 +126,25 @@ module.exports = async function handler(req, res) {
         };
     });
 
+    // Agents deployed for the clients this SDR closed — so the Revenue tab can
+    // show an Agents section mapped back to the clients they sold.
+    const agentsByClient = {};
+    const agentSummary = {};
+    let agentsTotal = 0;
+    const clientIds = items.map(i => i.client_id).filter(Boolean);
+    if (clientIds.length) {
+        const { data: ags } = await caller.sb
+            .from('client_agents')
+            .select('client_id, agent_type, status')
+            .in('client_id', clientIds);
+        (ags || []).forEach(a => {
+            (agentsByClient[a.client_id] = agentsByClient[a.client_id] || []).push({ agent_type: a.agent_type, status: a.status });
+            agentSummary[a.agent_type] = (agentSummary[a.agent_type] || 0) + 1;
+            agentsTotal += 1;
+        });
+    }
+    items.forEach(i => { i.agents = agentsByClient[i.client_id] || []; });
+
     return res.status(200).json({
         scope: {
             sdr_id: scope.sdrId,
@@ -134,6 +153,8 @@ module.exports = async function handler(req, res) {
             commission_pct: fallbackPct,
             commission_mrr_pct: fallbackMrrPct
         },
+        agents_summary: agentSummary,
+        agents_total: agentsTotal,
         totals: {
             mrr_closed_cents: mrrCents,
             lifetime_revenue_cents: revenueCents,
