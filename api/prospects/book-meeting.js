@@ -99,25 +99,38 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
     const { data: lead, error: leadErr } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,call_attempts')
+        .select('id,name,owner_name,owner_email,email,owner_phone,phone,call_attempts')
         .eq('id', leadId).maybeSingle();
     if (leadErr) return res.status(500).json({ error: 'lead_read_failed', detail: leadErr.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
 
     const ownerEmail = lead.owner_email || lead.email || null;
+    const ownerPhone = lead.owner_phone || lead.phone || null;
     const businessName = lead.name || 'Discovery call';
+    const ownerName = (lead.owner_name || '').trim() || null;
     const ownerFirstName = (lead.owner_name || '').trim().split(/\s+/)[0] || null;
     const startIso = new Date(whenIso).toISOString();
     const endIso = new Date(new Date(whenIso).getTime() + durationMin * 60000).toISOString();
 
     try {
         const accessToken = await accessTokenFromRefresh(refreshToken);
+        // Pull the contact (name / email / phone) onto the event so Remy's
+        // calendar shows who he's meeting — the same fields Google's booking
+        // form would have collected, but auto-filled from our lead data so the
+        // SDR never types them.
+        const contactLines = [
+            'Contact: ' + (ownerName || 'Owner (verify on call)'),
+            ownerPhone ? 'Phone: ' + ownerPhone : null,
+            ownerEmail ? 'Email: ' + ownerEmail : null,
+            '',
+            'Discovery call to walk through the AI agent fit for ' + businessName + '. Booked from the STILO SDR dashboard.'
+        ].filter(function (l) { return l !== null; });
         const eventBody = {
             summary: 'STILO AI Partners discovery · ' + businessName,
-            description: 'Discovery call to walk through the AI agent fit for ' + businessName + '. Booked from the STILO admin.',
+            description: contactLines.join('\n'),
             start: { dateTime: startIso, timeZone: 'America/New_York' },
             end: { dateTime: endIso, timeZone: 'America/New_York' },
-            attendees: ownerEmail ? [{ email: ownerEmail }] : [],
+            attendees: ownerEmail ? [{ email: ownerEmail, displayName: ownerName || businessName }] : [],
             conferenceData: { createRequest: { requestId: 'stilo-' + leadId + '-' + Date.now(), conferenceSolutionKey: { type: 'hangoutsMeet' } } },
             reminders: { useDefault: true }
         };

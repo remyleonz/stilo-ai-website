@@ -15,10 +15,13 @@
 const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
 const { getCalendarRefreshToken, accessTokenFromRefresh } = require('./_google_calendar');
 
+// Matches Remy's Google booking page ("STILO AI PARTNERS MEETING"):
+// Mon–Fri, 10:00am–7:00pm ET, 15-minute appointments. Weekends are skipped
+// in generateBusinessSlots (Sun/Sat unavailable on the booking page too).
 const SLOT_MIN = 15;
-const BIZ_START_HOUR = 9;   // 9am ET
-const BIZ_END_HOUR = 18;    // 6pm ET
-const TZ_OFFSET_HOURS = 4;  // ET = UTC-4 (DST), -5 in winter; close enough for slot generation
+const BIZ_START_HOUR = 10;  // 10am ET
+const BIZ_END_HOUR = 19;    // 7pm ET
+const TZ_OFFSET_HOURS = 4;  // ET = UTC-4 (DST); -5 in winter; close enough for slot generation
 
 function generateBusinessSlots(days) {
     const slots = [];
