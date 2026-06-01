@@ -804,13 +804,7 @@ flex-wrap:wrap}
     radial-gradient(1400px 800px at 50% 50%, rgba(7,7,10,0.20) 0%, rgba(7,7,10,0) 60%),
     linear-gradient(180deg, rgba(7,7,10,0.35) 0%, rgba(7,7,10,0) 30%, rgba(7,7,10,0.85) 100%);
 }
-.hero-video{
-  position:absolute;left:0;top:0;z-index:0;
-  width:100%;height:112%;object-fit:cover;object-position:center top;
-  opacity:0.42;transition:opacity 1s ease;pointer-events:none;
-}
-.hero-video[data-loaded="true"]{opacity:0.48}
-/* Kill the Three.js wireframe flash on first paint — video is the bg now */
+/* Kill the Three.js wireframe flash on first paint — aurora is the bg now */
 .hero-canvas{display:none}
 
 /* ====== LIVE AGENT DEMO SECTION (extracted from hero) ====== */
@@ -2524,6 +2518,26 @@ section .section-header h2 .gradient-text em {
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* 2026-06-01: kill the blue accent everywhere in titles/headings/numbers.
+   All heading + title text is white now, including the hero <h1> <em>,
+   the thesis line, stat/step/ROI numbers, use-case titles, the final CTA
+   headline, and the per-agent h2 accents. Reset any gradient-clip too. */
+.hero h1, .hero h1 em, .hero h1 .ai-accent,
+.thesis em,
+.stat-block-num, .stat-block-num em,
+.step-num, .step-num em,
+.usecase-title, .usecase-title em,
+.industry-roi-num, .industry-roi-num em,
+.final-cta-headline, .final-cta-headline em,
+.agent-content h2, .agent-content h2 em,
+.agent-panel-content h2, .agent-panel-content h2 em {
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 /* 2026-05-28: industries — lower text under image, CTA becomes a real
    button (was a text link). Also lower the per-agent copy under the
    master video so it doesn't crowd the frame. */
@@ -2600,13 +2614,8 @@ section .section-header h2 .gradient-text em {
     <span class="aurora-orb c"></span>
     <span class="aurora-orb d"></span>
   </div>
-  <!-- Hero background. Primary source is the Kling-rendered galaxy.
-       Falls back to the original shooting-star video if galaxy isn't
-       uploaded yet (drop /assets/hero-galaxy.mp4 to swap, no code change). -->
-  <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="auto" poster="/assets/galaxystillimage.png">
-    <source src="/assets/hero-galaxy.mp4" type="video/mp4">
-    <source src="/assets/newSTILOAIHEROVID.mp4" type="video/mp4">
-  </video>
+  <!-- Hero background: blue aurora glows on the same black void the rest
+       of the site uses. No video — just the brand blue + black accent. -->
   <div class="hero-veil"></div>
   <div class="container">
     <div class="hero-grid-v6">
@@ -4068,19 +4077,6 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     });
   }, { threshold: 0.25, rootMargin: '0px 0px -80px 0px' });
   io.observe(wrap);
-})();
-
-// Hero video: fade in once first frame is ready
-(function(){
-  var v = document.getElementById('heroVideo');
-  if (!v) return;
-  var hasSrc = v.src || v.currentSrc || v.querySelector('source[src]');
-  if (!hasSrc){ v.removeAttribute('autoplay'); return; }
-  v.addEventListener('loadeddata', function(){ v.setAttribute('data-loaded','true'); });
-  v.addEventListener('canplay', function(){ v.setAttribute('data-loaded','true'); });
-  // Force-attempt play on iOS Safari
-  var p = v.play();
-  if (p && p.catch) p.catch(function(){ /* autoplay blocked, ignore */ });
 })();
 
 // FAQ accordion
