@@ -18,12 +18,45 @@
  * 404 when no script exists for the slug, 503 when the service account
  * isn't configured (e.g., before David grants IAM access).
  */
-const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
+const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 
 const BUCKET = 'stilo-cold-call-scripts';
 const PREFIX = 'cold-call/';
 const SCOPE  = 'https://www.googleapis.com/auth/devstorage.read_only';
+
+// David's live cold-call briefs (the "scripts") land in a Supabase Storage
+// bucket, foldered by rep: cold-call-briefs/rep-{a,b,c}/<slug>-<YYYY-MM-DD>.md
+// (A=jack, B=luke, C=alejandro). This is the current source of truth; the GCS
+// path below is kept as a fallback for older scripts.
+const BRIEFS_BUCKET = 'cold-call-briefs';
+const REP_FOLDERS = { a: 'rep-a', b: 'rep-b', c: 'rep-c' };
+
+// Find the newest brief for a slug in Supabase Storage. Searches the rep folder
+// matching the tag hint first (fast), then the others. Returns
+// { name, folder, content_md, generated_at } or null.
+async function findBriefInSupabase(slug, repHint) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return null;
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+    const hint = repHint && REP_FOLDERS[String(repHint).toLowerCase()];
+    const folders = hint ? [hint, ...Object.values(REP_FOLDERS).filter(f => f !== hint)] : Object.values(REP_FOLDERS);
+    for (const folder of folders) {
+        const { data: items, error } = await sb.storage.from(BRIEFS_BUCKET).list(folder, { search: slug, limit: 100 });
+        if (error || !items || !items.length) continue;
+        const matches = items
+            .filter(it => it.name.toLowerCase().startsWith(slug + '-') && it.name.toLowerCase().endsWith('.md'))
+            .sort((a, b) => b.name.localeCompare(a.name)); // YYYY-MM-DD suffix => newest first
+        if (!matches.length) continue;
+        const name = folder + '/' + matches[0].name;
+        const { data: blob, error: dlErr } = await sb.storage.from(BRIEFS_BUCKET).download(name);
+        if (dlErr || !blob) continue;
+        const content_md = await blob.text();
+        const updated = matches[0].updated_at || (matches[0].created_at) || null;
+        return { name: name, folder: folder, content_md: content_md, generated_at: updated };
+    }
+    return null;
+}
 
 // Module-level token cache. Vercel re-uses warm function instances across
 // invocations within a region for ~5-15 minutes, so this avoids minting a
@@ -152,14 +185,32 @@ module.exports = async function handler(req, res) {
     const slug = (q.slug && String(q.slug).trim()) || slugify(q.business_name);
     if (!slug) return res.status(400).json({ error: 'missing_slug', detail: 'Pass ?slug=<lead-slug> or ?business_name=<name>.' });
 
+    // 1) Primary source: David's Supabase Storage briefs (cold-call-briefs).
+    // ?rep=a|b|c (from the lead's tentative_rep_assignment) speeds the lookup.
+    try {
+        const brief = await findBriefInSupabase(slug, q.rep);
+        if (brief) {
+            res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
+            return res.status(200).json({
+                slug: slug,
+                filename: brief.name,
+                generated_at: brief.generated_at,
+                content_md: brief.content_md,
+                source: 'supabase'
+            });
+        }
+    } catch (e) {
+        console.warn('[cold-call-script] supabase lookup failed, trying GCS:', e.message);
+    }
+
+    // 2) Fallback: legacy GCS bucket (older scripts).
     let token;
     try { token = await getAccessToken(); }
     catch (e) {
         if (e.code === 'NO_SA') {
-            return res.status(503).json({
-                error: 'gcs_not_configured',
-                detail: 'Set GCP_SCRIPTS_SA_KEY (full service-account JSON) in Vercel env. The service account also needs roles/storage.objectViewer on bucket ' + BUCKET + '.'
-            });
+            // Supabase (primary) had no brief and the legacy GCS fallback isn't
+            // configured — treat as "no script yet" rather than a server error.
+            return res.status(404).json({ error: 'script_not_found', slug: slug });
         }
         return res.status(502).json({ error: 'gcs_auth_failed', detail: String(e.message || e) });
     }

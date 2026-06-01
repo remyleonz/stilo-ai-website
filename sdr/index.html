@@ -1273,6 +1273,7 @@
                 const data = await fetchJSON('/api/prospects/detail?id=' + leadId);
                 const r = data.lead || data;
                 body.innerHTML = buildLeadDrawerHtml(r);
+                loadColdCallScript(r);
             } catch (e) {
                 body.innerHTML = '<div style="color:var(--red);">Failed: ' + escapeHtml(e.message) + '</div>';
             }
@@ -1281,6 +1282,62 @@
             document.getElementById('leadDrawer').classList.remove('open');
             document.getElementById('leadDrawerOverlay').classList.remove('open');
         }
+
+        // Fetch + render the cold-call brief (David's per-lead talk track) into
+        // the drawer. The `rep` hint (A/B/C tag) speeds the storage lookup.
+        async function loadColdCallScript(r) {
+            const host = document.getElementById('sdrScriptBody');
+            const metaEl = document.getElementById('sdrScriptMeta');
+            if (!host) return;
+            const name = r.business_name || r.name || '';
+            if (!name) { host.textContent = 'No business name on this lead.'; return; }
+            let url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(name);
+            if (r.tentative_rep_assignment) url += '&rep=' + encodeURIComponent(String(r.tentative_rep_assignment).toLowerCase());
+            try {
+                const data = await fetchJSON(url);
+                if (!data || !data.content_md) { host.textContent = 'No script for this lead yet.'; return; }
+                host.innerHTML = renderScriptMarkdown(data.content_md);
+                if (metaEl && data.generated_at) metaEl.textContent = '· generated ' + new Date(data.generated_at).toLocaleDateString();
+            } catch (e) {
+                if (e.status === 404) host.textContent = 'No cold-call script for this lead yet. Scripts are added with each new lead batch.';
+                else host.innerHTML = '<span style="color:var(--red);">Could not load script: ' + escapeHtml(e.message || 'unknown') + '</span>';
+            }
+        }
+
+        // Minimal, safe Markdown -> HTML for the brief (headings, bold, lists,
+        // blockquotes, paragraphs). Escapes first, so no raw HTML injection.
+        function renderScriptMarkdown(md) {
+            const lines = String(md || '').split('\n');
+            let html = '', inList = false;
+            const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+            const inline = (s) => escapeHtml(s)
+                .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--text-primary);">$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue);">$1</a>');
+            for (let raw of lines) {
+                const line = raw.replace(/\s+$/,'');
+                if (!line.trim()) { closeList(); continue; }
+                let m;
+                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+                    closeList();
+                    const lvl = Math.min(m[1].length, 4);
+                    const size = lvl <= 1 ? 16 : lvl === 2 ? 14 : 13;
+                    html += '<div style="font-family:var(--font-display);font-weight:700;color:var(--text-primary);font-size:' + size + 'px;margin:14px 0 6px;">' + inline(m[2]) + '</div>';
+                } else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) {
+                    if (!inList) { html += '<ul style="margin:4px 0 10px;padding-left:20px;">'; inList = true; }
+                    html += '<li style="margin:3px 0;">' + inline(m[1]) + '</li>';
+                } else if ((m = line.match(/^>\s?(.*)$/))) {
+                    closeList();
+                    html += '<div style="border-left:3px solid var(--blue);padding:6px 12px;margin:6px 0;color:var(--text-primary);background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
+                } else {
+                    closeList();
+                    html += '<p style="margin:6px 0;">' + inline(line) + '</p>';
+                }
+            }
+            closeList();
+            return html;
+        }
+
         function buildLeadDrawerHtml(r) {
             CURRENT.lead = r; // remember for the booking flow
             const tier = String(r.tier || r.prospect_tier || '').toLowerCase();
@@ -1331,6 +1388,11 @@
                 + '<div><div class="stat-label">Score</div><div>' + (r.prospect_score != null ? r.prospect_score : '—') + (r.call_attempts ? ' · ' + r.call_attempts + ' dial' + (r.call_attempts === 1 ? '' : 's') : '') + '</div></div>'
                 + '</div>'
                 + painHtml
+                // Cold-call script (talk track) — filled by loadColdCallScript() after the drawer renders.
+                + '<div style="margin-bottom:20px;">'
+                + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
+                + '<div id="sdrScriptBody" style="font-size:13px;line-height:1.55;color:var(--text-secondary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:14px 16px;">Loading script…</div>'
+                + '</div>'
                 + historyHtml
                 + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Log a call outcome</div>'
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
