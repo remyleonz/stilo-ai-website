@@ -14,8 +14,32 @@
  * accumulate as they land. The drawer reads `call_history` and renders a
  * timeline.
  */
-const { assertAdminOrSdr, scopedQuery, forwardToProspecting, methodNotAllowed, safeNumberId } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed, safeNumberId, normalizeLead } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
+
+function leadsClient() {
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false },
+        db: { schema: 'prospecting' }
+    });
+}
+
+// Fetch a single lead straight from Supabase. Replaces the old forward to
+// David's Cloud Run /api/prospects/{id}, which hangs under load and left the
+// lead drawer stuck on "Loading lead…".
+async function fetchLead({ id, phone, business_name, email }) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return null;
+    const sb = leadsClient();
+    let q = sb.from('leads').select('*');
+    if (id != null) q = q.eq('id', id);
+    else if (phone) q = q.or(`owner_phone.eq.${phone},phone.eq.${phone}`);
+    else if (email) q = q.or(`owner_email.eq.${email},email.eq.${email}`);
+    else if (business_name) q = q.ilike('name', `%${business_name}%`);
+    else return null;
+    const { data, error } = await q.limit(1);
+    if (error || !data || !data.length) return null;
+    return normalizeLead(data[0]);
+}
 
 async function fetchCallHistory(leadId) {
     if (leadId == null) return [];
@@ -41,27 +65,20 @@ module.exports = async function handler(req, res) {
     if (!gate.ok) return;
     const q = req.query || {};
     const id = safeNumberId(q.id);
-    let upstreamPath;
-    let query;
-    if (id != null) {
-        upstreamPath = '/api/prospects/' + id;
-        query = undefined;
-    } else if (q.phone || q.business_name || q.email) {
-        upstreamPath = '/api/prospects/detail';
-        query = { phone: q.phone, business_name: q.business_name, email: q.email };
-    } else {
+    if (id == null && !q.phone && !q.business_name && !q.email) {
         return res.status(400).json({ error: 'missing_lookup_key' });
     }
 
     // Fetch lead + call history in parallel — most leads have 0 calls, so
     // the lead_calls query is essentially free. Merge after both resolve.
-    const [{ status, json }, callHistory] = await Promise.all([
-        forwardToProspecting({ method: 'GET', path: upstreamPath, query: query }),
+    const [lead, callHistory] = await Promise.all([
+        fetchLead({ id: id, phone: q.phone, business_name: q.business_name, email: q.email }),
         id != null ? fetchCallHistory(id) : Promise.resolve([])
     ]);
-    if (status >= 200 && status < 300 && json && typeof json === 'object') {
-        json.call_history = callHistory;
-    }
+    if (!lead) return res.status(404).json({ error: 'lead_not_found' });
+    lead.call_history = callHistory;
+    const status = 200;
+    const json = lead;
 
     // Compliance audit: log every lead-drawer open. Fire-and-forget so we
     // never block the response. Captures who accessed which lead and when.

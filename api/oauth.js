@@ -248,9 +248,31 @@ module.exports = async function handler(req, res) {
       } catch (e) {
         console.warn('[oauth] could not persist tokens:', e.message);
       }
+    } else {
+      // No client-agent context => this is a STILO-owned connection (the
+      // booking calendar for remyleon@stiloaipartners.com). Persist the
+      // refresh token to public.oauth_tokens so calendar-availability +
+      // book-meeting can read it. A re-auth here just overwrites the row —
+      // no env var redeploy needed.
+      if (tokenJson.refresh_token) {
+        try {
+          const sb = admin();
+          await sb.from('oauth_tokens').upsert({
+            provider: provider,
+            refresh_token: tokenJson.refresh_token,
+            access_token: tokenJson.access_token || null,
+            scope: tokenJson.scope || null,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'provider' });
+        } catch (e) {
+          console.warn('[oauth] could not persist owned token:', e.message);
+        }
+      } else {
+        return closeWindowHtml(res, 'Connected, but Google did not return a refresh token. Revoke STILO access at myaccount.google.com/permissions, then try the link again.');
+      }
     }
 
-    return closeWindowHtml(res, 'Connected. You can close this tab.');
+    return closeWindowHtml(res, 'Connected. The STILO booking calendar is now linked. You can close this tab.');
   }
 
   return res.status(404).json({ error: 'Unknown action: ' + action });

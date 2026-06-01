@@ -194,6 +194,30 @@ function startOfDayET() {
     return new Date(etMidnightUtc + offsetMs);
 }
 
+// Best-effort "City" from a full street address like
+// "2519 NW 38th St, Miami, FL 33142" -> "Miami".
+function cityFromAddress(addr) {
+    if (!addr || typeof addr !== 'string') return null;
+    const parts = addr.split(',').map(s => s.trim()).filter(Boolean);
+    return parts.length >= 2 ? parts[parts.length - 2] : null;
+}
+
+/**
+ * Normalize a prospecting.leads row to the shape the dashboards expect.
+ * The Supabase table uses `name`/`category`; David's Cloud Run API aliased
+ * those to `business_name`/`niche`. Every endpoint that returns Supabase rows
+ * runs them through here so the frontend renders identically regardless of
+ * source. Originals are preserved; aliases are added only when missing.
+ */
+function normalizeLead(r) {
+    if (!r || typeof r !== 'object') return r;
+    return Object.assign({}, r, {
+        business_name: r.business_name || r.name || null,
+        niche: r.niche || r.category || null,
+        city: r.city || cityFromAddress(r.address),
+    });
+}
+
 module.exports = async function (req, res) {
     res.status(405).json({ error: 'not_a_handler' });
 };
@@ -248,3 +272,4 @@ module.exports.readJsonBody = readJsonBody;
 module.exports.methodNotAllowed = methodNotAllowed;
 module.exports.safeNumberId = safeNumberId;
 module.exports.startOfDayET = startOfDayET;
+module.exports.normalizeLead = normalizeLead;

@@ -13,23 +13,9 @@
  * If GOOGLE_OAUTH_* aren't configured, returns 503 — frontend shows a
  * "Configure Google Calendar" prompt instead of a broken flow.
  */
-const { assertAdminOrSdr, scopedQuery, methodNotAllowed, readJsonBody, safeNumberId, forwardToProspecting } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
+const { getCalendarRefreshToken, accessTokenFromRefresh } = require('./_google_calendar');
 const { createClient } = require('@supabase/supabase-js');
-
-async function getAccessToken() {
-    const r = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
-            client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-            refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
-            grant_type: 'refresh_token'
-        })
-    });
-    if (!r.ok) throw new Error('oauth_refresh_failed: ' + (await r.text()).slice(0, 200));
-    return (await r.json()).access_token;
-}
 
 function buildEmailHtml(opts) {
     // STILO-branded confirmation. No em dashes, no AI buzzwords (humanizer rules).
@@ -100,10 +86,11 @@ module.exports = async function handler(req, res) {
     if (leadId == null) return res.status(400).json({ error: 'missing_lead_id' });
     if (!whenIso) return res.status(400).json({ error: 'missing_when_iso' });
 
-    if (!process.env.GOOGLE_OAUTH_REFRESH_TOKEN) {
+    const refreshToken = await getCalendarRefreshToken();
+    if (!refreshToken) {
         return res.status(503).json({
             error: 'google_calendar_not_configured',
-            detail: 'Add GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN to Vercel env to enable booking.'
+            detail: 'The STILO booking calendar is not connected. Open /api/oauth?provider=google-calendar&action=start signed in as remyleon@stiloaipartners.com to link it.'
         });
     }
 
@@ -112,7 +99,7 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
     const { data: lead, error: leadErr } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email')
+        .select('id,name,owner_name,owner_email,email,call_attempts')
         .eq('id', leadId).maybeSingle();
     if (leadErr) return res.status(500).json({ error: 'lead_read_failed', detail: leadErr.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
@@ -124,7 +111,7 @@ module.exports = async function handler(req, res) {
     const endIso = new Date(new Date(whenIso).getTime() + durationMin * 60000).toISOString();
 
     try {
-        const accessToken = await getAccessToken();
+        const accessToken = await accessTokenFromRefresh(refreshToken);
         const eventBody = {
             summary: 'STILO AI Partners discovery · ' + businessName,
             description: 'Discovery call to walk through the AI agent fit for ' + businessName + '. Booked from the STILO admin.',
@@ -157,9 +144,12 @@ module.exports = async function handler(req, res) {
             });
         } catch (e) { emailResult = { error: String(e.message || e) }; }
 
-        // Persist Calendar/Meet metadata onto the lead row so the admin
-        // Booked Meeting tab can render "Open in Calendar" and "Join Meet"
-        // buttons. Best-effort: an RLS/perm failure shouldn't break booking.
+        // Persist Calendar/Meet metadata AND flip the lead lifecycle to
+        // booked_meeting in one Supabase write. This is the source of truth
+        // for the Booked Meeting tab (list-booked reads last_called_outcome
+        // straight from prospecting.leads). We no longer round-trip David's
+        // Cloud Run /log-call here — that call hangs under load and would
+        // leave a created Calendar event with the lead stuck in Cold Call.
         let persistError = null;
         try {
             const upd = await sb.from('leads').update({
@@ -168,25 +158,29 @@ module.exports = async function handler(req, res) {
                 meeting_meet_link:     meetLink || null,
                 meeting_scheduled_at:  startIso,
                 meeting_duration_min:  durationMin,
-                meeting_booked_by_sdr: gate.email || null
+                meeting_booked_by_sdr: gate.email || null,
+                last_called_outcome:   'booked_meeting',
+                last_called_at:        new Date().toISOString(),
+                call_attempts:         (Number(lead.call_attempts) || 0) + 1,
+                call_notes:            'Booked ' + new Date(startIso).toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET · ' + (meetLink || 'no Meet link')
             }).eq('id', leadId);
             if (upd.error) persistError = upd.error.message;
         } catch (e) { persistError = String(e.message || e); }
 
-        // Flip lead lifecycle through David's API so it lands in Booked Meeting tab.
-        const logResp = await forwardToProspecting({
-            method: 'POST', path: '/api/prospects/' + leadId + '/log-call',
-            body: {
-                outcome: 'booked_meeting',
-                notes: 'Auto-booked from STILO admin · ' + new Date(startIso).toLocaleString() + ' · ' + (meetLink || 'no Meet link'),
-                logged_by: gate.email
-            }
-        });
+        // Mirror the call into prospecting.lead_calls so it shows in call
+        // history + "Calls Today". Best-effort; never block the booking.
+        try {
+            await sb.from('lead_calls').insert({
+                lead_id: leadId, direction: 'outbound', outcome: 'booked_meeting',
+                called_at: new Date().toISOString(), logged_by: gate.email || null,
+                transcript_summary: 'Meeting booked for ' + new Date(startIso).toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET'
+            });
+        } catch (_) { /* lead_calls is a nice-to-have here */ }
 
         return res.status(200).json({
             ok: true, lead_id: leadId,
             event_id: evJson.id, event_link: evJson.htmlLink, meet_link: meetLink,
-            email: emailResult, log_call: { status: logResp.status },
+            email: emailResult,
             persisted: !persistError, persist_error: persistError
         });
     } catch (e) {

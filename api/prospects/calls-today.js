@@ -8,7 +8,7 @@
  * Day boundary is ET (Miami), not UTC, so an 8pm call doesn't roll
  * out of the tab at 7-8pm local. DST handled by startOfDayET().
  */
-const { assertAdminOrSdr, scopedQuery, resolveAssignedTo, methodNotAllowed, startOfDayET } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, startOfDayET, normalizeLead } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
@@ -50,5 +50,5 @@ module.exports = async function handler(req, res) {
     }
 
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json({ results: data || [] });
+    return res.status(200).json({ results: (data || []).map(normalizeLead) });
 };

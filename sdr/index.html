@@ -963,6 +963,11 @@
 
             CURRENT.session = session;
             await loadProfile();
+            // Prefetch the leads table now (it's the most-used tab and the
+            // cold-call queue should be warm before the rep clicks "Leads").
+            // Runs in the background while we paint the Overview, so switching
+            // to Leads is instant instead of a multi-second "Loading…".
+            loadLeads();
             await Promise.all([
                 loadOverview(),
                 loadMessagesPreview()
@@ -1096,7 +1101,7 @@
                 messages: 'Messages', history: 'Call History'
             }[page] || 'Dashboard';
 
-            if (page === 'leads') loadLeads();
+            if (page === 'leads') { if (!STATE._leadsLoaded) loadLeads(); }
             else if (page === 'performance') loadPerformance();
             else if (page === 'messages') loadMessages();
             else if (page === 'history') loadHistory();
@@ -1192,6 +1197,7 @@
         /* ===== LEADS ===== */
         async function loadLeads() {
             await Promise.all([loadLeadsStats(), loadLeadsTable()]);
+            STATE._leadsLoaded = true;
         }
         async function loadLeadsStats() {
             try {
@@ -1215,7 +1221,10 @@
 
         async function loadLeadsTable() {
             const wrap = document.getElementById('leadsTableWrap');
-            wrap.innerHTML = '<div class="empty-state">Loading…</div>';
+            // Only show the "Loading…" placeholder if there's nothing rendered
+            // yet. On a background prefetch or subtab refresh we keep the
+            // current table visible until the new rows are ready (no flash).
+            if (!wrap.querySelector('table')) wrap.innerHTML = '<div class="empty-state">Loading…</div>';
             const sub = STATE.leadsSubtab;
             const endpoint = {
                 callable: '/api/prospects/callable?limit=200',
@@ -1273,33 +1282,74 @@
             document.getElementById('leadDrawerOverlay').classList.remove('open');
         }
         function buildLeadDrawerHtml(r) {
+            CURRENT.lead = r; // remember for the booking flow
             const tier = String(r.tier || r.prospect_tier || '').toLowerCase();
             const stage = String(r.stage || 'NEW').toLowerCase();
+            const calls = Array.isArray(r.call_history) ? r.call_history : [];
+
+            // Pain / scoring reasoning, if David's scorer left a trail.
+            let painHtml = '';
+            if (r.prospect_reasoning) {
+                painHtml = '<div style="margin-bottom:20px;">'
+                    + '<div class="stat-label" style="margin-bottom:6px;">Why this lead</div>'
+                    + '<div style="font-size:13px;color:var(--text-secondary);line-height:1.5;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:10px 12px;">' + escapeHtml(r.prospect_reasoning) + '</div>'
+                    + '</div>';
+            }
+
+            // Call history timeline (parity with admin lead drawer).
+            let historyHtml = '';
+            if (calls.length) {
+                historyHtml = '<div style="margin-bottom:20px;">'
+                    + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Call history</div>'
+                    + calls.map(function (c) {
+                        const when = c.called_at ? new Date(c.called_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : '—';
+                        const dur = c.duration_seconds ? (Math.round(c.duration_seconds / 60) + 'm') : '';
+                        return '<div style="border-left:2px solid var(--blue);padding:4px 0 10px 12px;margin-left:4px;">'
+                            + '<div style="font-size:12px;color:var(--text-secondary);">' + escapeHtml(when) + (dur ? ' · ' + dur : '') + ' · ' + escapeHtml((c.outcome || c.direction || 'call').replace(/_/g, ' ')) + (c.logged_by ? ' · ' + escapeHtml(c.logged_by) : '') + '</div>'
+                            + (c.transcript_summary ? '<div style="font-size:12px;color:var(--text-tertiary);margin-top:3px;line-height:1.45;">' + escapeHtml(c.transcript_summary) + '</div>' : '')
+                            + (c.recording_url ? '<a href="' + escapeHtml(c.recording_url) + '" target="_blank" style="font-size:12px;color:var(--blue);">Recording</a>' : '')
+                            + '</div>';
+                    }).join('')
+                    + '</div>';
+            }
+
             return ''
                 + '<div style="margin-bottom:20px;">'
-                + '<div style="font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.02em;">' + escapeHtml(r.business_name || '—') + '</div>'
+                + '<div style="font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.02em;">' + escapeHtml(r.business_name || r.name || '—') + '</div>'
                 + '<div style="color:var(--text-secondary);margin-top:6px;">' + escapeHtml(r.owner_name || '—') + ' · ' + escapeHtml(r.owner_phone || '—') + '</div>'
-                + '<div style="margin-top:10px;display:flex;gap:8px;">'
+                + (r.address ? '<div style="color:var(--text-tertiary);font-size:13px;margin-top:3px;">' + escapeHtml(r.address) + '</div>' : '')
+                + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
                 + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '')
                 + (stage ? '<span class="badge ' + stage + '">' + stage.replace('_',' ').toUpperCase() + '</span>' : '')
+                + (r.website ? '<a href="' + escapeHtml(r.website) + '" target="_blank" style="font-size:12px;color:var(--blue);align-self:center;">Website ↗</a>' : '')
                 + '</div>'
                 + '</div>'
-                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px;">'
-                + '<div><div class="stat-label">Niche</div><div>' + escapeHtml(r.niche || '—') + '</div></div>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 24px;margin-bottom:20px;">'
+                + '<div><div class="stat-label">Niche</div><div>' + escapeHtml(r.niche || r.category || '—') + '</div></div>'
                 + '<div><div class="stat-label">City</div><div>' + escapeHtml(r.city || '—') + '</div></div>'
-                + '<div><div class="stat-label">Email</div><div>' + escapeHtml(r.owner_email || '—') + '</div></div>'
-                + '<div><div class="stat-label">Score</div><div>' + (r.prospect_score != null ? r.prospect_score : '—') + '</div></div>'
+                + '<div><div class="stat-label">Email</div><div style="word-break:break-all;">' + escapeHtml(r.owner_email || r.email || '—') + '</div></div>'
+                + '<div><div class="stat-label">Score</div><div>' + (r.prospect_score != null ? r.prospect_score : '—') + (r.call_attempts ? ' · ' + r.call_attempts + ' dial' + (r.call_attempts === 1 ? '' : 's') : '') + '</div></div>'
                 + '</div>'
+                + painHtml
+                + historyHtml
                 + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Log a call outcome</div>'
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
                 + outcomeBtn(r.id, 'called',              'Called (dial only)',          'var(--blue)')
-                + outcomeBtn(r.id, 'booked_meeting',      'Booked meeting',              'var(--green)')
+                + '<button onclick="openBookingPicker(' + r.id + ')" style="padding:10px 14px;background:var(--bg-card);border:1px solid var(--green);color:var(--green);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Booked meeting</button>'
                 + outcomeBtn(r.id, 'callback_requested',  'Interested · follow up',      'var(--orange)')
                 + outcomeBtn(r.id, 'owner_uninterested',  'Not interested',              'var(--text-tertiary)')
                 + outcomeBtn(r.id, 'wrong_number',        'Wrong number',                'var(--red)')
                 + outcomeBtn(r.id, 'do_not_call',         'Do Not Call',                 'var(--red)')
                 + '</div>'
-                + '<textarea id="callNote" placeholder="Notes (optional)" rows="3" style="width:100%;margin-top:14px;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;"></textarea>';
+                + '<textarea id="callNote" placeholder="Notes (optional)" rows="3" style="width:100%;margin-top:14px;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;"></textarea>'
+                // Booking slot picker — hidden until "Booked meeting" is clicked.
+                + '<div id="sdrBookingPicker" style="display:none;margin-top:16px;border-top:1px solid var(--border-medium);padding-top:16px;">'
+                + '<div class="section-title" style="font-size:14px;margin-bottom:4px;">Pick a time on Remy\'s calendar</div>'
+                + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">Books the meeting, emails the prospect the Google Meet link, and adds it to Remy\'s calendar.</div>'
+                + '<div id="sdrBookingSlots"></div>'
+                + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
+                + '<button id="sdrBookBtn" onclick="confirmBooking(' + r.id + ')" disabled style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;opacity:0.5;">Book + send invite</button>'
+                + '</div>';
         }
         function outcomeBtn(leadId, outcome, label, color) {
             return '<button onclick="logCall(' + leadId + ',\'' + outcome + '\')" style="padding:10px 14px;background:var(--bg-card);border:1px solid ' + color + ';color:' + color + ';border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">' + label + '</button>';
@@ -1316,6 +1366,132 @@
                 loadLeads();
                 loadOverview();
             } catch (e) { alert('Log failed: ' + e.message); }
+        }
+
+        /* ===== BOOKING SLOT PICKER (Google Calendar free/busy) =====
+           Mirrors the admin lead drawer: choose "Booked meeting" → reveal a
+           two-step day/time picker fed by /api/prospects/calendar-availability
+           → confirm → /api/prospects/book-meeting creates the event, emails
+           the prospect, and flips the lead to booked. */
+        var bookingState = { slots: [], selectedIso: null, expandedDay: null };
+
+        function openBookingPicker(leadId) {
+            var host = document.getElementById('sdrBookingPicker');
+            if (host) host.style.display = 'block';
+            loadBookingSlots();
+            if (host) host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function loadBookingSlots() {
+            var host = document.getElementById('sdrBookingSlots');
+            if (!host) return;
+            host.innerHTML = '<div style="padding:14px;color:var(--text-tertiary);font-size:12px;">Loading available times…</div>';
+            bookingState = { slots: [], selectedIso: null, expandedDay: null };
+            setBookBtnEnabled(false);
+            try {
+                var data = await fetchJSON('/api/prospects/calendar-availability?days=7');
+                if (data.configured === false) {
+                    host.innerHTML = '<div style="padding:14px;background:rgba(234,179,8,0.12);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:12px;line-height:1.5;">Google Calendar is not connected yet. Remy needs to authorize the booking calendar before slots will appear.</div>';
+                    return;
+                }
+                bookingState.slots = data.slots || [];
+                bookingState.expandedDay = bookingState.slots.length ? bookingDayKey(bookingState.slots[0].start) : null;
+                renderBookingSlots();
+            } catch (e) {
+                var detail = (e.body && e.body.detail) ? String(e.body.detail) : '';
+                host.innerHTML = '<div style="color:var(--red);font-size:12px;padding:12px;line-height:1.5;">Could not load slots: <strong>' + escapeHtml(e.message || 'unknown') + '</strong>'
+                    + (detail ? '<div style="margin-top:6px;color:var(--text-tertiary);font-size:11px;white-space:pre-wrap;">' + escapeHtml(detail.slice(0, 400)) + '</div>' : '') + '</div>';
+            }
+        }
+
+        function bookingDayKey(iso) {
+            return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+        }
+
+        function renderBookingSlots() {
+            var host = document.getElementById('sdrBookingSlots');
+            if (!host) return;
+            if (!bookingState.slots.length) {
+                host.innerHTML = '<div style="padding:14px;color:var(--text-tertiary);font-size:12px;">No open slots in the next 7 business days.</div>';
+                return;
+            }
+            var byDay = {}, dayOrder = [];
+            bookingState.slots.forEach(function (s) {
+                var key = bookingDayKey(s.start);
+                if (!byDay[key]) { byDay[key] = []; dayOrder.push(key); }
+                byDay[key].push(s);
+            });
+            var dayCards = dayOrder.map(function (day) {
+                var isOpen = bookingState.expandedDay === day;
+                var bg = isOpen ? 'var(--blue)' : 'var(--bg-input)';
+                var color = isOpen ? '#fff' : 'var(--text-primary)';
+                var border = isOpen ? 'var(--blue)' : 'var(--border-medium)';
+                return '<button type="button" onclick="selectBookingDay(\'' + day + '\')" style="flex:1;min-width:104px;padding:9px 8px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;color:' + color + ';font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3;">'
+                    + '<div>' + escapeHtml(day) + '</div><div style="font-size:10px;font-weight:500;opacity:0.75;margin-top:2px;">' + byDay[day].length + ' slots</div></button>';
+            }).join('');
+            var html = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + dayCards + '</div>';
+            if (bookingState.expandedDay && byDay[bookingState.expandedDay]) {
+                var timeButtons = byDay[bookingState.expandedDay].map(function (s) {
+                    var time = new Date(s.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+                    var sel = bookingState.selectedIso === s.start;
+                    var bg = sel ? 'var(--blue)' : 'var(--bg-input)';
+                    var color = sel ? '#fff' : 'var(--text-primary)';
+                    var border = sel ? 'var(--blue)' : 'var(--border-medium)';
+                    return '<button type="button" onclick="selectBookingSlot(\'' + s.start + '\')" style="padding:8px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:6px;color:' + color + ';font-size:12px;font-weight:600;cursor:pointer;">' + escapeHtml(time) + '</button>';
+                }).join('');
+                html += '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + escapeHtml(bookingState.expandedDay) + ' · open times</div>'
+                    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;max-height:220px;overflow-y:auto;padding:2px;">' + timeButtons + '</div>';
+            }
+            host.innerHTML = html;
+        }
+
+        function selectBookingDay(day) {
+            bookingState.expandedDay = (bookingState.expandedDay === day) ? null : day;
+            renderBookingSlots();
+        }
+
+        function selectBookingSlot(iso) {
+            bookingState.selectedIso = iso;
+            bookingState.expandedDay = bookingDayKey(iso);
+            renderBookingSlots();
+            setBookBtnEnabled(true);
+            var msg = document.getElementById('sdrBookingMsg');
+            if (msg) {
+                msg.style.color = 'var(--blue)';
+                msg.textContent = new Date(iso).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET selected.';
+            }
+        }
+
+        function setBookBtnEnabled(on) {
+            var b = document.getElementById('sdrBookBtn');
+            if (!b) return;
+            b.disabled = !on;
+            b.style.opacity = on ? '1' : '0.5';
+            b.style.cursor = on ? 'pointer' : 'not-allowed';
+        }
+
+        async function confirmBooking(leadId) {
+            if (!bookingState.selectedIso) return;
+            var msg = document.getElementById('sdrBookingMsg');
+            var btn = document.getElementById('sdrBookBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Booking…'; }
+            if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Booking on Google Calendar + emailing the prospect…'; }
+            try {
+                var resp = await fetchJSON('/api/prospects/book-meeting', {
+                    method: 'POST',
+                    body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 })
+                });
+                if (msg) {
+                    msg.style.color = 'var(--green)';
+                    msg.innerHTML = 'Booked. ' + (resp.event_link ? '<a href="' + escapeHtml(resp.event_link) + '" target="_blank" style="color:var(--blue);">Open in Calendar</a>' : '')
+                        + (resp.meet_link ? ' · <a href="' + escapeHtml(resp.meet_link) + '" target="_blank" style="color:var(--blue);">Meet link</a>' : '')
+                        + (resp.email && resp.email.id ? ' · email sent' : (resp.email && resp.email.skipped ? ' · email skipped' : ''));
+                }
+                setTimeout(function () { closeLeadDrawer(); loadLeads(); loadOverview(); }, 1800);
+            } catch (e) {
+                if (btn) { btn.disabled = false; btn.textContent = 'Book + send invite'; }
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Booking failed: ' + (e.message || 'unknown'); }
+            }
         }
 
         /* ===== PERFORMANCE (with merged Earnings) =====

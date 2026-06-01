@@ -12,27 +12,13 @@
  * Returns 503 with a clear message if OAuth isn't configured yet — frontend
  * shows a "Configure Google Calendar" prompt instead of a broken picker.
  */
-const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
+const { getCalendarRefreshToken, accessTokenFromRefresh } = require('./_google_calendar');
 
 const SLOT_MIN = 15;
 const BIZ_START_HOUR = 9;   // 9am ET
 const BIZ_END_HOUR = 18;    // 6pm ET
 const TZ_OFFSET_HOURS = 4;  // ET = UTC-4 (DST), -5 in winter; close enough for slot generation
-
-async function getAccessToken() {
-    const r = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
-            client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-            refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
-            grant_type: 'refresh_token'
-        })
-    });
-    if (!r.ok) throw new Error('oauth_refresh_failed: ' + (await r.text()).slice(0, 200));
-    return (await r.json()).access_token;
-}
 
 function generateBusinessSlots(days) {
     const slots = [];
@@ -60,10 +46,11 @@ module.exports = async function handler(req, res) {
 
     const days = Math.min(Math.max(parseInt((req.query && req.query.days) || '7', 10), 1), 14);
 
-    if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET || !process.env.GOOGLE_OAUTH_REFRESH_TOKEN) {
+    const refreshToken = await getCalendarRefreshToken();
+    if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET || !refreshToken) {
         return res.status(503).json({
             error: 'google_calendar_not_configured',
-            detail: 'Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN in Vercel env.',
+            detail: 'The STILO booking calendar is not connected. Open /api/oauth?provider=google-calendar&action=start signed in as remyleon@stiloaipartners.com to link it.',
             // Return the slot grid anyway so the frontend can render a "configure"
             // hint with realistic time labels.
             slots: generateBusinessSlots(days),
@@ -72,7 +59,7 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        const accessToken = await getAccessToken();
+        const accessToken = await accessTokenFromRefresh(refreshToken);
         const candidateSlots = generateBusinessSlots(days);
         if (!candidateSlots.length) return res.status(200).json({ slots: [], configured: true });
 
