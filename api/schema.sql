@@ -12,6 +12,7 @@
 --   forge = AI Website
 --   signal = AI SEO (GEO)
 --   oracle = Growth Intelligence
+--   pitch = AI Sales Coach
 --   flux = Custom Automations
 
 -- Leads table (pre-purchase / pre-booking capture)
@@ -76,7 +77,7 @@ create policy "Users can update own client record" on public.clients
 create table public.client_agents (
   id uuid primary key default gen_random_uuid(),
   client_id uuid references public.clients(id) on delete cascade,
-  agent_type text not null, -- echo, ignite, revive, scout, forge, signal, oracle, flux
+  agent_type text not null, -- echo, ignite, revive, scout, forge, signal, oracle, pitch, flux
   status text default 'onboarding', -- onboarding, active, paused, cancelled
   stripe_subscription_id text,
   onboarding_progress jsonb default '{}',

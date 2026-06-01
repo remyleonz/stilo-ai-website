@@ -7260,9 +7260,11 @@
                 var data = await res.json();
                 var deals = data.deals || [];
                 var stages = ['PROPOSAL_SENT', 'INVOICE_SENT', 'PAID', 'ONBOARDING', 'LIVE', 'CHURNED', 'CLOSED_LOST'];
+                // Calm, semantic palette (was a 7-hue rainbow). Blue family =
+                // in-flight, green = money in / live, red = churned, gray = lost.
                 var stageColors = {
-                    PROPOSAL_SENT: '#f97316', INVOICE_SENT: '#eab308', PAID: '#0ea5e9',
-                    ONBOARDING: '#a855f7', LIVE: '#10b981', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280'
+                    PROPOSAL_SENT: '#2563eb', INVOICE_SENT: '#60a5fa', PAID: '#22c55e',
+                    ONBOARDING: '#60a5fa', LIVE: '#22c55e', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280'
                 };
                 grid.innerHTML = stages.map(function (st) {
                     var stageDeals = deals.filter(function (d) { return d.stage === st; });
@@ -7312,7 +7314,7 @@
                     + '<th style="padding:10px;"></th>'
                     + '</tr></thead><tbody>'
                     + deals.map(function (d) {
-                        var stageColor = { PROPOSAL_SENT: '#f97316', INVOICE_SENT: '#eab308', PAID: '#0ea5e9', ONBOARDING: '#a855f7', LIVE: '#10b981', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280' }[d.stage] || '#6b7280';
+                        var stageColor = { PROPOSAL_SENT: '#2563eb', INVOICE_SENT: '#60a5fa', PAID: '#22c55e', ONBOARDING: '#60a5fa', LIVE: '#22c55e', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280' }[d.stage] || '#6b7280';
                         return '<tr style="border-top:1px solid var(--border-subtle);cursor:pointer;" onclick="openDealDetail(\'' + d.id + '\')">'
                             + '<td style="padding:10px;"><strong>' + escapeAdminHtml(d.business_name) + '</strong><br><span style="color:var(--text-tertiary);font-size:11px;">' + escapeAdminHtml(d.contact_email) + '</span></td>'
                             + '<td style="padding:10px;">' + (d.sdr_users ? escapeAdminHtml(d.sdr_users.display_name) : '<span style="color:var(--text-muted);">—</span>') + '</td>'

@@ -11,3 +11,6 @@ scripts/secrets.json
 
 # Competitor reference screenshots — internal only, do not ship
 CompetitorSites/
+
+# Internal competitive / site analysis — keep local, never publish on the site repo
+site-audit/

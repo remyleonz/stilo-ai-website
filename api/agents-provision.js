@@ -81,6 +81,10 @@ function checkBlockingGates(agentType, config) {
     case 'oracle':
       if (!safe.data_sources_minimum_check) missing.push('data_sources');
       break;
+    case 'pitch':
+      if (!safe.source_connection_test) missing.push('source_connection_test');
+      if (!safe.consent_to_process_transcripts) missing.push('consent_to_process_transcripts');
+      break;
     default:
       // business_profile, flux: handler refuses anyway
       break;

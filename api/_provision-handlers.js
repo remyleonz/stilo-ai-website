@@ -523,6 +523,37 @@ const HANDLERS = {
     },
   },
 
+  pitch: {
+    async run({ agent, config, profile, niche }) {
+      // PITCH (AI Sales Coach) runtime lives in the Sales Coach Python agent.
+      // First-pass provisioning writes merged config to disk; the scheduled job
+      // pulls call/email source credentials from there to build the baseline
+      // analysis. Real source pulls (Gong, Gmail OAuth, etc.) happen in that
+      // worker — this endpoint just persists the inputs and flags for review.
+      const updates = { provisioned: true };
+      const slug = clientSlugFor(profile, agent);
+      const filePath = clientsDirFor(slug, 'pitch');
+      const writeRes = writeConfigFile(filePath, Object.assign({}, profile, config, { niche }));
+      updates.disk_synced = writeRes.written;
+
+      const notes = [];
+      if (config.connect_call_source && config.connect_call_source !== 'manual_upload' && config.connect_call_source !== 'none_yet') {
+        notes.push('Call source: ' + config.connect_call_source + ' — verify pull access on next worker run.');
+      }
+      if (config.connect_email_source && config.connect_email_source !== 'manual_paste' && config.connect_email_source !== 'none_yet') {
+        notes.push('Email source: ' + config.connect_email_source + '.');
+      }
+
+      return {
+        provisioned: true,
+        updates,
+        human_review: notes.length ? notes.join(' | ') : (writeRes.written
+          ? 'PITCH config written. Sales Coach worker picks it up on the next scheduled run.'
+          : writeRes.note),
+      };
+    },
+  },
+
 };
 
 module.exports = { HANDLERS };
