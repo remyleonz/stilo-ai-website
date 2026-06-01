@@ -8,8 +8,8 @@
  *                commission_paid, commission_lifetime }
  *
  * MRR closed = sum of monthly_retainer for primary attribution rows.
- * Commission upfront = upfront_fee * commission_pct (one-time)
- * Commission monthly = monthly_retainer * commission_pct (recurring while active)
+ * Commission upfront = upfront_fee * commission_pct        (one-time, setup fee)
+ * Commission monthly = monthly_retainer * commission_mrr_pct (recurring while active)
  */
 const { authSdr, resolveScope, methodNotAllowed } = require('./_shared');
 
@@ -30,6 +30,7 @@ module.exports = async function handler(req, res) {
             upfront_fee_cents,
             monthly_retainer_cents,
             commission_pct,
+            commission_mrr_pct,
             payout_status,
             payout_pending_cents,
             payout_paid_cents,
@@ -45,7 +46,8 @@ module.exports = async function handler(req, res) {
     const { data: rows, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
 
-    const fallbackPct = scope.sdr && scope.sdr.commission_pct ? Number(scope.sdr.commission_pct) : 0.25;
+    const fallbackPct = scope.sdr && scope.sdr.commission_pct != null ? Number(scope.sdr.commission_pct) : 0.25;
+    const fallbackMrrPct = scope.sdr && scope.sdr.commission_mrr_pct != null ? Number(scope.sdr.commission_mrr_pct) : 0.10;
 
     let mrrCents = 0;
     let revenueCents = 0;
@@ -74,10 +76,11 @@ module.exports = async function handler(req, res) {
 
     const items = (rows || []).map(r => {
         const pct = r.commission_pct != null ? Number(r.commission_pct) : fallbackPct;
+        const mrrPct = r.commission_mrr_pct != null ? Number(r.commission_mrr_pct) : fallbackMrrPct;
         const upfront = r.upfront_fee_cents || 0;
         const retainer = r.monthly_retainer_cents || 0;
         const commissionUpfront = Math.round(upfront * pct);
-        const commissionMonthly = Math.round(retainer * pct);
+        const commissionMonthly = Math.round(retainer * mrrPct);
 
         // payout_status === 'pending' means client hasn't paid yet → commission is "awaiting payment"
         // (visibility-only on SDR dashboard, no dollar amount per Remy's choice).
@@ -111,6 +114,7 @@ module.exports = async function handler(req, res) {
             upfront_fee_cents: upfront,
             monthly_retainer_cents: retainer,
             commission_pct: pct,
+            commission_mrr_pct: mrrPct,
             commission_upfront_cents: commissionUpfront,
             commission_monthly_cents: commissionMonthly,
             payout_status: r.payout_status,
@@ -127,7 +131,8 @@ module.exports = async function handler(req, res) {
             sdr_id: scope.sdrId,
             sdr_name: scope.sdr ? scope.sdr.display_name : 'All SDRs',
             is_all: scope.isAllScope,
-            commission_pct: fallbackPct
+            commission_pct: fallbackPct,
+            commission_mrr_pct: fallbackMrrPct
         },
         totals: {
             mrr_closed_cents: mrrCents,

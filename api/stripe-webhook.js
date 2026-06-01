@@ -379,7 +379,7 @@ async function handleCheckoutComplete(session) {
       if (ownerEmail) {
         const { data: sdr } = await supabase
           .from('sdr_users')
-          .select('id, commission_pct')
+          .select('id, commission_pct, commission_mrr_pct')
           .eq('email', ownerEmail.toLowerCase())
           .eq('active', true)
           .maybeSingle();
@@ -400,6 +400,7 @@ async function handleCheckoutComplete(session) {
             upfront_fee_cents: upfrontCents,
             monthly_retainer_cents: monthlyCents,
             commission_pct: sdr.commission_pct,
+            commission_mrr_pct: sdr.commission_mrr_pct,
             payout_status: 'pending',
             stripe_customer_id: session.customer || null,
             stripe_subscription_id: session.subscription || null,

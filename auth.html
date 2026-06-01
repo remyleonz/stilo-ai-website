@@ -223,6 +223,13 @@
             transform: translateY(0);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .error-message {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.2);
@@ -324,7 +331,7 @@
                 <label for="signin-email">Email</label>
                 <input type="email" id="signin-email" placeholder="you@business.com" autocomplete="email">
               </div>
-              <button type="button" class="btn-primary" onclick="handleMagicLink()">Send My Login Link</button>
+              <button type="button" class="btn-primary" id="signinSendBtn" onclick="handleMagicLink()">Send My Login Link</button>
               <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:14px;line-height:1.5;">Link expires in 1 hour and works once. Check spam if it doesn't arrive.</p>
             </div>
         </div>
@@ -379,9 +386,60 @@
             document.getElementById('success-msg').style.display = 'none';
         }
 
+        // Send-button cooldown. The button locks the instant it's pressed
+        // (before any await) so rapid taps can't each fire signInWithOtp, and
+        // stays locked through a 30s countdown after a link is sent. Together
+        // these kill the "you can only request this after N seconds" rate-limit
+        // error that button-spamming used to trigger.
+        function startButtonCooldown(btn, seconds, idleLabel) {
+            if (!btn) return;
+            var remaining = seconds;
+            btn.disabled = true;
+            btn.textContent = 'Resend in ' + remaining + 's';
+            if (btn._cooldownTimer) clearInterval(btn._cooldownTimer);
+            btn._cooldownTimer = setInterval(function () {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    clearInterval(btn._cooldownTimer);
+                    btn._cooldownTimer = null;
+                    btn.disabled = false;
+                    btn.textContent = idleLabel;
+                } else {
+                    btn.textContent = 'Resend in ' + remaining + 's';
+                }
+            }, 1000);
+        }
+
+        function unlockButton(btn, idleLabel) {
+            if (!btn) return;
+            if (btn._cooldownTimer) { clearInterval(btn._cooldownTimer); btn._cooldownTimer = null; }
+            btn.disabled = false;
+            btn.textContent = idleLabel;
+        }
+
+        // Supabase rate-limit text looks like "For security purposes, you can
+        // only request this after 23 seconds." Pull the number so the cooldown
+        // matches what the server actually wants.
+        function rateLimitSeconds(message) {
+            var m = (message || '').match(/after (\d+)\s*sec/i);
+            return m ? parseInt(m[1], 10) : null;
+        }
+        function isRateLimit(message) {
+            var msg = (message || '').toLowerCase();
+            return (msg.indexOf('after') !== -1 && msg.indexOf('sec') !== -1)
+                || msg.indexOf('rate limit') !== -1 || msg.indexOf('too many') !== -1;
+        }
+
         async function handleMagicLink() {
+            var btn = document.getElementById('signinSendBtn');
             var email = document.getElementById('signin-email').value.trim();
             if (!email) { showError('Enter your email first.'); return; }
+            if (btn && btn.disabled) return; // already sending or cooling down
+
+            // Lock immediately, before the await, so double/triple taps can't
+            // each fire an OTP request.
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+            hideMessages();
 
             // Admins can self-provision. Clients can only sign in if they have
             // an existing account (created by the Stripe webhook on purchase).
@@ -401,14 +459,23 @@
                     var msg = (error.message || '').toLowerCase();
                     if (msg.indexOf('signups not allowed') !== -1 || msg.indexOf('user not found') !== -1) {
                         showError('We don\'t have an account for that email. Make sure you\'re using the email from your purchase, or get a free audit to get started.');
+                        unlockButton(btn, 'Send My Login Link');
+                    } else if (isRateLimit(error.message)) {
+                        // Asked again too soon — hold the button exactly as long
+                        // as the server wants (fallback 30s).
+                        showError('One link at a time. Hang tight a few seconds and try again.');
+                        startButtonCooldown(btn, rateLimitSeconds(error.message) || 30, 'Send My Login Link');
                     } else {
                         showError(error.message);
+                        unlockButton(btn, 'Send My Login Link');
                     }
                     return;
                 }
                 showSuccess('Login link sent. Click it in your inbox and you\'ll land straight in your dashboard.');
+                startButtonCooldown(btn, 30, 'Send My Login Link');
             } catch (err) {
                 showError('Something went wrong. Please try again.');
+                unlockButton(btn, 'Send My Login Link');
             }
         }
 
@@ -427,6 +494,7 @@
                 return;
             }
             var btn = document.getElementById('welcomeSendBtn');
+            if (btn && btn.disabled) return; // already sending
             btn.disabled = true;
             btn.textContent = 'Sending...';
 

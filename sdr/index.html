@@ -216,41 +216,51 @@
         /* CARDS / GRIDS */
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 16px;
             margin-bottom: 24px;
         }
         .stat-card {
-            background: var(--bg-card);
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
             border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 16px 18px;
+            border-radius: 14px;
+            padding: 22px 22px 18px;
+            transition: border-color 160ms ease, background 160ms ease;
         }
         .stat-label {
-            font-size: 11px;
-            letter-spacing: 0.08em;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
             color: var(--text-secondary);
-            margin-bottom: 6px;
+            margin-bottom: 10px;
         }
         .stat-value {
             font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 2rem;
-            line-height: 1.1;
-            letter-spacing: -0.02em;
+            font-weight: 600;
+            font-size: 2.1rem;
+            line-height: 1.05;
+            letter-spacing: -0.025em;
             color: var(--text-primary);
             font-variant-numeric: tabular-nums;
         }
         .stat-meta {
-            font-size: 12px;
+            font-size: 0.78rem;
             color: var(--text-tertiary);
-            margin-top: 6px;
+            margin-top: 8px;
         }
-        .stat-card.accent-blue { border-left: 3px solid var(--blue); }
-        .stat-card.accent-green { border-left: 3px solid var(--green); }
-        .stat-card.accent-purple { border-left: 3px solid var(--purple); }
-        .stat-card.accent-orange { border-left: 3px solid var(--orange); }
+        /* Calm, uniform cards. The old colored left-borders read as clutter;
+           the numbers + mono eyebrows carry the hierarchy now (Revenue-tab
+           styling). Clickable cards get a subtle hover instead of a rainbow. */
+        .stat-card.accent-blue,
+        .stat-card.accent-green,
+        .stat-card.accent-purple,
+        .stat-card.accent-orange { border-left: 1px solid var(--border-subtle); }
+        .stat-card[onclick] { cursor: pointer; }
+        .stat-card[onclick]:hover {
+            border-color: var(--border-medium);
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+        }
 
         .section-title {
             font-family: var(--font-display);
@@ -302,27 +312,31 @@
         /* TIER + STAGE BADGES */
         .badge {
             display: inline-block;
-            padding: 2px 9px;
+            padding: 3px 10px;
             border-radius: 999px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--text-tertiary);
-            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+            font-size: 0.66rem;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
         }
-        .badge.hot { border-color: var(--red); color: var(--red); }
-        .badge.warm { border-color: var(--orange); color: var(--orange); }
-        .badge.cool { border-color: var(--yellow); color: var(--yellow); }
-        .badge.new { border-color: var(--text-tertiary); color: var(--text-tertiary); }
-        .badge.contacted { border-color: var(--blue); color: var(--blue); }
-        .badge.engaged { border-color: var(--cyan); color: var(--cyan); }
-        .badge.qualified { border-color: var(--purple); color: var(--purple); }
-        .badge.meeting_booked, .badge.closed_won { border-color: var(--green); color: var(--green); }
-        .badge.closed_lost { border-color: var(--red); color: var(--red); }
-        .badge.paid { border-color: var(--green); color: var(--green); }
-        .badge.pending { border-color: var(--orange); color: var(--orange); }
-        .badge.invoiced { border-color: var(--cyan); color: var(--cyan); }
+        /* Semantic color lives in the text only; the pill stays a calm,
+           uniform shape so rows don't turn into a row of colored rings. */
+        .badge.hot { color: #f87171; }
+        .badge.warm { color: var(--orange); }
+        .badge.cool { color: var(--yellow); }
+        .badge.new { color: var(--text-secondary); }
+        .badge.contacted { color: var(--blue); }
+        .badge.engaged { color: var(--cyan); }
+        .badge.qualified { color: var(--purple); }
+        .badge.meeting_booked, .badge.closed_won { color: var(--green); }
+        .badge.closed_lost { color: #f87171; }
+        .badge.paid { color: var(--green); }
+        .badge.pending { color: var(--orange); }
+        .badge.invoiced { color: var(--cyan); }
 
         /* DRAWER */
         .drawer {
@@ -470,29 +484,29 @@
 
         /* PROGRESS RING (big) */
         .ring-wrap {
-            display: flex; align-items: center; gap: 22px;
-            margin-bottom: 28px;
-            padding: 24px;
-            background: var(--bg-card);
+            display: flex; align-items: center; gap: 24px;
+            margin-bottom: 24px;
+            padding: 24px 26px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
             border: 1px solid var(--border-subtle);
-            border-radius: 14px;
+            border-radius: 16px;
         }
         .ring-svg {
-            width: 92px; height: 92px;
+            width: 88px; height: 88px;
             transform: rotate(-90deg);
         }
-        .ring-svg .track { fill: none; stroke: var(--bg-elev); stroke-width: 8; }
-        .ring-svg .fill { fill: none; stroke: var(--blue); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 600ms ease; }
+        .ring-svg .track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 5; }
+        .ring-svg .fill { fill: none; stroke: var(--blue); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 600ms ease; }
         .ring-text {
-            font-size: 12px; color: var(--text-secondary);
+            font-size: 0.78rem; color: var(--text-secondary);
         }
         .ring-text strong {
             display: block;
             font-family: var(--font-display);
-            font-weight: 800;
-            font-size: 24px;
+            font-weight: 700;
+            font-size: 26px;
             color: var(--text-primary);
-            letter-spacing: -0.02em;
+            letter-spacing: -0.025em;
         }
 
         /* Hide sidebar overflow at any width so its 260px contents never
@@ -670,8 +684,9 @@
                     <div style="color:var(--text-secondary);font-size:13px;margin-top:6px;" id="bigQuotaRemaining">— remaining</div>
                 </div>
                 <div style="margin-left:auto;text-align:right;">
-                    <div class="stat-label">Streak</div>
-                    <div style="font-family:var(--font-display);font-weight:800;font-size:1.8rem;letter-spacing:-0.02em;" id="overviewStreak">—</div>
+                    <div class="stat-label">Close rate</div>
+                    <div style="font-family:var(--font-display);font-weight:600;font-size:1.8rem;letter-spacing:-0.025em;" id="overviewCloseRate">—</div>
+                    <div class="stat-meta" id="overviewCloseRateMeta">meetings / dials</div>
                 </div>
             </div>
 
@@ -756,7 +771,7 @@
              /api/sdr/earnings in parallel. -->
         <section class="page-content hidden" id="page-performance">
             <div class="section-title">Performance</div>
-            <div class="section-subtitle">Lifetime stats + commission. 25% on every closed deal.</div>
+            <div class="section-subtitle">Lifetime stats + commission. 25% of setup fee + 10% of monthly retainer.</div>
 
             <!-- Top row: the four call KPIs that drive the day. -->
             <div class="stat-grid">
@@ -1030,7 +1045,7 @@
                 document.getElementById('profSdrKey').value = sdr.sdr_key || '';
                 document.getElementById('profAvatarColor').value = sdr.avatar_color || '#2563EB';
                 document.getElementById('profOpenPhone').value = sdr.openphone_number || '';
-                document.getElementById('profCommission').value = Math.round(Number(sdr.commission_pct || 0.25) * 1000) / 10 + '%';
+                document.getElementById('profCommission').value = (Math.round(Number(sdr.commission_pct != null ? sdr.commission_pct : 0.25) * 1000) / 10) + '% setup · ' + (Math.round(Number(sdr.commission_mrr_pct != null ? sdr.commission_mrr_pct : 0.10) * 1000) / 10) + '% MRR';
                 document.getElementById('profQuota').value = (sdr.daily_call_quota || 50) + ' calls / day';
             } catch (e) {
                 console.error('[loadProfile]', e);
@@ -1131,7 +1146,7 @@
                     perf.quota.today_remaining + ' more to hit today\'s target';
                 document.getElementById('topbarQuotaToday').textContent = perf.quota.today_progress;
                 document.getElementById('topbarQuotaTarget').textContent = perf.quota.daily;
-                document.getElementById('overviewStreak').textContent = '—';
+                document.getElementById('overviewCloseRate').textContent = (perf.rates && perf.rates.close_rate_pct != null) ? perf.rates.close_rate_pct + '%' : '—';
 
                 // Commission preview
                 const earn = await fetchJSON('/api/sdr/earnings');

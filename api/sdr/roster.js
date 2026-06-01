@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
 
     let q = caller.sb
         .from('sdr_users')
-        .select('id, email, sdr_key, display_name, initials, avatar_color, commission_pct, daily_call_quota, openphone_number, active, hired_at, auth_user_id')
+        .select('id, email, sdr_key, display_name, initials, avatar_color, commission_pct, commission_mrr_pct, daily_call_quota, openphone_number, active, hired_at, auth_user_id')
         .order('hired_at', { ascending: true });
 
     if (!includeInactive) q = q.eq('active', true);

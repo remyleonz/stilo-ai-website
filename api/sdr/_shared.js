@@ -73,7 +73,7 @@ async function authSdr(req, res) {
     // Resolve sdr_users row for this user (if any)
     const { data: sdrRow } = await sb
         .from('sdr_users')
-        .select('id, email, sdr_key, display_name, initials, avatar_color, commission_pct, active, daily_call_quota, openphone_number, hired_at')
+        .select('id, email, sdr_key, display_name, initials, avatar_color, commission_pct, commission_mrr_pct, active, daily_call_quota, openphone_number, hired_at')
         .eq('auth_user_id', userId)
         .maybeSingle();
 
@@ -106,7 +106,7 @@ async function resolveScope(req, caller) {
     if (!sdrId) return { sdrId: null, isAllScope: true, sdr: null };
     const { data: sdr } = await caller.sb
         .from('sdr_users')
-        .select('id, email, sdr_key, display_name, initials, avatar_color, commission_pct, daily_call_quota')
+        .select('id, email, sdr_key, display_name, initials, avatar_color, commission_pct, commission_mrr_pct, daily_call_quota')
         .eq('id', sdrId)
         .maybeSingle();
     return { sdrId, isAllScope: false, sdr: sdr || null };

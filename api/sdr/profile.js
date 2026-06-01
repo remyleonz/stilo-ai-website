@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
         }
 
         // SDR can update: display_name, avatar_color, openphone_number, notes
-        // Admin can additionally update: commission_pct, daily_call_quota, active, manager_email
+        // Admin can additionally update: commission_pct, commission_mrr_pct, daily_call_quota, active, manager_email
         const update = { updated_at: new Date().toISOString() };
         if (typeof body.display_name === 'string')     update.display_name = body.display_name.slice(0, 80);
         if (typeof body.avatar_color === 'string')     update.avatar_color = body.avatar_color.slice(0, 16);
@@ -57,6 +57,7 @@ module.exports = async function handler(req, res) {
 
         if (caller.isAdmin) {
             if (body.commission_pct !== undefined) update.commission_pct = Number(body.commission_pct);
+            if (body.commission_mrr_pct !== undefined) update.commission_mrr_pct = Number(body.commission_mrr_pct);
             if (body.daily_call_quota !== undefined) update.daily_call_quota = parseInt(body.daily_call_quota, 10);
             if (typeof body.active === 'boolean') update.active = body.active;
             if (typeof body.manager_email === 'string') update.manager_email = body.manager_email.slice(0, 120);

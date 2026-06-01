@@ -4235,7 +4235,7 @@
                     + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">'
                         + '<div style="width:56px;height:56px;border-radius:50%;background:' + (sdr.avatar_color || '#2563EB') + ';display:inline-flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;">' + escapeAdminHtml(sdr.initials || '?') + '</div>'
                         + '<div style="flex:1;min-width:0;"><div style="font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-0.02em;">' + escapeAdminHtml(sdr.display_name) + '</div>'
-                        + '<div style="color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(sdr.email) + ' · commission ' + Math.round(Number(sdr.commission_pct || 0.25) * 1000) / 10 + '% · quota ' + (sdr.daily_call_quota || 50) + '/day</div></div>'
+                        + '<div style="color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(sdr.email) + ' · commission ' + Math.round(Number(sdr.commission_pct || 0.25) * 1000) / 10 + '% setup / ' + Math.round(Number(sdr.commission_mrr_pct != null ? sdr.commission_mrr_pct : 0.10) * 1000) / 10 + '% MRR · quota ' + (sdr.daily_call_quota || 50) + '/day</div></div>'
                         // Open this SDR\'s dashboard in a new tab as them. Audited
                         // server-side; banner on /sdr/ makes the impersonation
                         // obvious. Mirrors the "Open as client" pattern on the
@@ -7074,7 +7074,7 @@
             }
             var sdrOptions = '<option value="">No SDR credit (house deal)</option>' + sdrRoster.map(function (s) {
                 var sel = s.id === defaultSdrId ? ' selected' : '';
-                return '<option value="' + s.id + '"' + sel + '>' + escapeAdminHtml(s.display_name) + ' (' + Math.round(Number(s.commission_pct || 0.25) * 100) + '%)</option>';
+                return '<option value="' + s.id + '"' + sel + '>' + escapeAdminHtml(s.display_name) + ' (' + Math.round(Number(s.commission_pct || 0.25) * 100) + '% setup / ' + Math.round(Number(s.commission_mrr_pct != null ? s.commission_mrr_pct : 0.10) * 100) + '% MRR)</option>';
             }).join('');
 
             var modalHtml = ''

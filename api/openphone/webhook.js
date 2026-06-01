@@ -17,7 +17,7 @@
  * signature on the body; reject anything that doesn't verify.
  */
 
-const { verifySignature, readRawBody, serviceClient, normalizePhone, openphoneFetch } = require('./_shared');
+const { verifySignature, readRawBody, serviceClient, publicClient, normalizePhone, openphoneFetch } = require('./_shared');
 
 function deriveOutcome(callPayload) {
     const status = callPayload.status || callPayload.completedReason || '';
@@ -270,9 +270,14 @@ module.exports = async function handler(req, res) {
     //   3. leads.assigned_to fallback (applied after lead resolution below).
     // We intentionally never set logged_by to null here — upsert would wipe
     // out a value already on the row from a prior manual log.
+    // Secondary signal — used only when a call isn't on a dedicated SDR line.
+    // Luke has no Quo user seat, so he never appears here; he's covered by the
+    // phone-line map below. Keep this in sync with `list-users` in Quo.
     const QUO_USER_ID_TO_EMAIL = {
-        'UShj8EpsSW': 'remyleon@stiloaipartners.com',
-        'USsSwYdBtK': 'davidcoira@stiloaipartners.com'
+        'UShj8EpsSW': 'remyleon@stiloaipartners.com',         // Remy Leon (owner)
+        'USCFfV4w6g': 'jackmaguire@stiloaipartners.com',      // Jack Maguire
+        'USHJZZYPss': 'alejandrobarrios@stiloaipartners.com', // Alejandro Barrios
+        'USsSwYdBtK': 'davidcoira@stiloaipartners.com'        // David Coira (legacy id)
     };
     const metadataLoggedBy = (call.metadata && call.metadata.logged_by) || null;
     if (metadataLoggedBy) {
@@ -342,6 +347,36 @@ module.exports = async function handler(req, res) {
         }
     }
     if (leadId) baseFields.lead_id = leadId;
+
+    // ── SDR attribution by dedicated Quo line (primary signal) ───────────────
+    // Each rep dials from their own Quo number, so the STILO-owned side of the
+    // call identifies the rep regardless of which Quo user (or no user, in
+    // Luke's case) placed it. Data-driven off public.sdr_users.openphone_number
+    // so onboarding a rep is just: insert the row + set their number. An
+    // explicit metadata.logged_by from the admin call tool still wins (set
+    // above), so this only fills or overrides the userId-map guess for SDR lines.
+    if (!metadataLoggedBy && (baseFields.from_number || baseFields.to_number)) {
+        try {
+            const pub = publicClient();
+            const { data: sdrLines } = await pub
+                .from('sdr_users')
+                .select('email, openphone_number')
+                .eq('active', true)
+                .not('openphone_number', 'is', null);
+            if (Array.isArray(sdrLines) && sdrLines.length) {
+                const lineToEmail = {};
+                for (const s of sdrLines) {
+                    const n = normalizePhone(s.openphone_number);
+                    if (n) lineToEmail[n] = s.email;
+                }
+                const ourLine = [baseFields.from_number, baseFields.to_number]
+                    .find(function (n) { return n && lineToEmail[n]; });
+                if (ourLine) baseFields.logged_by = lineToEmail[ourLine];
+            }
+        } catch (e) {
+            console.warn('[openphone/webhook] sdr line attribution failed', e.message || e);
+        }
+    }
 
     // Fallback attribution: if we resolved a lead but no explicit logged_by
     // came through, attribute the call to whoever owns the lead. Without

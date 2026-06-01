@@ -28,6 +28,15 @@ function serviceClient() {
     });
 }
 
+function publicClient() {
+    // sdr_users (and the rest of the authz tables) live in the public schema.
+    // serviceClient() is pinned to 'prospecting', so the webhook uses this
+    // client when it needs to resolve a rep from their dedicated phone line.
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false }
+    });
+}
+
 async function readRawBody(req) {
     if (req.rawBody) return req.rawBody;
     const chunks = [];
@@ -54,46 +63,50 @@ async function readRawBody(req) {
  * Returns true on match.
  */
 function verifySignature(headerValue, rawBody) {
-    const secret = process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET;
-    if (!secret) return false;
+    const secretEnv = process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET;
+    if (!secretEnv) return false;
     if (!headerValue) return false;
 
-    const keyBinary = Buffer.from(secret, 'base64');
+    // Quo issues a DISTINCT signing key per webhook, and call / transcript /
+    // summary events are separate webhooks. So OPENPHONE_WEBHOOK_SIGNING_SECRET
+    // is a comma-separated list of keys; we accept the event if ANY of them
+    // verifies. A single secret with no comma still works unchanged.
+    const secrets = secretEnv.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     const bodyStr = rawBody.toString('utf8');
 
-    const tryHmac = function (timestamp, expectedB64) {
-        if (!expectedB64) return false;
-        const payload = (timestamp ? timestamp + '.' : '') + bodyStr;
-        const computed = crypto.createHmac('sha256', keyBinary).update(payload).digest('base64');
-        if (computed.length !== expectedB64.length) return false;
-        try {
-            return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(expectedB64));
-        } catch (_) { return false; }
-    };
+    function matchesKey(keyBinary) {
+        const tryHmac = function (timestamp, expectedB64) {
+            if (!expectedB64) return false;
+            const payload = (timestamp ? timestamp + '.' : '') + bodyStr;
+            const computed = crypto.createHmac('sha256', keyBinary).update(payload).digest('base64');
+            if (computed.length !== expectedB64.length) return false;
+            try {
+                return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(expectedB64));
+            } catch (_) { return false; }
+        };
+        // Canonical: hmac;1;<ts>;<sig>
+        if (headerValue.indexOf(';') !== -1) {
+            const parts = headerValue.split(';').map(function (s) { return s.trim(); });
+            if (parts.length >= 4 && tryHmac(parts[2], parts[3])) return true;
+        }
+        // Stripe-style fallback: t=<ts>,v1=<sig>
+        if (headerValue.indexOf('=') !== -1) {
+            const fields = {};
+            headerValue.split(',').forEach(function (chunk) {
+                const eq = chunk.indexOf('=');
+                if (eq < 0) return;
+                fields[chunk.slice(0, eq).trim()] = chunk.slice(eq + 1).trim();
+            });
+            if (fields.t && fields.v1 && tryHmac(fields.t, fields.v1)) return true;
+        }
+        // Last resort: raw signature only, no timestamp prefix.
+        return tryHmac('', headerValue);
+    }
 
-    // Canonical: hmac;1;<ts>;<sig>
-    if (headerValue.indexOf(';') !== -1) {
-        const parts = headerValue.split(';').map(function (s) { return s.trim(); });
-        if (parts.length >= 4) {
-            const ts = parts[2];
-            const sig = parts[3];
-            if (tryHmac(ts, sig)) return true;
-        }
+    for (let i = 0; i < secrets.length; i++) {
+        if (matchesKey(Buffer.from(secrets[i], 'base64'))) return true;
     }
-    // Stripe-style fallback: t=<ts>,v1=<sig>
-    if (headerValue.indexOf('=') !== -1) {
-        const fields = {};
-        headerValue.split(',').forEach(function (chunk) {
-            const eq = chunk.indexOf('=');
-            if (eq < 0) return;
-            fields[chunk.slice(0, eq).trim()] = chunk.slice(eq + 1).trim();
-        });
-        if (fields.t && fields.v1) {
-            if (tryHmac(fields.t, fields.v1)) return true;
-        }
-    }
-    // Last resort: raw signature only, no timestamp prefix.
-    return tryHmac('', headerValue);
+    return false;
 }
 
 async function openphoneFetch(opts) {
@@ -142,6 +155,7 @@ module.exports = async function (_req, res) {
     res.status(405).json({ error: 'not_a_handler' });
 };
 module.exports.serviceClient = serviceClient;
+module.exports.publicClient = publicClient;
 module.exports.verifySignature = verifySignature;
 module.exports.openphoneFetch = openphoneFetch;
 module.exports.readRawBody = readRawBody;

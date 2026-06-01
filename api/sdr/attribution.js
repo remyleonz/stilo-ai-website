@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
             .from('client_attribution')
             .select(`
                 *,
-                sdr_users ( id, display_name, sdr_key, initials, avatar_color, email, commission_pct )
+                sdr_users ( id, display_name, sdr_key, initials, avatar_color, email, commission_pct, commission_mrr_pct )
             `)
             .eq('client_id', clientId)
             .order('role', { ascending: true });
@@ -42,15 +42,17 @@ module.exports = async function handler(req, res) {
         const sdrId = body.sdr_id;
         if (!clientId || !sdrId) return res.status(400).json({ error: 'client_id_and_sdr_id_required' });
 
-        // Snapshot commission_pct from SDR if not provided
+        // Snapshot commission rates from SDR if not provided
         let commissionPct = body.commission_pct;
-        if (commissionPct == null) {
+        let commissionMrrPct = body.commission_mrr_pct;
+        if (commissionPct == null || commissionMrrPct == null) {
             const { data: sdr } = await caller.sb
                 .from('sdr_users')
-                .select('commission_pct')
+                .select('commission_pct, commission_mrr_pct')
                 .eq('id', sdrId)
                 .maybeSingle();
-            commissionPct = sdr ? Number(sdr.commission_pct) : 0.25;
+            if (commissionPct == null) commissionPct = sdr ? Number(sdr.commission_pct) : 0.25;
+            if (commissionMrrPct == null) commissionMrrPct = sdr && sdr.commission_mrr_pct != null ? Number(sdr.commission_mrr_pct) : 0.10;
         }
 
         const role = body.role || 'primary';
@@ -62,6 +64,7 @@ module.exports = async function handler(req, res) {
             upfront_fee_cents: body.upfront_fee_cents != null ? parseInt(body.upfront_fee_cents, 10) : 0,
             monthly_retainer_cents: body.monthly_retainer_cents != null ? parseInt(body.monthly_retainer_cents, 10) : 0,
             commission_pct: commissionPct,
+            commission_mrr_pct: commissionMrrPct,
             payout_status: body.payout_status || 'pending',
             notes: (body.notes || '').toString().slice(0, 1000) || null,
             updated_at: new Date().toISOString()
