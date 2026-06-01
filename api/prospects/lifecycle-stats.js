@@ -83,10 +83,11 @@ async function localStats(sdrEmail) {
         };
 
         const callable = function (q) {
-            // Callable = named owner AND a dialable phone (owner_phone OR
-            // business `phone`), not DNC, still in the cold-call lifecycle.
+            // Callable = has a David-written cold-call script AND a dialable
+            // phone, not DNC, still in the cold-call lifecycle. (The scripted
+            // set is the callable queue; owner name not required.)
             return scope(q)
-                .not('owner_name', 'is', null).neq('owner_name', '')
+                .eq('has_cold_call_script', true)
                 .or('owner_phone.not.is.null,phone.not.is.null')
                 .not('do_not_call', 'eq', true)
                 .or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
@@ -120,7 +121,7 @@ async function localStats(sdrEmail) {
             scoping_applied = false;
             const callableNoScope = function (q) {
                 return q
-                    .not('owner_name', 'is', null).neq('owner_name', '')
+                    .eq('has_cold_call_script', true)
                     .or('owner_phone.not.is.null,phone.not.is.null')
                     .not('do_not_call', 'eq', true)
                     .or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');

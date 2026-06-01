@@ -19,14 +19,13 @@ async function callableFromSupabase(opts) {
         db: { schema: 'prospecting' }
     });
 
-    // "Callable" = a named owner AND a phone we can dial. Per Remy: only show
-    // leads that are genuinely workable. The phone may live in owner_phone OR
-    // the business `phone` column (David's batches use `phone`), but the owner
-    // name must be present (it's not hiding in another column — when missing,
-    // David's research simply failed for that lead).
+    // "Callable" = the lead David wrote a cold-call script for (the 750 briefs,
+    // ~250 per rep) AND a phone we can dial. Per Remy, the scripted set IS the
+    // callable queue; owner name is NOT required (David often leaves it for the
+    // rep to confirm on the call). Phone may live in owner_phone OR `phone`.
     let q = sb.from('leads')
         .select('*')
-        .not('owner_name', 'is', null).neq('owner_name', '')
+        .eq('has_cold_call_script', true)
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false');
 

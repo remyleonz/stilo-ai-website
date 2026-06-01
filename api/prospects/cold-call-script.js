@@ -69,15 +69,17 @@ function base64UrlEncode(buf) {
 
 function slugify(input) {
     if (!input) return '';
-    // Match David's filename convention: lowercase ASCII, hyphenated.
-    // Combining-mark range ̀-ͯ covers the diacritics produced by
-    // NFKD normalization, so "Café" → "cafe", "Ñ" → "n", etc.
+    // Match David's filename convention (standard Python slugify): lowercase,
+    // strip accents, DELETE punctuation that isn't a separator (so "T&S" -> "ts",
+    // "Al's" -> "als", "24/7" -> "247", "Dr." -> "dr"), THEN collapse whitespace/
+    // underscores/hyphens to a single hyphen. The old version turned & ' / into
+    // hyphens, which mismatched ~40 brief filenames.
     return String(input)
         .normalize('NFKD').replace(/[̀-ͯ]/g, '')
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .replace(/-{2,}/g, '-');
+        .replace(/[^a-z0-9\s_-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
 }
 
 function loadServiceAccount() {
