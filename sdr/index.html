@@ -1431,31 +1431,104 @@
             if (r.tentative_rep_assignment) url += '&rep=' + encodeURIComponent(String(r.tentative_rep_assignment).toLowerCase());
             try {
                 const data = await fetchJSON(url);
-                if (!data || !data.content_md) { host.textContent = 'No script for this lead yet.'; return; }
-                host.innerHTML = renderScriptMarkdown(data.content_md);
-                if (metaEl && data.generated_at) metaEl.textContent = '· generated ' + new Date(data.generated_at).toLocaleDateString();
+                if (data && data.content_md) {
+                    host.innerHTML = renderScriptMarkdown(data.content_md);
+                    if (metaEl && data.generated_at) metaEl.textContent = '· generated ' + new Date(data.generated_at).toLocaleDateString();
+                    return;
+                }
+                throw { status: 404 };
             } catch (e) {
-                if (e.status === 404) host.textContent = 'No cold-call script for this lead yet. Scripts are added with each new lead batch.';
-                else host.innerHTML = '<span style="color:var(--red);">Could not load script: ' + escapeHtml(e.message || 'unknown') + '</span>';
+                // No prepared brief — synthesize one from the lead's own research
+                // (opener + objections + hook) so the rep is never empty-handed.
+                if (e.status === 404) {
+                    const synth = buildScriptFromResearch(r);
+                    if (synth) {
+                        host.innerHTML = renderScriptMarkdown(synth);
+                        if (metaEl) metaEl.textContent = '· auto-built from research';
+                    } else {
+                        host.textContent = 'No cold-call script for this lead yet. Use the pain points + business summary above.';
+                    }
+                } else {
+                    host.innerHTML = '<span style="color:var(--red);">Could not load script: ' + escapeHtml(e.message || 'unknown') + '</span>';
+                }
             }
         }
 
-        // Minimal, safe Markdown -> HTML for the brief (headings, bold, lists,
-        // blockquotes, paragraphs). Escapes first, so no raw HTML injection.
+        // Build a usable cold-call script from a lead's deep_research_json when
+        // David hasn't generated a polished brief. Returns markdown (highlighted
+        // by renderScriptMarkdown) or null if there's no research to work with.
+        function buildScriptFromResearch(r) {
+            let dr = r.deep_research_json;
+            if (!dr) return null;
+            try { dr = typeof dr === 'string' ? JSON.parse(dr) : dr; } catch (_) { return null; }
+            const op = dr.suggested_opener || {};
+            const repFirst = (CURRENT.sdr && CURRENT.sdr.display_name ? String(CURRENT.sdr.display_name).trim().split(/\s+/)[0] : '') || 'STILO';
+            const openerText = [op.line_1, op.line_2, op.line_3, op.line_4]
+                .filter(Boolean).join(' ').replace(/\[REP\]/g, repFirst).trim();
+            const hook = (dr.hook_observable || '').trim();
+            const objs = Array.isArray(dr.likely_objections) ? dr.likely_objections : [];
+            const roi = (dr.automation_roi_estimate || '').trim();
+            if (!openerText && !hook && !objs.length) return null;
+
+            let md = '**Decision-maker:** ' + (r.owner_name || 'Owner') + '\n\n';
+            const ph = r.owner_phone || r.phone; if (ph) md += '**Phone:** ' + ph + '\n\n';
+            if (openerText) md += '**Open:**\n> ' + openerText + '\n\n';
+            if (hook) md += '## The hook\n> ' + hook + '\n\n';
+            if (objs.length) {
+                md += '## Likely objections\n';
+                objs.forEach(function (o) {
+                    if (!o || !o.trigger) return;
+                    md += '**They say:** "' + o.trigger + '"\n\n' + (o.response || '') + '\n\n';
+                });
+            }
+            if (roi) md += '## Value anchor\n' + roi + '\n';
+            return md;
+        }
+
+        // Minimal, safe Markdown -> HTML for the brief. Escapes first (no HTML
+        // injection). Two lines are highlighted for the rep: the decision-maker
+        // (owner name) and the OPEN line (what they say first on the call).
+        function openerBox(text) {
+            return '<div style="margin:10px 0;border:1px solid var(--green);background:rgba(16,185,129,0.10);border-radius:10px;padding:12px 14px;">'
+                + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:var(--green);text-transform:uppercase;margin-bottom:5px;">▶ Opener — say this first</div>'
+                + '<div style="font-size:14px;line-height:1.55;color:var(--text-primary);font-weight:500;">' + text + '</div></div>';
+        }
+        function dmBox(value) {
+            return '<div style="margin:10px 0;border:1px solid rgba(37,99,235,0.45);background:rgba(37,99,235,0.10);border-radius:10px;padding:10px 14px;">'
+                + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:3px;">Decision-maker</div>'
+                + '<div style="font-size:16px;font-weight:800;color:var(--text-primary);font-family:var(--font-display);">' + value + '</div></div>';
+        }
         function renderScriptMarkdown(md) {
             const lines = String(md || '').split('\n');
-            let html = '', inList = false;
+            let html = '', inList = false, expectOpener = false;
             const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
             const inline = (s) => escapeHtml(s)
                 .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--text-primary);">$1</strong>')
                 .replace(/\*([^*]+)\*/g, '<em>$1</em>')
                 .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue);">$1</a>');
             for (let raw of lines) {
-                const line = raw.replace(/\s+$/,'');
+                const line = raw.replace(/\s+$/, '');
                 if (!line.trim()) { closeList(); continue; }
+                const plain = line.replace(/^[>#\s*]+/, '').replace(/\*\*/g, '').trim();
                 let m;
-                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+                // Decision-maker → highlighted owner box.
+                if (/^decision[-\s]?maker\s*:/i.test(plain)) {
+                    closeList(); expectOpener = false;
+                    html += dmBox(escapeHtml(plain.replace(/^decision[-\s]?maker\s*:\s*/i, '')));
+                    continue;
+                }
+                // "Open:" label — opener may be inline after the colon, or in the
+                // following blockquote (set the flag).
+                const openMatch = plain.match(/^open\s*:?\s*(.*)$/i);
+                if (openMatch && /^open\b/i.test(plain)) {
                     closeList();
+                    const rest = openMatch[1].replace(/^>\s*/, '').trim();
+                    if (rest) { html += openerBox(inline(rest)); expectOpener = false; }
+                    else { expectOpener = true; }
+                    continue;
+                }
+                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+                    closeList(); expectOpener = false;
                     const lvl = Math.min(m[1].length, 4);
                     const size = lvl <= 1 ? 16 : lvl === 2 ? 14 : 13;
                     html += '<div style="font-family:var(--font-display);font-weight:700;color:var(--text-primary);font-size:' + size + 'px;margin:14px 0 6px;">' + inline(m[2]) + '</div>';
@@ -1464,9 +1537,10 @@
                     html += '<li style="margin:3px 0;">' + inline(m[1]) + '</li>';
                 } else if ((m = line.match(/^>\s?(.*)$/))) {
                     closeList();
-                    html += '<div style="border-left:3px solid var(--blue);padding:6px 12px;margin:6px 0;color:var(--text-primary);background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
+                    if (expectOpener) { html += openerBox(inline(m[1])); expectOpener = false; }
+                    else html += '<div style="border-left:3px solid var(--blue);padding:6px 12px;margin:6px 0;color:var(--text-primary);background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
                 } else {
-                    closeList();
+                    closeList(); expectOpener = false;
                     html += '<p style="margin:6px 0;">' + inline(line) + '</p>';
                 }
             }
