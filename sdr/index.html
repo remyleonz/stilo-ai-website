@@ -1086,6 +1086,10 @@
                 + '<a href="/admin/#team" style="color:white;text-decoration:underline;font-weight:700;">Exit impersonation →</a>';
             document.body.prepend(banner);
             document.body.style.paddingTop = '40px';
+            // The sidebar is position:fixed so body padding doesn't move it —
+            // drop it below the banner so the logo isn't hidden during preview.
+            var sbEl = document.getElementById('sidebar');
+            if (sbEl) { sbEl.style.top = '40px'; sbEl.style.height = 'calc(100vh - 40px)'; }
         }
 
         async function authHeaders() {
