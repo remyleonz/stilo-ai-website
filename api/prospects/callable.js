@@ -19,17 +19,21 @@ async function callableFromSupabase(opts) {
         db: { schema: 'prospecting' }
     });
 
+    // "Callable" = there is SOME phone we can dial. David's batches put the
+    // business line in `phone` and often leave owner_name/owner_phone null
+    // (you call the business and ask for the owner), so requiring owner_phone
+    // hid his 250-per-rep leads. Accept owner_phone OR phone; don't require
+    // owner_name.
     let q = sb.from('leads')
         .select('*')
-        .not('owner_name', 'is', null).neq('owner_name', '')
-        .not('owner_phone', 'is', null).neq('owner_phone', '')
+        .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false');
 
     if (opts.assignedTo) q = q.eq('assigned_to', opts.assignedTo);
     if (opts.tier)      q = q.eq('prospect_tier', opts.tier);
     if (opts.niche)     q = q.eq('niche', opts.niche);
     if (opts.minScore)  q = q.gte('prospect_score', opts.minScore);
-    if (opts.search)    q = q.or(`business_name.ilike.%${opts.search}%,owner_name.ilike.%${opts.search}%`);
+    if (opts.search)    q = q.ilike('name', `%${opts.search}%`);
 
     // Drop leads that are already out of the cold-call lifecycle. Must keep
     // never-called leads (last_called_outcome IS NULL) — an OR of `neq`

@@ -215,6 +215,9 @@ function normalizeLead(r) {
         business_name: r.business_name || r.name || null,
         niche: r.niche || r.category || null,
         city: r.city || cityFromAddress(r.address),
+        // Surface a dialable number: many leads carry the business line in
+        // `phone` with owner_phone null. The dashboards render owner_phone.
+        owner_phone: r.owner_phone || r.phone || null,
     });
 }
 
