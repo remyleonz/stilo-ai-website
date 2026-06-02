@@ -1384,7 +1384,7 @@
                     html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
                         + '<td><strong>' + escapeHtml(r.business_name || '—') + '</strong></td>'
                         + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
-                        + '<td>' + escapeHtml(r.owner_phone || '—') + '</td>'
+                        + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
                         + '<td>' + escapeHtml(r.niche || '—') + '</td>'
                         + '<td>' + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '—') + '</td>'
                         + '<td>' + escapeHtml(lastTouch) + '</td>'
