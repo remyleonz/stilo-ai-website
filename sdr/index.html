@@ -1136,7 +1136,12 @@
         }
 
         /* ===== PROFILE ===== */
-        async function loadProfile() {
+        // Resolving the SDR is load-bearing: every /api/prospects/ call scopes to
+        // CURRENT.sdr.email during impersonation. If this fetch hiccups and we
+        // leave CURRENT.sdr null, the leads load UNSCOPED (all ~740 scripted
+        // leads). So retry a few times before giving up.
+        async function loadProfile(attempt) {
+            attempt = attempt || 0;
             try {
                 const { sdr } = await fetchJSON('/api/sdr/profile');
                 if (!sdr) {
@@ -1160,7 +1165,15 @@
                 document.getElementById('profQuota').value = (sdr.daily_call_quota || 50) + ' calls / day';
             } catch (e) {
                 console.error('[loadProfile]', e);
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600)); return loadProfile(attempt + 1); }
             }
+        }
+
+        // True unless we're impersonating and haven't resolved the SDR yet. Used
+        // to keep prospect queries from firing unscoped (which returns every
+        // rep's leads instead of this SDR's).
+        function scopeReady() {
+            return !CURRENT.impersonateSdrId || !!(CURRENT.sdr && CURRENT.sdr.email);
         }
 
         function renderSdrIdentity(sdr) {
@@ -1316,10 +1329,13 @@
 
         /* ===== LEADS ===== */
         async function loadLeads() {
+            // loadLeadsStats + loadLeadsTable each wait for the impersonation
+            // scope (so we never query unscoped and pull every rep's ~740 leads).
             await Promise.all([loadLeadsStats(), loadLeadsTable()]);
-            STATE._leadsLoaded = true;
+            if (scopeReady()) STATE._leadsLoaded = true;
         }
         async function loadLeadsStats() {
+            if (!scopeReady()) return;
             try {
                 const stats = await fetchJSON('/api/prospects/lifecycle-stats');
                 document.getElementById('lwfCallable').textContent = (stats.all_leads_count != null) ? stats.all_leads_count : (stats.tier ? Object.values(stats.tier).reduce((a,b) => a + (b||0), 0) : '—');
@@ -1353,8 +1369,19 @@
             loadLeadsTable();
         }
 
+        var _leadsScopeWaits = 0;
         async function loadLeadsTable() {
             const wrap = document.getElementById('leadsTableWrap');
+            // Wait for the impersonation scope before querying — otherwise the
+            // admin path returns every rep's ~740 leads. Poll until the profile
+            // resolves (loadProfile retries), then load.
+            if (!scopeReady()) {
+                if (!wrap.querySelector('table')) wrap.innerHTML = '<div class="empty-state">Loading…</div>';
+                if (_leadsScopeWaits++ < 20) setTimeout(loadLeadsTable, 400);
+                return;
+            }
+            // Scope just became ready (e.g. after a poll) — refresh the stat cards too.
+            if (_leadsScopeWaits > 0) { _leadsScopeWaits = 0; loadLeadsStats(); }
             // Only show the "Loading…" placeholder if there's nothing rendered
             // yet. On a background prefetch or subtab refresh we keep the
             // current table visible until the new rows are ready (no flash).
@@ -1500,18 +1527,31 @@
         }
         function renderScriptMarkdown(md) {
             const src = String(md || '');
-            // If the brief has a dedicated "Suggested opener" section, THAT is the
-            // opener we highlight (not the inline "Open:" line). Synthesized
-            // scripts have no such section, so we highlight their "Open:" instead.
-            const hasSuggested = /##\s*suggested opener/i.test(src);
             const lines = src.split('\n');
-            let html = '', inList = false, expectOpener = false, inSuggested = false;
-            let buf = [];
+            const plainOf = (l) => l.replace(/^[>#\s*]+/, '').replace(/\*\*/g, '').trim();
+
+            // Pre-extract the "## Suggested opener" lines. This is the opener we
+            // surface (David also leaves an inline "Open:" line — a different
+            // angle — which we drop). We render the Suggested opener in the green
+            // box at the "Open:" position, i.e. right above Diagnostic questions.
+            const suggested = [];
+            {
+                let cap = false;
+                for (const ln of lines) {
+                    const pl = plainOf(ln);
+                    if (/^#{1,6}\s/.test(ln) && /^suggested opener/i.test(pl)) { cap = true; continue; }
+                    if (cap) {
+                        if (/^#{1,6}\s/.test(ln) || /^rep\s+[a-z]\b.*extension/i.test(pl)) break;
+                        if (ln.trim()) suggested.push(pl);
+                    }
+                }
+            }
+            const openerHtml = suggested.length
+                ? suggested.map(escapeHtml).join('<br><br>')
+                : null;
+
+            let html = '', inList = false, expectOpener = false, skipSection = false;
             const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
-            const flushSuggested = () => {
-                if (buf.length) html += openerBox(buf.join('<br><br>'));
-                buf = []; inSuggested = false;
-            };
             const inline = (s) => escapeHtml(s)
                 .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;">$1</strong>')
                 .replace(/\*([^*]+)\*/g, '<em>$1</em>')
@@ -1519,20 +1559,21 @@
             const P = 'font-size:14px;line-height:1.6;color:var(--text-primary);';
             for (let raw of lines) {
                 const line = raw.replace(/\s+$/, '');
-                const plain = line.replace(/^[>#\s*]+/, '').replace(/\*\*/g, '').trim();
+                const plain = plainOf(line);
 
-                // Stop rendering at the "Rep X extension" section (cut it + anything after).
-                if (/^rep\s+[a-z]\b.*extension/i.test(plain)) { flushSuggested(); break; }
+                // Cut the "Rep X extension" section and everything after it.
+                if (/^rep\s+[a-z]\b.*extension/i.test(plain)) break;
 
-                // Accumulate the Suggested-opener lines until the next heading.
-                if (inSuggested) {
-                    if (/^#{1,6}\s/.test(line)) { flushSuggested(); /* fall through to heading */ }
-                    else { if (line.trim()) buf.push(escapeHtml(plain)); continue; }
+                // Skip the "## Suggested opener" section in place (relocated above).
+                if (/^#{1,6}\s/.test(line) && /^suggested opener/i.test(plain)) { skipSection = true; continue; }
+                if (skipSection) {
+                    if (/^#{1,6}\s/.test(line)) skipSection = false; // next heading ends the skip
+                    else continue;
                 }
 
                 if (!line.trim()) { closeList(); continue; }
 
-                // Remove the entire "The hook" section (heading + its labels).
+                // Remove the "The hook" section (heading + its labels).
                 if (/^the hook$/i.test(plain) || /^(observable|source|diagnosis|archetype)\b/i.test(plain)) continue;
 
                 // Decision-maker → highlighted owner box.
@@ -1543,40 +1584,37 @@
                 }
 
                 let m;
-                // Headings.
-                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
-                    closeList(); expectOpener = false;
-                    if (/^suggested opener/i.test(plain)) { inSuggested = true; continue; } // becomes the green box
-                    const lvl = Math.min(m[1].length, 4);
-                    const size = lvl <= 1 ? 17 : lvl === 2 ? 15 : 14;
-                    html += '<div style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:' + size + 'px;margin:16px 0 7px;">' + inline(m[2]) + '</div>';
-                    continue;
-                }
-
-                // "Open:" line — highlight only when there's no Suggested-opener section.
+                // "Open:" line — replaced by the green Suggested-opener box (placed
+                // here, above Diagnostic questions). Falls back to the Open: text
+                // for synthesized scripts that have no Suggested opener.
                 const openMatch = plain.match(/^open\s*:?\s*(.*)$/i);
                 if (openMatch && /^open\b/i.test(plain)) {
                     closeList();
                     const rest = openMatch[1].replace(/^>\s*/, '').trim();
-                    if (hasSuggested) { if (rest) html += '<p style="' + P + 'margin:7px 0;">' + inline('**Open:** ' + rest) + '</p>'; }
-                    else if (rest) { html += openerBox(inline(rest)); }
-                    else { expectOpener = true; }
+                    if (openerHtml) html += openerBox(openerHtml);
+                    else if (rest) html += openerBox(inline(rest));
+                    else expectOpener = true;
                     continue;
                 }
 
-                if ((m = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/))) {
+                // Headings.
+                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+                    closeList(); expectOpener = false;
+                    const lvl = Math.min(m[1].length, 4);
+                    const size = lvl <= 1 ? 17 : lvl === 2 ? 15 : 14;
+                    html += '<div style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:' + size + 'px;margin:16px 0 7px;">' + inline(m[2]) + '</div>';
+                } else if ((m = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/))) {
                     if (!inList) { html += '<ul style="margin:6px 0 12px;padding-left:20px;">'; inList = true; }
                     html += '<li style="' + P + 'margin:5px 0;">' + inline(m[1]) + '</li>';
                 } else if ((m = line.match(/^>\s?(.*)$/))) {
                     closeList();
-                    if (expectOpener && !hasSuggested) { html += openerBox(inline(m[1])); expectOpener = false; }
+                    if (expectOpener && !openerHtml) { html += openerBox(inline(m[1])); expectOpener = false; }
                     else html += '<div style="border-left:3px solid var(--blue);padding:8px 12px;margin:7px 0;color:#fff;font-size:14px;line-height:1.6;background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
                 } else {
                     closeList(); expectOpener = false;
                     html += '<p style="' + P + 'margin:7px 0;">' + inline(line) + '</p>';
                 }
             }
-            flushSuggested();
             closeList();
             return html;
         }
