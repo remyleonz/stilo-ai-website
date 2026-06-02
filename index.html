@@ -2576,11 +2576,13 @@ section .section-header h2 .gradient-text em {
    ===================================================== */
 .process-rail{
   position:relative;display:grid;grid-template-columns:repeat(3,1fr);
-  gap:40px;max-width:1040px;margin:0 auto;padding-top:8px;
+  gap:40px;max-width:1040px;margin:0 auto;padding-top:0;
 }
-/* horizontal track sitting on the node row */
+/* Horizontal track. Its ends line up exactly with the first/last node
+   centers: with three 1fr columns and a 40px gap, each node center sits
+   at (100% - 2*gap)/6 from its side, so the line spans node-to-node. */
 .process-rail .rail-line{
-  position:absolute;top:17px;left:16.66%;right:16.66%;height:2px;
+  position:absolute;top:8px;left:calc((100% - 80px) / 6);right:calc((100% - 80px) / 6);height:2px;
   background:rgba(255,255,255,0.10);border-radius:2px;overflow:hidden;z-index:0;
 }
 .process-rail .rail-progress{
@@ -2592,7 +2594,7 @@ section .section-header h2 .gradient-text em {
 .process-rail.in-view .rail-progress{width:100%}
 .rail-step{position:relative;text-align:center;padding:0 14px;z-index:1}
 .rail-node{
-  width:18px;height:18px;border-radius:50%;margin:9px auto 0;
+  width:18px;height:18px;border-radius:50%;margin:0 auto;
   background:var(--bg-elevated);border:2px solid rgba(255,255,255,0.20);
   position:relative;z-index:2;
   transition:background .5s var(--ease-out),border-color .5s var(--ease-out),box-shadow .5s var(--ease-out);
@@ -2611,8 +2613,8 @@ section .section-header h2 .gradient-text em {
 .process-rail.in-view .rail-step-index{opacity:1}
 .rail-step h3{
   font-family:var(--font-display),'Saira',system-ui,sans-serif;
-  font-size:1.18rem;text-transform:uppercase;font-weight:700;
-  letter-spacing:-0.01em;margin:14px 0 10px;color:#fff;
+  font-size:1.35rem;text-transform:uppercase;font-weight:700;
+  letter-spacing:-0.01em;margin:26px 0 12px;color:#fff;
 }
 .rail-step p{color:var(--fg-2);font-size:0.97rem;line-height:1.6;max-width:34ch;margin:0 auto}
 @media (max-width:760px){
@@ -2621,8 +2623,8 @@ section .section-header h2 .gradient-text em {
   .process-rail .rail-progress{width:100%;height:0}
   .process-rail.in-view .rail-progress{height:100%}
   .rail-step{text-align:left;padding:0}
-  .rail-node{position:absolute;left:-38px;top:2px;margin:0}
-  .rail-step-index{margin-top:0;font-size:2.1rem}
+  .rail-node{position:absolute;left:-38px;top:4px;margin:0}
+  .rail-step h3{margin-top:0}
   .rail-step p{max-width:none}
 }
 
@@ -2647,7 +2649,7 @@ section .section-header h2 .gradient-text em {
 .wc-col.wc-them{color:var(--fg-3)}
 /* highlight the STILO column down the whole table */
 .why-compare .wc-stilo{background:linear-gradient(180deg,rgba(45,79,184,0.12),rgba(45,79,184,0.03))}
-.wc-row{border-top:1px solid var(--stroke)}
+.wc-row{border-top:1px solid var(--stroke);align-items:center}
 .wc-feature{padding:26px}
 .wc-feature h3{
   font-family:var(--font-display),'Saira',system-ui,sans-serif;
@@ -2987,19 +2989,16 @@ section .section-header h2 .gradient-text em {
       <div class="rail-line"><span class="rail-progress"></span></div>
       <div class="rail-step" style="--i:0">
         <div class="rail-node"></div>
-        <div class="rail-step-index">01</div>
         <h3>Audit</h3>
         <p>A focused 15-minute call. We map your call flow, lead path, customer history, and competitive position. You walk out with a one-page diagnosis and a fixed price.</p>
       </div>
       <div class="rail-step" style="--i:1">
         <div class="rail-node"></div>
-        <div class="rail-step-index">02</div>
         <h3>Build</h3>
         <p>We design and deploy your agent team, trained on your business. Every script, prompt, and integration reviewed by a human before it touches a customer.</p>
       </div>
       <div class="rail-step" style="--i:2">
         <div class="rail-node"></div>
-        <div class="rail-step-index">03</div>
         <h3>Run</h3>
         <p>We monitor, tune, and improve every agent every week. You get a weekly report with what shipped, what moved, and the three things we're testing next.</p>
       </div>
@@ -3174,43 +3173,39 @@ section .section-header h2 .gradient-text em {
     <div class="why-compare fade-in">
       <div class="why-compare-head">
         <div class="wc-feature-head"></div>
-        <div class="wc-col wc-stilo">STILO</div>
+        <div class="wc-col wc-stilo">STILO AI PARTNERS</div>
         <div class="wc-col wc-them">Typical agency</div>
       </div>
 
       <div class="wc-row">
         <div class="wc-feature">
           <h3>Custom, not configured.</h3>
-          <p>Every agent is trained on your services, your pricing, your customers. We study your market and read your reviews before we write a single prompt. What the AI says is what you'd say on your best day. Never a template with your logo glued on.</p>
         </div>
-        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Trained on your real business</span></div>
+        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Trained on your real business</span></div>
         <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Generic template, your logo glued on</span></div>
       </div>
 
       <div class="wc-row">
         <div class="wc-feature">
           <h3>We run it. You don't have to.</h3>
-          <p>Most agencies hand you a dashboard and disappear. We monitor, tune, and improve every agent every week. You get a one-page report with what shipped, what moved, and the three things we're testing next.</p>
         </div>
-        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Monitored and tuned every week</span></div>
+        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Monitored and tuned every week</span></div>
         <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Handed a dashboard, then gone</span></div>
       </div>
 
       <div class="wc-row">
         <div class="wc-feature">
           <h3>One connected system.</h3>
-          <p>Your receptionist talks to your lead responder. Your lead responder feeds your reactivation engine. Every agent shares context, customers, and outcomes. One layer of intelligence, not nine point solutions duct-taped together.</p>
         </div>
-        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Agents share one brain</span></div>
+        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Agents share one brain</span></div>
         <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Nine tools duct-taped together</span></div>
       </div>
 
       <div class="wc-row">
         <div class="wc-feature">
           <h3>AI plus human review.</h3>
-          <p>AI drafts in minutes. A real strategist reviews every prompt, script, and message before it touches a real customer. Nothing ships without a human signoff, because we know exactly when AI gets the tone wrong.</p>
         </div>
-        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Human signoff before launch</span></div>
+        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Human signoff before launch</span></div>
         <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Unchecked AI ships raw</span></div>
       </div>
     </div>

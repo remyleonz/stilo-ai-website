@@ -142,14 +142,15 @@
         }
 
         .logo a {
-            font-family: var(--font-display);
-            font-size: 28px;
-            font-weight: 800;
+            display: inline-block;
             text-decoration: none;
-            background: linear-gradient(135deg, var(--purple-light), var(--purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
+            line-height: 0;
+        }
+        .logo a img.auth-logo-img {
+            height: 54px;
+            width: auto;
+            object-fit: contain;
+            filter: brightness(1.5) contrast(1.06) saturate(1.1) drop-shadow(0 2px 10px rgba(45,79,184,0.55));
         }
 
         .logo p {
@@ -299,7 +300,7 @@
     <div class="auth-form-col">
       <div class="auth-container">
         <div class="logo">
-            <a href="index.html">STILO AI PARTNERS</a>
+            <a href="index.html"><img class="auth-logo-img" src="/assets/new3DLogoSTILOAI.png" alt="STILO AI PARTNERS" /></a>
             <p>Client Portal</p>
         </div>
 
