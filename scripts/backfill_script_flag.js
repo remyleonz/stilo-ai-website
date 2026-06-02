@@ -24,7 +24,9 @@ const { createClient } = require('@supabase/supabase-js');
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 const leads = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });
 
-const REP_EMAIL = { 'rep-a': 'jacksonmaguire0@gmail.com', 'rep-b': 'huronfire5@gmail.com', 'rep-c': 'aleb1027@gmail.com' };
+// rep-a = Jack, rep-b = Alejandro, rep-c = Luke. (Corrected 2026-06-01: rep-b
+// and rep-c were swapped — rep-b leads belong to Alejandro, rep-c to Luke.)
+const REP_EMAIL = { 'rep-a': 'jacksonmaguire0@gmail.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'huronfire5@gmail.com' };
 function slugify(s) {
     // Standard Python slugify (matches David's brief filenames): delete
     // punctuation, then hyphenate whitespace/underscores/hyphens.
