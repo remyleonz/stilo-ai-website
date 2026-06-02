@@ -1681,12 +1681,13 @@
                 + '<div id="sdrBookingPicker" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'
                 + '<div class="section-title" style="font-size:13px;margin-bottom:4px;">Pick a time on Remy\'s calendar</div>'
                 + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">Books the meeting, emails the prospect the Google Meet link, and adds it to Remy\'s calendar.</div>'
-                // Confirm-the-email block: the SDR verifies this address on the call before sending.
+                // Editable email field — required before booking so the prospect
+                // actually receives the invite + Meet link. Pre-filled when we
+                // have it; the rep confirms or types it from the call.
                 + '<div style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:10px 12px;margin-bottom:14px;">'
-                + '<div class="stat-label" style="margin-bottom:4px;">Invite + confirmation will be emailed to</div>'
-                + ((r.owner_email || r.email)
-                    ? '<div style="font-size:14px;font-weight:600;word-break:break-all;">' + escapeHtml(r.owner_email || r.email) + '</div><div style="font-size:11px;color:var(--text-tertiary);margin-top:3px;">Confirm this is right on the call before you book.</div>'
-                    : '<div style="font-size:13px;color:var(--orange);">No email on file. Ask for it on the call. (Booking still works, but no confirmation email is sent.)</div>')
+                + '<div class="stat-label" style="margin-bottom:6px;">Send invite + confirmation to <span style="color:var(--red);">*</span></div>'
+                + '<input id="sdrBookingEmail" type="email" value="' + escapeHtml(r.owner_email || r.email || '') + '" placeholder="client@email.com" oninput="updateBookBtn()" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">'
+                + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:5px;">' + ((r.owner_email || r.email) ? 'Confirm this is right on the call before you book.' : 'No email on file — ask for it on the call and type it here.') + '</div>'
                 + '</div>'
                 + '<div id="sdrBookingSlots"></div>'
                 + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
@@ -1873,7 +1874,7 @@
             bookingState.selectedIso = iso;
             bookingState.expandedDay = bookingDayKey(iso);
             renderBookingSlots();
-            setBookBtnEnabled(true);
+            updateBookBtn();
             var msg = document.getElementById('sdrBookingMsg');
             if (msg) {
                 msg.style.color = 'var(--blue)';
@@ -1881,6 +1882,16 @@
             }
         }
 
+        function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim()); }
+        function bookingEmail() {
+            var el = document.getElementById('sdrBookingEmail');
+            return el ? el.value.trim() : '';
+        }
+        // Book button is enabled only when a slot is picked AND a valid email
+        // is entered — the prospect must get the invite + Meet link.
+        function updateBookBtn() {
+            setBookBtnEnabled(!!bookingState.selectedIso && validEmail(bookingEmail()));
+        }
         function setBookBtnEnabled(on) {
             var b = document.getElementById('sdrBookBtn');
             if (!b) return;
@@ -1893,12 +1904,18 @@
             if (!bookingState.selectedIso) return;
             var msg = document.getElementById('sdrBookingMsg');
             var btn = document.getElementById('sdrBookBtn');
+            var email = bookingEmail();
+            if (!validEmail(email)) {
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter the client\'s email before booking — they need it to get the Meet link.'; }
+                var inp = document.getElementById('sdrBookingEmail'); if (inp) inp.focus();
+                return;
+            }
             if (btn) { btn.disabled = true; btn.textContent = 'Booking…'; }
             if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Booking on Google Calendar + emailing the prospect…'; }
             try {
                 var resp = await fetchJSON('/api/prospects/book-meeting', {
                     method: 'POST',
-                    body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 })
+                    body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15, email: email })
                 });
                 if (msg) {
                     msg.style.color = 'var(--green)';

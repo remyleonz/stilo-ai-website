@@ -104,7 +104,10 @@ module.exports = async function handler(req, res) {
     if (leadErr) return res.status(500).json({ error: 'lead_read_failed', detail: leadErr.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
 
-    const ownerEmail = lead.owner_email || lead.email || null;
+    // Email the rep typed/confirmed in the booking form wins, then the lead's
+    // stored address. The SDR UI requires a valid email before booking.
+    const typedEmail = (body.email && String(body.email).trim()) || null;
+    const ownerEmail = typedEmail || lead.owner_email || lead.email || null;
     const ownerPhone = lead.owner_phone || lead.phone || null;
     const businessName = lead.name || 'Discovery call';
     const ownerName = (lead.owner_name || '').trim() || null;
@@ -165,7 +168,7 @@ module.exports = async function handler(req, res) {
         // leave a created Calendar event with the lead stuck in Cold Call.
         let persistError = null;
         try {
-            const upd = await sb.from('leads').update({
+            const updateRow = {
                 meeting_event_id:      evJson.id || null,
                 meeting_event_link:    evJson.htmlLink || null,
                 meeting_meet_link:     meetLink || null,
@@ -176,7 +179,10 @@ module.exports = async function handler(req, res) {
                 last_called_at:        new Date().toISOString(),
                 call_attempts:         (Number(lead.call_attempts) || 0) + 1,
                 call_notes:            'Booked ' + new Date(startIso).toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET · ' + (meetLink || 'no Meet link')
-            }).eq('id', leadId);
+            };
+            // Save the email the rep captured on the call so the lead has it going forward.
+            if (typedEmail && !lead.owner_email) updateRow.owner_email = typedEmail;
+            const upd = await sb.from('leads').update(updateRow).eq('id', leadId);
             if (upd.error) persistError = upd.error.message;
         } catch (e) { persistError = String(e.message || e); }
 
