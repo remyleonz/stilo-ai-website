@@ -1107,7 +1107,7 @@ flex-wrap:wrap}
 .stat-block{position:relative}
 .stat-block-num{font-family:var(--font-display);font-size:clamp(2.6rem,4vw,3.8rem);font-weight:500;letter-spacing:-0.04em;line-height:1;color:#F0F6FF}
 .stat-block-num em{font-style:normal;color:#7FBFFF;font-weight:500}
-.stat-block-label{margin-top:14px;font-family:var(--font-mono);font-size:0.74rem;color:rgba(240,246,255,0.78);letter-spacing:0.14em;text-transform:uppercase;line-height:1.4;max-width:22ch}
+.stat-block-label{margin-top:14px;font-family:var(--font-display),'Saira',system-ui,sans-serif;font-weight:500;font-size:0.95rem;color:rgba(240,246,255,0.82);letter-spacing:0.005em;text-transform:none;line-height:1.45;max-width:24ch}
 @media (max-width:960px){.stats-shape{grid-template-columns:repeat(2,1fr);padding:44px 32px}}
 @media (max-width:520px){.stats-shape{grid-template-columns:1fr;gap:24px}}
 
@@ -1830,7 +1830,7 @@ section,.partners{background:transparent !important}
 .agent-mockup-body .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(96,165,250,0.16);color:var(--accent-hi);font-size:10px;font-weight:600;letter-spacing:0.04em}
 
 @media (max-width:720px){
-  .agent-stage{aspect-ratio:4/3}
+  .agent-stage{aspect-ratio:16/9}
   .agent-content.active{gap:24px}
   .agent-copy-text{display:contents}
   .agent-copy-text h2{order:1}
@@ -2025,7 +2025,7 @@ section,.partners{background:transparent !important}
 .stats-shape{grid-template-columns:repeat(3,1fr) !important}
 @media (max-width:780px){.stats-shape{grid-template-columns:1fr !important}}
 .stat-block-num{font-family:'Geist',system-ui,sans-serif;font-weight:700}
-.stat-block-label{font-family:var(--font-mono)}
+.stat-block-label{font-family:var(--font-display),'Saira',system-ui,sans-serif}
 
 /* WHY US */
 .why-card{background:rgba(15,18,28,0.55)}
@@ -2239,11 +2239,11 @@ section,.partners{background:transparent !important}
   }
   .stats-shape .stat-block-num{font-size:clamp(1.25rem,6vw,1.75rem) !important}
   .stats-shape .stat-block-label{
-    margin-top:7px !important;
-    font-size:clamp(0.46rem,1.7vw,0.58rem) !important;
-    letter-spacing:0.06em !important;
-    line-height:1.22 !important;
-    max-width:16ch !important;
+    margin-top:8px !important;
+    font-size:clamp(0.7rem,2.4vw,0.82rem) !important;
+    letter-spacing:0.005em !important;
+    line-height:1.35 !important;
+    max-width:18ch !important;
   }
 }
 
@@ -2570,6 +2570,116 @@ section .section-header h2 .gradient-text em {
 /* Lower the per-agent copy block under the master demo video. */
 .agent-copy-wrap { margin-top: 56px !important; }
 @media (max-width: 720px) { .agent-copy-wrap { margin-top: 36px !important; } }
+
+/* =====================================================
+   PROCESS — connected timeline rail (2026-06-01 redesign)
+   ===================================================== */
+.process-rail{
+  position:relative;display:grid;grid-template-columns:repeat(3,1fr);
+  gap:40px;max-width:1040px;margin:0 auto;padding-top:8px;
+}
+/* horizontal track sitting on the node row */
+.process-rail .rail-line{
+  position:absolute;top:17px;left:16.66%;right:16.66%;height:2px;
+  background:rgba(255,255,255,0.10);border-radius:2px;overflow:hidden;z-index:0;
+}
+.process-rail .rail-progress{
+  display:block;height:100%;width:0;
+  background:linear-gradient(90deg,var(--accent),var(--accent-glow));
+  box-shadow:0 0 16px rgba(90,123,232,0.65);
+  transition:width 1.7s var(--ease-out),height 1.7s var(--ease-out);
+}
+.process-rail.in-view .rail-progress{width:100%}
+.rail-step{position:relative;text-align:center;padding:0 14px;z-index:1}
+.rail-node{
+  width:18px;height:18px;border-radius:50%;margin:9px auto 0;
+  background:var(--bg-elevated);border:2px solid rgba(255,255,255,0.20);
+  position:relative;z-index:2;
+  transition:background .5s var(--ease-out),border-color .5s var(--ease-out),box-shadow .5s var(--ease-out);
+  transition-delay:calc(var(--i) * 0.5s + 0.35s);
+}
+.process-rail.in-view .rail-node{
+  background:var(--accent);border-color:var(--accent-glow);
+  box-shadow:0 0 0 6px rgba(45,79,184,0.16),0 0 26px rgba(90,123,232,0.7);
+}
+.rail-step-index{
+  font-family:var(--font-display),'Saira',system-ui,sans-serif;
+  font-weight:800;font-size:2.6rem;line-height:1;letter-spacing:-0.02em;
+  color:#fff;margin-top:26px;opacity:0.22;
+  transition:opacity .5s ease;transition-delay:calc(var(--i) * 0.5s + 0.35s);
+}
+.process-rail.in-view .rail-step-index{opacity:1}
+.rail-step h3{
+  font-family:var(--font-display),'Saira',system-ui,sans-serif;
+  font-size:1.18rem;text-transform:uppercase;font-weight:700;
+  letter-spacing:-0.01em;margin:14px 0 10px;color:#fff;
+}
+.rail-step p{color:var(--fg-2);font-size:0.97rem;line-height:1.6;max-width:34ch;margin:0 auto}
+@media (max-width:760px){
+  .process-rail{grid-template-columns:1fr;gap:34px;padding-top:4px;padding-left:38px}
+  .process-rail .rail-line{top:6px;bottom:6px;left:9px;right:auto;width:2px;height:auto}
+  .process-rail .rail-progress{width:100%;height:0}
+  .process-rail.in-view .rail-progress{height:100%}
+  .rail-step{text-align:left;padding:0}
+  .rail-node{position:absolute;left:-38px;top:2px;margin:0}
+  .rail-step-index{margin-top:0;font-size:2.1rem}
+  .rail-step p{max-width:none}
+}
+
+/* =====================================================
+   WHY US — STILO vs typical agency comparison (2026-06-01)
+   ===================================================== */
+.why-compare{
+  max-width:1000px;margin:0 auto;
+  border:1px solid var(--stroke);border-radius:20px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0));
+}
+.why-compare-head,.wc-row{
+  display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr);
+}
+.why-compare-head{border-bottom:1px solid var(--stroke);background:rgba(255,255,255,0.02)}
+.why-compare-head>div{
+  padding:18px 26px;font-family:var(--font-display),'Saira',system-ui,sans-serif;
+  font-weight:700;text-transform:uppercase;letter-spacing:0.03em;font-size:0.95rem;
+}
+.wc-col{text-align:center}
+.wc-col.wc-stilo{color:#fff}
+.wc-col.wc-them{color:var(--fg-3)}
+/* highlight the STILO column down the whole table */
+.why-compare .wc-stilo{background:linear-gradient(180deg,rgba(45,79,184,0.12),rgba(45,79,184,0.03))}
+.wc-row{border-top:1px solid var(--stroke)}
+.wc-feature{padding:26px}
+.wc-feature h3{
+  font-family:var(--font-display),'Saira',system-ui,sans-serif;
+  font-size:1.1rem;text-transform:uppercase;font-weight:700;
+  letter-spacing:-0.01em;margin:0 0 8px;color:#fff;
+}
+.wc-feature p{color:var(--fg-2);font-size:0.93rem;line-height:1.55;margin:0}
+.wc-cell{
+  padding:26px 22px;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;text-align:center;gap:12px;
+}
+.wc-mark{
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  font-size:1rem;font-weight:700;flex-shrink:0;
+}
+.wc-check{background:rgba(45,79,184,0.20);color:var(--accent-glow);border:1px solid rgba(90,123,232,0.45)}
+.wc-x{background:rgba(255,255,255,0.04);color:var(--fg-3);border:1px solid var(--stroke)}
+.wc-note{font-size:0.84rem;line-height:1.45;max-width:20ch;color:var(--fg-3)}
+.wc-cell.wc-stilo .wc-note{color:var(--fg-2)}
+@media (max-width:760px){
+  .why-compare-head{display:none}
+  .wc-row{grid-template-columns:1fr 1fr;grid-template-areas:"feat feat" "stilo them"}
+  .wc-feature{grid-area:feat;padding:22px 20px 6px}
+  .wc-cell.wc-stilo{grid-area:stilo}
+  .wc-cell.wc-them{grid-area:them}
+  .wc-cell{padding:16px 16px 22px;gap:8px}
+  .wc-cell::before{
+    content:attr(data-label);font-family:var(--font-mono);
+    font-size:0.66rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--fg-3);
+  }
+  .wc-note{font-size:0.8rem}
+}
 </style>
 </head>
 <body>
@@ -2587,7 +2697,7 @@ section .section-header h2 .gradient-text em {
       <li><a href="#agents">Agents</a></li>
       <li><a href="#industries">Use cases</a></li>
       <li><a href="#process">Process</a></li>
-      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#why-us">Why us</a></li>
       <li><a href="/auth.html">Account</a></li>
     </ul>
     <a href="#contact" class="nav-cta">Talk to a partner</a>
@@ -2598,9 +2708,7 @@ section .section-header h2 .gradient-text em {
   <a href="#agents">Agents</a>
   <a href="#industries">Use cases</a>
   <a href="#process">Process</a>
-  <a href="#results">Results</a>
   <a href="#why-us">Why us</a>
-  <a href="#faq">FAQ</a>
   <a href="/auth.html">Account</a>
   <a href="#contact" class="btn-primary">Talk to a partner</a>
 </div>
@@ -2875,19 +2983,23 @@ section .section-header h2 .gradient-text em {
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 64px;max-width:none;">
       <h2><span class="gradient-text">Three steps <em>One partner</em></span></h2>
     </div>
-    <div class="process-track">
-      <div class="process-step fade-in">
-        <div class="step-num"><em>01</em></div>
+    <div class="process-rail fade-in">
+      <div class="rail-line"><span class="rail-progress"></span></div>
+      <div class="rail-step" style="--i:0">
+        <div class="rail-node"></div>
+        <div class="rail-step-index">01</div>
         <h3>Audit</h3>
         <p>A focused 15-minute call. We map your call flow, lead path, customer history, and competitive position. You walk out with a one-page diagnosis and a fixed price.</p>
       </div>
-      <div class="process-step fade-in delay-1">
-        <div class="step-num"><em>02</em></div>
+      <div class="rail-step" style="--i:1">
+        <div class="rail-node"></div>
+        <div class="rail-step-index">02</div>
         <h3>Build</h3>
         <p>We design and deploy your agent team, trained on your business. Every script, prompt, and integration reviewed by a human before it touches a customer.</p>
       </div>
-      <div class="process-step fade-in delay-2">
-        <div class="step-num"><em>03</em></div>
+      <div class="rail-step" style="--i:2">
+        <div class="rail-node"></div>
+        <div class="rail-step-index">03</div>
         <h3>Run</h3>
         <p>We monitor, tune, and improve every agent every week. You get a weekly report with what shipped, what moved, and the three things we're testing next.</p>
       </div>
@@ -3059,34 +3171,47 @@ section .section-header h2 .gradient-text em {
       <span class="eyebrow">Why STILO</span>
       <h2><span class="gradient-text">Four things <em>nobody else does</em></span></h2>
     </div>
-    <div class="why-grid-v3">
-      <div class="why-card-v3 fade-in">
-        <div class="why-card-num">01</div>
-        <div class="why-card-body">
+    <div class="why-compare fade-in">
+      <div class="why-compare-head">
+        <div class="wc-feature-head"></div>
+        <div class="wc-col wc-stilo">STILO</div>
+        <div class="wc-col wc-them">Typical agency</div>
+      </div>
+
+      <div class="wc-row">
+        <div class="wc-feature">
           <h3>Custom, not configured.</h3>
           <p>Every agent is trained on your services, your pricing, your customers. We study your market and read your reviews before we write a single prompt. What the AI says is what you'd say on your best day. Never a template with your logo glued on.</p>
         </div>
+        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Trained on your real business</span></div>
+        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Generic template, your logo glued on</span></div>
       </div>
-      <div class="why-card-v3 fade-in delay-1">
-        <div class="why-card-num">02</div>
-        <div class="why-card-body">
+
+      <div class="wc-row">
+        <div class="wc-feature">
           <h3>We run it. You don't have to.</h3>
           <p>Most agencies hand you a dashboard and disappear. We monitor, tune, and improve every agent every week. You get a one-page report with what shipped, what moved, and the three things we're testing next.</p>
         </div>
+        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Monitored and tuned every week</span></div>
+        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Handed a dashboard, then gone</span></div>
       </div>
-      <div class="why-card-v3 fade-in delay-2">
-        <div class="why-card-num">03</div>
-        <div class="why-card-body">
+
+      <div class="wc-row">
+        <div class="wc-feature">
           <h3>One connected system.</h3>
           <p>Your receptionist talks to your lead responder. Your lead responder feeds your reactivation engine. Every agent shares context, customers, and outcomes. One layer of intelligence, not nine point solutions duct-taped together.</p>
         </div>
+        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Agents share one brain</span></div>
+        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Nine tools duct-taped together</span></div>
       </div>
-      <div class="why-card-v3 fade-in delay-3">
-        <div class="why-card-num">04</div>
-        <div class="why-card-body">
+
+      <div class="wc-row">
+        <div class="wc-feature">
           <h3>AI plus human review.</h3>
           <p>AI drafts in minutes. A real strategist reviews every prompt, script, and message before it touches a real customer. Nothing ships without a human signoff, because we know exactly when AI gets the tone wrong.</p>
         </div>
+        <div class="wc-cell wc-stilo" data-label="STILO"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Human signoff before launch</span></div>
+        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Unchecked AI ships raw</span></div>
       </div>
     </div>
     <div style="text-align:center;margin-top:64px;" class="fade-in">
@@ -3095,227 +3220,6 @@ section .section-header h2 .gradient-text em {
   </div>
 </section>
 
-<!-- ===== ANCHOR CASE STUDY V5 (tabbed multi-niche) ===== -->
-<section class="case-section" id="results">
-  <div class="container">
-    <div class="section-header fade-in">
-      <h2><span class="gradient-text">Built for businesses doing <em>real revenue</em></span></h2>
-    </div>
-
-    <div class="case-tabs" role="tablist">
-      <button class="case-tab active" data-case="receptionist"><span class="case-tab-num">01</span>Receptionist</button>
-      <button class="case-tab" data-case="lead-reply"><span class="case-tab-num">02</span>Outbound Lead Reply</button>
-      <button class="case-tab" data-case="reactivation"><span class="case-tab-num">03</span>Lost Customer Reactivation</button>
-      <button class="case-tab" data-case="lead-gen"><span class="case-tab-num">04</span>Lead Generator</button>
-      <button class="case-tab" data-case="website"><span class="case-tab-num">05</span>Website Builder</button>
-      <button class="case-tab" data-case="seo"><span class="case-tab-num">06</span>AI SEO</button>
-      <button class="case-tab" data-case="growth"><span class="case-tab-num">07</span>Growth Intelligence</button>
-      <button class="case-tab" data-case="sales"><span class="case-tab-num">08</span>AI Sales Manager</button>
-    </div>
-
-    <div class="case-card active" data-case-card="receptionist">
-      <div>
-        <h3 class="case-title">The phone never goes to voicemail again.</h3>
-        <p class="case-quote">"We close the kitchen at ten, but people still call until midnight. Every one of those calls now ends in a booking."</p>
-        <div class="case-attribution"><b>General manager</b> &middot; 80-seat restaurant, FL</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">2 rings</div><div class="case-stat-label">Average pickup time</div></div>
-        <div class="case-stat"><div class="case-stat-num">24/7</div><div class="case-stat-label">Nights, weekends, holidays</div></div>
-      </div>
-    </div>
-
-    <div class="case-card" data-case-card="lead-reply">
-      <div>
-        <h3 class="case-title">Form leads get a text back before they put the phone down.</h3>
-        <p class="case-quote">"Every form fill got a personalized SMS in under a minute. Competitors hadn't even loaded the email yet."</p>
-        <div class="case-attribution"><b>Operations lead</b> &middot; Plumbing &amp; home services</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">&lt;60s</div><div class="case-stat-label">First-response time</div></div>
-        <div class="case-stat"><div class="case-stat-num">SMS · Email · Voice</div><div class="case-stat-label">Multichannel reply on every form</div></div>
-      </div>
-    </div>
-
-    <div class="case-card" data-case-card="reactivation">
-      <div>
-        <h3 class="case-title">Patients who quietly drifted off the schedule are back on it.</h3>
-        <p class="case-quote">"1,800 patients sat dormant in our PMS for years. The agent surfaced them, sent the offer, and 200 came back."</p>
-        <div class="case-attribution"><b>Practice owner</b> &middot; Multi-location dental, FL</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">Per-customer</div><div class="case-stat-label">Personalized offer, never a mass blast</div></div>
-        <div class="case-stat"><div class="case-stat-num">Weekly</div><div class="case-stat-label">New dormant cohort surfaced</div></div>
-      </div>
-    </div>
-
-    <div class="case-card" data-case-card="lead-gen">
-      <div>
-        <h3 class="case-title">A pipeline built without picking up a single phone.</h3>
-        <p class="case-quote">"Five thousand verified prospects with direct dials. We hadn't even hired an SDR and the calendar was already filling."</p>
-        <div class="case-attribution"><b>Founder</b> &middot; Commercial roofing</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">5,000</div><div class="case-stat-label">Verified prospects per batch</div></div>
-        <div class="case-stat"><div class="case-stat-num">0 SDRs</div><div class="case-stat-label">Headcount required to operate</div></div>
-      </div>
-    </div>
-
-    <div class="case-card" data-case-card="website">
-      <div>
-        <h3 class="case-title">A real site, built in a week, that actually books.</h3>
-        <p class="case-quote">"Same design quality, half the price, and the conversion rate more than doubled in the first month."</p>
-        <div class="case-attribution"><b>Owner</b> &middot; Aesthetic med spa</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">1 week</div><div class="case-stat-label">From kickoff to launch</div></div>
-        <div class="case-stat"><div class="case-stat-num">A+</div><div class="case-stat-label">Lighthouse score, all four metrics</div></div>
-      </div>
-    </div>
-
-    <div class="case-card" data-case-card="seo">
-      <div>
-        <h3 class="case-title">When someone asks ChatGPT for help, your name shows up.</h3>
-        <p class="case-quote">"ChatGPT recommends us by name when someone asks for a divorce attorney in our city. That used to be a Google ad spend."</p>
-        <div class="case-attribution"><b>Managing partner</b> &middot; Family law firm</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">AI-first</div><div class="case-stat-label">Overviews, ChatGPT, Perplexity</div></div>
-        <div class="case-stat"><div class="case-stat-num">Weekly</div><div class="case-stat-label">Tracked across the new search surfaces</div></div>
-      </div>
-    </div>
-
-    <div class="case-card" data-case-card="growth">
-      <div>
-        <h3 class="case-title">Three things to ship this week, every Monday morning.</h3>
-        <p class="case-quote">"Monday morning brief, three specific actions, the price lift held. We never would have caught the window without it."</p>
-        <div class="case-attribution"><b>Owner</b> &middot; Multi-location auto detail</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">Weekly</div><div class="case-stat-label">Action-led growth brief</div></div>
-        <div class="case-stat"><div class="case-stat-num">3 actions</div><div class="case-stat-label">Never thirty</div></div>
-      </div>
-    </div>
-
-    <div class="case-card" data-case-card="sales">
-      <div>
-        <h3 class="case-title">Software reseller lifted win rate 22% in one quarter.</h3>
-        <p class="case-quote">"Every rep got better coaching than any human manager could give. The scorecards do not lie."</p>
-        <div class="case-attribution"><b>VP Sales</b> &middot; B2B SaaS reseller</div>
-      </div>
-                  <div class="case-stats">
-        <div class="case-stat"><div class="case-stat-num">Per-rep</div><div class="case-stat-label">Scorecards updated after every call</div></div>
-        <div class="case-stat"><div class="case-stat-num">Always-on</div><div class="case-stat-label">Follow-ups sent in your voice, on your cadence</div></div>
-      </div>
-    </div>
-
-    </div>
-</section>
-
-<!-- STILO PARTNERS founders section removed per Remy. -->
-
-<!-- ===== FAQ ===== -->
-<section class="faq-section" id="faq">
-  <div class="container">
-    <div class="section-header fade-in" style="text-align:center;margin:0 auto 48px;">
-      <span class="eyebrow">FAQ</span>
-      <h2><span class="gradient-text">Questions we get from every founder</span></h2>
-    </div>
-    <div class="faq-list">
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>How long does it take to deploy a full agent team?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">It depends on scope. A focused single-agent build is quick. A full nine-agent operating system with custom integrations is a deeper engagement. Either way, every prompt, script, and integration goes through a human review pass before it touches a real customer. We give you a fixed timeline after the audit, not before.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>Do you replace my receptionist or my team?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">No. The receptionist covers the calls your team misses: nights, weekends, and overflow. The outbound lead reply agent responds in under a minute when your team is busy. The agents do what humans cannot, and route the rest to you.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>What happens if the AI says something wrong?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Every customer-facing message is scripted, reviewed, and bounded to topics you approved. The agent transfers to a human the moment a request falls outside its scope. We monitor every conversation weekly and tighten the script when something looks off.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>What's the pricing?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Pricing depends on which agents you need and your call and lead volume. We quote a fixed monthly price after the audit, with a one-time build fee. The audit takes fifteen minutes and is free.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>What integrations are supported?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Google Calendar, Outlook, Calendly, most major PMS and CRM systems, Stripe for payments, Twilio for voice and SMS, and your existing forms and ads. If we don't support it out of the box, the custom automations agent builds the integration.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>Do you only work with one type of business?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">No. We work with service businesses, retail, professional services, and B2B operators across the US. Every engagement starts with research into your category, market, and customers, so the agents we build are tuned to the way your specific business actually runs.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>How is this different from buying a chatbot or ChatGPT?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">ChatGPT is a tool. A chatbot widget is a SaaS subscription you configure yourself. We build a custom agent system trained on your business and connected to your phones, your forms, your CRM, and your calendar. Then we run it. You are paying for the agency, not the software.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>Will my customers know they are talking to AI?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">By default the receptionist introduces itself as an AI assistant on the first call. We can adjust the script to your preference and your local rules. In every case the agent is trained to transfer to a human the moment the conversation needs one.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>Can I start with one agent and add more later?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Yes. Most clients start with the receptionist or the outbound lead reply agent and add others once they see the lift. Every agent we build plugs into the same connected layer, so adding a second or third agent later does not require a rebuild.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>What does the 15-minute audit actually cover?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">We map your current call flow, lead path, customer database, and your top three competitors. You leave the call with a one-page diagnosis of where AI will pay back fastest in your business, an honest list of where it will not, and a fixed quote for any agent we recommend.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>Do you work with businesses outside Miami?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Yes. We are based in Miami but most of our clients are elsewhere. Onboarding is remote, the agents run in the cloud, and you get the same weekly reports whether you are next door or in another time zone.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>What happens to my data?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Your customer data stays in your accounts (your CRM, your calendar, your inbox). We use enterprise APIs from OpenAI, Anthropic, Twilio, Supabase, and Stripe with their data-handling controls. We do not sell or share your data, and we never use your customer conversations to train a public model.</div></div>
-      </div>
-      <div class="faq-item fade-in">
-        <button class="faq-question" type="button">
-          <span>How fast will I see results?</span>
-          <span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">For the receptionist and the outbound lead reply agent, most clients see a measurable lift in week one because both replace something they were already losing money on. For lead generation, SEO, and reactivation, the meaningful lift shows up in month two or three. We tell you the realistic timeline before we quote.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- Final CTA block removed per Remy. Quiz/contact section below
      handles the close. -->
@@ -3488,19 +3392,19 @@ section .section-header h2 .gradient-text em {
       <div class="footer-col">
         <h4>Explore</h4>
         <ul>
-          <li><a href="#agents">The nine agents</a></li>
+          <li><a href="#agents">The agents</a></li>
+          <li><a href="#industries">Use cases</a></li>
           <li><a href="#process">Our process</a></li>
-          <li><a href="#results">Results</a></li>
           <li><a href="#why-us">Why STILO</a></li>
-          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#contact">Talk to a partner</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>Contact</h4>
         <ul>
           <li><a href="#contact">Talk to a partner</a></li>
-          <li><a href="tel:+17868067509">(786) 806-7509</a></li>
-          <li><a href="mailto:stiloaiconsulting@gmail.com">stiloaiconsulting@gmail.com</a></li>
+          <li><a href="tel:+17867557104">(786) 755-7104</a></li>
+          <li><a href="mailto:remyleon@stiloaipartners.com">remyleon@stiloaipartners.com</a></li>
           <li><span style="color:var(--fg-3);font-size:0.9rem;">Miami, FL</span></li>
         </ul>
         <div class="footer-social">
