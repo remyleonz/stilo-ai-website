@@ -1488,62 +1488,95 @@
         // Minimal, safe Markdown -> HTML for the brief. Escapes first (no HTML
         // injection). Two lines are highlighted for the rep: the decision-maker
         // (owner name) and the OPEN line (what they say first on the call).
-        function openerBox(text) {
-            return '<div style="margin:10px 0;border:1px solid var(--green);background:rgba(16,185,129,0.10);border-radius:10px;padding:12px 14px;">'
-                + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:var(--green);text-transform:uppercase;margin-bottom:5px;">▶ Opener — say this first</div>'
-                + '<div style="font-size:14px;line-height:1.55;color:var(--text-primary);font-weight:500;">' + text + '</div></div>';
+        function openerBox(innerHtml) {
+            return '<div style="margin:12px 0;border:1px solid var(--green);background:rgba(16,185,129,0.12);border-radius:10px;padding:14px 16px;">'
+                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--green);text-transform:uppercase;margin-bottom:8px;">▶ Opener — say this first</div>'
+                + '<div style="font-size:15px;line-height:1.6;color:#fff;font-weight:500;">' + innerHtml + '</div></div>';
         }
         function dmBox(value) {
-            return '<div style="margin:10px 0;border:1px solid rgba(37,99,235,0.45);background:rgba(37,99,235,0.10);border-radius:10px;padding:10px 14px;">'
-                + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:3px;">Decision-maker</div>'
-                + '<div style="font-size:16px;font-weight:800;color:var(--text-primary);font-family:var(--font-display);">' + value + '</div></div>';
+            return '<div style="margin:12px 0;border:1px solid rgba(37,99,235,0.45);background:rgba(37,99,235,0.12);border-radius:10px;padding:12px 16px;">'
+                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:4px;">Decision-maker</div>'
+                + '<div style="font-size:18px;font-weight:800;color:#fff;font-family:var(--font-display);">' + value + '</div></div>';
         }
         function renderScriptMarkdown(md) {
-            const lines = String(md || '').split('\n');
-            let html = '', inList = false, expectOpener = false;
+            const src = String(md || '');
+            // If the brief has a dedicated "Suggested opener" section, THAT is the
+            // opener we highlight (not the inline "Open:" line). Synthesized
+            // scripts have no such section, so we highlight their "Open:" instead.
+            const hasSuggested = /##\s*suggested opener/i.test(src);
+            const lines = src.split('\n');
+            let html = '', inList = false, expectOpener = false, inSuggested = false;
+            let buf = [];
             const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+            const flushSuggested = () => {
+                if (buf.length) html += openerBox(buf.join('<br><br>'));
+                buf = []; inSuggested = false;
+            };
             const inline = (s) => escapeHtml(s)
-                .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--text-primary);">$1</strong>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;">$1</strong>')
                 .replace(/\*([^*]+)\*/g, '<em>$1</em>')
                 .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue);">$1</a>');
+            const P = 'font-size:14px;line-height:1.6;color:var(--text-primary);';
             for (let raw of lines) {
                 const line = raw.replace(/\s+$/, '');
-                if (!line.trim()) { closeList(); continue; }
                 const plain = line.replace(/^[>#\s*]+/, '').replace(/\*\*/g, '').trim();
-                let m;
+
+                // Stop rendering at the "Rep X extension" section (cut it + anything after).
+                if (/^rep\s+[a-z]\b.*extension/i.test(plain)) { flushSuggested(); break; }
+
+                // Accumulate the Suggested-opener lines until the next heading.
+                if (inSuggested) {
+                    if (/^#{1,6}\s/.test(line)) { flushSuggested(); /* fall through to heading */ }
+                    else { if (line.trim()) buf.push(escapeHtml(plain)); continue; }
+                }
+
+                if (!line.trim()) { closeList(); continue; }
+
+                // Remove the entire "The hook" section (heading + its labels).
+                if (/^the hook$/i.test(plain) || /^(observable|source|diagnosis|archetype)\b/i.test(plain)) continue;
+
                 // Decision-maker → highlighted owner box.
                 if (/^decision[-\s]?maker\s*:/i.test(plain)) {
                     closeList(); expectOpener = false;
                     html += dmBox(escapeHtml(plain.replace(/^decision[-\s]?maker\s*:\s*/i, '')));
                     continue;
                 }
-                // "Open:" label — opener may be inline after the colon, or in the
-                // following blockquote (set the flag).
+
+                let m;
+                // Headings.
+                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+                    closeList(); expectOpener = false;
+                    if (/^suggested opener/i.test(plain)) { inSuggested = true; continue; } // becomes the green box
+                    const lvl = Math.min(m[1].length, 4);
+                    const size = lvl <= 1 ? 17 : lvl === 2 ? 15 : 14;
+                    html += '<div style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:' + size + 'px;margin:16px 0 7px;">' + inline(m[2]) + '</div>';
+                    continue;
+                }
+
+                // "Open:" line — highlight only when there's no Suggested-opener section.
                 const openMatch = plain.match(/^open\s*:?\s*(.*)$/i);
                 if (openMatch && /^open\b/i.test(plain)) {
                     closeList();
                     const rest = openMatch[1].replace(/^>\s*/, '').trim();
-                    if (rest) { html += openerBox(inline(rest)); expectOpener = false; }
+                    if (hasSuggested) { if (rest) html += '<p style="' + P + 'margin:7px 0;">' + inline('**Open:** ' + rest) + '</p>'; }
+                    else if (rest) { html += openerBox(inline(rest)); }
                     else { expectOpener = true; }
                     continue;
                 }
-                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
-                    closeList(); expectOpener = false;
-                    const lvl = Math.min(m[1].length, 4);
-                    const size = lvl <= 1 ? 16 : lvl === 2 ? 14 : 13;
-                    html += '<div style="font-family:var(--font-display);font-weight:700;color:var(--text-primary);font-size:' + size + 'px;margin:14px 0 6px;">' + inline(m[2]) + '</div>';
-                } else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) {
-                    if (!inList) { html += '<ul style="margin:4px 0 10px;padding-left:20px;">'; inList = true; }
-                    html += '<li style="margin:3px 0;">' + inline(m[1]) + '</li>';
+
+                if ((m = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/))) {
+                    if (!inList) { html += '<ul style="margin:6px 0 12px;padding-left:20px;">'; inList = true; }
+                    html += '<li style="' + P + 'margin:5px 0;">' + inline(m[1]) + '</li>';
                 } else if ((m = line.match(/^>\s?(.*)$/))) {
                     closeList();
-                    if (expectOpener) { html += openerBox(inline(m[1])); expectOpener = false; }
-                    else html += '<div style="border-left:3px solid var(--blue);padding:6px 12px;margin:6px 0;color:var(--text-primary);background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
+                    if (expectOpener && !hasSuggested) { html += openerBox(inline(m[1])); expectOpener = false; }
+                    else html += '<div style="border-left:3px solid var(--blue);padding:8px 12px;margin:7px 0;color:#fff;font-size:14px;line-height:1.6;background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
                 } else {
                     closeList(); expectOpener = false;
-                    html += '<p style="margin:6px 0;">' + inline(line) + '</p>';
+                    html += '<p style="' + P + 'margin:7px 0;">' + inline(line) + '</p>';
                 }
             }
+            flushSuggested();
             closeList();
             return html;
         }
@@ -1583,7 +1616,7 @@
             if (summary) {
                 summaryHtml = '<div style="margin-bottom:20px;">'
                     + '<div class="stat-label" style="margin-bottom:6px;">About this business</div>'
-                    + '<div style="font-size:13px;color:var(--text-secondary);line-height:1.55;">' + escapeHtml(summary.slice(0, 400)) + '</div>'
+                    + '<div style="font-size:14px;color:var(--text-primary);line-height:1.6;">' + escapeHtml(summary.slice(0, 400)) + '</div>'
                     + '</div>';
             }
 
@@ -1615,7 +1648,7 @@
                 // ── Header ──
                 + '<div style="margin-bottom:16px;">'
                 + '<div style="font-family:var(--font-display);font-size:23px;font-weight:800;letter-spacing:-0.02em;line-height:1.15;">' + escapeHtml(r.business_name || r.name || '—') + '</div>'
-                + '<div style="color:var(--text-secondary);margin-top:6px;font-size:13px;">' + escapeHtml(r.owner_name || 'Owner (verify on call)') + (r.address ? ' · ' + escapeHtml(r.address) : '') + '</div>'
+                + '<div style="color:var(--text-primary);margin-top:6px;font-size:14px;">' + escapeHtml(r.owner_name || 'Owner (verify on call)') + (r.address ? ' · ' + escapeHtml(r.address) : '') + '</div>'
                 + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
                 + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '')
                 + (r.prospect_score != null ? '<span style="font-size:11px;color:var(--text-tertiary);">Score ' + r.prospect_score + '</span>' : '')
@@ -1645,7 +1678,7 @@
                 // ── Cold-call script (filled by loadColdCallScript) ──
                 + '<div style="margin-bottom:22px;">'
                 + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
-                + '<div id="sdrScriptBody" style="font-size:13px;line-height:1.55;color:var(--text-secondary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:14px 16px;">Loading script…</div>'
+                + '<div id="sdrScriptBody" style="font-size:14px;line-height:1.6;color:var(--text-primary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:16px 18px;">Loading script…</div>'
                 + '</div>'
                 + historyHtml
                 // ── Log outcome ──
