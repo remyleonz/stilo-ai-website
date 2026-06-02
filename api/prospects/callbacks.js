@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
     let q = sb.from('leads')
         .select('*')
         .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
-        .not('do_not_call', 'eq', true);
+        .or('do_not_call.is.null,do_not_call.eq.false');
     if (sdrEmail) q = q.eq('assigned_to', sdrEmail);
 
     const { data, error } = await q

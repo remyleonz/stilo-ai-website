@@ -67,7 +67,7 @@ module.exports = async function handler(req, res) {
                 .eq('prospect_tier', tier)
                 .not('owner_name', 'is', null).neq('owner_name', '')
                 .or('owner_phone.not.is.null,phone.not.is.null')
-                .not('do_not_call', 'eq', true)
+                .or('do_not_call.is.null,do_not_call.eq.false')
                 .is('last_called_at', null)
                 .is('deep_research_done_at', null)
                 .not('name', 'is', null)
