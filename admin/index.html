@@ -1499,6 +1499,33 @@
             </div>
             <div id="prospectDrawerOverlay" onclick="closeProspectDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
 
+            <!-- EMAIL COMPOSER MODAL (shared by prospect drawer + Shared tab) -->
+            <div id="emailComposerModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.62);align-items:flex-start;justify-content:center;padding:34px 20px;overflow-y:auto;">
+                <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;max-width:620px;width:100%;padding:24px 26px;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <div style="font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:-0.01em;">Email this lead</div>
+                        <button onclick="closeEmailComposer()" aria-label="Close" style="background:none;border:none;color:var(--text-muted);font-size:24px;line-height:1;cursor:pointer;">&times;</button>
+                    </div>
+                    <div id="emailComposerStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Drafting…</div>
+                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">To</label>
+                        <input id="ecTo" type="email" placeholder="client@email.com" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></div>
+                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Subject</label>
+                        <input id="ecSubject" type="text" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></div>
+                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Message</label>
+                        <textarea id="ecBody" rows="13" style="width:100%;padding:12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;line-height:1.55;resize:vertical;"></textarea></div>
+                    <div style="background:var(--bg-input);border:1px dashed var(--border-medium);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Signature added automatically</div>
+                        <div id="ecFooter" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;line-height:1.5;"></div>
+                    </div>
+                    <div id="ecMsg" style="font-size:12px;min-height:16px;margin-bottom:10px;"></div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;align-items:center;">
+                        <button onclick="copyComposerEmail()" style="padding:10px 16px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;">Copy</button>
+                        <button onclick="closeEmailComposer()" style="padding:10px 16px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+                        <button id="ecSendBtn" onclick="sendComposerEmail()" style="padding:10px 20px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Send email</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ============================================================
                  Prospecting (cold-call list, cold-email list, dead pool)
                  Backed by /api/prospects/* proxy → David's prospecting backend
@@ -1632,6 +1659,7 @@
                     <!-- Inbound from marketing site quiz. Lead Reply Agent has already emailed them; this is for follow-up. -->
                     <button class="prospect-subtab" data-subtab="quiz-leads" onclick="switchProspectTab('quiz-leads')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Quiz Leads <span id="prospectQuizLeadsBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(45,79,184,0.22);color:#5A7BE8;font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="my-history" onclick="switchProspectTab('my-history')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">My Call History</button>
+                    <button class="prospect-subtab" data-subtab="shared" onclick="switchProspectTab('shared')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Shared with me <span id="prospectSharedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(45,79,184,0.22);color:#5A7BE8;font-size:10px;font-weight:700;">0</span></button>
                 </div>
 
                 <!-- Filter bar: search · tier · niche. SDR moved to top-right selector. -->
@@ -1669,6 +1697,7 @@
                 <div id="prospectTableDead" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <div id="prospectTableCallsToday" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <div id="prospectTableMyHistory" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="prospectTableShared" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <!-- Quiz Leads: inbound from the marketing site quiz (public.quiz_submissions). -->
                 <div id="prospectTableQuizLeads" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
                     <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Quiz Leads will load when you open this tab.</div>
@@ -5546,10 +5575,12 @@
             if (myHistoryHost) myHistoryHost.style.display                    = name === 'my-history'   ? '' : 'none';
             var quizHost = document.getElementById('prospectTableQuizLeads');
             if (quizHost) quizHost.style.display                              = name === 'quiz-leads'   ? '' : 'none';
+            var sharedHost = document.getElementById('prospectTableShared');
+            if (sharedHost) sharedHost.style.display                          = name === 'shared'       ? '' : 'none';
             var myHistoryControls = document.getElementById('prospectMyHistoryControls');
             if (myHistoryControls) myHistoryControls.style.display            = name === 'my-history'   ? 'flex' : 'none';
             // Filter bar useful only for the broad inbound lists; hide on cold-call lifecycle stages.
-            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today' || name === 'my-history' || name === 'quiz-leads');
+            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today' || name === 'my-history' || name === 'quiz-leads' || name === 'shared');
             document.getElementById('prospectFilterBar').style.display = hideFilter ? 'none' : 'flex';
             if (name === 'callable')          loadProspectCallable();
             else if (name === 'emailable')    loadProspectEmailable();
@@ -5559,6 +5590,103 @@
             else if (name === 'calls-today')  loadCallsToday();
             else if (name === 'my-history')   loadMyHistory();
             else if (name === 'quiz-leads')   loadQuizLeads();
+            else if (name === 'shared')       loadProspectShared();
+        }
+
+        /* ===== SHARED WITH ME (cross-dashboard lead sharing) =====
+           Leads an SDR (or another admin) shared to Remy. Click a row to open
+           the normal prospect drawer and act on it (email, call, close). */
+        async function loadProspectShared() {
+            var host = document.getElementById('prospectTableShared');
+            if (!host) return;
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading shared leads...</div>';
+            try {
+                var data = await prospectFetchJSON('/api/prospects/shared-with-me');
+                var rows = data.results || [];
+                var badge = document.getElementById('prospectSharedBadge');
+                if (badge) { badge.textContent = rows.length; badge.style.display = rows.length ? 'inline-block' : 'none'; }
+                if (!rows.length) {
+                    host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Nothing shared with you yet. SDRs can share a lead from its drawer.</div>';
+                    return;
+                }
+                var body = rows.map(function (r) {
+                    var sh = r._share || {};
+                    var by = (sh.shared_by || '').split('@')[0] || '—';
+                    var when = sh.at ? new Date(sh.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+                    var id = r.id;
+                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
+                        + '<td style="padding:12px 14px;"><strong>' + escapeAdminHtml(r.business_name || r.name || ('Lead ' + id)) + '</strong></td>'
+                        + '<td style="padding:12px 14px;">' + escapeAdminHtml(r.owner_name || '—') + '</td>'
+                        + '<td style="padding:12px 14px;white-space:nowrap;">' + escapeAdminHtml(r.owner_phone || '—') + '</td>'
+                        + '<td style="padding:12px 14px;">' + escapeAdminHtml(r.owner_email || r.email || '—') + '</td>'
+                        + '<td style="padding:12px 14px;white-space:nowrap;">' + escapeAdminHtml(by) + (when ? '<br><span style="color:var(--text-muted);font-size:11px;">' + escapeAdminHtml(when) + '</span>' : '') + '</td>'
+                        + '<td style="padding:12px 14px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(sh.note || '') + '</td>'
+                        + '</tr>';
+                }).join('');
+                host.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="text-align:left;color:var(--text-secondary);font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">'
+                    + '<th style="padding:10px 14px;">Business</th><th style="padding:10px 14px;">Owner</th><th style="padding:10px 14px;">Phone</th><th style="padding:10px 14px;">Email</th><th style="padding:10px 14px;">Shared by</th><th style="padding:10px 14px;">Note</th>'
+                    + '</tr></thead><tbody>' + body + '</tbody></table>';
+            } catch (e) {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load shared leads: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+
+        /* ===== EMAIL COMPOSER (admin) =====
+           "Email this lead" on the prospect drawer → draft-email (AI sales
+           agent) → edit → send-email (Resend). Footer + booking link appended
+           server-side. Same endpoints the SDR dashboard uses. */
+        var emailComposerLeadId = null;
+        function ecValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim()); }
+        function setEcSending(on) {
+            var b = document.getElementById('ecSendBtn');
+            if (b) { b.disabled = on; b.textContent = on ? 'Sending…' : 'Send email'; b.style.opacity = on ? 0.6 : 1; b.style.cursor = on ? 'wait' : 'pointer'; }
+        }
+        async function openEmailComposer(leadId) {
+            emailComposerLeadId = leadId;
+            document.getElementById('emailComposerModal').style.display = 'flex';
+            ['ecTo', 'ecSubject', 'ecBody'].forEach(function (id) { document.getElementById(id).value = ''; });
+            document.getElementById('ecFooter').textContent = '';
+            document.getElementById('ecMsg').textContent = '';
+            var status = document.getElementById('emailComposerStatus');
+            status.style.color = 'var(--text-muted)';
+            status.textContent = 'Drafting a personalized email with the AI sales agent…';
+            setEcSending(false);
+            try {
+                var d = await prospectFetchJSON('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify({ id: leadId }) });
+                document.getElementById('ecTo').value = d.to_email || '';
+                document.getElementById('ecSubject').value = d.subject || '';
+                document.getElementById('ecBody').value = d.body || '';
+                document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
+                status.textContent = (d.source === 'gemini' ? 'Drafted by the AI sales agent' : 'Draft ready') + '. Edit anything, then send. Name, phone, booking link, and footer are added automatically.';
+                if (!d.to_email) { var m = document.getElementById('ecMsg'); m.style.color = '#f59e0b'; m.textContent = 'No email on file. Type the prospect\'s email above.'; document.getElementById('ecTo').focus(); }
+            } catch (e) { status.style.color = 'var(--red)'; status.textContent = 'Could not draft: ' + (e.message || 'unknown'); }
+        }
+        function closeEmailComposer() { document.getElementById('emailComposerModal').style.display = 'none'; }
+        async function sendComposerEmail() {
+            var to = document.getElementById('ecTo').value.trim();
+            var subject = document.getElementById('ecSubject').value.trim();
+            var body = document.getElementById('ecBody').value.trim();
+            var msg = document.getElementById('ecMsg');
+            if (!ecValidEmail(to)) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter a valid email address.'; document.getElementById('ecTo').focus(); return; }
+            if (body.length < 20) { msg.style.color = 'var(--red)'; msg.textContent = 'The message looks empty.'; return; }
+            setEcSending(true); msg.style.color = 'var(--text-muted)'; msg.textContent = 'Sending…';
+            try {
+                await prospectFetchJSON('/api/prospects/send-email', { method: 'POST', body: JSON.stringify({ id: emailComposerLeadId, to: to, subject: subject, body: body }) });
+                msg.style.color = 'var(--green,#10b981)'; msg.textContent = 'Sent to ' + to + '.';
+                setTimeout(closeEmailComposer, 1300);
+            } catch (e) {
+                setEcSending(false);
+                var detail = (e.body && e.body.detail) ? (' (' + e.body.detail + ')') : '';
+                msg.style.color = 'var(--red)'; msg.textContent = 'Send failed: ' + (e.message || 'unknown') + detail;
+            }
+        }
+        function copyComposerEmail() {
+            var text = document.getElementById('ecBody').value + '\n\n' + document.getElementById('ecFooter').textContent;
+            navigator.clipboard.writeText(text).then(function () {
+                var m = document.getElementById('ecMsg'); m.style.color = 'var(--blue)'; m.textContent = 'Copied message to clipboard.';
+            }).catch(function () {
+                var m = document.getElementById('ecMsg'); m.style.color = 'var(--red)'; m.textContent = 'Copy failed.';
+            });
         }
 
         /* ===== QUIZ LEADS (inbound from marketing site, 2026-05-27) ===== */
@@ -6486,6 +6614,7 @@
                 + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
                 + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">' + (mode === 'emailable' ? 'Owner email' : 'Direct line') + (d.owner_phone_strict && mode !== 'emailable' ? ' <span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-size:10px;">STRICT</span>' : '') + '</div>'
                 + contactBlock
+                + '<div style="margin-top:14px;"><button type="button" onclick="openEmailComposer(' + JSON.stringify(d.id) + ')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>Email this lead</button></div>'
                 + (recProduct ? '<div style="margin-top:14px;font-size:12px;"><span style="color:var(--text-secondary);">Recommended: </span><span style="color:var(--text-primary);font-weight:600;">' + escapeAdminHtml(recProduct) + '</span></div>' : '')
                 + '</div>'
 

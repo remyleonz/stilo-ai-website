@@ -80,12 +80,16 @@ async function findOrStubLead(sb, phone) {
     const fmtCond = fmt
         ? ',owner_phone.eq.' + JSON.stringify(fmt) + ',phone.eq.' + JSON.stringify(fmt)
         : '';
-    const { data: existing } = await sb
+    // limit(1) (not maybeSingle) on purpose: some numbers appear on 2+ duplicate
+    // lead rows, and maybeSingle throws on >1 match — which used to orphan the
+    // call (lead_id=null) instead of attributing it. Take the first match.
+    const { data: existingRows } = await sb
         .from('leads')
         .select('id')
         .or('owner_phone.eq.' + norm + ',phone.eq.' + norm + fmtCond)
-        .maybeSingle();
-    if (existing && existing.id) return existing.id;
+        .order('id', { ascending: true })
+        .limit(1);
+    if (existingRows && existingRows[0] && existingRows[0].id) return existingRows[0].id;
     // Stub a minimal lead row so inbound missed calls don't get dropped.
     const { data: created, error } = await sb
         .from('leads')
