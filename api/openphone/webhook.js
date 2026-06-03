@@ -191,14 +191,18 @@ module.exports = async function handler(req, res) {
                 const rawKey = crypto.createHmac('sha256', k).update((pTs ? pTs + '.' : '') + bodyStr).digest('base64');
                 return { i: i, key_head: k.slice(0, 6), match_withTs: withTs === pSig, match_noTs: noTs === pSig, match_rawKey: rawKey === pSig, computed_head: withTs.slice(0, 8) };
             });
-            console.warn('[openphone/webhook] SIGFAIL ' + JSON.stringify({
-                evt_type: (function () { try { return JSON.parse(bodyStr).type || JSON.parse(bodyStr).object && JSON.parse(bodyStr).object.type; } catch (_) { return '?'; } })(),
+            const detail = {
+                evt_type: (function () { try { var b = JSON.parse(bodyStr); return b.type || (b.object && b.object.type) || '?'; } catch (_) { return '?'; } })(),
                 sig_header: sigHeader,
                 content_type: req.headers['content-type'] || null,
                 body_len: raw.length,
                 recv_sig_head: (pSig || '').slice(0, 8),
                 diag: diag
-            }));
+            };
+            console.warn('[openphone/webhook] SIGFAIL ' + JSON.stringify(detail));
+            // Persist so we can read the full diagnostic (Vercel log viewer
+            // truncates). Best-effort; remove this table + block after fixing.
+            try { publicClient().from('webhook_debug').insert({ detail: detail }).then(function () {}, function () {}); } catch (_) {}
         } catch (e) { console.warn('[openphone/webhook] SIGFAIL diag error', e && e.message); }
         return res.status(401).json({ error: 'invalid_signature' });
     }
