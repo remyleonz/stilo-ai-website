@@ -201,8 +201,9 @@ module.exports = async function handler(req, res) {
             };
             console.warn('[openphone/webhook] SIGFAIL ' + JSON.stringify(detail));
             // Persist so we can read the full diagnostic (Vercel log viewer
-            // truncates). Best-effort; remove this table + block after fixing.
-            try { publicClient().from('webhook_debug').insert({ detail: detail }).then(function () {}, function () {}); } catch (_) {}
+            // truncates). MUST await: serverless freezes after the response, so
+            // a fire-and-forget insert never lands. Temporary; remove after fix.
+            try { await publicClient().from('webhook_debug').insert({ detail: detail }); } catch (_) {}
         } catch (e) { console.warn('[openphone/webhook] SIGFAIL diag error', e && e.message); }
         return res.status(401).json({ error: 'invalid_signature' });
     }
