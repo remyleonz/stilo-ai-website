@@ -161,6 +161,26 @@ async function mergeQuoIntoManualRow(sb, rowId, baseFields) {
     return data;
 }
 
+// Definitive webhook auth that survives Vercel cold starts (where req.query is
+// not populated, so the URL token isn't seen). Pull the call id out of the
+// event and ask the OpenPhone API whether that call exists in OUR account. Only
+// real Quo calls resolve; a forger would need a live call id from our org. Used
+// only as a fallback when token + HMAC both fail.
+async function verifyCallExists(evt) {
+    try {
+        const data = (evt && (evt.data || evt.payload || evt.object || evt)) || {};
+        const call = data.object || data.call || data;
+        const callId = call && (call.callId || call.call_id || call.id);
+        if (!callId || !/^AC[A-Za-z0-9]+$/.test(String(callId))) return false;
+        const r = await openphoneFetch({ path: '/calls/' + encodeURIComponent(callId) });
+        if (r.status !== 200) return false;
+        const c = (r.json && (r.json.data || r.json)) || {};
+        return String(c.id || '') === String(callId);
+    } catch (_) {
+        return false;
+    }
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
@@ -189,48 +209,31 @@ module.exports = async function handler(req, res) {
     const tokenOk = !!expectedToken && urlToken.length === expectedToken.length
         && (function () { try { return require('crypto').timingSafeEqual(Buffer.from(urlToken), Buffer.from(expectedToken)); } catch (_) { return false; } })();
 
-    if (!tokenOk && !verifySignature(sigHeader, raw)) {
-        // SIGFAIL diagnostic (2026-06-03): real call.completed events 401 while
-        // transcript/summary pass, even though all 3 keys are in the secret and
-        // a manually-forged K1 event verifies. Log, per key, whether our
-        // canonical HMAC matches the received signature so we can see if this is
-        // a key, scheme, or raw-body-bytes problem. Remove once root-caused.
-        try {
-            const crypto = require('crypto');
-            const bodyStr = raw.toString('utf8');
-            let pTs = null, pSig = null;
-            if (sigHeader.indexOf(';') !== -1) { const p = sigHeader.split(';'); pTs = p[2]; pSig = (p[3] || '').trim(); }
-            const secrets = (process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-            const diag = secrets.map(function (k, i) {
-                const withTs = crypto.createHmac('sha256', Buffer.from(k, 'base64')).update((pTs ? pTs + '.' : '') + bodyStr).digest('base64');
-                const noTs = crypto.createHmac('sha256', Buffer.from(k, 'base64')).update(bodyStr).digest('base64');
-                const rawKey = crypto.createHmac('sha256', k).update((pTs ? pTs + '.' : '') + bodyStr).digest('base64');
-                return { i: i, key_head: k.slice(0, 6), match_withTs: withTs === pSig, match_noTs: noTs === pSig, match_rawKey: rawKey === pSig, computed_head: withTs.slice(0, 8) };
-            });
-            const detail = {
-                evt_type: (function () { try { var b = JSON.parse(bodyStr); return b.type || (b.object && b.object.type) || '?'; } catch (_) { return '?'; } })(),
-                sig_header: sigHeader,
-                content_type: req.headers['content-type'] || null,
-                body_len: raw.length,
-                recv_sig_head: (pSig || '').slice(0, 8),
-                req_url: req.url || null,
-                req_query_keys: req.query ? Object.keys(req.query) : 'no-req-query',
-                url_token_seen: urlToken ? (urlToken.slice(0, 6) + '...len' + urlToken.length) : 'EMPTY',
-                expected_token_len: expectedToken.length,
-                diag: diag
-            };
-            console.warn('[openphone/webhook] SIGFAIL ' + JSON.stringify(detail));
-            // Persist so we can read the full diagnostic (Vercel log viewer
-            // truncates). MUST await: serverless freezes after the response, so
-            // a fire-and-forget insert never lands. Temporary; remove after fix.
-            try { await publicClient().from('webhook_debug').insert({ detail: detail }); } catch (_) {}
-        } catch (e) { console.warn('[openphone/webhook] SIGFAIL diag error', e && e.message); }
-        return res.status(401).json({ error: 'invalid_signature' });
-    }
-
+    // Parse the body now so the API-confirmation fallback can read the call id.
     let evt;
     try { evt = JSON.parse(raw.toString('utf8') || '{}'); }
     catch { return res.status(400).json({ error: 'invalid_json' }); }
+
+    // Authenticate, cheapest check first:
+    //   1. token in the URL (?token=)        — fast
+    //   2. HMAC signature                     — fast (Quo's scheme is unverifiable
+    //                                            in practice, kept for the future)
+    //   3. OpenPhone API confirms the call id exists in OUR account — definitive.
+    // Why (3): Vercel intermittently does NOT expose req.query on COLD function
+    // starts, so the token isn't seen and (1) flaps. call.completed +
+    // call.recording.completed fire first (cold) and were 401ing, while
+    // transcript/summary fired seconds later (warm) and passed. The API check
+    // has no such race — only a real call in our account resolves — so it
+    // catches the cold-start deliveries the token check misses.
+    let authed = tokenOk || verifySignature(sigHeader, raw);
+    if (!authed) authed = await verifyCallExists(evt);
+    if (!authed) {
+        console.warn('[openphone/webhook] unauthenticated event rejected', {
+            type: (evt && (evt.type || (evt.object && evt.object.type))) || '?',
+            token_seen: !!urlToken
+        });
+        return res.status(401).json({ error: 'invalid_signature' });
+    }
 
     const type = evt.type || evt.event || '';
     const data = evt.data || evt.payload || evt.object || evt;
