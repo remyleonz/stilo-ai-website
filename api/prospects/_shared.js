@@ -218,6 +218,15 @@ function normalizeLead(r) {
         // Surface a dialable number: many leads carry the business line in
         // `phone` with owner_phone null. The dashboards render owner_phone.
         owner_phone: r.owner_phone || r.phone || null,
+        // David's ranking is `prospect_tier` (hot/warm/cool/dead). There's a
+        // separate LEGACY `tier` column with stale 'cold' values on ~2k leads
+        // from an old import. Canonicalize both fields to David's prospect_tier
+        // so no dashboard ever shows the stale 'cold'. If David didn't rank a
+        // lead, both are null (shown as "—") rather than a wrong tier. Future
+        // pushes flow through automatically because prospect_tier is the only
+        // source we read.
+        tier: r.prospect_tier || null,
+        prospect_tier: r.prospect_tier || null,
     });
 }
 

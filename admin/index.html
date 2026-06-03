@@ -5191,7 +5191,7 @@
             if (f.tier) {
                 var want = String(f.tier).toLowerCase();
                 rows = rows.filter(function (r) {
-                    var t = String(r.prospect_tier || r.tier || '').toLowerCase();
+                    var t = String(r.prospect_tier || '').toLowerCase();
                     return t === want;
                 });
             }
@@ -5398,7 +5398,7 @@
                     }
                     return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                         + '<td style="padding:10px 14px;font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(calledTime) + '</td>'
-                        + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
+                        + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
@@ -5472,7 +5472,7 @@
 
                     return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                         + '<td style="padding:10px 14px;font-size:12px;color:' + whenColor + ';font-weight:600;white-space:nowrap;">' + escapeAdminHtml(whenStr) + '</td>'
-                        + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + '</td>'
+                        + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
                         + bookedByCell
@@ -5490,7 +5490,7 @@
                     ? ' <span title="You\'ve dialed this lead today, no outcome logged yet" style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;background:rgba(234,179,8,0.15);color:var(--yellow,#eab308);font-size:10px;font-weight:700;letter-spacing:0.04em;">DIALED ×' + (r.call_attempts || 1) + '</span>'
                     : '';
                 return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
-                    + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier || r.tier) + dialedBadge + '</td>'
+                    + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier) + dialedBadge + '</td>'
                     + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                     + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
                     + contactCol
@@ -6605,7 +6605,7 @@
                   + '<div style="flex:1;min-width:0;">'
                     + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
                     + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.85rem;letter-spacing:-0.02em;margin:0;line-height:1.15;">' + escapeAdminHtml(business) + '</h2>'
-                    + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier || d.tier) + ' · ' + stageBadge(d.stage) + '</div>'
+                    + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier) + ' · ' + stageBadge(d.stage) + '</div>'
                     + lastOutcomePill
                   + '</div>'
                   + closeDealCta

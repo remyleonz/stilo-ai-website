@@ -1484,7 +1484,7 @@
                 } else {
                     html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th><th>Last touch</th></tr></thead><tbody>';
                     rows.slice(0, 200).forEach(r => {
-                        const tier = String(r.tier || r.prospect_tier || '').toLowerCase();
+                        const tier = String(r.prospect_tier || '').toLowerCase(); // David's ranking only; ignore legacy `tier` col
                         const lastTouch = r.last_called_at ? new Date(r.last_called_at).toLocaleString()
                             : r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at).toLocaleString()
                             : '—';
@@ -1847,7 +1847,7 @@
 
         function buildLeadDrawerHtml(r) {
             CURRENT.lead = r; // remember for the booking + call flows
-            const tier = String(r.tier || r.prospect_tier || '').toLowerCase();
+            const tier = String(r.prospect_tier || '').toLowerCase(); // David's ranking only; ignore legacy `tier` col
             const calls = Array.isArray(r.call_history) ? r.call_history : [];
             const phoneDisplay = r.owner_phone || r.phone || '';
             const summary = businessSummary(r);
