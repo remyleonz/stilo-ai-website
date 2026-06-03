@@ -227,12 +227,16 @@ function normalizeLead(r) {
         //      every scripted lead the reps actually call.
         //   2. prospect_tier — his older scoring column (hot/warm/cool/dead),
         //      used only when there's no brief tier.
-        //   3. null → "—".
+        //   3. has_cold_call_script but no tier anywhere — David shipped no
+        //      brief/score for it, yet it's in the active call queue → default
+        //      to 'cool' (lowest priority, sorts last) so the queue has no blank
+        //      tiers. Not written to the DB; purely a display default.
+        //   4. null → "—" (non-callable leads only).
         // The legacy `tier` column (stale 'cold' on ~2k old-import leads) is
         // never read. Future brief pushes flow through automatically once
         // backfill_brief_tier.js stamps brief_tier.
-        tier: (BRIEF_TIER_MAP[r.brief_tier] || r.prospect_tier || null),
-        prospect_tier: (BRIEF_TIER_MAP[r.brief_tier] || r.prospect_tier || null),
+        tier: (BRIEF_TIER_MAP[r.brief_tier] || r.prospect_tier || (r.has_cold_call_script ? 'cool' : null)),
+        prospect_tier: (BRIEF_TIER_MAP[r.brief_tier] || r.prospect_tier || (r.has_cold_call_script ? 'cool' : null)),
     });
 }
 
