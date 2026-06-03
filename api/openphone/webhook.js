@@ -174,16 +174,32 @@ module.exports = async function handler(req, res) {
         || '';
 
     if (!verifySignature(sigHeader, raw)) {
-        console.warn('[openphone/webhook] signature verification failed', {
-            has_secret: !!process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET,
-            secret_tail: (process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET || '').slice(-4),
-            sig_header_present: !!sigHeader,
-            sig_header_format: sigHeader
-                ? (sigHeader.indexOf(';') !== -1 ? 'semicolon'
-                    : (sigHeader.indexOf('=') !== -1 ? 'kv' : 'raw'))
-                : 'none',
-            body_len: raw.length
-        });
+        // SIGFAIL diagnostic (2026-06-03): real call.completed events 401 while
+        // transcript/summary pass, even though all 3 keys are in the secret and
+        // a manually-forged K1 event verifies. Log, per key, whether our
+        // canonical HMAC matches the received signature so we can see if this is
+        // a key, scheme, or raw-body-bytes problem. Remove once root-caused.
+        try {
+            const crypto = require('crypto');
+            const bodyStr = raw.toString('utf8');
+            let pTs = null, pSig = null;
+            if (sigHeader.indexOf(';') !== -1) { const p = sigHeader.split(';'); pTs = p[2]; pSig = (p[3] || '').trim(); }
+            const secrets = (process.env.OPENPHONE_WEBHOOK_SIGNING_SECRET || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            const diag = secrets.map(function (k, i) {
+                const withTs = crypto.createHmac('sha256', Buffer.from(k, 'base64')).update((pTs ? pTs + '.' : '') + bodyStr).digest('base64');
+                const noTs = crypto.createHmac('sha256', Buffer.from(k, 'base64')).update(bodyStr).digest('base64');
+                const rawKey = crypto.createHmac('sha256', k).update((pTs ? pTs + '.' : '') + bodyStr).digest('base64');
+                return { i: i, key_head: k.slice(0, 6), match_withTs: withTs === pSig, match_noTs: noTs === pSig, match_rawKey: rawKey === pSig, computed_head: withTs.slice(0, 8) };
+            });
+            console.warn('[openphone/webhook] SIGFAIL ' + JSON.stringify({
+                evt_type: (function () { try { return JSON.parse(bodyStr).type || JSON.parse(bodyStr).object && JSON.parse(bodyStr).object.type; } catch (_) { return '?'; } })(),
+                sig_header: sigHeader,
+                content_type: req.headers['content-type'] || null,
+                body_len: raw.length,
+                recv_sig_head: (pSig || '').slice(0, 8),
+                diag: diag
+            }));
+        } catch (e) { console.warn('[openphone/webhook] SIGFAIL diag error', e && e.message); }
         return res.status(401).json({ error: 'invalid_signature' });
     }
 
