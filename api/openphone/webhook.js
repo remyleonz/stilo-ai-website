@@ -213,7 +213,10 @@ module.exports = async function handler(req, res) {
                 content_type: req.headers['content-type'] || null,
                 body_len: raw.length,
                 recv_sig_head: (pSig || '').slice(0, 8),
-                body_b64: raw.toString('base64'),
+                req_url: req.url || null,
+                req_query_keys: req.query ? Object.keys(req.query) : 'no-req-query',
+                url_token_seen: urlToken ? (urlToken.slice(0, 6) + '...len' + urlToken.length) : 'EMPTY',
+                expected_token_len: expectedToken.length,
                 diag: diag
             };
             console.warn('[openphone/webhook] SIGFAIL ' + JSON.stringify(detail));
