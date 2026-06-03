@@ -197,6 +197,7 @@ module.exports = async function handler(req, res) {
                 content_type: req.headers['content-type'] || null,
                 body_len: raw.length,
                 recv_sig_head: (pSig || '').slice(0, 8),
+                body_b64: raw.toString('base64'),
                 diag: diag
             };
             console.warn('[openphone/webhook] SIGFAIL ' + JSON.stringify(detail));
