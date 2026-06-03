@@ -304,11 +304,15 @@ module.exports = async function handler(req, res) {
     const baseFields = {
         openphone_call_id: openphoneCallId,
         direction: direction,
-        from_number: fromNumber ? normalizePhone(fromNumber) : null,
-        to_number: toNumber ? normalizePhone(toNumber) : null,
         called_at: call.createdAt || call.startedAt || new Date().toISOString(),
         raw_payload: evt
     };
+    // Only set from/to when THIS event carries them. The later transcript /
+    // summary events have no numbers; writing null here would wipe the from/to
+    // that call.completed already stored (upsert overwrites every column it's
+    // given). Preserving them keeps the call row complete + lead matching intact.
+    if (fromNumber) baseFields.from_number = normalizePhone(fromNumber);
+    if (toNumber) baseFields.to_number = normalizePhone(toNumber);
 
     // logged_by attribution. Four sources, in order of preference:
     //   1. call.metadata.logged_by — admin's log-call route originated the
@@ -463,7 +467,13 @@ module.exports = async function handler(req, res) {
             const derived = deriveDurationSeconds(call);
             if (derived != null) baseFields.duration_seconds = derived;
             else if (call.duration || call.durationSeconds) baseFields.duration_seconds = call.duration || call.durationSeconds;
-            baseFields.outcome = deriveOutcome(call);
+            // Only call.completed/ended carry the call's answer status. The
+            // summary payload has no answeredAt, so deriveOutcome would wrongly
+            // return 'no_answer' and clobber the 'answered' that call.completed
+            // already set. So don't derive an outcome from summary events.
+            if (type === 'call.completed' || type === 'call.ended') {
+                baseFields.outcome = deriveOutcome(call);
+            }
             // summary may be a string, .text, or an array (Quo v3 sends array)
             const rawSummary = data.summary || call.summary || null;
             if (rawSummary) {
