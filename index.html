@@ -2622,8 +2622,18 @@ section .section-header h2 .gradient-text em {
   .process-rail .rail-line{top:6px;bottom:6px;left:9px;right:auto;width:2px;height:auto}
   .process-rail .rail-progress{width:100%;height:0}
   .process-rail.in-view .rail-progress{height:100%}
-  .rail-step{text-align:left;padding:0}
-  .rail-node{position:absolute;left:-38px;top:4px;margin:0}
+  .rail-step{text-align:left;padding:0;position:static}
+  /* Pin the three dots to the line itself — top edge, exact midpoint, bottom
+     edge — instead of to each step's heading (which left them scattered by
+     text height). Steps are position:static on mobile, so the absolutely
+     positioned nodes anchor to the position:relative .process-rail, and the
+     line spans top:6px → bottom:6px, so 50% is its true midpoint. */
+  .rail-node{position:absolute;left:0;top:auto;margin:0}
+  /* .rail-line is child 1, so the three steps are children 2/3/4 (nth-of-type
+     would miscount because .rail-line is also a div). */
+  .process-rail .rail-step:nth-child(2) .rail-node{top:6px;bottom:auto;transform:translateY(-50%)}
+  .process-rail .rail-step:nth-child(3) .rail-node{top:50%;bottom:auto;transform:translateY(-50%)}
+  .process-rail .rail-step:nth-child(4) .rail-node{top:auto;bottom:6px;transform:translateY(50%)}
   .rail-step h3{margin-top:0}
   .rail-step p{max-width:none}
 }
