@@ -810,6 +810,7 @@
                 <button class="leads-subtab" data-sub="calls_today" onclick="setLeadsSubtab('calls_today')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Today</button>
                 <button class="leads-subtab" data-sub="dead" onclick="setLeadsSubtab('dead')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Dead Pool</button>
                 <button class="leads-subtab" data-sub="shared" onclick="setLeadsSubtab('shared')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Shared with me <span id="sharedSubtabBadge" class="nav-badge hidden" style="margin-left:4px;">0</span></button>
+                <button class="leads-subtab" data-sub="emailed" onclick="setLeadsSubtab('emailed')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Emailed</button>
             </div>
 
             <!-- Tier filter (Cold Call only) -->
@@ -1454,7 +1455,8 @@
                 booked: '/api/prospects/list-booked',
                 calls_today: '/api/prospects/calls-today',
                 dead: '/api/prospects/dead?limit=200',
-                shared: '/api/prospects/shared-with-me'
+                shared: '/api/prospects/shared-with-me',
+                emailed: '/api/prospects/emailed'
             }[sub];
             try {
                 const data = await fetchJSON(endpoint);
@@ -1478,6 +1480,21 @@
                             + '<td>' + escapeHtml(r.niche || '—') + '</td>'
                             + '<td style="white-space:nowrap;">' + escapeHtml(by) + '</td>'
                             + '<td style="color:var(--text-tertiary);font-size:12px;">' + escapeHtml(sh.note || '') + '</td>'
+                            + '</tr>';
+                    });
+                    html += '</tbody></table>';
+                } else if (sub === 'emailed') {
+                    // Leads this rep emailed via the Email button.
+                    html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Emailed to</th><th>Niche</th><th>Sent</th></tr></thead><tbody>';
+                    rows.slice(0, 200).forEach(r => {
+                        const em = r._email || {};
+                        const sent = em.at ? new Date(em.at).toLocaleString() : '—';
+                        html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
+                            + '<td><strong>' + escapeHtml(r.business_name || r.name || ('Lead ' + r.id)) + '</strong></td>'
+                            + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
+                            + '<td style="word-break:break-all;">' + escapeHtml(em.to || r.owner_email || r.email || '—') + '</td>'
+                            + '<td>' + escapeHtml(r.niche || '—') + '</td>'
+                            + '<td style="white-space:nowrap;">' + escapeHtml(sent) + '</td>'
                             + '</tr>';
                     });
                     html += '</tbody></table>';
@@ -1523,8 +1540,40 @@
             }
         }
         function closeLeadDrawer() {
+            // Flush any unsaved notes before the drawer closes so nothing is lost.
+            try { if (_notesDirty && _notesLeadId) saveNotesNow(_notesLeadId); } catch (e) {}
             document.getElementById('leadDrawer').classList.remove('open');
             document.getElementById('leadDrawerOverlay').classList.remove('open');
+        }
+
+        /* ===== LEAD NOTES (autosave) =====
+           The drawer notes field persists to prospecting.leads.call_notes. It
+           pre-fills with the saved notes, autosaves ~0.8s after the rep stops
+           typing, and flushes on drawer close — so notes survive across
+           sessions even if the rep never logs a call. */
+        var _notesTimer = null, _notesDirty = false, _notesLeadId = null;
+        function scheduleNotesSave(leadId) {
+            _notesDirty = true; _notesLeadId = leadId;
+            var msg = document.getElementById('notesSavedMsg');
+            if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Saving…'; }
+            if (_notesTimer) clearTimeout(_notesTimer);
+            _notesTimer = setTimeout(function () { saveNotesNow(leadId); }, 800);
+        }
+        async function saveNotesNow(leadId) {
+            if (_notesTimer) { clearTimeout(_notesTimer); _notesTimer = null; }
+            if (!_notesDirty) return;
+            var el = document.getElementById('callNote');
+            var notes = el ? el.value : '';
+            _notesDirty = false;
+            try {
+                await fetchJSON('/api/prospects/save-notes', { method: 'POST', body: JSON.stringify({ id: leadId, notes: notes }) });
+                var msg = document.getElementById('notesSavedMsg');
+                if (msg) { msg.style.color = 'var(--green)'; msg.textContent = 'Saved ✓'; }
+            } catch (e) {
+                _notesDirty = true; // let a later flush retry
+                var m2 = document.getElementById('notesSavedMsg');
+                if (m2) { m2.style.color = 'var(--red)'; m2.textContent = 'Save failed'; }
+            }
         }
 
         /* ===== EMAIL COMPOSER =====
@@ -1938,7 +1987,8 @@
                 + outcomeChip(r.id, 'openBookingPicker(' + r.id + ')', 'Booked meeting', 'Pick a slot + send invite', 'var(--green)')
                 + outcomeChip(r.id, 'openDnc(' + r.id + ')', 'Do Not Call', 'Requires a reason note', 'var(--red)')
                 + '</div>'
-                + '<textarea id="callNote" placeholder="Notes (optional)" rows="2" style="width:100%;margin-top:12px;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;resize:vertical;"></textarea>'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:4px;"><span class="stat-label">Notes</span><span id="notesSavedMsg" style="font-size:11px;color:var(--text-tertiary);">Saves automatically</span></div>'
+                + '<textarea id="callNote" placeholder="Notes about this lead or call. Saved automatically." rows="3" oninput="scheduleNotesSave(' + r.id + ')" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;resize:vertical;">' + escapeHtml(r.call_notes || '') + '</textarea>'
                 + '<div id="sdrOutcomeMsg" style="font-size:12px;margin-top:8px;min-height:14px;"></div>'
                 // ── Callback scheduler (hidden until Interested) ──
                 + '<div id="sdrCallbackBox" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'

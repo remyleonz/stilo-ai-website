@@ -112,13 +112,19 @@ module.exports = async function handler(req, res) {
     const playbook = kit.pickPlaybook(niche);
     const sender = await kit.getSenderIdentity(gate.email);
 
+    // Default = the deterministic template: pulls the client's business + the
+    // recommended agent (by niche) + the rep's footer. Reliable, identical every
+    // time, no AI cost or variability. AI drafting is opt-in via use_ai:true.
     let source = 'template';
-    let draft = await geminiDraft({
-        business: business, firstName: fName, niche: niche, hook: researchHook(lead),
-        agent: playbook.agent, oneLiner: playbook.oneLiner, pain: playbook.pain
-    });
-    if (draft) { source = 'gemini'; }
-    else { draft = kit.templateBody({ firstName: fName, business: business, senderName: sender.name, playbook: playbook }); }
+    let draft = null;
+    if (body.use_ai === true) {
+        draft = await geminiDraft({
+            business: business, firstName: fName, niche: niche, hook: researchHook(lead),
+            agent: playbook.agent, oneLiner: playbook.oneLiner, pain: playbook.pain
+        });
+        if (draft) source = 'gemini';
+    }
+    if (!draft) draft = kit.templateBody({ firstName: fName, business: business, senderName: sender.name, playbook: playbook });
 
     draft = kit.ensureBookingLink(kit.sanitizeCopy(draft));
 
