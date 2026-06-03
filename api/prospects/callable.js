@@ -30,7 +30,18 @@ async function callableFromSupabase(opts) {
         .or('do_not_call.is.null,do_not_call.eq.false');
 
     if (opts.assignedTo) q = q.eq('assigned_to', opts.assignedTo);
-    if (opts.tier)      q = q.eq('prospect_tier', opts.tier);
+    // Tier filter must match what the dashboard DISPLAYS: brief_tier first
+    // (1=hot,2=warm,3=cool), falling back to the legacy prospect_tier when a
+    // lead has no brief tier. Keeps the Hot/Warm/Cool chips consistent with the
+    // badges.
+    if (opts.tier) {
+        const briefN = { hot: 1, warm: 2, cool: 3 }[String(opts.tier).toLowerCase()];
+        if (briefN) {
+            q = q.or('brief_tier.eq.' + briefN + ',and(brief_tier.is.null,prospect_tier.eq.' + opts.tier + ')');
+        } else {
+            q = q.eq('prospect_tier', opts.tier);
+        }
+    }
     if (opts.niche)     q = q.eq('niche', opts.niche);
     if (opts.minScore)  q = q.gte('prospect_score', opts.minScore);
     if (opts.search)    q = q.ilike('name', `%${opts.search}%`);
@@ -43,6 +54,8 @@ async function callableFromSupabase(opts) {
     q = q.or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
 
     const { data, error } = await q
+        // Hottest first: brief Tier 1 → 2 → 3 → untiered, then by score within.
+        .order('brief_tier', { ascending: true, nullsFirst: false })
         .order('prospect_score', { ascending: false, nullsFirst: false })
         .limit(opts.limit || 200);
 
