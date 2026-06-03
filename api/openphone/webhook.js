@@ -542,3 +542,13 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ error: 'webhook_processing_failed', detail: String(e.message || e) });
     }
 };
+
+// CRITICAL for signature verification: disable Vercel's automatic body parser
+// so the raw request stream reaches readRawBody() intact. With the parser on,
+// @vercel/node races to consume/parse the body before our handler reads it,
+// intermittently leaving readRawBody empty -> HMAC over an empty body -> 401
+// invalid_signature (the flip-flop where some deliveries land and others fail).
+// The Stripe webhook in this repo uses the same export for the same reason.
+module.exports.config = {
+    api: { bodyParser: false }
+};

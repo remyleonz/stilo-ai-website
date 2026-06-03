@@ -18,6 +18,18 @@
  * prospecting.leads (lifecycle stage) joined by lead_id.
  */
 const { authSdr, resolveScope, methodNotAllowed } = require('./_shared');
+const { createClient } = require('@supabase/supabase-js');
+
+// lead_calls lives in the `prospecting` schema. caller.sb (from authSdr)
+// defaults to `public`, so querying lead_calls through it silently returns 0
+// (no public.lead_calls). Use a prospecting-scoped client for dial/meeting
+// counts. This was the cause of every SDR showing 0 dials on the admin Team
+// profile + the SDR overview, despite real calls.
+function prospectingClient() {
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false }, db: { schema: 'prospecting' }
+    });
+}
 
 function startOfTodayET() {
     const now = new Date();
@@ -79,21 +91,22 @@ module.exports = async function handler(req, res) {
     const weekISO = startOfWeekISO();
     const monthISO = startOfMonthISO();
 
+    const psb = prospectingClient(); // lead_calls is in the prospecting schema
     const [
         dialsToday, dialsWeek, dialsMonth, dialsAll,
         meetingsToday, meetingsWeek, meetingsMonth, meetingsAll,
         uniqueToday, uniqueAll
     ] = await Promise.all([
-        countCalls(caller.sb, filterEmail, todayISO),
-        countCalls(caller.sb, filterEmail, weekISO),
-        countCalls(caller.sb, filterEmail, monthISO),
-        countCalls(caller.sb, filterEmail, null),
-        countMeetingsBooked(caller.sb, filterEmail, todayISO),
-        countMeetingsBooked(caller.sb, filterEmail, weekISO),
-        countMeetingsBooked(caller.sb, filterEmail, monthISO),
-        countMeetingsBooked(caller.sb, filterEmail, null),
-        uniqueLeadsContacted(caller.sb, filterEmail, todayISO),
-        uniqueLeadsContacted(caller.sb, filterEmail, null)
+        countCalls(psb, filterEmail, todayISO),
+        countCalls(psb, filterEmail, weekISO),
+        countCalls(psb, filterEmail, monthISO),
+        countCalls(psb, filterEmail, null),
+        countMeetingsBooked(psb, filterEmail, todayISO),
+        countMeetingsBooked(psb, filterEmail, weekISO),
+        countMeetingsBooked(psb, filterEmail, monthISO),
+        countMeetingsBooked(psb, filterEmail, null),
+        uniqueLeadsContacted(psb, filterEmail, todayISO),
+        uniqueLeadsContacted(psb, filterEmail, null)
     ]);
 
     // Closed clients via client_attribution (admins see all, SDR sees own)
