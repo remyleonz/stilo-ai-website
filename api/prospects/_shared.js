@@ -30,6 +30,9 @@ const ADMIN_EMAILS = [
     'davidcoira@stiloaipartners.com'
 ];
 
+// David's cold-call brief Tier (1=top priority) → the dashboard's named tier.
+const BRIEF_TIER_MAP = { 1: 'hot', 2: 'warm', 3: 'cool' };
+
 function adminClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 }
@@ -218,15 +221,18 @@ function normalizeLead(r) {
         // Surface a dialable number: many leads carry the business line in
         // `phone` with owner_phone null. The dashboards render owner_phone.
         owner_phone: r.owner_phone || r.phone || null,
-        // David's ranking is `prospect_tier` (hot/warm/cool/dead). There's a
-        // separate LEGACY `tier` column with stale 'cold' values on ~2k leads
-        // from an old import. Canonicalize both fields to David's prospect_tier
-        // so no dashboard ever shows the stale 'cold'. If David didn't rank a
-        // lead, both are null (shown as "—") rather than a wrong tier. Future
-        // pushes flow through automatically because prospect_tier is the only
-        // source we read.
-        tier: r.prospect_tier || null,
-        prospect_tier: r.prospect_tier || null,
+        // Tier source of truth (in priority order):
+        //   1. brief_tier — David's CURRENT ranking, parsed from the cold-call
+        //      brief header ("**Tier:** N", 1=hot/2=warm/3=cool). Present on
+        //      every scripted lead the reps actually call.
+        //   2. prospect_tier — his older scoring column (hot/warm/cool/dead),
+        //      used only when there's no brief tier.
+        //   3. null → "—".
+        // The legacy `tier` column (stale 'cold' on ~2k old-import leads) is
+        // never read. Future brief pushes flow through automatically once
+        // backfill_brief_tier.js stamps brief_tier.
+        tier: (BRIEF_TIER_MAP[r.brief_tier] || r.prospect_tier || null),
+        prospect_tier: (BRIEF_TIER_MAP[r.brief_tier] || r.prospect_tier || null),
     });
 }
 
