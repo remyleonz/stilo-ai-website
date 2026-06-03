@@ -173,7 +173,23 @@ module.exports = async function handler(req, res) {
         || req.headers['openphone-webhook-signature']
         || '';
 
-    if (!verifySignature(sigHeader, raw)) {
+    // Primary auth: a secret token in the webhook URL (?token=...). Quo's HMAC
+    // signature scheme proved impossible to reproduce reliably (their docs are
+    // vague and a byte-exact body still wouldn't verify), so we authenticate
+    // the webhook by a shared secret in the URL that only we and Quo know. HMAC
+    // still works as a fallback if it ever verifies. The token is rotatable via
+    // OPENPHONE_WEBHOOK_TOKEN + re-pointing the webhooks.
+    function getUrlToken() {
+        if (req.query && req.query.token) return String(req.query.token);
+        try { return new URL(req.url, 'http://x').searchParams.get('token') || ''; }
+        catch (_) { return ''; }
+    }
+    const expectedToken = process.env.OPENPHONE_WEBHOOK_TOKEN || '';
+    const urlToken = getUrlToken();
+    const tokenOk = !!expectedToken && urlToken.length === expectedToken.length
+        && (function () { try { return require('crypto').timingSafeEqual(Buffer.from(urlToken), Buffer.from(expectedToken)); } catch (_) { return false; } })();
+
+    if (!tokenOk && !verifySignature(sigHeader, raw)) {
         // SIGFAIL diagnostic (2026-06-03): real call.completed events 401 while
         // transcript/summary pass, even though all 3 keys are in the secret and
         // a manually-forged K1 event verifies. Log, per key, whether our
