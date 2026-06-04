@@ -79,7 +79,10 @@ module.exports = async function handler(req, res) {
     // Also save the email onto the lead if we didn't have one.
     const plain = kit.sanitizeCopy(message) + '\n\n' + kit.footerText(sender);
     try {
-        await sb.from('lead_messages').insert({
+        // supabase-js returns { error } rather than throwing, so CHECK it —
+        // a swallowed error here is how email tracking silently broke before
+        // (service_role lacked USAGE on lead_messages_id_seq). Now surfaced.
+        const { error: logErr } = await sb.from('lead_messages').insert({
             lead_id: id,
             direction: 'outbound',
             channel: 'email',
@@ -94,7 +97,8 @@ module.exports = async function handler(req, res) {
             provider_message_id: sendResult.id || null,
             status: 'sent'
         });
-    } catch (_) { /* logging is best-effort; the send already succeeded */ }
+        if (logErr) console.error('[send-email] lead_messages log failed:', logErr.message);
+    } catch (e) { console.error('[send-email] lead_messages log threw:', e && e.message); }
     try {
         if (!lead.owner_email && !lead.email) {
             await sb.from('leads').update({ owner_email: to }).eq('id', id);
