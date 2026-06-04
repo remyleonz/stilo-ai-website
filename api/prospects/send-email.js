@@ -60,7 +60,10 @@ module.exports = async function handler(req, res) {
             body: JSON.stringify({
                 from: fromName + ' <' + fromEmail + '>',
                 to: [to],
-                reply_to: sender.replyTo || fromEmail,
+                // MASTER INBOX: every client reply routes to the one STILO inbox
+                // Remy checks (remyleon@stiloaipartners.com via STILO_REPLY_TO),
+                // not the rep's personal email. So all replies land in one place.
+                reply_to: process.env.STILO_REPLY_TO || fromEmail,
                 subject: subject,
                 html: html
             })
