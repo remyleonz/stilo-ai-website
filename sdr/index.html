@@ -813,12 +813,15 @@
                 <button class="leads-subtab" data-sub="emailed" onclick="setLeadsSubtab('emailed')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Emailed</button>
             </div>
 
-            <!-- Tier filter (Cold Call only) -->
-            <div id="leadsTierFilter" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
-                <button class="tier-chip active" data-tier="" onclick="setTierFilter('')" style="padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">All tiers</button>
-                <button class="tier-chip" data-tier="hot" onclick="setTierFilter('hot')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Hot</button>
-                <button class="tier-chip" data-tier="warm" onclick="setTierFilter('warm')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Warm</button>
-                <button class="tier-chip" data-tier="cool" onclick="setTierFilter('cool')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Cool</button>
+            <!-- Search + tier filter row -->
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                <input id="leadSearch" type="search" placeholder="Search business, owner name, or phone…" oninput="onLeadSearch()" autocomplete="off" style="flex:1;min-width:240px;padding:8px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:999px;color:inherit;font-family:inherit;font-size:13px;">
+                <div id="leadsTierFilter" style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="tier-chip active" data-tier="" onclick="setTierFilter('')" style="padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">All tiers</button>
+                    <button class="tier-chip" data-tier="hot" onclick="setTierFilter('hot')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Hot</button>
+                    <button class="tier-chip" data-tier="warm" onclick="setTierFilter('warm')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Warm</button>
+                    <button class="tier-chip" data-tier="cool" onclick="setTierFilter('cool')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Cool</button>
+                </div>
             </div>
 
             <div class="table-wrap" id="leadsTableWrap">
@@ -1409,6 +1412,9 @@
 
         function setLeadsSubtab(sub) {
             STATE.leadsSubtab = sub;
+            // Switching tabs clears any active search.
+            var _se = document.getElementById('leadSearch'); if (_se) _se.value = '';
+            STATE.searchActive = false;
             document.querySelectorAll('.leads-subtab').forEach(b => {
                 const active = b.dataset.sub === sub;
                 b.style.borderBottomColor = active ? 'var(--blue)' : 'transparent';
@@ -1520,26 +1526,56 @@
                     });
                     html += '</tbody></table>';
                 } else {
-                    html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th><th>Last touch</th></tr></thead><tbody>';
-                    rows.slice(0, 200).forEach(r => {
-                        const tier = String(r.prospect_tier || '').toLowerCase(); // David's ranking only; ignore legacy `tier` col
-                        const lastTouch = r.last_called_at ? new Date(r.last_called_at).toLocaleString()
-                            : r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at).toLocaleString()
-                            : '—';
-                        html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
-                            + '<td><strong>' + escapeHtml(r.business_name || '—') + '</strong></td>'
-                            + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
-                            + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
-                            + '<td>' + escapeHtml(r.niche || '—') + '</td>'
-                            + '<td>' + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '—') + '</td>'
-                            + '<td>' + escapeHtml(lastTouch) + '</td>'
-                            + '</tr>';
-                    });
-                    html += '</tbody></table>';
+                    html = standardLeadTableHtml(rows);
                 }
                 wrap.innerHTML = html;
             } catch (e) {
                 wrap.innerHTML = '<div class="empty-state">Failed to load: ' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        // Standard lead table (Business / Owner / Phone / Niche / Tier / Last
+        // touch). Shared by the subtab lists and the search results.
+        function standardLeadTableHtml(rows) {
+            let html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th><th>Last touch</th></tr></thead><tbody>';
+            rows.slice(0, 200).forEach(function (r) {
+                const tier = String(r.prospect_tier || '').toLowerCase();
+                const lastTouch = r.last_called_at ? new Date(r.last_called_at).toLocaleString()
+                    : r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at).toLocaleString() : '—';
+                html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
+                    + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
+                    + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
+                    + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
+                    + '<td>' + escapeHtml(r.niche || '—') + '</td>'
+                    + '<td>' + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '—') + '</td>'
+                    + '<td>' + escapeHtml(lastTouch) + '</td>'
+                    + '</tr>';
+            });
+            return html + '</tbody></table>';
+        }
+
+        // Lead search bar: queries business name, owner name, or phone across
+        // ALL of the rep's leads (not just the current subtab). Debounced.
+        var _searchTimer = null;
+        function onLeadSearch() {
+            if (_searchTimer) clearTimeout(_searchTimer);
+            _searchTimer = setTimeout(runLeadSearch, 280);
+        }
+        async function runLeadSearch() {
+            const el = document.getElementById('leadSearch');
+            const q = (el ? el.value : '').trim();
+            const wrap = document.getElementById('leadsTableWrap');
+            if (q.length < 2) { STATE.searchActive = false; loadLeadsTable(); return; }
+            STATE.searchActive = true;
+            wrap.innerHTML = '<div class="empty-state">Searching…</div>';
+            try {
+                const data = await fetchJSON('/api/prospects/search?q=' + encodeURIComponent(q));
+                const rows = data.results || [];
+                wrap.innerHTML = rows.length
+                    ? standardLeadTableHtml(rows)
+                    : '<div class="empty-state">No leads match "' + escapeHtml(q) + '".</div>';
+            } catch (e) {
+                wrap.innerHTML = '<div class="empty-state">Search failed: ' + escapeHtml(e.message || 'unknown') + '</div>';
             }
         }
 
