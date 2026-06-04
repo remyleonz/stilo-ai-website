@@ -1326,6 +1326,7 @@
 
         /* ===== OVERVIEW ===== */
         async function loadOverview() {
+            maybeSyncBookings(); // pull any new self-booked meetings (throttled)
             try {
                 const perf = await fetchJSON('/api/sdr/performance');
                 document.getElementById('overviewDialsWeek').textContent = perf.dials.week;
@@ -1417,6 +1418,26 @@
             const tf = document.getElementById('leadsTierFilter');
             if (tf) tf.style.display = (sub === 'callable') ? 'flex' : 'none';
             loadLeadsTable();
+            // Opening the Booked tab pulls any new self-booked meetings off the
+            // calendar (throttled server-side) so they appear without a cron.
+            if (sub === 'booked') maybeSyncBookings();
+        }
+
+        // Trigger the on-demand calendar→Booked sync. Returns how many new
+        // bookings landed. Server throttles to once per 90s across all reps.
+        async function triggerBookingSync() {
+            try {
+                const r = await fetchJSON('/api/prospects/sync-bookings', { method: 'POST' });
+                return (r && r.booked_count) || 0;
+            } catch (e) { return 0; }
+        }
+        async function maybeSyncBookings() {
+            const n = await triggerBookingSync();
+            if (n > 0) {
+                if (STATE.leadsSubtab === 'booked') loadLeadsTable();
+                loadLeadsStats();
+                if (typeof loadOverviewLists === 'function') loadOverviewLists();
+            }
         }
 
         function setTierFilter(tier) {

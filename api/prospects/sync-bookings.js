@@ -19,7 +19,7 @@
  * Auth: Vercel cron sends `Authorization: Bearer <CRON_SECRET>`. An admin JWT
  * also works for manual triggering.
  */
-const { assertAdmin, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
 const { getCalendarRefreshToken, accessTokenFromRefresh } = require('./_google_calendar');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -28,6 +28,10 @@ function leadsClient() {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
 }
+function publicClient() {
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+}
+const THROTTLE_MS = 90 * 1000; // don't re-hit the calendar more than once per 90s
 
 // Which rep gets credit: the one who emailed this lead most recently, else the
 // lead's owner.
@@ -44,12 +48,27 @@ async function resolveSdr(sb, leadId, assignedTo) {
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET' && req.method !== 'POST') return methodNotAllowed(res, 'GET, POST');
 
-    // Auth: cron secret (Vercel injects it) OR an admin JWT for manual runs.
+    // Auth: cron secret (Vercel injects it) OR any logged-in rep/admin — reps
+    // trigger this when they open their Booked tab.
     const authHeader = req.headers.authorization || '';
     const cronOk = !!process.env.CRON_SECRET && authHeader === 'Bearer ' + process.env.CRON_SECRET;
+    let gate = { ok: true, isAdmin: true, email: null };
     if (!cronOk) {
-        const gate = await assertAdmin(req, res);
-        if (!gate.ok) return; // assertAdmin already wrote 401/403
+        gate = await assertAdminOrSdr(req, res);
+        if (!gate.ok) return; // already wrote 401/403
+    }
+
+    // Throttle: this runs on every Booked-tab open, so don't actually re-scan
+    // the calendar more than once per 90s across all reps. ?force=1 bypasses.
+    const kv = publicClient();
+    const force = !!(req.query && req.query.force === '1');
+    if (!cronOk && !force) {
+        try {
+            const { data } = await kv.from('app_kv').select('updated_at').eq('key', 'last_booking_sync').maybeSingle();
+            if (data && (Date.now() - new Date(data.updated_at).getTime()) < THROTTLE_MS) {
+                return res.status(200).json({ ok: true, throttled: true, booked_count: 0 });
+            }
+        } catch (_) { /* if kv is unavailable, just run */ }
     }
 
     const refreshToken = await getCalendarRefreshToken();
@@ -126,11 +145,17 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // Stamp the throttle clock so the next Booked-tab open within 90s is a no-op.
+    try { await kv.from('app_kv').upsert({ key: 'last_booking_sync', value: { by: cronOk ? 'cron' : (gate.email || 'admin') }, updated_at: new Date().toISOString() }); } catch (_) {}
+
+    // Reps get only the count (enough to know whether to refresh their list).
+    // Admin/cron get the full detail incl. other reps' leads.
+    const privileged = cronOk || gate.isAdmin;
     return res.status(200).json({
         ok: true,
         scanned_events: events.length,
         booked_count: booked.length,
-        booked: booked,
-        unmatched_emails: Array.from(new Set(unmatched))
+        booked: privileged ? booked : undefined,
+        unmatched_emails: privileged ? Array.from(new Set(unmatched)) : undefined
     });
 };
