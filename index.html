@@ -41,6 +41,7 @@
     <link rel="preload" as="image" href="/assets/professional.png">
     <link rel="preload" as="image" href="/assets/AUtoServices.png">
     <link rel="preload" as="image" href="/assets/realestate.png">
+    <link rel="preload" as="image" href="/assets/salons.png">
 
     <script type="application/ld+json">
     {
@@ -159,9 +160,12 @@ a{color:inherit;text-decoration:none}
    big display headlines (h1/h2) with open tracking — the Didone wants air, not
    the tight negative tracking a techno-sans uses. Smaller subheads (h3/h4)
    stay normal case so they read as headings, not labels. */
-h1,h2,h3,h4{font-family:var(--font-display);font-weight:500;letter-spacing:0.005em;line-height:1.06}
-h1{font-size:clamp(2.4rem,5.6vw,4.9rem);letter-spacing:0.01em;font-weight:600;text-transform:uppercase;line-height:0.98}
-h2{font-size:clamp(2rem,3.8vw,3.3rem);font-weight:600;text-transform:uppercase;letter-spacing:0.012em}
+/* font-optical-sizing:none pins Bodoni Moda's optical axis low so the serifs
+   stay sturdy at display sizes instead of thinning to hairlines (the reason
+   our headings read spindly vs the Lindgren site). Heavier weights to match. */
+h1,h2,h3,h4{font-family:var(--font-display);font-optical-sizing:none;font-weight:600;letter-spacing:0.005em;line-height:1.06}
+h1{font-size:clamp(2.4rem,5.6vw,4.9rem);letter-spacing:0.01em;font-weight:700;text-transform:uppercase;line-height:0.98}
+h2{font-size:clamp(2rem,3.8vw,3.3rem);font-weight:700;text-transform:uppercase;letter-spacing:0.012em}
 h3{font-size:1.3rem;letter-spacing:0.004em;font-weight:600}
 p{color:var(--fg-2)}
 .container{width:var(--container);margin:0 auto;position:relative}
@@ -781,28 +785,31 @@ flex-wrap:wrap}
 
 /* ===== HERO V7 (2026-06-05): embossed wordmark + bottom-left rising headline ===== */
 .hero{align-items:flex-end !important;padding:120px 0 0 !important;}
-.hero .hero-container-v7{position:absolute;left:0;right:0;bottom:8vh;z-index:3;width:var(--container);margin:0 auto;padding-bottom:0;}
-/* Embossed official wordmark, pressed into the dark surface. */
+/* Headline hugs the true left edge (was centered in a max-width container,
+   which read as middle-aligned). */
+.hero .hero-container-v7{position:absolute;left:0;right:0;bottom:8vh;z-index:3;width:auto;margin:0;padding:0 4vw;}
+/* Embossed official wordmark, pressed into the dark surface — smaller and
+   clearly readable now (was oversized and too dim). */
 .hero-emboss{
   position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
 }
 .hero-emboss img{
-  width:min(1500px,118%);height:auto;max-width:none;
-  opacity:0.16;
-  transform:translateY(-4%);
+  width:min(820px,62%);height:auto;max-width:none;
+  opacity:0.5;
+  transform:translateY(-6%);
   mix-blend-mode:screen;
-  filter:saturate(1.25) brightness(0.9)
-    drop-shadow(0 2px 0 rgba(255,255,255,0.10))
-    drop-shadow(0 -2px 2px rgba(0,0,0,0.65));
+  filter:saturate(1.35) brightness(1.25)
+    drop-shadow(0 2px 0 rgba(255,255,255,0.14))
+    drop-shadow(0 -2px 3px rgba(0,0,0,0.6));
 }
-@media (max-width:720px){.hero-emboss img{width:155%;opacity:0.13}}
+@media (max-width:720px){.hero-emboss img{width:84%;opacity:0.42}}
 /* Headline: single line, all caps, pinned bottom-left, slow rise on load.
    Scoped to .hero h1.hero-headline so it beats the legacy .hero h1 rule. */
 .hero h1.hero-headline{
   font-family:var(--font-display);
-  font-weight:600;text-transform:uppercase;
-  font-size:clamp(1.7rem,5.2vw,5rem);
+  font-weight:700;text-transform:uppercase;font-optical-sizing:none;
+  font-size:clamp(1.7rem,4.6vw,4.1rem);
   line-height:0.98;letter-spacing:0.012em;
   color:#fff;text-align:left;margin:0;white-space:nowrap;
   text-shadow:0 6px 34px rgba(0,0,0,0.6),0 2px 10px rgba(0,0,0,0.5);
@@ -2723,21 +2730,21 @@ section .section-header h2 .gradient-text em {
    pulled up to overlap Audit's bottom-right corner, Run left and pulled up
    to overlap Build's bottom-left. Each card "jumps" into view on scroll. */
 .steps-stack{
-  position:relative;max-width:1080px;margin:0 auto;
+  position:relative;max-width:900px;margin:0 auto;
   display:flex;flex-direction:column;align-items:stretch;
 }
 .step-card{
   position:relative;
-  width:min(540px,58%);
+  width:min(540px,62%);
   aspect-ratio:1/1;
-  padding:46px;
-  display:flex;flex-direction:column;justify-content:flex-end;
-  border-radius:26px;
+  padding:44px;
+  display:flex;flex-direction:column;justify-content:flex-start;gap:16px;
+  border-radius:24px;
   background:
-    radial-gradient(120% 120% at 16% 12%,rgba(45,79,184,0.24),transparent 58%),
+    radial-gradient(135% 135% at 18% 14%,rgba(45,79,184,0.30),transparent 56%),
     linear-gradient(165deg,var(--bg-elevated) 0%,var(--bg-plate) 100%);
   border:1px solid var(--stroke-hi);
-  box-shadow:0 60px 120px rgba(0,0,0,0.62),0 0 0 1px rgba(45,79,184,0.10),inset 0 1px 0 rgba(255,255,255,0.05);
+  box-shadow:0 50px 110px rgba(0,0,0,0.6),0 0 0 1px rgba(45,79,184,0.12),inset 0 1px 0 rgba(255,255,255,0.05);
   overflow:hidden;
   opacity:0;transform:translateY(96px) scale(0.9);filter:blur(10px);
   transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1.15s cubic-bezier(.22,1.32,.36,1),filter .9s ease;
@@ -2748,31 +2755,33 @@ section .section-header h2 .gradient-text em {
   background:linear-gradient(90deg,transparent,rgba(90,123,232,0.7),transparent);
 }
 .step-card.in-view{opacity:1;transform:none;filter:blur(0);}
+/* Big overlap so the corners clearly stack (was edge-to-edge). */
 .step-card-1{align-self:flex-start;z-index:1;}
-.step-card-2{align-self:flex-end;margin-top:-130px;z-index:2;}
-.step-card-3{align-self:flex-start;margin-top:-130px;z-index:3;}
+.step-card-2{align-self:flex-end;margin-top:-205px;z-index:2;}
+.step-card-3{align-self:flex-start;margin-top:-205px;z-index:3;}
+/* Number: SOLID brand-blue, in normal flow at the top so the card fills out. */
 .step-card-index{
-  position:absolute;top:30px;right:40px;
-  font-family:var(--font-display);font-weight:600;
-  font-size:clamp(4rem,9vw,8rem);line-height:0.8;
-  color:transparent;-webkit-text-stroke:1.5px rgba(90,123,232,0.42);
+  font-family:var(--font-display);font-weight:700;font-optical-sizing:none;
+  font-size:clamp(4rem,7.5vw,7rem);line-height:0.8;
+  color:var(--accent-glow);
   letter-spacing:0.01em;pointer-events:none;
+  text-shadow:0 0 44px rgba(45,79,184,0.55);
 }
 .step-card-body h3{
-  font-family:var(--font-display);font-size:clamp(1.8rem,2.6vw,2.6rem);
-  text-transform:uppercase;font-weight:600;letter-spacing:0.02em;
+  font-family:var(--font-display);font-size:clamp(1.9rem,2.7vw,2.7rem);
+  text-transform:uppercase;font-weight:700;font-optical-sizing:none;letter-spacing:0.02em;
   color:#fff;margin:0 0 14px;line-height:1;
 }
 .step-card-body p{
-  color:var(--fg-2);font-size:1.04rem;line-height:1.6;max-width:36ch;margin:0;
+  color:#fff;font-size:1.04rem;line-height:1.6;max-width:34ch;margin:0;
 }
 @media (max-width:760px){
-  .steps-stack{max-width:440px;}
-  .step-card{width:90%;padding:30px;border-radius:20px;}
+  .steps-stack{max-width:460px;}
+  .step-card{width:94%;padding:28px;border-radius:20px;}
   .step-card-1{align-self:flex-start;}
-  .step-card-2{align-self:flex-end;margin-top:-60px;}
-  .step-card-3{align-self:flex-start;margin-top:-60px;}
-  .step-card-index{font-size:3.6rem;top:18px;right:22px;}
+  .step-card-2{align-self:flex-end;margin-top:-90px;}
+  .step-card-3{align-self:flex-start;margin-top:-90px;}
+  .step-card-index{font-size:3.4rem;}
 }
 
 /* WHY-US comparison — rebuilt as a polished product component (2026-06-05).
@@ -2834,6 +2843,21 @@ section .section-header h2 .gradient-text em {
     font-size:0.62rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--fg-3);
   }
   .wc-note{font-size:0.95rem;max-width:none}
+}
+
+/* ===== 2026-06-05b: sitewide Bodoni weight + optical-sizing fix =====
+   Bumps every display heading to a sturdier 700 and pins optical sizing low
+   so the serifs read like the Lindgren site instead of thinning to hairlines.
+   Placed last so it wins over the scattered weight:600 declarations. */
+h1,h2,h3,h4,
+.gradient-text,.section-header .gradient-text,.section-header h2,
+.hero h1.hero-headline,.agent-content h2,
+.wc-feature h3,.step-card-body h3,.industry-title,.rail-step h3{
+  font-optical-sizing:none;
+}
+h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
+.agent-content h2,.agent-content h2 em,.section-header .gradient-text em{
+  font-weight:700;
 }
 </style>
 </head>
@@ -3171,6 +3195,7 @@ section .section-header h2 .gradient-text em {
       <button class="industry-tab" data-industry="professional"><span class="industry-tab-num">06</span>Professional Services</button>
       <button class="industry-tab" data-industry="auto"><span class="industry-tab-num">07</span>Auto Services</button>
       <button class="industry-tab" data-industry="real-estate"><span class="industry-tab-num">08</span>Real Estate</button>
+      <button class="industry-tab" data-industry="salons"><span class="industry-tab-num">09</span>Salons &amp; Barbershops</button>
     </div>
 
     <!-- HOME SERVICES -->
@@ -3280,6 +3305,24 @@ section .section-header h2 .gradient-text em {
           <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Outbound Lead Reply</b><span>Replies in under 60 seconds, every channel</span></div></div>
           <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lead Generator</b><span>Builds and ranks buyer + seller prospect lists</span></div></div>
           <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI Sales Manager</b><span>Coaches calls, sends nudges, closes more deals</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALONS & BARBERSHOPS -->
+    <div class="industry-panel" data-industry-panel="salons">
+      <div class="industry-image"><img src="/assets/salons.png" alt="Modern hair salon and barbershop interior" loading="eager" decoding="async"></div>
+      <div class="industry-content">
+        <h3 class="industry-title">Keep every chair booked, even when your hands are full.</h3>
+        <p class="industry-pain">Stylists and barbers cannot answer the phone mid-cut, so booking calls roll to voicemail and walk to the shop down the street. No-shows and empty chairs quietly eat the week's revenue.</p>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Books and reschedules appointments while you are on the chair</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lost Customer Reactivation</b><span>Texts clients due for their next cut or color</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Outbound Lead Reply</b><span>Answers DMs and form leads before they book elsewhere</span></div></div>
         </div>
       </div>
     </div>

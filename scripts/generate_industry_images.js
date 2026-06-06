@@ -20,12 +20,12 @@ const STYLE =
   'no logos, no watermarks.';
 
 const JOBS = [
-  { file: 'professional.png', prompt:
-    'Interior office scene. A well-dressed accountant in a suit sits at a desk ' +
-    'inside a modern upscale office, smiling while reviewing printed financial ' +
-    'documents and a laptop with a seated client across the desk. A bookshelf ' +
-    'with binders and a large window with city buildings behind them. Indoor ' +
-    'corporate setting, business attire. ' + STYLE },
+  { file: 'salons.png', prompt:
+    'Interior of an upscale modern hair salon and barbershop. A stylist in a ' +
+    'black apron finishing a client\'s haircut in a leather styling chair, large ' +
+    'framed mirrors with warm bulb lighting, warm wood counters, plants, sleek ' +
+    'product shelves, golden-hour light through a big window. Candid, premium, ' +
+    'welcoming. ' + STYLE },
 ];
 
 async function gen(job) {
