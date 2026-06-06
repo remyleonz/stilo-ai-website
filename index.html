@@ -18,7 +18,10 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Typography ported from the Lindgren site: Bodoni Moda (Didone display
+         serif) for headlines, Barlow Semi Condensed for body, JetBrains Mono
+         for technical labels. Replaces the Saira/Geist "techno-sans" pairing. -->
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <link rel="canonical" href="https://stiloaipartners.com">
     <meta property="og:url" content="https://stiloaipartners.com">
@@ -31,11 +34,13 @@
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="keywords" content="AI agency Miami, AI receptionist, AI lead response, AI for small business, AI consulting, custom AI agents, AI website, AI SEO, GEO, AI customer reactivation">
     <link rel="preload" as="image" href="/assets/homeservices.png">
-    <link rel="preload" as="image" href="/assets/medspas.png">
-    <link rel="preload" as="image" href="/assets/restaurants.png">
-    <link rel="preload" as="image" href="/assets/realestate.png">
-    <link rel="preload" as="image" href="/assets/AUtoServices.png">
     <link rel="preload" as="image" href="/assets/Medical.png">
+    <link rel="preload" as="image" href="/assets/medspas.png">
+    <link rel="preload" as="image" href="/assets/insurance.png">
+    <link rel="preload" as="image" href="/assets/marketing.png">
+    <link rel="preload" as="image" href="/assets/professional.png">
+    <link rel="preload" as="image" href="/assets/AUtoServices.png">
+    <link rel="preload" as="image" href="/assets/realestate.png">
 
     <script type="application/ld+json">
     {
@@ -116,10 +121,10 @@
   --iris:var(--accent-deep);
   --grad-rim:linear-gradient(135deg,#2D4FB8 0%,#1E3A8A 55%,#102054 100%);
   --grad-text:linear-gradient(135deg,#F4F1EA 0%,#5A7BE8 38%,#2D4FB8 72%,#F4F1EA 100%);
-  --font-display:'Saira',system-ui,sans-serif;
-  --font-accent:'Instrument Serif',Georgia,serif;
-  --font-body:'Geist','Inter Tight',system-ui,sans-serif;
-  --font-mono:'Geist Mono',ui-monospace,monospace;
+  --font-display:'Bodoni Moda',Georgia,serif;
+  --font-accent:'Bodoni Moda',Georgia,serif;
+  --font-body:'Barlow Semi Condensed',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
   --radius:14px;
   --radius-lg:22px;
   --container:min(1200px,92vw);
@@ -150,10 +155,14 @@ body::after{
 }
 img,svg,video{display:block;max-width:100%}
 a{color:inherit;text-decoration:none}
-h1,h2,h3,h4{font-family:var(--font-display);font-weight:600;letter-spacing:-0.02em;line-height:1.1}
-h1{font-size:clamp(2.6rem,6vw,5.2rem);letter-spacing:-0.035em;font-weight:500}
-h2{font-size:clamp(2rem,3.8vw,3.2rem)}
-h3{font-size:1.25rem;letter-spacing:-0.015em}
+/* Display type ported from the Lindgren site: Bodoni Moda, uppercase on the
+   big display headlines (h1/h2) with open tracking — the Didone wants air, not
+   the tight negative tracking a techno-sans uses. Smaller subheads (h3/h4)
+   stay normal case so they read as headings, not labels. */
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:500;letter-spacing:0.005em;line-height:1.06}
+h1{font-size:clamp(2.4rem,5.6vw,4.9rem);letter-spacing:0.01em;font-weight:600;text-transform:uppercase;line-height:0.98}
+h2{font-size:clamp(2rem,3.8vw,3.3rem);font-weight:600;text-transform:uppercase;letter-spacing:0.012em}
+h3{font-size:1.3rem;letter-spacing:0.004em;font-weight:600}
 p{color:var(--fg-2)}
 .container{width:var(--container);margin:0 auto;position:relative}
 .accent-italic{font-family:var(--font-accent);font-style:italic;font-weight:400}
@@ -190,14 +199,17 @@ nav.scrolled{padding:10px 0;backdrop-filter:blur(18px);-webkit-backdrop-filter:b
   color:var(--fg);transition:opacity .2s;
 }
 .nav-logo:hover{opacity:0.85}
-.nav-logo-mark{width:52px;height:52px;border-radius:8px;object-fit:contain;display:none;background:transparent;filter:drop-shadow(0 2px 8px rgba(45,79,184,0.45))}
-.nav-logo-wordmark{height:62px;width:auto;display:none;object-fit:contain;filter:brightness(1.5) contrast(1.06) saturate(1.1) drop-shadow(0 2px 10px rgba(45,79,184,0.55))}
+.nav-logo-mark{height:40px;width:auto;object-fit:contain;display:none;background:transparent;filter:brightness(1.55) saturate(1.12) drop-shadow(0 2px 10px rgba(45,79,184,0.5))}
+/* Official wordmark — bigger, Lindgren-scale presence in the header. */
+.nav-logo-wordmark{height:84px;width:auto;display:none;object-fit:contain;filter:brightness(1.5) contrast(1.04) saturate(1.12) drop-shadow(0 2px 12px rgba(45,79,184,0.5))}
+nav.scrolled .nav-logo-wordmark{height:64px}
 .nav-logo.has-wordmark .nav-logo-text{display:none !important}
 .nav-logo.has-wordmark .nav-logo-wordmark{display:inline-block}
 .nav-logo-text{display:none}
 @media (max-width:720px){
-  .nav-logo-mark{display:inline-block;width:40px;height:40px}
-  .nav-logo-wordmark,.nav-logo-text{display:none !important}
+  .nav-logo.has-wordmark .nav-logo-wordmark{display:none !important}
+  .nav-logo-mark{display:inline-block;height:34px}
+  .nav-logo-text{display:none !important}
 }
 .nav-links{display:flex;list-style:none;gap:6px}
 .nav-links a{
@@ -624,13 +636,13 @@ footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--
 .sticky-cta-close{background:none;border:0;color:var(--fg-3);font-size:1.4rem;cursor:pointer;padding:0 8px}
 
 /* ========== FADE IN ========== */
-.fade-in{opacity:0;transform:translateY(24px)}
-.fade-in.in-view{animation:fadeInUp .8s var(--ease-out) forwards}
+.fade-in{opacity:0;transform:translateY(42px) scale(0.985);filter:blur(8px)}
+.fade-in.in-view{animation:fadeInUp 1.15s cubic-bezier(.16,1,.3,1) forwards}
 .fade-in.delay-1.in-view{animation-delay:.08s}
 .fade-in.delay-2.in-view{animation-delay:.16s}
 .fade-in.delay-3.in-view{animation-delay:.24s}
 .fade-in.delay-4.in-view{animation-delay:.32s}
-@keyframes fadeInUp{to{opacity:1;transform:translateY(0)}}
+@keyframes fadeInUp{to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
 /* When GSAP is driving entrance animations, kill the CSS opacity-0 initial state
    for the elements it manages so there's no race / flicker */
 html.gsap-ready .agent-card.fade-in,
@@ -766,6 +778,41 @@ section{padding:160px 0}
 
 flex-wrap:wrap}
 .hero-content,.hero-grid,.hero-rail,.hero-visual,.hero-eyebrow{}/* legacy slots, no longer used */
+
+/* ===== HERO V7 (2026-06-05): embossed wordmark + bottom-left rising headline ===== */
+.hero{align-items:flex-end !important;padding:120px 0 0 !important;}
+.hero .hero-container-v7{position:absolute;left:0;right:0;bottom:8vh;z-index:3;width:var(--container);margin:0 auto;padding-bottom:0;}
+/* Embossed official wordmark, pressed into the dark surface. */
+.hero-emboss{
+  position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.hero-emboss img{
+  width:min(1500px,118%);height:auto;max-width:none;
+  opacity:0.16;
+  transform:translateY(-4%);
+  mix-blend-mode:screen;
+  filter:saturate(1.25) brightness(0.9)
+    drop-shadow(0 2px 0 rgba(255,255,255,0.10))
+    drop-shadow(0 -2px 2px rgba(0,0,0,0.65));
+}
+@media (max-width:720px){.hero-emboss img{width:155%;opacity:0.13}}
+/* Headline: single line, all caps, pinned bottom-left, slow rise on load.
+   Scoped to .hero h1.hero-headline so it beats the legacy .hero h1 rule. */
+.hero h1.hero-headline{
+  font-family:var(--font-display);
+  font-weight:600;text-transform:uppercase;
+  font-size:clamp(1.7rem,5.2vw,5rem);
+  line-height:0.98;letter-spacing:0.012em;
+  color:#fff;text-align:left;margin:0;white-space:nowrap;
+  text-shadow:0 6px 34px rgba(0,0,0,0.6),0 2px 10px rgba(0,0,0,0.5);
+  opacity:0;transform:translateY(58px);filter:blur(8px);
+  animation:heroRiseV7 2.6s cubic-bezier(.16,1,.3,1) 0.7s forwards;
+  will-change:opacity,transform,filter;
+}
+@keyframes heroRiseV7{to{opacity:1;transform:translateY(0);filter:blur(0)}}
+@media (max-width:560px){.hero h1.hero-headline{white-space:normal;max-width:14ch;font-size:clamp(2rem,11vw,3rem)}}
+@media (prefers-reduced-motion:reduce){.hero h1.hero-headline{opacity:1;transform:none;filter:none;animation:none}}
 
 /* Ambient hero background: aurora orbs + video slot */
 .hero-aurora{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
@@ -1578,7 +1625,7 @@ flex-wrap:wrap}
 .contact-section .section-header h2{font-size:clamp(2.2rem,4vw,3.4rem)}
 
 /* Section header tightening */
-.section-header h2{font-size:clamp(2.2rem,3.6vw,3.4rem);letter-spacing:-0.035em;line-height:1.05;font-weight:500}
+.section-header h2{font-size:clamp(2.2rem,3.6vw,3.4rem);letter-spacing:0.012em;line-height:1.04;font-weight:600}
 .section-header .gradient-text{font-family:var(--font-display);font-style:normal;background:none;-webkit-text-fill-color:initial;color:var(--fg);font-weight:500}
 .section-header .gradient-text em{
   font-family:var(--font-accent);font-style:italic;font-weight:400;
@@ -1620,34 +1667,37 @@ flex-wrap:wrap}
    REDESIGN V3 (2026-05-26 evening) — Snowflake-tier overrides
    ===================================================== */
 
-/* Display font: Geist for everything heading + UI */
-h1,h2,h3,h4,.btn-primary,.btn-ghost,.nav-cta,.nav-logo,.nav-links a{
-  font-family:'Geist',system-ui,sans-serif;
+/* Display font: Bodoni Moda (Lindgren system) for every heading + UI label.
+   Nav links + body UI fall back to Barlow via --font-body below. */
+h1,h2,h3,h4,.btn-primary,.btn-ghost,.nav-cta{
+  font-family:var(--font-display);
 }
+.nav-logo,.nav-links a{font-family:var(--font-body);}
 
-/* All H2s: ALL CAPS, tight, big, no italic accent */
+/* All H2s: ALL CAPS Didone — open tracking, not the tight techno-sans tracking.
+   The em accent becomes a Bodoni italic in brand blue (the Lindgren flourish). */
 h2{
   text-transform:uppercase;
-  font-weight:700;
-  letter-spacing:-0.02em;
+  font-weight:600;
+  letter-spacing:0.012em;
   font-size:clamp(2.2rem,4.4vw,4rem);
-  line-height:1.04;
+  line-height:1.02;
 }
 h2 em,.section-header .gradient-text em{
-  font-family:'Geist',system-ui,sans-serif;
-  font-style:normal;font-weight:700;
-  background:none;-webkit-text-fill-color:initial;color:var(--accent-hi);
-  letter-spacing:-0.02em;
+  font-family:var(--font-accent);
+  font-style:italic;font-weight:500;
+  background:none;-webkit-text-fill-color:initial;color:var(--accent-glow);
+  letter-spacing:0.005em;
 }
 .section-header .gradient-text{
-  font-family:'Geist',system-ui,sans-serif;
-  text-transform:uppercase;font-weight:700;letter-spacing:-0.02em;color:var(--fg);
+  font-family:var(--font-display);
+  text-transform:uppercase;font-weight:600;letter-spacing:0.012em;color:var(--fg);
   background:none;-webkit-text-fill-color:initial;
 }
 
-/* H3 caps, tighter */
-h3{text-transform:uppercase;font-weight:700;letter-spacing:0;font-size:1.06rem}
-.agent-card h3,.why-card h3,.process-step h3,.case-title{text-transform:uppercase;font-weight:700;letter-spacing:0}
+/* H3 caps, Bodoni */
+h3{text-transform:uppercase;font-weight:600;letter-spacing:0.018em;font-size:1.08rem}
+.agent-card h3,.why-card h3,.process-step h3,.case-title{text-transform:uppercase;font-weight:600;letter-spacing:0.018em}
 
 /* Hide all the small section-eyebrow chips site-wide */
 .section-header .eyebrow,.case-eyebrow,.usecase-eyebrow,.system-center-eyebrow{display:none !important}
@@ -1768,6 +1818,16 @@ section,.partners{background:transparent !important}
 .agent-content{display:none}
 .agent-content.active{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:64px;align-items:center;animation:apFade .5s var(--ease-out)}
 @media (max-width:960px){.agent-content.active{grid-template-columns:1fr;gap:36px}}
+/* Mobile: screenshots first, then the copy + CTA centered underneath.
+   column-reverse flips the DOM order (copy-text, then mockups) so the
+   screenshots sit on top and the headline + body + CTA land centered below. */
+@media (max-width:760px){
+  .agents-master .agent-content.active{display:flex !important;flex-direction:column;gap:32px}
+  .agents-master .agent-content.active .agent-mockups{order:0}
+  .agents-master .agent-content.active .agent-copy-text{order:1;align-items:center;text-align:center}
+  .agents-master .agent-content.active .agent-panel-body{max-width:46ch}
+  .agents-master .agent-content.active .agent-copy-cta{align-self:center}
+}
 .agent-copy-text{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
 .agent-content h2{
   font-size:clamp(1.8rem,2.6vw,2.6rem);
@@ -1782,21 +1842,25 @@ section,.partners{background:transparent !important}
 .agent-content h2 em{color:var(--accent-hi);font-style:normal}
 .agent-panel-body{color:var(--fg-2);font-size:1.05rem;line-height:1.55;margin:0 0 28px;max-width:42ch}
 .agent-copy-cta{
-  padding:12px 26px;
-  border-radius:10px;
-  background:linear-gradient(135deg,var(--accent-hi),var(--accent));
+  padding:1rem 2rem;
+  border-radius:0;
+  background:var(--accent);
   color:#fff;
   font-family:var(--font-display);
   font-weight:600;
-  font-size:0.92rem;
-  letter-spacing:0.02em;
+  font-size:0.78rem;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
   text-decoration:none;
+  border:1px solid var(--accent);
   box-shadow:none;
-  transition:background .2s,transform .2s,box-shadow .2s;
+  transition:background .45s cubic-bezier(.16,1,.3,1),border-color .45s,color .45s;
 }
 .agent-copy-cta:hover{
-  background:linear-gradient(135deg,var(--accent-glow),var(--accent-hi));
-  transform:translateY(-1px);
+  background:transparent;
+  border-color:#fff;
+  color:#fff;
+  transform:none;
   box-shadow:none;
 }
 
@@ -2044,8 +2108,7 @@ section,.partners{background:transparent !important}
 .quiz-step-title{font-family:'Geist',system-ui,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:-0.01em;font-size:1.6rem}
 
 /* NAV */
-.nav-cta{font-family:'Geist',system-ui,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;font-size:0.78rem;padding:11px 20px}
-.nav-links a{font-family:'Geist',system-ui,sans-serif;font-weight:500;font-size:0.86rem}
+.nav-links a{font-family:var(--font-body);font-weight:500;font-size:0.9rem;letter-spacing:0.04em;text-transform:uppercase}
 
 /* BUTTONS */
 .btn-primary,.btn-ghost{font-family:'Geist',system-ui,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;font-size:0.82rem;padding:15px 28px}
@@ -2063,38 +2126,38 @@ section,.partners{background:transparent !important}
   flex-direction:column !important;
   align-items:center !important;
   justify-content:center !important;
-  gap:6px !important;
-  padding:18px 18px !important;
-  min-height:78px !important;
-  border-radius:10px !important;
-  border:1px solid rgba(255,255,255,0.10) !important;
-  /* Inactive: subtle light-gray fill that contrasts vs the dark page.
-     2026-05-28: bumped from ~2% white to ~9% so buttons read clearly. */
-  background:rgba(255,255,255,0.09) !important;
-  color:#e8eaf2 !important;
+  gap:7px !important;
+  padding:16px 16px !important;
+  min-height:74px !important;
+  border-radius:0 !important;
+  border:1px solid var(--stroke-hi) !important;
+  /* Inactive: hairline outline on near-transparent fill — Lindgren tab
+     language. Active fills brand navy. */
+  background:rgba(255,255,255,0.03) !important;
+  color:var(--fg-2) !important;
   cursor:pointer;
-  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
+  font-family:var(--font-display) !important;
   font-weight:600 !important;
-  font-size:0.86rem !important;
-  letter-spacing:0.06em !important;
+  font-size:0.8rem !important;
+  letter-spacing:0.12em !important;
   text-transform:uppercase !important;
-  transition:background .2s,color .2s,border-color .2s,transform .2s;
+  transition:background .45s cubic-bezier(.16,1,.3,1),color .45s,border-color .45s !important;
   white-space:normal !important;
-  line-height:1.15 !important;
+  line-height:1.18 !important;
   text-align:center !important;
   width:100% !important;
 }
 .agent-tab:hover,.case-tab:hover,.industry-tab:hover{
   color:#fff !important;
-  border-color:rgba(255,255,255,0.20) !important;
-  background:rgba(255,255,255,0.14) !important;
-  transform:translateY(-1px);
+  border-color:rgba(255,255,255,0.32) !important;
+  background:rgba(255,255,255,0.07) !important;
+  transform:none !important;
 }
 .agent-tab.active,.case-tab.active,.industry-tab.active{
   background:var(--accent) !important;
   color:#fff !important;
   border-color:var(--accent) !important;
-  box-shadow:0 8px 24px rgba(30,58,138,0.32);
+  box-shadow:none !important;
 }
 .agent-tab .agent-tab-num,
 .case-tab .case-tab-num,
@@ -2111,55 +2174,66 @@ section,.partners{background:transparent !important}
 .case-tab.active .case-tab-num,
 .industry-tab.active .industry-tab-num{opacity:0.85 !important}
 
-/* ---- CTA SYSTEM V3.1: rectangular Talk-to-a-Partner buttons sitewide ---- */
+/* ---- CTA SYSTEM V4 (2026-06-05): Lindgren squared buttons ----
+   Ported from the Randy Lindgren site's .cta-primary / .btn-outline-light:
+   zero radius, Bodoni Moda, 0.18em tracking, 1px hairline border, slow
+   cubic transitions. Two roles only: filled (primary actions) and
+   outline-light (secondary / "see it work"). No pill, no gradient, no glow. */
 .btn-primary{
-  border-radius:10px !important;
-  padding:15px 26px !important;
+  border-radius:0 !important;
+  padding:1rem 2rem !important;
   background:var(--accent) !important;
   color:#fff !important;
-  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
-  font-weight:700 !important;
-  font-size:0.86rem !important;
-  letter-spacing:0.08em !important;
+  font-family:var(--font-display) !important;
+  font-weight:600 !important;
+  font-size:0.78rem !important;
+  letter-spacing:0.18em !important;
   text-transform:uppercase !important;
-  box-shadow:0 6px 22px rgba(30,58,138,0.32) !important;
+  border:1px solid var(--accent) !important;
+  box-shadow:none !important;
+  transition:background .45s cubic-bezier(.16,1,.3,1),border-color .45s cubic-bezier(.16,1,.3,1),color .45s cubic-bezier(.16,1,.3,1) !important;
 }
+.btn-primary::before{display:none !important}
 .btn-primary:hover{
-  background:var(--accent-hi) !important;
-  box-shadow:0 12px 32px rgba(45,79,184,0.42) !important;
-  transform:translateY(-1px) !important;
+  background:transparent !important;
+  border-color:#fff !important;
+  color:#fff !important;
+  box-shadow:none !important;
+  transform:none !important;
 }
 .btn-ghost{
-  border-radius:10px !important;
-  padding:14px 24px !important;
-  border:1px solid var(--stroke-hi) !important;
-  background:rgba(255,255,255,0.02) !important;
-  color:var(--fg) !important;
-  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
+  border-radius:0 !important;
+  padding:1rem 2rem !important;
+  border:1px solid rgba(255,255,255,0.82) !important;
+  background:transparent !important;
+  color:#fff !important;
+  font-family:var(--font-display) !important;
   font-weight:600 !important;
-  font-size:0.86rem !important;
-  letter-spacing:0.08em !important;
+  font-size:0.78rem !important;
+  letter-spacing:0.18em !important;
   text-transform:uppercase !important;
+  transition:background .45s cubic-bezier(.16,1,.3,1),color .45s cubic-bezier(.16,1,.3,1),border-color .45s cubic-bezier(.16,1,.3,1) !important;
 }
 .btn-ghost:hover{
-  border-color:var(--accent-hi) !important;
-  background:rgba(45,79,184,0.10) !important;
-  color:var(--fg) !important;
+  border-color:#fff !important;
+  background:#fff !important;
+  color:#0A0A12 !important;
 }
 .nav-cta{
-  border-radius:10px !important;
-  padding:11px 20px !important;
-  font-family:var(--font-display),'Saira',system-ui,sans-serif !important;
-  font-weight:700 !important;
-  font-size:0.78rem !important;
-  letter-spacing:0.08em !important;
+  border-radius:0 !important;
+  padding:0.78rem 1.5rem !important;
+  font-family:var(--font-display) !important;
+  font-weight:600 !important;
+  font-size:0.72rem !important;
+  letter-spacing:0.16em !important;
   text-transform:uppercase !important;
   background:var(--accent) !important;
   color:#fff !important;
-  border:0 !important;
+  border:1px solid var(--accent) !important;
+  transition:background .45s cubic-bezier(.16,1,.3,1),border-color .45s,color .45s !important;
 }
 .nav-cta::before,.nav-cta::after{display:none !important}
-.nav-cta:hover{background:var(--accent-hi) !important;box-shadow:0 6px 22px rgba(45,79,184,0.42)}
+.nav-cta:hover{background:transparent !important;border-color:#fff !important;color:#fff !important;box-shadow:none !important}
 
 /* ---- RECEPTIONIST: suppress duplicate top blue line (inner ::before) ---- */
 .agent-visual-wrap .call-panel::before{display:none !important}
@@ -2548,24 +2622,27 @@ section .section-header h2 .gradient-text em {
 .industry-cta {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 10px !important;
-  padding: 12px 22px !important;
+  gap: 12px !important;
+  padding: 1rem 2rem !important;
   background: var(--accent) !important;
   color: #ffffff !important;
-  border-radius: 10px !important;
-  font-family: var(--font-display),'Saira',system-ui,sans-serif !important;
+  border-radius: 0 !important;
+  font-family: var(--font-display) !important;
   font-weight: 600 !important;
-  font-size: 0.95rem !important;
-  letter-spacing: 0.02em !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
   text-decoration: none !important;
-  border: none !important;
+  border: 1px solid var(--accent) !important;
   margin-top: 18px !important;
-  transition: background .2s, transform .2s, box-shadow .2s !important;
+  transition: background .45s cubic-bezier(.16,1,.3,1), border-color .45s, color .45s !important;
 }
 .industry-cta:hover {
-  background: var(--accent-hi) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(30,58,138,0.4);
+  background: transparent !important;
+  border-color: #fff !important;
+  color: #fff !important;
+  transform: none;
+  box-shadow: none;
 }
 /* Lower the per-agent copy block under the master demo video. */
 .agent-copy-wrap { margin-top: 56px !important; }
@@ -2641,56 +2718,122 @@ section .section-header h2 .gradient-text em {
 /* =====================================================
    WHY US — STILO vs typical agency comparison (2026-06-01)
    ===================================================== */
+/* ===== 3 STEPS — diagonally overlapping square cards (2026-06-05) =====
+   Big square cards in a zig-zag stack: Audit top-left, Build right and
+   pulled up to overlap Audit's bottom-right corner, Run left and pulled up
+   to overlap Build's bottom-left. Each card "jumps" into view on scroll. */
+.steps-stack{
+  position:relative;max-width:1080px;margin:0 auto;
+  display:flex;flex-direction:column;align-items:stretch;
+}
+.step-card{
+  position:relative;
+  width:min(540px,58%);
+  aspect-ratio:1/1;
+  padding:46px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  border-radius:26px;
+  background:
+    radial-gradient(120% 120% at 16% 12%,rgba(45,79,184,0.24),transparent 58%),
+    linear-gradient(165deg,var(--bg-elevated) 0%,var(--bg-plate) 100%);
+  border:1px solid var(--stroke-hi);
+  box-shadow:0 60px 120px rgba(0,0,0,0.62),0 0 0 1px rgba(45,79,184,0.10),inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow:hidden;
+  opacity:0;transform:translateY(96px) scale(0.9);filter:blur(10px);
+  transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1.15s cubic-bezier(.22,1.32,.36,1),filter .9s ease;
+  will-change:opacity,transform,filter;
+}
+.step-card::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(90,123,232,0.7),transparent);
+}
+.step-card.in-view{opacity:1;transform:none;filter:blur(0);}
+.step-card-1{align-self:flex-start;z-index:1;}
+.step-card-2{align-self:flex-end;margin-top:-130px;z-index:2;}
+.step-card-3{align-self:flex-start;margin-top:-130px;z-index:3;}
+.step-card-index{
+  position:absolute;top:30px;right:40px;
+  font-family:var(--font-display);font-weight:600;
+  font-size:clamp(4rem,9vw,8rem);line-height:0.8;
+  color:transparent;-webkit-text-stroke:1.5px rgba(90,123,232,0.42);
+  letter-spacing:0.01em;pointer-events:none;
+}
+.step-card-body h3{
+  font-family:var(--font-display);font-size:clamp(1.8rem,2.6vw,2.6rem);
+  text-transform:uppercase;font-weight:600;letter-spacing:0.02em;
+  color:#fff;margin:0 0 14px;line-height:1;
+}
+.step-card-body p{
+  color:var(--fg-2);font-size:1.04rem;line-height:1.6;max-width:36ch;margin:0;
+}
+@media (max-width:760px){
+  .steps-stack{max-width:440px;}
+  .step-card{width:90%;padding:30px;border-radius:20px;}
+  .step-card-1{align-self:flex-start;}
+  .step-card-2{align-self:flex-end;margin-top:-60px;}
+  .step-card-3{align-self:flex-start;margin-top:-60px;}
+  .step-card-index{font-size:3.6rem;top:18px;right:22px;}
+}
+
+/* WHY-US comparison — rebuilt as a polished product component (2026-06-05).
+   Bigger type, brighter notes, solid filled checks, a highlighted STILO
+   column with a blue wash + halo. No more thin gray spreadsheet. */
 .why-compare{
-  max-width:1000px;margin:0 auto;
-  border:1px solid var(--stroke);border-radius:20px;overflow:hidden;
-  background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0));
+  max-width:1060px;margin:0 auto;
+  border:1px solid var(--stroke-hi);border-radius:22px;overflow:hidden;
+  background:var(--bg-plate);
+  box-shadow:0 50px 120px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.04);
 }
 .why-compare-head,.wc-row{
-  display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr);
+  display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) minmax(0,1fr);
 }
-.why-compare-head{border-bottom:1px solid var(--stroke);background:rgba(255,255,255,0.02)}
+.why-compare-head{border-bottom:1px solid var(--stroke-hi);}
 .why-compare-head>div{
-  padding:18px 26px;font-family:var(--font-display),'Saira',system-ui,sans-serif;
-  font-weight:700;text-transform:uppercase;letter-spacing:0.03em;font-size:0.95rem;
+  padding:24px 30px;font-family:var(--font-display);
+  font-weight:600;text-transform:uppercase;letter-spacing:0.14em;font-size:0.82rem;
+  display:flex;align-items:center;
 }
-.wc-col{text-align:center}
-.wc-col.wc-stilo{color:#fff}
-.wc-col.wc-them{color:var(--fg-3)}
-/* highlight the STILO column down the whole table */
-.why-compare .wc-stilo{background:linear-gradient(180deg,rgba(45,79,184,0.12),rgba(45,79,184,0.03))}
-.wc-row{border-top:1px solid var(--stroke);align-items:center}
-.wc-feature{padding:26px}
+.wc-col{justify-content:center;text-align:center;}
+.wc-col.wc-stilo{color:#fff;}
+.wc-col.wc-them{color:var(--fg-3);}
+/* Highlight the STILO column down the whole table. */
+.why-compare .wc-stilo{
+  background:linear-gradient(180deg,rgba(45,79,184,0.18),rgba(45,79,184,0.06));
+  box-shadow:inset 1px 0 0 var(--accent-line),inset -1px 0 0 var(--accent-line);
+}
+.wc-row{border-top:1px solid var(--stroke);align-items:stretch;}
+.wc-feature{padding:32px 30px;display:flex;flex-direction:column;justify-content:center;}
 .wc-feature h3{
-  font-family:var(--font-display),'Saira',system-ui,sans-serif;
-  font-size:1.1rem;text-transform:uppercase;font-weight:700;
-  letter-spacing:-0.01em;margin:0 0 8px;color:#fff;
+  font-family:var(--font-display);
+  font-size:1.4rem;text-transform:uppercase;font-weight:600;
+  letter-spacing:0.012em;margin:0;color:#fff;line-height:1.08;
 }
-.wc-feature p{color:var(--fg-2);font-size:0.93rem;line-height:1.55;margin:0}
+.wc-feature p{color:var(--fg-2);font-size:0.95rem;line-height:1.55;margin:8px 0 0;}
 .wc-cell{
-  padding:26px 22px;display:flex;flex-direction:column;align-items:center;
-  justify-content:flex-start;text-align:center;gap:12px;
+  padding:30px 26px;display:flex;flex-direction:row;align-items:center;
+  justify-content:center;text-align:left;gap:14px;
 }
 .wc-mark{
-  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
-  font-size:1rem;font-weight:700;flex-shrink:0;
+  width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+  font-size:1.05rem;font-weight:700;flex-shrink:0;line-height:1;
 }
-.wc-check{background:rgba(45,79,184,0.20);color:var(--accent-glow);border:1px solid rgba(90,123,232,0.45)}
-.wc-x{background:rgba(255,255,255,0.04);color:var(--fg-3);border:1px solid var(--stroke)}
-.wc-note{font-size:0.84rem;line-height:1.45;max-width:20ch;color:var(--fg-3)}
-.wc-cell.wc-stilo .wc-note{color:var(--fg-2)}
+.wc-check{background:var(--accent);color:#fff;border:1px solid var(--accent-hi);box-shadow:0 6px 18px rgba(45,79,184,0.45);}
+.wc-x{background:rgba(255,255,255,0.05);color:var(--fg-2);border:1px solid var(--stroke-hi);}
+.wc-note{font-size:1.04rem;line-height:1.38;max-width:22ch;color:#fff;font-weight:500;}
+.wc-cell.wc-them .wc-note{color:var(--fg-2);font-weight:400;}
 @media (max-width:760px){
   .why-compare-head{display:none}
   .wc-row{grid-template-columns:1fr 1fr;grid-template-areas:"feat feat" "stilo them"}
-  .wc-feature{grid-area:feat;padding:22px 20px 6px}
+  .wc-feature{grid-area:feat;padding:26px 22px 8px}
+  .wc-feature h3{font-size:1.25rem}
   .wc-cell.wc-stilo{grid-area:stilo}
   .wc-cell.wc-them{grid-area:them}
-  .wc-cell{padding:16px 16px 22px;gap:8px}
+  .wc-cell{padding:18px 18px 24px;gap:10px;flex-direction:column;align-items:flex-start;text-align:left}
   .wc-cell::before{
     content:attr(data-label);font-family:var(--font-mono);
-    font-size:0.66rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--fg-3);
+    font-size:0.62rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--fg-3);
   }
-  .wc-note{font-size:0.8rem}
+  .wc-note{font-size:0.95rem;max-width:none}
 }
 </style>
 </head>
@@ -2701,8 +2844,8 @@ section .section-header h2 .gradient-text em {
 <nav id="topNav">
   <div class="nav-inner">
     <a href="/" class="nav-logo has-wordmark" id="navLogoLink" onclick="location.href='/';return false;">
-      <img class="nav-logo-mark" src="/assets/STILOMOBILELOGO.png" alt="STILO" />
-      <img class="nav-logo-wordmark" src="/assets/new3DLogoSTILOAI.png" alt="STILO AI PARTNERS" />
+      <img class="nav-logo-mark" src="/assets/StiloLogoOfficial.png" alt="STILO AI PARTNERS" />
+      <img class="nav-logo-wordmark" src="/assets/StiloLogoOfficial.png" alt="STILO AI PARTNERS" />
       <span class="nav-logo-text">STILO AI PARTNERS</span>
     </a>
     <ul class="nav-links">
@@ -2735,31 +2878,18 @@ section .section-header h2 .gradient-text em {
     <span class="aurora-orb d"></span>
   </div>
   <!-- Hero background: blue aurora glows on the same black void the rest
-       of the site uses. No video — just the brand blue + black accent. -->
+       of the site uses. The official wordmark is EMBOSSED into the surface
+       (low opacity + screen blend + letterpress edge) so it reads as part
+       of the background, not an overlaid image — the Lindgren stamped-logo
+       treatment, adapted from white to our dark brand. -->
+  <div class="hero-emboss" aria-hidden="true">
+    <img src="/assets/StiloLogoOfficial.png" alt="" loading="eager" />
+  </div>
   <div class="hero-veil"></div>
-  <div class="container">
-    <div class="hero-grid-v6">
-      <!-- LEFT: copy + CTAs. 2-line headline (Snowflake pattern). -->
-      <div class="hero-copy">
-        <h1 data-split="lines">
-          <span class="line"><span class="line-inner"><em>AI</em> SOLUTIONS</span></span>
-          <span class="line"><span class="line-inner">FOR YOUR <em>BUSINESS</em></span></span>
-        </h1>
-        <p class="hero-sub">We design, build, and operate AI agents that give you back your time, close more sales, and grow your business.</p>
-        <div class="hero-ctas">
-          <a href="#contact" class="btn-primary">Talk to a partner</a>
-          <a href="#agents" class="btn-ghost">See it work</a>
-        </div>
-      </div>
-      <!-- RIGHT: 3D STILO logo. Entrance: rotates in from off-screen
-           right and lands face-on. Idle: gentle tilt+bob so it stays
-           alive and never goes invisible edge-on. -->
-      <div class="hero-3d-stage" aria-hidden="true">
-        <div class="hero-3d-logo-wrap">
-          <img class="hero-3d-logo" src="/assets/new3DLogoSTILOAI.png" alt="" loading="eager" />
-        </div>
-      </div>
-    </div>
+  <div class="container hero-container-v7">
+    <!-- Single-line, all-caps headline pinned bottom-left, rising in slowly
+         on load (Lindgren hero). No sub-copy, no buttons. -->
+    <h1 class="hero-headline">AI Solutions for your business</h1>
   </div>
 </section>
 
@@ -2767,7 +2897,7 @@ section .section-header h2 .gradient-text em {
 <section class="agents-master" id="agents">
   <div class="container">
     <div class="section-header fade-in">
-      <h2><span class="gradient-text">A team of <em>AI</em> agents</span></h2>
+      <h2><span class="gradient-text">A team of <em>agents</em></span></h2>
     </div>
 
     <!-- Compact tab pills above the stage. Wraps to two rows naturally. -->
@@ -2808,7 +2938,7 @@ section .section-header h2 .gradient-text em {
     <div class="agent-copy-wrap">
       <div class="agent-content active" data-agent-content="receptionist">
         <div class="agent-copy-text">
-          <h2>Answer every call. <em>Book every lead.</em></h2>
+          <h2>Never lose a call to <em>voicemail</em>.</h2>
           <p class="agent-panel-body">A 24/7 voice agent trained on your hours, services, and pricing. Picks up in under two rings, qualifies the caller, books straight into your calendar, and sends a summary to your team. Transfers to a human when something needs one.</p>
           <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
@@ -2993,25 +3123,30 @@ section .section-header h2 .gradient-text em {
 <section class="process-section" id="process">
   <div class="container">
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 64px;max-width:none;">
-      <h2><span class="gradient-text">Three steps <em>One partner</em></span></h2>
+      <h2><span class="gradient-text">3 Steps</span></h2>
     </div>
-    <div class="process-rail fade-in">
-      <div class="rail-line"><span class="rail-progress"></span></div>
-      <div class="rail-step" style="--i:0">
-        <div class="rail-node"></div>
-        <h3>Audit</h3>
-        <p>A focused 15-minute call. We map your call flow, lead path, customer history, and competitive position. You walk out with a one-page diagnosis and a fixed price.</p>
-      </div>
-      <div class="rail-step" style="--i:1">
-        <div class="rail-node"></div>
-        <h3>Build</h3>
-        <p>We design and deploy your agent team, trained on your business. Every script, prompt, and integration reviewed by a human before it touches a customer.</p>
-      </div>
-      <div class="rail-step" style="--i:2">
-        <div class="rail-node"></div>
-        <h3>Run</h3>
-        <p>We monitor, tune, and improve every agent every week. You get a weekly report with what shipped, what moved, and the three things we're testing next.</p>
-      </div>
+    <div class="steps-stack">
+      <article class="step-card step-card-1">
+        <span class="step-card-index">01</span>
+        <div class="step-card-body">
+          <h3>Audit</h3>
+          <p>A focused 15-minute call. We map your call flow, lead path, customer history, and competitive position. You walk out with a one-page diagnosis and a fixed price.</p>
+        </div>
+      </article>
+      <article class="step-card step-card-2">
+        <span class="step-card-index">02</span>
+        <div class="step-card-body">
+          <h3>Build</h3>
+          <p>We design and deploy your agent team, trained on your business. Every script, prompt, and integration reviewed by a human before it touches a customer.</p>
+        </div>
+      </article>
+      <article class="step-card step-card-3">
+        <span class="step-card-index">03</span>
+        <div class="step-card-body">
+          <h3>Run</h3>
+          <p>We monitor, tune, and improve every agent every week. You get a weekly report with what shipped, what moved, and the three things we're testing next.</p>
+        </div>
+      </article>
     </div>
     <div style="text-align:center;margin-top:60px;" class="fade-in">
       <a href="#contact" class="btn-primary">Start with a 15-minute audit</a>
@@ -3024,16 +3159,18 @@ section .section-header h2 .gradient-text em {
   <div class="container">
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 56px;">
       <span class="eyebrow">Use cases</span>
-      <h2><span class="gradient-text">AI built for <em>your industry</em></span></h2>
+      <h2><span class="gradient-text">Built for <em>your industry</em></span></h2>
     </div>
 
     <div class="industry-tabs" role="tablist">
       <button class="industry-tab active" data-industry="home-services"><span class="industry-tab-num">01</span>Home Services</button>
-      <button class="industry-tab" data-industry="med-spa"><span class="industry-tab-num">02</span>Med Spa &amp; Aesthetics</button>
-      <button class="industry-tab" data-industry="restaurant"><span class="industry-tab-num">03</span>Restaurants</button>
-      <button class="industry-tab" data-industry="real-estate"><span class="industry-tab-num">04</span>Real Estate</button>
-      <button class="industry-tab" data-industry="auto"><span class="industry-tab-num">05</span>Auto Services</button>
-      <button class="industry-tab" data-industry="medical"><span class="industry-tab-num">06</span>Medical &amp; Dental</button>
+      <button class="industry-tab" data-industry="medical"><span class="industry-tab-num">02</span>Medical &amp; Dental</button>
+      <button class="industry-tab" data-industry="med-spa"><span class="industry-tab-num">03</span>Med Spa &amp; Aesthetics</button>
+      <button class="industry-tab" data-industry="insurance"><span class="industry-tab-num">04</span>Insurance</button>
+      <button class="industry-tab" data-industry="marketing"><span class="industry-tab-num">05</span>Marketing &amp; Web</button>
+      <button class="industry-tab" data-industry="professional"><span class="industry-tab-num">06</span>Professional Services</button>
+      <button class="industry-tab" data-industry="auto"><span class="industry-tab-num">07</span>Auto Services</button>
+      <button class="industry-tab" data-industry="real-estate"><span class="industry-tab-num">08</span>Real Estate</button>
     </div>
 
     <!-- HOME SERVICES -->
@@ -3074,21 +3211,56 @@ section .section-header h2 .gradient-text em {
       </div>
     </div>
 
-    <!-- RESTAURANTS -->
-    <div class="industry-panel" data-industry-panel="restaurant">
-      <!-- Industry hero image. Swap to /assets/industries/restaurant.jpg for an owned asset. -->
-      <div class="industry-image"><img src="/assets/restaurants.png" alt="Modern restaurant interior" loading="eager" decoding="async"></div>
+    <!-- INSURANCE -->
+    <div class="industry-panel" data-industry-panel="insurance">
+      <div class="industry-image"><img src="/assets/insurance.png" alt="Insurance agent meeting with a client" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Capture every reservation, even after closing.</h3>
-        <p class="industry-pain">Diners call until midnight. Reservations are won and lost in seconds. Every voicemail is a table sitting empty tomorrow night.</p>
+        <h3 class="industry-title">Quote the caller before they reach the next agency.</h3>
+        <p class="industry-pain">People shopping for coverage call a few agencies and buy from the first one that picks up and quotes. Miss the call and the policy gets written somewhere else. Speed and follow-up win the premium.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
       <div class="industry-system">
         <div class="industry-system-label">The system we'd build</div>
         <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Reservations, hours, private events, allergies, all 24/7</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>AI SEO</b><span>Owns the local Google AI results in your neighborhood</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Custom Automations</b><span>Wait-list to text, no-shows to recovered tables</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Answers quote calls 24/7 and captures every detail</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Outbound Lead Reply</b><span>Texts back web quote requests in under a minute</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Lost Customer Reactivation</b><span>Renewal and cross-sell outreach on every policy</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETING & WEB AGENCIES -->
+    <div class="industry-panel" data-industry-panel="marketing">
+      <div class="industry-image"><img src="/assets/marketing.png" alt="Marketing and web design agency team at work" loading="eager" decoding="async"></div>
+      <div class="industry-content">
+        <h3 class="industry-title">Run your own pipeline as well as your clients'.</h3>
+        <p class="industry-pain">Agencies build sharp funnels for clients and run leaky ones for themselves. Discovery calls go to voicemail and proposals stall while you are heads-down on delivery. Warm leads cool off fast.</p>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Outbound Lead Reply</b><span>Replies to inbound and ad leads in under 60 seconds</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lead Generator</b><span>Builds and ranks target account lists in your niche</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>AI Sales Agent</b><span>Preps calls, sends nudges, moves proposals to closed</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFESSIONAL SERVICES -->
+    <div class="industry-panel" data-industry-panel="professional">
+      <div class="industry-image"><img src="/assets/professional.png" alt="Accountant reviewing documents with a client" loading="eager" decoding="async"></div>
+      <div class="industry-content">
+        <h3 class="industry-title">Bill more hours. Stop fielding the same calls.</h3>
+        <p class="industry-pain">Every call about intake, status, or scheduling is time you cannot bill. Prospects who can't reach you call the next firm. The work that pays keeps getting interrupted by the phone.</p>
+        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="industry-system">
+        <div class="industry-system-label">The system we'd build</div>
+        <div class="industry-agent-stack">
+          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Handles intake, scheduling, and FAQs so you stay billable</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Outbound Lead Reply</b><span>Responds to new client inquiries in under a minute</span></div></div>
+          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Lost Customer Reactivation</b><span>Brings back past clients at the right interval</span></div></div>
         </div>
       </div>
     </div>
@@ -3197,7 +3369,7 @@ section .section-header h2 .gradient-text em {
 
       <div class="wc-row">
         <div class="wc-feature">
-          <h3>We run it. You don't have to.</h3>
+          <h3>We run it for you.</h3>
         </div>
         <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Monitored and tuned every week</span></div>
         <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Handed a dashboard, then gone</span></div>
@@ -3235,7 +3407,6 @@ section .section-header h2 .gradient-text em {
     <div class="section-header fade-in" style="text-align:center;margin:0 auto 40px;">
       <span class="eyebrow">Get started</span>
       <h2><span class="gradient-text">See what we'd build for <em>your business</em></span></h2>
-      <p style="margin:14px auto 0;max-width:48ch;">Ten quick questions. You get a tailored agent team, a fixed monthly price, and the option to book a 15-minute call with Remy.</p>
     </div>
     <div class="contact-inner fade-in" id="quizContainer">
 
@@ -3882,7 +4053,7 @@ if (!canvas) { /* no-op */ } else if (reduced) {
 
 // Fade-in observer with safety fallback
 (function(){
-  var els=document.querySelectorAll('.fade-in,.process-step');
+  var els=document.querySelectorAll('.fade-in,.process-step,.step-card');
   var obs=new IntersectionObserver(function(entries){
     entries.forEach(function(e){
       if (e.isIntersecting){e.target.classList.add('in-view');obs.unobserve(e.target);}
