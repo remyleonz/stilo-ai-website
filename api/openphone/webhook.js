@@ -353,7 +353,7 @@ module.exports = async function handler(req, res) {
 
     const { data: existingRow } = await sb
         .from('lead_calls')
-        .select('id, lead_id')
+        .select('id, lead_id, logged_by')
         .eq('openphone_call_id', openphoneCallId)
         .maybeSingle();
 
@@ -451,7 +451,15 @@ module.exports = async function handler(req, res) {
     // came through, attribute the call to whoever owns the lead. Without
     // this every Quo/OpenPhone webhook lands with logged_by=null and the
     // lead never appears in that SDR's My Call History.
-    if (leadId && !baseFields.logged_by) {
+    //
+    // BUT never let this overwrite an attribution already on the row. Quo fires
+    // call.completed (carries from/to → line attribution = the real caller)
+    // THEN transcript/summary (no numbers → line block skipped). Without the
+    // existingRow.logged_by guard, the later events fell through to this
+    // assigned_to fallback and the upsert clobbered the caller with the lead's
+    // owner — which is why both owner test calls (to a lead assigned to Luke)
+    // were mis-stamped huronfire5 instead of remy/david.
+    if (leadId && !baseFields.logged_by && !(existingRow && existingRow.logged_by)) {
         const { data: ownerRow } = await sb
             .from('leads')
             .select('assigned_to')

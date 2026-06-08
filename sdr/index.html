@@ -1157,7 +1157,18 @@
         }
 
         async function authHeaders() {
-            return { 'Authorization': 'Bearer ' + CURRENT.session.access_token };
+            // Always pull the freshest token. The session captured at page load
+            // expires after ~1 hour; sending that stale token made the call-log
+            // endpoints 401 with "invalid_token". sb.auth.getSession() returns
+            // the current session and auto-refreshes it when expired, so the
+            // token is always live.
+            var token = CURRENT.session && CURRENT.session.access_token;
+            try {
+                var r = await sb.auth.getSession();
+                var s = r && r.data && r.data.session;
+                if (s && s.access_token) { token = s.access_token; CURRENT.session = s; }
+            } catch (_) { /* fall back to the cached token */ }
+            return { 'Authorization': 'Bearer ' + (token || '') };
         }
 
         // Append the right scoping params for the admin → SDR impersonation
@@ -1178,10 +1189,26 @@
 
         async function fetchJSON(path, opts) {
             opts = opts || {};
-            const headers = Object.assign({}, await authHeaders(), opts.headers || {});
-            if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-            path = withImpersonationParam(path);
-            const res = await fetch(path, { method: opts.method || 'GET', headers, body: opts.body });
+            const scopedPath = withImpersonationParam(path);
+            const send = async function () {
+                const headers = Object.assign({}, await authHeaders(), opts.headers || {});
+                if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+                return fetch(scopedPath, { method: opts.method || 'GET', headers, body: opts.body });
+            };
+            let res = await send();
+            // Bulletproofing for expired sessions: if a token still 401s
+            // (e.g. the access token lapsed between authHeaders and the request),
+            // force a refresh and retry ONCE. If it still fails, the refresh
+            // token itself is dead — bounce to sign-in instead of surfacing a
+            // confusing "invalid_token" to the rep mid-call-log.
+            if (res.status === 401) {
+                try { await sb.auth.refreshSession(); } catch (_) {}
+                res = await send();
+                if (res.status === 401 && !CURRENT.impersonateSdrId) {
+                    localStorage.setItem('auth_redirect', '/sdr/' + (window.location.search || ''));
+                    window.location.href = '/auth.html';
+                }
+            }
             const text = await res.text();
             let json;
             try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }

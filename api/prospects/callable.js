@@ -13,42 +13,23 @@ const { createClient } = require('@supabase/supabase-js');
 // admin sees from his backend.
 const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
 
-// The two agency owners cold-call from their own (large) lead pools, which
-// David does NOT write per-lead scripts for. Their scripted leads got reassigned
-// to the SDRs during onboarding (backfill_script_flag.js reassigns by GCS brief),
-// leaving the owners' callable view empty. So for owner queues we drop the
-// has_cold_call_script gate and surface their best uncalled leads by score. We
-// can't just flag their leads has_cold_call_script=true because that backfill
-// resets the column for every lead on each run.
-const OWNER_EMAILS = new Set(['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com']);
-const OWNER_QUEUE_CAP = 50; // owners get a focused 50-lead daily cold-call list
-
 async function callableFromSupabase(opts) {
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false },
         db: { schema: 'prospecting' }
     });
 
-    const isOwner = opts.assignedTo && OWNER_EMAILS.has(String(opts.assignedTo).toLowerCase());
-
     // "Callable" = the lead David wrote a cold-call script for (the ~750 briefs,
     // ~250 per rep) AND a phone we can dial. Per Remy, the scripted set IS the
     // callable queue; owner name is NOT required (David often leaves it for the
     // rep to confirm on the call). Phone may live in owner_phone OR `phone`.
-    // Owners are the exception: no script gate (see OWNER_EMAILS note above).
+    // The two owners get scripted leads on loan from the SDRs (see the
+    // owner_lead_loan tracking), so they run through this exact same path.
     let q = sb.from('leads')
         .select('*')
+        .eq('has_cold_call_script', true)
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false');
-    if (!isOwner) {
-        q = q.eq('has_cold_call_script', true);
-    } else {
-        // Owner queues have no scripts, so require a contact name: the admin
-        // leads table drops rows without owner_name (hasOwner filter), and a
-        // named contact is what makes the lead genuinely callable. Owners have
-        // 350+ such leads each, well past the 50 cap.
-        q = q.not('owner_name', 'is', null).neq('owner_name', '');
-    }
 
     if (opts.assignedTo) q = q.eq('assigned_to', opts.assignedTo);
     // Tier filter must match what the dashboard DISPLAYS: brief_tier first
@@ -74,14 +55,11 @@ async function callableFromSupabase(opts) {
     // the stat card counted 94. Mirror lifecycle-stats' null-safe filter.
     q = q.or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
 
-    const cap = isOwner
-        ? Math.min(opts.limit || OWNER_QUEUE_CAP, OWNER_QUEUE_CAP)
-        : (opts.limit || 200);
     const { data, error } = await q
         // Hottest first: brief Tier 1 → 2 → 3 → untiered, then by score within.
         .order('brief_tier', { ascending: true, nullsFirst: false })
         .order('prospect_score', { ascending: false, nullsFirst: false })
-        .limit(cap);
+        .limit(opts.limit || 200);
 
     if (error) return { error };
     return { results: (data || []).map(normalizeLead) };

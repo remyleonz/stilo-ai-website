@@ -21,11 +21,6 @@ const { createClient } = require('@supabase/supabase-js');
 
 const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
 const DEAD_OUTCOMES   = ['do_not_call', 'dnc_request', 'wrong_number', 'disconnected'];
-// Owner queues have no David scripts, so their "callable" definition swaps the
-// has_cold_call_script gate for an owner_name requirement (mirrors callable.js).
-// Without this the owner Leads tab showed "0 / queue running low" despite 50
-// callable leads rendering in the table.
-const OWNER_EMAILS = new Set(['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com']);
 
 // Legacy shim — kept for back-compat with the call site below. New code
 // should use resolveAssignedTo() from _shared.js which is async and reads
@@ -64,7 +59,7 @@ async function distinctLeadsByLoggedBy(sb, sdrEmail, predicate) {
     } catch (_) { return -1; }
 }
 
-async function localStats(sdrEmail, isOwner) {
+async function localStats(sdrEmail) {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return null;
     try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -88,16 +83,15 @@ async function localStats(sdrEmail, isOwner) {
         };
 
         const callable = function (q) {
-            // Callable = a dialable phone, not DNC, still in the cold-call
-            // lifecycle, plus EITHER a David script (SDRs) OR a contact name
-            // (owners, who have no scripts — mirrors callable.js).
-            q = scope(q)
+            // Callable = has a David-written cold-call script AND a dialable
+            // phone, not DNC, still in the cold-call lifecycle. (The scripted
+            // set is the callable queue; owner name not required.) Owners run
+            // through the same gate on their loaned-in scripted leads.
+            return scope(q)
+                .eq('has_cold_call_script', true)
                 .or('owner_phone.not.is.null,phone.not.is.null')
                 .or('do_not_call.is.null,do_not_call.eq.false')
                 .or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
-            return isOwner
-                ? q.not('owner_name', 'is', null).neq('owner_name', '')
-                : q.eq('has_cold_call_script', true);
         };
         const C = function () { return leads().select('id', { count: 'exact', head: true }); };
 
@@ -190,11 +184,10 @@ module.exports = async function handler(req, res) {
     } else if (req.query && req.query.assigned_to) {
         sdrEmail = await resolveAssignedTo(req.query.assigned_to);
     }
-    const isOwner = !!sdrEmail && OWNER_EMAILS.has(String(sdrEmail).toLowerCase());
 
     try {
         const [local, upstream] = await Promise.all([
-            localStats(sdrEmail, isOwner),
+            localStats(sdrEmail),
             statsFromUpstream()
         ]);
 
