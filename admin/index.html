@@ -6842,10 +6842,21 @@
                       + '</div>'
                     : '')
 
+                // One-tap outcome chips (parity with the SDR drawer). They drive
+                // the hidden #prospectOutcome the existing handlers read, so the
+                // booking/callback/Logged-by flow is unchanged. "No answer" logs
+                // instantly; the rest reveal their panel + a confirm button.
                 + (mode === 'emailable'
                     ? ''
-                    : '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Outcome</label>'
-                      + '<select id="prospectOutcome" onchange="onOutcomeChange()" required style="width:100%;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;margin-bottom:12px;">' + outcomes + '</select>')
+                    : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+                      + prospectOutcomeChip('called', 'No answer / voicemail', 'Just logs the dial', 'var(--text-secondary)')
+                      + prospectOutcomeChip('callback_requested', 'Interested, follow up', 'Set a callback time', 'var(--blue)')
+                      + prospectOutcomeChip('booked_meeting', 'Booked meeting', 'Pick a slot + send invite', 'var(--green,#22c55e)')
+                      + prospectOutcomeChip('owner_uninterested', 'Not interested', 'Keep in pipeline', 'var(--text-muted)')
+                      + prospectOutcomeChip('wrong_number', 'Wrong number', 'Sends to Dead Pool', 'var(--orange,#f97316)')
+                      + prospectOutcomeChip('do_not_call', 'Do Not Call', 'Sends to Dead Pool', 'var(--red)')
+                      + '</div>'
+                      + '<select id="prospectOutcome" onchange="onOutcomeChange()" style="display:none;">' + outcomes + '</select>')
                 + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Notes</label>'
                 + '<textarea id="prospectNotes" rows="3" placeholder="What was said, who answered, next move..." style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;margin-bottom:12px;font-family:inherit;"></textarea>'
                 + (mode === 'emailable'
@@ -6884,7 +6895,7 @@
                           + '<option value="davidcoira@stiloaipartners.com"' + davidSel + '>David Coira' + (meKey === 'david' ? meLabel : '') + '</option>'
                         + '</select>';
                 })()
-                + '<button type="submit" style="width:100%;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">' + submitLabel + '</button>'
+                + '<button type="submit" style="display:none;width:100%;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">' + submitLabel + '</button>'
                 + (mode === 'emailable' ? '' : '<button type="button" onclick="addProspectToCallbackList(' + JSON.stringify(d.id) + ')" style="width:100%;margin-top:8px;padding:8px 14px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">Add to callback list</button>')
                 + '<div id="prospectFormMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);"></div>'
                 + '</form>'
@@ -7018,6 +7029,34 @@
             }
         }
 
+        // One-tap outcome chip (SDR-drawer parity). Two-line, colored left edge.
+        function prospectOutcomeChip(value, title, sub, accent) {
+            return '<button type="button" id="poc_' + value + '" data-active="0" onclick="selectProspectOutcome(\'' + value + '\')" '
+                + 'style="text-align:left;padding:11px 13px;background:var(--bg-input);border:1px solid var(--border-medium);border-left:3px solid ' + accent + ';border-radius:10px;cursor:pointer;transition:background 120ms;" '
+                + 'onmouseover="if(this.getAttribute(\'data-active\')!==\'1\')this.style.background=\'var(--bg-card)\'" onmouseout="if(this.getAttribute(\'data-active\')!==\'1\')this.style.background=\'var(--bg-input)\'">'
+                + '<div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + title + '</div>'
+                + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + sub + '</div>'
+                + '</button>';
+        }
+        // Chip click → set the hidden outcome, highlight, reveal the right panel.
+        // The dial-only outcome ("No answer / voicemail") logs immediately, like
+        // the SDR chip; the rest wait for the panel's confirm button.
+        function selectProspectOutcome(value) {
+            var sel = document.getElementById('prospectOutcome');
+            if (!sel) return;
+            sel.value = value;
+            PROSPECT_OUTCOMES.forEach(function (o) {
+                var el = document.getElementById('poc_' + o.value);
+                if (!el) return;
+                var on = o.value === value;
+                el.setAttribute('data-active', on ? '1' : '0');
+                el.style.background = on ? 'var(--bg-card)' : 'var(--bg-input)';
+                el.style.boxShadow = on ? '0 0 0 1px var(--blue) inset' : 'none';
+            });
+            onOutcomeChange();
+            var match = PROSPECT_OUTCOMES.find(function (o) { return o.value === value; });
+            if (match && match.dialOnly) submitCallLog();
+        }
         function onOutcomeChange() {
             var sel = document.getElementById('prospectOutcome');
             var row = document.getElementById('prospectFollowupRow');
@@ -7026,13 +7065,24 @@
             if (!sel) return;
             var match = PROSPECT_OUTCOMES.find(function(o){ return o.value === sel.value; });
             if (row) row.style.display = (match && match.followUp) ? 'block' : 'none';
-            // booked_meeting → render Google Calendar slot picker; submit becomes "Book + send invite"
+            // booked_meeting → render Google Calendar slot picker.
             if (sel.value === 'booked_meeting') {
                 if (pickerHost) { pickerHost.style.display = 'block'; loadBookingSlots(); }
-                if (submitBtn) submitBtn.textContent = 'Book + send invite';
             } else {
                 if (pickerHost) pickerHost.style.display = 'none';
-                if (submitBtn) submitBtn.textContent = (match && match.dialOnly) ? 'Mark as called and next' : 'Log call and next';
+            }
+            // Submit button only appears once a chip is actually selected, and
+            // never for the dial-only outcome (it auto-logs). Label is contextual.
+            if (submitBtn) {
+                var chipEl = document.getElementById('poc_' + sel.value);
+                var chipActive = chipEl && chipEl.getAttribute('data-active') === '1';
+                if (!chipActive || (match && match.dialOnly)) {
+                    submitBtn.style.display = 'none';
+                } else {
+                    submitBtn.style.display = 'block';
+                    submitBtn.textContent = sel.value === 'booked_meeting' ? 'Book + send invite'
+                        : (match && match.followUp ? 'Schedule the callback' : 'Log this outcome');
+                }
             }
         }
 
