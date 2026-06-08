@@ -993,8 +993,9 @@
             <div class="section-title">Call History</div>
             <div class="section-subtitle">Every call you've logged, newest first.</div>
 
-            <div style="display:flex;gap:6px;margin-bottom:14px;">
-                <button class="hist-range active" data-range="week" onclick="setHistoryRange('week')" style="padding:6px 14px;background:var(--blue);color:white;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last week</button>
+            <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+                <button class="hist-range active" data-range="week" onclick="setHistoryRange('week')" style="padding:6px 14px;background:var(--blue);color:white;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">This week</button>
+                <button class="hist-range" data-range="lastweek" onclick="setHistoryRange('lastweek')" style="padding:6px 14px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last week</button>
                 <button class="hist-range" data-range="month" onclick="setHistoryRange('month')" style="padding:6px 14px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Last month</button>
                 <button class="hist-range" data-range="all" onclick="setHistoryRange('all')" style="padding:6px 14px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">All time</button>
             </div>
@@ -1537,21 +1538,59 @@
         // Standard lead table (Business / Owner / Phone / Niche / Tier / Last
         // touch). Shared by the subtab lists and the search results.
         function standardLeadTableHtml(rows) {
-            let html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th><th>Last touch</th></tr></thead><tbody>';
+            let html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th>'
+                + '<th onclick="sortLeadsByLastTouch(this)" style="cursor:pointer;user-select:none;white-space:nowrap;" title="Sort by last touched">Last touch<span class="sort-arrow"></span></th>'
+                + '</tr></thead><tbody>';
             rows.slice(0, 200).forEach(function (r) {
                 const tier = String(r.prospect_tier || '').toLowerCase();
-                const lastTouch = r.last_called_at ? new Date(r.last_called_at).toLocaleString()
-                    : r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at).toLocaleString() : '—';
-                html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
+                const lastRaw = r.last_called_at || r.meeting_scheduled_at || null;
+                const ms = tsToMs(lastRaw);
+                html += '<tr data-lastts="' + (ms == null ? '' : ms) + '" onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
                     + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
                     + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
                     + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
                     + '<td>' + escapeHtml(r.niche || '—') + '</td>'
                     + '<td>' + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '—') + '</td>'
-                    + '<td>' + escapeHtml(lastTouch) + '</td>'
+                    + '<td style="white-space:nowrap;">' + fmtET(lastRaw) + '</td>'
                     + '</tr>';
             });
             return html + '</tbody></table>';
+        }
+
+        // ── Timestamp helpers ───────────────────────────────────────────────
+        // prospecting.leads.last_called_at is `timestamp WITHOUT time zone` — a
+        // UTC instant with no zone marker. new Date() would read it as local
+        // time and render it ~4h ahead (a 2:06pm call showing as 6:06pm). Mark
+        // naive values UTC; leave already-zoned values (Z / +hh:mm, e.g.
+        // lead_calls.called_at) alone. Format in ET.
+        function tsToMs(ts) {
+            if (!ts) return null;
+            let s = String(ts);
+            if (!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+            const ms = Date.parse(s);
+            return isNaN(ms) ? null : ms;
+        }
+        function fmtET(ts) {
+            const ms = tsToMs(ts);
+            if (ms == null) return '—';
+            return new Date(ms).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+        // Click the "Last touch" header to sort the rendered rows by timestamp.
+        // First click → newest first (what reps want), second → oldest first.
+        function sortLeadsByLastTouch(th) {
+            const table = th.closest('table'); if (!table || !table.tBodies[0]) return;
+            const tbody = table.tBodies[0];
+            const dir = th.getAttribute('data-dir') === 'desc' ? 'asc' : 'desc';
+            th.setAttribute('data-dir', dir);
+            const arrow = th.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = dir === 'desc' ? ' ↓' : ' ↑';
+            const trs = Array.prototype.slice.call(tbody.rows);
+            trs.sort(function (a, b) {
+                let av = parseFloat(a.getAttribute('data-lastts')); if (isNaN(av)) av = -Infinity;
+                let bv = parseFloat(b.getAttribute('data-lastts')); if (isNaN(bv)) bv = -Infinity;
+                return dir === 'desc' ? bv - av : av - bv;
+            });
+            trs.forEach(function (r) { tbody.appendChild(r); });
         }
 
         // Lead search bar: queries business name, owner name, or phone across
@@ -2497,13 +2536,35 @@
             }
         }
 
+        // ET calendar boundaries (EDT season, -04:00). This week = Monday 00:00
+        // ET of the current week; last week = the prior Monday-Sunday block.
+        function etCalendarBounds() {
+            const now = new Date();
+            const etStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+            const wd = now.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+            const dsm = (({ Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 })[wd] + 6) % 7;
+            const thisMon = new Date(etStr + 'T00:00:00-04:00');
+            thisMon.setUTCDate(thisMon.getUTCDate() - dsm);
+            const lastMon = new Date(thisMon); lastMon.setUTCDate(lastMon.getUTCDate() - 7);
+            return { thisMon: thisMon.toISOString(), lastMon: lastMon.toISOString() };
+        }
+
         async function loadHistory() {
             const body = document.getElementById('historyBody');
             body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);">Loading…</td></tr>';
-            const sinceMs = { week: 7, month: 30, all: 9999 }[STATE.historyRange] || 7;
-            const since = new Date(Date.now() - sinceMs * 86400000).toISOString();
+            const b = etCalendarBounds();
+            // This week / Last week are calendar weeks; Last month is the last
+            // 30 days; All time has no bounds.
+            let since = null, until = null;
+            if (STATE.historyRange === 'week')       { since = b.thisMon; }
+            else if (STATE.historyRange === 'lastweek') { since = b.lastMon; until = b.thisMon; }
+            else if (STATE.historyRange === 'month')    { since = new Date(Date.now() - 30 * 86400000).toISOString(); }
+            // 'all' → no since/until
             try {
-                const data = await fetchJSON('/api/prospects/my-history?since=' + encodeURIComponent(since));
+                const params = [];
+                if (since) params.push('since=' + encodeURIComponent(since));
+                if (until) params.push('until=' + encodeURIComponent(until));
+                const data = await fetchJSON('/api/prospects/my-history' + (params.length ? '?' + params.join('&') : ''));
                 const rows = data.results || data || [];
                 if (!rows.length) {
                     body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);">No calls in this range.</td></tr>';
@@ -2524,7 +2585,7 @@
                     const notesBlock = (r.notes ? '<div style="color:var(--text-tertiary);font-size:12px;">' + escapeHtml(r.notes) + '</div>' : '')
                         + summary + (rec ? '<div style="margin-top:5px;">' + rec + '</div>' : '') + trans;
                     return '<tr>'
-                        + '<td style="white-space:nowrap;">' + (when ? new Date(when).toLocaleString() : '—') + dur + '</td>'
+                        + '<td style="white-space:nowrap;">' + fmtET(when) + dur + '</td>'
                         + '<td>' + escapeHtml(r.business_name || r.name || '—') + '</td>'
                         + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
                         + '<td>' + escapeHtml(outcome) + '</td>'

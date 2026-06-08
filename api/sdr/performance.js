@@ -37,16 +37,25 @@ function startOfTodayET() {
     return new Date(etDateStr + 'T00:00:00-04:00').toISOString();
 }
 
+// Monday 00:00 America/New_York of the CURRENT calendar week — not a rolling
+// 7-day window. The old version subtracted 7 days, so on a Monday it summed all
+// of last week (Mon-Sun) plus today, inflating "this week". Week resets Monday.
 function startOfWeekISO() {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString();
+    const now = new Date();
+    const etDateStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD in ET
+    const weekday = now.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+    const daysSinceMon = ((({ Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 })[weekday]) + 6) % 7;
+    const monday = new Date(etDateStr + 'T00:00:00-04:00'); // ET midnight today (EDT season)
+    monday.setUTCDate(monday.getUTCDate() - daysSinceMon);
+    return monday.toISOString();
 }
 
+// First of the CURRENT calendar month at 00:00 ET (was a rolling 30 days).
 function startOfMonthISO() {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString();
+    const now = new Date();
+    const etDateStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+    const firstOfMonth = etDateStr.slice(0, 8) + '01';
+    return new Date(firstOfMonth + 'T00:00:00-04:00').toISOString();
 }
 
 async function countCalls(sb, email, sinceISO) {

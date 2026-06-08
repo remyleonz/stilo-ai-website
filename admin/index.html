@@ -5203,11 +5203,18 @@
             // backend already filtered to — without it, every comparison
             // 'remyleon@stiloaipartners.com' === 'remy' was false and every
             // row got filtered out client-side.
-            var EMAIL_TO_SDR_KEY = {
+            // Owner emails are static; SDR emails come from the live roster so
+            // every rep's assigned_to email resolves to their key (otherwise
+            // non-owner emails fell through to the fake id-parity split and the
+            // server-side filter got undone client-side).
+            var EMAIL_TO_SDR_KEY = Object.assign({
                 'remyleon@stiloaipartners.com':  'remy',
                 'remyleon11@gmail.com':          'remy',
                 'davidcoira@stiloaipartners.com': 'david'
-            };
+            }, (window.__SDR_ROSTER || []).reduce(function (m, s) {
+                if (s && s.email && s.sdr_key) m[String(s.email).toLowerCase()] = String(s.sdr_key).toLowerCase();
+                return m;
+            }, {}));
             if (f.sdr) {
                 rows = rows.filter(function (r) {
                     var explicit = String(r.assigned_to || '').toLowerCase();
@@ -5343,6 +5350,39 @@
             }
         }
 
+        // prospecting.leads.last_called_at is `timestamp WITHOUT time zone` (a UTC
+        // instant, no zone marker). new Date() reads it as local time → renders
+        // ~4h ahead. Mark naive values UTC; leave zoned values (Z / +hh:mm) alone.
+        function tsToMsP(ts) {
+            if (!ts) return null;
+            var s = String(ts);
+            if (!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+            var ms = Date.parse(s);
+            return isNaN(ms) ? null : ms;
+        }
+        function fmtETp(ts) {
+            var ms = tsToMsP(ts);
+            if (ms == null) return '—';
+            return new Date(ms).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+        // Click a "Last …" header to sort the rendered rows by timestamp.
+        // First click → newest first, second → oldest first.
+        function sortProspectByLastTouch(th) {
+            var table = th.closest('table'); if (!table || !table.tBodies[0]) return;
+            var tbody = table.tBodies[0];
+            var dir = th.getAttribute('data-dir') === 'desc' ? 'asc' : 'desc';
+            th.setAttribute('data-dir', dir);
+            var arrow = th.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = dir === 'desc' ? ' ↓' : ' ↑';
+            var trs = Array.prototype.slice.call(tbody.rows);
+            trs.sort(function (a, b) {
+                var av = parseFloat(a.getAttribute('data-lastts')); if (isNaN(av)) av = -Infinity;
+                var bv = parseFloat(b.getAttribute('data-lastts')); if (isNaN(bv)) bv = -Infinity;
+                return dir === 'desc' ? bv - av : av - bv;
+            });
+            trs.forEach(function (r) { tbody.appendChild(r); });
+        }
+
         function renderProspectTable(rows, mode) {
             if (!rows || !rows.length) {
                 return '<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px;">No prospects in this view.</div>';
@@ -5359,13 +5399,13 @@
             if (mode === 'calls-today' || isHistory) {
                 head = '<tr><th style="' + thNarrow + '">Time</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Outcome</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last called</th>' + (isHistoryAll ? '<th style="' + thNarrow + '">Logged by</th>' : '') + '</tr>';
             } else if (mode === 'emailable') {
-                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last contacted</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Email</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + 'cursor:pointer;user-select:none;" onclick="sortProspectByLastTouch(this)" title="Sort by last contacted">Last contacted<span class="sort-arrow"></span></th></tr>';
             } else if (mode === 'callbacks') {
-                head = '<tr><th style="' + thNarrow + '">Due</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Last call</th><th style="' + thNarrow + '">Action</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Due</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + 'cursor:pointer;user-select:none;" onclick="sortProspectByLastTouch(this)" title="Sort by last call">Last call<span class="sort-arrow"></span></th><th style="' + thNarrow + '">Action</th></tr>';
             } else if (mode === 'booked') {
                 head = '<tr><th style="' + thNarrow + '">When</th><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Booked by</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Meeting</th><th style="' + thNarrow + '">Action</th></tr>';
             } else {
-                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Stage</th><th style="' + thNarrow + '">Last called</th></tr>';
+                head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Stage</th><th style="' + thNarrow + 'cursor:pointer;user-select:none;" onclick="sortProspectByLastTouch(this)" title="Sort by last called">Last called<span class="sort-arrow"></span></th></tr>';
             }
             var body = rows.map(function(r) {
                 var id = r.id != null ? r.id : r.lead_id;
@@ -5375,7 +5415,8 @@
                 var email = r.owner_email || r.email || '';
                 var niche = r.niche || r.category || '—';
                 var lastCalled = r.last_called_at || r.last_contacted_at || r.last_emailed_at;
-                var lastStr = lastCalled ? new Date(lastCalled).toLocaleDateString() : '—';
+                var lastStr = fmtETp(lastCalled);
+                var lastMs = tsToMsP(lastCalled);
                 var score = r.prospect_score != null ? r.prospect_score : (r.score != null ? r.score : '—');
                 var strictBadge = r.owner_phone_strict ? ' <span title="Strict-pass owner phone" style="display:inline-block;padding:1px 6px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;letter-spacing:0.04em;">STRICT</span>' : '';
                 // Email intentionally NOT shown under phone — keeps the row
@@ -5410,11 +5451,11 @@
                 }
                 if (mode === 'callbacks') {
                     var due = r.next_action_due_at || r.next_callback_at;
-                    var dueDate = due ? new Date(due) : null;
-                    var dueStr = dueDate ? dueDate.toLocaleString() : '—';
-                    var overdue = dueDate && dueDate.getTime() < Date.now();
-                    var lastCallStr = r.last_called_at ? new Date(r.last_called_at).toLocaleDateString() : '—';
-                    return '<tr onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
+                    var dueMs = tsToMsP(due);
+                    var dueStr = dueMs != null ? fmtETp(due) : '—';
+                    var overdue = dueMs != null && dueMs < Date.now();
+                    var lastCallStr = fmtETp(r.last_called_at);
+                    return '<tr data-lastts="' + (tsToMsP(r.last_called_at) == null ? '' : tsToMsP(r.last_called_at)) + '" onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                         + '<td style="padding:10px 14px;font-size:12px;color:' + (overdue ? 'var(--red)' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + escapeAdminHtml(dueStr) + (overdue ? ' (overdue)' : '') + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
@@ -5489,7 +5530,7 @@
                 var dialedBadge = dialedToday
                     ? ' <span title="You\'ve dialed this lead today, no outcome logged yet" style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;background:rgba(234,179,8,0.15);color:var(--yellow,#eab308);font-size:10px;font-weight:700;letter-spacing:0.04em;">DIALED ×' + (r.call_attempts || 1) + '</span>'
                     : '';
-                return '<tr onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
+                return '<tr data-lastts="' + (lastMs == null ? '' : lastMs) + '" onclick="openProspectDrawer(\'' + id + '\', \'' + mode + '\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;' + rowStyle + '" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
                     + '<td style="padding:11px 10px;white-space:nowrap;">' + tierBadge(r.prospect_tier) + dialedBadge + '</td>'
                     + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
                     + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
@@ -5976,7 +6017,8 @@
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading callbacks...</div>';
             }
             try {
-                var qs = '?limit=400' + (dueOnly ? '&due=today' : '');
+                var qs = '?limit=400' + (dueOnly ? '&due=today' : '')
+                    + (prospectState.filters.sdr ? '&assigned_to=' + encodeURIComponent(prospectState.filters.sdr) : '');
                 var data = await prospectFetchJSON('/api/prospects/list-callbacks' + qs);
                 var raw = data.results || [];
                 if (!dueOnly) prospectState.cache.callbacks = raw;

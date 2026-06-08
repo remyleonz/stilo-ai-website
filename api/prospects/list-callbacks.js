@@ -10,7 +10,7 @@
  * Routing through Vercel with the service-role key sidesteps that —
  * service role can read any schema regardless of API exposure.
  */
-const { assertAdmin, methodNotAllowed } = require('./_shared');
+const { assertAdmin, resolveAssignedTo, methodNotAllowed } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const SELECT_COLS = [
@@ -18,7 +18,7 @@ const SELECT_COLS = [
     'category', 'prospect_tier', 'prospect_score', 'score',
     'last_called_at', 'last_called_outcome', 'call_attempts', 'call_notes',
     'next_action_due_at', 'next_action_type', 'owner_phone_strict_pass',
-    'do_not_call'
+    'do_not_call', 'assigned_to'
 ].join(',');
 
 module.exports = async function handler(req, res) {
@@ -38,6 +38,15 @@ module.exports = async function handler(req, res) {
     const now = new Date();
     const endOfDay = new Date(now); endOfDay.setUTCHours(23, 59, 59, 999);
 
+    // Scope to one rep's callbacks when the admin has an SDR selected. Without
+    // this the pool returned every rep's callbacks regardless of the selected
+    // SDR (Remy showed 8 callbacks that were actually his SDRs'). Accepts a
+    // sdr_key ('remy'/'david'/<key>) or an email; resolves to the email stored
+    // in leads.assigned_to.
+    const assignedTo = (req.query && req.query.assigned_to)
+        ? await resolveAssignedTo(req.query.assigned_to)
+        : null;
+
     try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
             auth: { persistSession: false },
@@ -47,6 +56,7 @@ module.exports = async function handler(req, res) {
             .select(SELECT_COLS)
             .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
             .neq('do_not_call', true);
+        if (assignedTo) q = q.eq('assigned_to', assignedTo);
         if (dueToday) {
             q = q.lte('next_action_due_at', endOfDay.toISOString());
         }
