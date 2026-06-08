@@ -18,7 +18,7 @@
  *   - Calls Today (today only, any SDR)
  *   - Dead Pool   (terminal outcome OR call_attempts >= 3)
  */
-const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, resolveAssignedTo, methodNotAllowed } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const ADMIN_SDRS = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
@@ -40,11 +40,18 @@ module.exports = async function handler(req, res) {
     }
 
     const q = req.query || {};
-    const rawOverride = q.email && String(q.email).trim().toLowerCase();
-    // Only honor overrides for the two admin SDRs.
-    const targetEmail = (rawOverride && ADMIN_SDRS.includes(rawOverride))
-        ? rawOverride
-        : gate.email;
+    // Scope target. Admins (including the admin→SDR impersonation flow, which
+    // sends ?assigned_to=<sdr email>) may view ANY rep's history; a plain SDR is
+    // always locked to their own. Previously only remy/david were honorable, so
+    // impersonating any other SDR silently showed the admin's own calls — which
+    // is why a rep's Call History looked nearly empty.
+    let targetEmail = gate.email;
+    if (gate.isAdmin) {
+        const override = q.assigned_to
+            ? await resolveAssignedTo(q.assigned_to)
+            : (q.email ? String(q.email).trim().toLowerCase() : null);
+        if (override) targetEmail = override;
+    }
     const allSdrs = q.all === '1' || q.all === 'true' || q.all === 1 || q.all === true;
     const limit  = Math.min(parseInt(q.limit, 10) || 200, 500);
     const offset = Math.max(parseInt(q.offset, 10) || 0, 0);
