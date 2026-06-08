@@ -6464,11 +6464,26 @@
             }
             return psDeriveAgent(lead && (lead.niche || lead.category)).agent;
         }
-        // Rewrite the agent section to a clean "Lead with: <agent>" line and drop
-        // a redundant "## Recommendation" block that's just Unknown/none noise.
+        // Per-agent value prop. David's brief hardcodes the AI-receptionist
+        // pitch into "Value anchor" on EVERY lead, so it contradicts the
+        // recommended agent on reactivation/outbound leads. Re-point it.
+        function psAgentValueProp(agent) {
+            var n = String(agent || '').toLowerCase();
+            if (/reactivation|lapsed|\blcr\b|revive/.test(n)) return 'A reactivation agent wins back past customers who went quiet with personalized email and text offers. It is revenue you already earned once, recovered on autopilot.';
+            if (/outbound|lead response|lead reply|ignite/.test(n)) return 'An outbound lead agent replies to every new lead within minutes, qualifies them, and pushes them to book. The first to call back almost always wins the job.';
+            return 'An AI receptionist answers every call, books the appointment, and captures the lead 24/7 in English and Spanish. Typical client recovers $3-8k a month from missed inbound.';
+        }
+        function psNormalizeValueAnchor(md, agent) {
+            if (/receptionist/i.test(String(agent || ''))) return md; // David's anchor already matches
+            return String(md || '').replace(/(\*\*Value anchor:\*\*\s*).*/i, '$1' + psAgentValueProp(agent));
+        }
+        // Rewrite the agent section to a clean "Lead with: <agent>" line, align the
+        // value anchor to that agent, and drop the redundant "## Recommendation"
+        // Unknown/none noise.
         function psNormalizeAgentSection(md, lead) {
             var src = String(md || '');
             var agent = psResolveAgentName(src, lead);
+            src = psNormalizeValueAnchor(src, agent);
             src = src.replace(/#{1,6}\s*Recommended STILO agent\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i,
                 '## Recommended STILO agent\n- **Lead with:** ' + agent + '\n');
             src = src.replace(/#{1,6}\s*Recommendation\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i, function (b) {

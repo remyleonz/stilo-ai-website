@@ -1920,9 +1920,22 @@
             }
             return deriveAgent(lead && (lead.niche || lead.category)).agent;
         }
+        // David hardcodes the AI-receptionist value anchor on every lead; re-point
+        // it at the recommended agent so it stops contradicting on LCR/outbound.
+        function agentValueProp(agent) {
+            const n = String(agent || '').toLowerCase();
+            if (/reactivation|lapsed|\blcr\b|revive/.test(n)) return 'A reactivation agent wins back past customers who went quiet with personalized email and text offers. It is revenue you already earned once, recovered on autopilot.';
+            if (/outbound|lead response|lead reply|ignite/.test(n)) return 'An outbound lead agent replies to every new lead within minutes, qualifies them, and pushes them to book. The first to call back almost always wins the job.';
+            return 'An AI receptionist answers every call, books the appointment, and captures the lead 24/7 in English and Spanish. Typical client recovers $3-8k a month from missed inbound.';
+        }
+        function normalizeValueAnchor(md, agent) {
+            if (/receptionist/i.test(String(agent || ''))) return md;
+            return String(md || '').replace(/(\*\*Value anchor:\*\*\s*).*/i, '$1' + agentValueProp(agent));
+        }
         function normalizeAgentSection(md, lead) {
             let src = String(md || '');
             const agent = resolveAgentName(src, lead);
+            src = normalizeValueAnchor(src, agent);
             src = src.replace(/#{1,6}\s*Recommended STILO agent\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i,
                 '## Recommended STILO agent\n- **Lead with:** ' + agent + '\n');
             src = src.replace(/#{1,6}\s*Recommendation\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i, function (b) {
