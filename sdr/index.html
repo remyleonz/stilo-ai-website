@@ -1896,15 +1896,39 @@
                 return { agent: 'Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
             return { agent: 'AI Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
         }
+        function cleanAgent(s) { return String(s || '').replace(/\(.*?\)/g, '').replace(/[*`]/g, '').trim(); }
+        // The agent we're selling: prefer David's brief ("Recommended STILO
+        // agent" human line, then a real "Primary:"); derive from niche only when
+        // both are Unknown/none. (Never clobber a real agent like LCR.)
+        function resolveAgentName(md, lead) {
+            const src = String(md || '');
+            const sec = src.match(/#{1,6}\s*Recommended STILO agent\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
+            if (sec) {
+                const lines = sec[1].split(/\r?\n/);
+                for (let i = 0; i < lines.length; i++) {
+                    const raw = lines[i].replace(/^[-*]\s*/, '').replace(/[*`]/g, '').trim();
+                    if (!raw || /^secondary/i.test(raw)) continue;
+                    const pm = raw.match(/^primary\s*:\s*(.+)$/i);
+                    const val = cleanAgent(pm ? pm[1] : raw);
+                    if (val && !/^(unknown|none|n\/?a|tbd)$/i.test(val)) return val;
+                }
+            }
+            const rec = src.match(/#{1,6}\s*Recommendation\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
+            if (rec) {
+                const pm2 = rec[1].replace(/[*`]/g, '').match(/primary\s*:\s*([^\r\n]+)/i);
+                if (pm2) { const v = cleanAgent(pm2[1]); if (v && !/^(unknown|none|n\/?a|tbd)$/i.test(v)) return v; }
+            }
+            return deriveAgent(lead && (lead.niche || lead.category)).agent;
+        }
         function normalizeAgentSection(md, lead) {
-            const re = /#{1,6}\s*Recommended STILO agent[\s\S]*?(?=\r?\n#{1,6}\s|$)/i;
-            const m = String(md || '').match(re);
-            if (!m) return md;
-            let prim = (m[0].match(/Primary:\*{0,2}\s*([^\r\n]+)/i) || [])[1] || '';
-            prim = prim.replace(/[*`]/g, '').trim();
-            if (prim && !/^(unknown|none|n\/?a|tbd)$/i.test(prim)) return md;
-            const d = deriveAgent(lead && (lead.niche || lead.category));
-            return md.replace(re, '## Recommended STILO agent\n- **Lead with:** ' + d.agent + '\n- ' + d.oneLiner + '\n');
+            let src = String(md || '');
+            const agent = resolveAgentName(src, lead);
+            src = src.replace(/#{1,6}\s*Recommended STILO agent\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i,
+                '## Recommended STILO agent\n- **Lead with:** ' + agent + '\n');
+            src = src.replace(/#{1,6}\s*Recommendation\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i, function (b) {
+                return /primary\s*:\s*unknown|secondary[^\r\n]*none/i.test(b) ? '' : b;
+            });
+            return src;
         }
 
         // Minimal, safe Markdown -> HTML for the brief. Escapes first (no HTML

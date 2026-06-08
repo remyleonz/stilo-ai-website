@@ -6438,17 +6438,43 @@
                 return { agent: 'Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
             return { agent: 'AI Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
         }
-        // When the brief's "Recommended STILO agent" is Unknown/none, swap in the
-        // niche-derived agent so the rep never sees "Primary: Unknown".
+        function psCleanAgent(s) { return String(s || '').replace(/\(.*?\)/g, '').replace(/[*`]/g, '').trim(); }
+        // The agent we're selling. Prefer David's brief: the human line under
+        // "## Recommended STILO agent" (e.g. "LCR — Lapsed Client Reactivation"),
+        // then a real "Primary:" under "## Recommendation". Only when both are
+        // Unknown/none do we derive from the niche. (Earlier this clobbered a real
+        // agent with the niche guess — wrong.)
+        function psResolveAgentName(md, lead) {
+            var src = String(md || '');
+            var sec = src.match(/#{1,6}\s*Recommended STILO agent\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
+            if (sec) {
+                var lines = sec[1].split(/\r?\n/);
+                for (var i = 0; i < lines.length; i++) {
+                    var raw = lines[i].replace(/^[-*]\s*/, '').replace(/[*`]/g, '').trim();
+                    if (!raw || /^secondary/i.test(raw)) continue;
+                    var pm = raw.match(/^primary\s*:\s*(.+)$/i);
+                    var val = psCleanAgent(pm ? pm[1] : raw);
+                    if (val && !/^(unknown|none|n\/?a|tbd)$/i.test(val)) return val;
+                }
+            }
+            var rec = src.match(/#{1,6}\s*Recommendation\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
+            if (rec) {
+                var pm2 = rec[1].replace(/[*`]/g, '').match(/primary\s*:\s*([^\r\n]+)/i);
+                if (pm2) { var v = psCleanAgent(pm2[1]); if (v && !/^(unknown|none|n\/?a|tbd)$/i.test(v)) return v; }
+            }
+            return psDeriveAgent(lead && (lead.niche || lead.category)).agent;
+        }
+        // Rewrite the agent section to a clean "Lead with: <agent>" line and drop
+        // a redundant "## Recommendation" block that's just Unknown/none noise.
         function psNormalizeAgentSection(md, lead) {
-            var re = /#{1,6}\s*Recommended STILO agent[\s\S]*?(?=\r?\n#{1,6}\s|$)/i;
-            var m = String(md || '').match(re);
-            if (!m) return md;
-            var prim = (m[0].match(/Primary:\*{0,2}\s*([^\r\n]+)/i) || [])[1] || '';
-            prim = prim.replace(/[*`]/g, '').trim();
-            if (prim && !/^(unknown|none|n\/?a|tbd)$/i.test(prim)) return md; // real agent already present
-            var d = psDeriveAgent(lead && (lead.niche || lead.category));
-            return md.replace(re, '## Recommended STILO agent\n- **Lead with:** ' + d.agent + '\n- ' + d.oneLiner + '\n');
+            var src = String(md || '');
+            var agent = psResolveAgentName(src, lead);
+            src = src.replace(/#{1,6}\s*Recommended STILO agent\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i,
+                '## Recommended STILO agent\n- **Lead with:** ' + agent + '\n');
+            src = src.replace(/#{1,6}\s*Recommendation\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i, function (b) {
+                return /primary\s*:\s*unknown|secondary[^\r\n]*none/i.test(b) ? '' : b;
+            });
+            return src;
         }
         function psOpenerBox(innerHtml) {
             return '<div style="margin:12px 0;border:1px solid var(--green,#22c55e);background:rgba(34,197,94,0.12);border-radius:10px;padding:14px 16px;">'
@@ -6572,6 +6598,12 @@
                     return;
                 }
                 body.innerHTML = renderScriptMarkdown(psNormalizeAgentSection(data.content_md, lead));
+                // Sync the Pitch pill + the drawer's "Recommended" line to the
+                // agent the script actually leads with (the lead's
+                // matched_product_name is often "Unknown").
+                var resolvedAgent = psResolveAgentName(data.content_md, lead);
+                var pillEl = document.getElementById('prospectScriptPitch'); if (pillEl) pillEl.textContent = 'Pitch: ' + resolvedAgent;
+                var recEl = document.getElementById('prospectRecAgent'); if (recEl) recEl.textContent = resolvedAgent;
                 if (meta) {
                     var when = data.generated_at ? new Date(data.generated_at).toLocaleDateString() : '';
                     meta.textContent = 'Script: ' + (data.filename || '').split('/').pop() + (when ? ' · generated ' + when : '');
@@ -6613,12 +6645,10 @@
             // that fits this business. Fallbacks kept for legacy data.
             var reasoning  = d.prospect_reasoning || d.prospecting_reasoning || d.reasoning || d.talk_track || '';
             var recProduct = d.matched_product_name || d.recommended_product || d.recommendation || '';
-            // David's pipeline leaves matched_product_name "Unknown" on plenty of
-            // leads; show the niche-derived agent instead so the Pitch pill +
-            // Recommended line read the agent we're actually selling.
-            if (!recProduct || /^(unknown|none|n\/?a|tbd)$/i.test(String(recProduct).trim())) {
-                recProduct = psDeriveAgent(d.niche || d.category).agent;
-            }
+            // matched_product_name is often "Unknown"; blank it for the initial
+            // paint. loadColdCallScript resolves the agent the brief actually
+            // leads with and fills the Pitch pill + Recommended line async.
+            if (/^(unknown|none|n\/?a|tbd)$/i.test(String(recProduct).trim())) recProduct = '';
             var history = d.call_history || d.calls || [];
 
             var outcomes = PROSPECT_OUTCOMES.map(function(o){
@@ -6718,7 +6748,7 @@
                 + '<div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Niche</div><div style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(niche || '—') + '</div></div>'
                 + '<div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">City</div><div style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(d.city || '—') + '</div></div>'
                 + '<div style="grid-column:span 2;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Email</div><div style="font-size:14px;color:var(--text-primary);word-break:break-all;">' + (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);text-decoration:none;">' + escapeAdminHtml(email) + '</a>' : '—') + '</div></div>'
-                + (recProduct ? '<div style="grid-column:span 2;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Recommended</div><div style="font-size:14px;color:var(--text-primary);font-weight:600;">' + escapeAdminHtml(recProduct) + '</div></div>' : '')
+                + '<div style="grid-column:span 2;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Recommended</div><div id="prospectRecAgent" style="font-size:14px;color:var(--text-primary);font-weight:600;">' + (recProduct ? escapeAdminHtml(recProduct) : '<span style="color:var(--text-muted);font-weight:400;">resolving from script…</span>') + '</div></div>'
                 + '</div>';
 
             // Last-log pill — surfaces the most recent outcome at the top of the
