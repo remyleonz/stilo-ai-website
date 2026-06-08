@@ -42,7 +42,7 @@ async function callableFromSupabase(opts) {
             q = q.eq('prospect_tier', opts.tier);
         }
     }
-    if (opts.niche)     q = q.eq('niche', opts.niche);
+    if (opts.niche)     q = q.eq('category', opts.niche); // leads has `category`, not `niche` — filtering on niche 400s
     if (opts.minScore)  q = q.gte('prospect_score', opts.minScore);
     if (opts.search)    q = q.ilike('name', `%${opts.search}%`);
 

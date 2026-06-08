@@ -32,6 +32,19 @@ function researchHook(r) {
     return h ? h.slice(0, 280) : '';
 }
 
+// Last-resort email: the email-finder step often lands an address in
+// deep_research_json (email / owner_email) even when the structured columns are
+// blank. We surface it into the composer's TO field for the rep to CONFIRM (the
+// modal never auto-sends), so they aren't retyping an address research already
+// found. Returns '' when nothing usable is present.
+function researchEmail(r) {
+    let dr = r.deep_research_json;
+    if (!dr) return '';
+    try { dr = typeof dr === 'string' ? JSON.parse(dr) : dr; } catch (_) { return ''; }
+    const e = String(dr.owner_email || dr.email || '').trim();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : '';
+}
+
 async function geminiDraft(ctx) {
     const key = process.env.GEMINI_API_KEY;
     if (!key) return null;
@@ -100,14 +113,17 @@ module.exports = async function handler(req, res) {
     if (id == null) return res.status(400).json({ error: 'missing_id' });
 
     const sb = leadsClient();
+    // NOTE: prospecting.leads has no `niche` column (only `category`). Selecting
+    // a non-existent column makes PostgREST 400 and surfaced to the SDR/admin as
+    // "Could not draft: lead_read_failed". Use category as the niche signal.
     const { data: lead, error } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,niche,category,address,deep_research_json')
+        .select('id,name,owner_name,owner_email,email,category,address,deep_research_json')
         .eq('id', id).maybeSingle();
     if (error) return res.status(500).json({ error: 'lead_read_failed', detail: error.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
 
     const business = lead.name || 'your business';
-    const niche = lead.niche || lead.category || '';
+    const niche = lead.category || '';
     const fName = kit.firstName(lead.owner_name);
     const playbook = kit.pickPlaybook(niche);
     const sender = await kit.getSenderIdentity(gate.email);
@@ -130,8 +146,10 @@ module.exports = async function handler(req, res) {
 
     const subject = 'Following up, ' + business + ' + STILO AI';
 
+    const toEmail = lead.owner_email || lead.email || researchEmail(lead) || '';
+
     return res.status(200).json({
-        to_email: lead.owner_email || lead.email || '',
+        to_email: toEmail,
         subject: subject,
         body: draft,
         agent: playbook.agent,

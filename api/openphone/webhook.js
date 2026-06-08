@@ -327,9 +327,22 @@ module.exports = async function handler(req, res) {
     // phone-line map below. Keep this in sync with `list-users` in Quo.
     const QUO_USER_ID_TO_EMAIL = {
         'UShj8EpsSW': 'remyleon@stiloaipartners.com',         // Remy Leon (owner)
+        'USxSahMbat': 'huronfire5@gmail.com',                 // Luke Huron (now has a Quo seat)
         'USCFfV4w6g': 'jackmaguire@stiloaipartners.com',      // Jack Maguire
         'USHJZZYPss': 'alejandrobarrios@stiloaipartners.com', // Alejandro Barrios
         'USsSwYdBtK': 'davidcoira@stiloaipartners.com'        // David Coira (legacy id)
+    };
+
+    // ── Agency-owner cold-call lines (2026-06-08) ────────────────────────────
+    // The two owners cold-call from their own Quo numbers, but BOTH lines sit
+    // under Remy's Quo user seat (UShj8EpsSW). So the userId map above would
+    // stamp every owner call as Remy, misattributing David's. We map the lines
+    // themselves and let the phone-line block below override the userId guess.
+    // Attribution-only on purpose: owners are NOT in sdr_users, so this keeps
+    // them out of round-robin lead assignment and the commission leaderboard.
+    const OWNER_LINE_TO_EMAIL = {
+        '+17868376639': 'remyleon@stiloaipartners.com',  // (786) 837-6639 — Remy Leon
+        '+17865742922': 'davidcoira@stiloaipartners.com' // (786) 574-2922 — David Coira
     };
     const metadataLoggedBy = (call.metadata && call.metadata.logged_by) || null;
     if (metadataLoggedBy) {
@@ -400,15 +413,20 @@ module.exports = async function handler(req, res) {
     }
     if (leadId) baseFields.lead_id = leadId;
 
-    // ── SDR attribution by dedicated Quo line (primary signal) ───────────────
+    // ── Rep attribution by dedicated Quo line (primary signal) ───────────────
     // Each rep dials from their own Quo number, so the STILO-owned side of the
     // call identifies the rep regardless of which Quo user (or no user, in
-    // Luke's case) placed it. Data-driven off public.sdr_users.openphone_number
-    // so onboarding a rep is just: insert the row + set their number. An
-    // explicit metadata.logged_by from the admin call tool still wins (set
-    // above), so this only fills or overrides the userId-map guess for SDR lines.
+    // Luke's case) placed it. SDR lines are data-driven off
+    // public.sdr_users.openphone_number; the two owner lines are layered in from
+    // OWNER_LINE_TO_EMAIL (owners aren't in sdr_users). An explicit
+    // metadata.logged_by from the admin call tool still wins (set above), so
+    // this only fills or overrides the userId-map guess for known lines.
     if (!metadataLoggedBy && (baseFields.from_number || baseFields.to_number)) {
         try {
+            // Owner lines first; SDR rows can't collide with them (different
+            // numbers), and seeding here means an owner line always resolves
+            // even before any DB read.
+            const lineToEmail = Object.assign({}, OWNER_LINE_TO_EMAIL);
             const pub = publicClient();
             const { data: sdrLines } = await pub
                 .from('sdr_users')
@@ -416,17 +434,16 @@ module.exports = async function handler(req, res) {
                 .eq('active', true)
                 .not('openphone_number', 'is', null);
             if (Array.isArray(sdrLines) && sdrLines.length) {
-                const lineToEmail = {};
                 for (const s of sdrLines) {
                     const n = normalizePhone(s.openphone_number);
                     if (n) lineToEmail[n] = s.email;
                 }
-                const ourLine = [baseFields.from_number, baseFields.to_number]
-                    .find(function (n) { return n && lineToEmail[n]; });
-                if (ourLine) baseFields.logged_by = lineToEmail[ourLine];
             }
+            const ourLine = [baseFields.from_number, baseFields.to_number]
+                .find(function (n) { return n && lineToEmail[n]; });
+            if (ourLine) baseFields.logged_by = lineToEmail[ourLine];
         } catch (e) {
-            console.warn('[openphone/webhook] sdr line attribution failed', e.message || e);
+            console.warn('[openphone/webhook] line attribution failed', e.message || e);
         }
     }
 

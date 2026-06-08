@@ -6519,42 +6519,60 @@
                     + '</div>';
             }).join('') : '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No prior contacts.</div>';
 
-            var dialerBlock = '';
-            if (mode !== 'emailable' && phone) {
-                var lineOptions = (prospectState.openphoneNumbers || []).map(function (n) {
-                    var sel = String(n.id) === String(prospectState.openphoneSelectedId) ? ' selected' : '';
-                    return '<option value="' + escapeAdminHtml(n.id) + '"' + sel + '>' + escapeAdminHtml(n.name || n.number) + '</option>';
-                }).join('');
+            // ── SDR-drawer parity: prominent "Direct line" phone card ────────
+            // Same gradient card + big Call-in-Quo button the SDR drawer uses,
+            // but it keeps admin's extras: the OpenPhone line picker, the STRICT
+            // pill, and the auto-copy dialer hint. JS hooks preserved exactly
+            // (#openphoneLinePicker / onCallButtonClick / #prospectDialerMsg).
+            var strictPill = (d.owner_phone_strict && mode !== 'emailable')
+                ? '<span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-size:10px;margin-left:6px;">STRICT</span>' : '';
+            var lineOptions = (prospectState.openphoneNumbers || []).map(function (n) {
+                var sel = String(n.id) === String(prospectState.openphoneSelectedId) ? ' selected' : '';
+                return '<option value="' + escapeAdminHtml(n.id) + '"' + sel + '>' + escapeAdminHtml(n.name || n.number) + '</option>';
+            }).join('');
+            var callSvg = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+
+            var phoneCardHtml;
+            if (mode === 'emailable') {
+                phoneCardHtml = '<div style="background:linear-gradient(180deg,rgba(37,99,235,0.10),rgba(37,99,235,0.02));border:1px solid rgba(37,99,235,0.35);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
+                    + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Owner email</div>'
+                    + (email
+                        ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text-primary);text-decoration:none;word-break:break-all;">' + escapeAdminHtml(email) + '</a>'
+                        : '<div style="color:var(--text-muted);font-size:14px;">No owner email on file.</div>')
+                    + '</div>';
+            } else if (phone) {
                 var encPhone = encodeURIComponent(phone);
                 var appUrl = 'https://my.openphone.com/calls/new?to=' + encPhone;
-                // Single primary action + tiny phone-icon copy button next to it.
-                // Phone icon SVG is inlined; on click the button switches to a "Copied" state for 1.5s.
-                var shareIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
-                dialerBlock = ''
-                    + (lineOptions
-                        ? '<div style="margin-top:10px;"><label style="font-size:11px;color:var(--text-secondary);">From <select id="openphoneLinePicker" onchange="selectOpenPhoneLine(this.value)" style="margin-left:6px;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;">' + lineOptions + '</select></label></div>'
-                        : '')
-                    + '<div style="display:flex;gap:8px;margin-top:10px;align-items:stretch;">'
-                      + '<a href="' + escapeAdminHtml(appUrl) + '" target="_blank" rel="noopener" '
-                        + 'onclick="onCallButtonClick(event, ' + JSON.stringify(phone) + ')" '
-                        + 'style="flex:1;min-width:200px;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">Call in Quo</a>'
-                      + '<button id="prospectShareBtn" type="button" onclick="shareLeadLink(' + JSON.stringify(d.id) + ')" title="Copy shareable link" '
-                        + 'style="width:42px;flex-shrink:0;padding:0;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 150ms;">' + shareIconSvg + '</button>'
+                phoneCardHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg,rgba(37,99,235,0.10),rgba(37,99,235,0.02));border:1px solid rgba(37,99,235,0.35);border-radius:12px;padding:16px 18px;margin-bottom:12px;">'
+                    + '<div style="min-width:0;">'
+                      + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:2px;">Direct line' + strictPill + '</div>'
+                      + '<div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.01em;">' + escapeAdminHtml(phone) + '</div>'
                     + '</div>'
-                    + '<div id="prospectDialerMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);min-height:16px;">Tap Call in Quo. The number is auto-copied — paste in Quo\'s dialer with Cmd+V, hit call. Transcript lands here ~1s after hangup.</div>';
+                    + '<a href="' + escapeAdminHtml(appUrl) + '" target="_blank" rel="noopener" onclick="onCallButtonClick(event, ' + JSON.stringify(phone) + ')" '
+                      + 'style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:13px 20px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 14px rgba(37,99,235,0.35);">' + callSvg + 'Call in Quo</a>'
+                    + '</div>'
+                    + (lineOptions ? '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--text-secondary);">From <select id="openphoneLinePicker" onchange="selectOpenPhoneLine(this.value)" style="margin-left:6px;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;">' + lineOptions + '</select></label></div>' : '')
+                    + '<div id="prospectDialerMsg" style="margin-bottom:16px;font-size:12px;color:var(--text-muted);min-height:16px;">Tap Call in Quo. The number is auto-copied — paste in Quo\'s dialer with Cmd+V, hit call. Transcript lands here ~1s after hangup.</div>';
+            } else {
+                phoneCardHtml = '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:12px;color:var(--text-muted);font-size:13px;">No phone on file.</div>';
             }
 
-            // Show the owner email next to the phone in the call-mode drawer
-            // (intentionally NOT shown in the row above). Email-mode keeps the
-            // email-only block since phone is irrelevant there.
-            var phoneEmailLine = phone
-                ? '<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;"><div style="color:var(--text-primary);font-size:18px;font-family:var(--font-mono);font-weight:600;">' + escapeAdminHtml(phone) + '</div>'
-                  + (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);font-size:13px;text-decoration:none;">' + escapeAdminHtml(email) + '</a>' : '')
-                  + '</div>'
-                : '';
-            var contactBlock = mode === 'emailable'
-                ? (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);font-size:14px;">' + escapeAdminHtml(email) + '</a>' : '<span style="color:var(--text-muted);font-size:13px;">No owner email on file.</span>')
-                : (phone ? phoneEmailLine + dialerBlock : '<span style="color:var(--text-muted);font-size:13px;">No phone on file.</span>');
+            // Action pills — Email this lead + Share link, matching the SDR row.
+            // Share keeps admin's copy-a-link behavior (#prospectShareBtn hook).
+            var shareIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+            var mailIconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>';
+            var actionPillsHtml = '<div style="display:flex;gap:8px;margin-bottom:18px;">'
+                + '<button type="button" onclick="openEmailComposer(' + JSON.stringify(d.id) + ')" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;">' + mailIconSvg + 'Email this lead</button>'
+                + '<button id="prospectShareBtn" type="button" onclick="shareLeadLink(' + JSON.stringify(d.id) + ')" title="Copy shareable link" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">' + shareIconSvg + 'Share</button>'
+                + '</div>';
+
+            // Info grid — Niche / City / Email (+ Recommended), matching SDR.
+            var infoGridHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-bottom:18px;">'
+                + '<div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Niche</div><div style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(niche || '—') + '</div></div>'
+                + '<div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">City</div><div style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(d.city || '—') + '</div></div>'
+                + '<div style="grid-column:span 2;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Email</div><div style="font-size:14px;color:var(--text-primary);word-break:break-all;">' + (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);text-decoration:none;">' + escapeAdminHtml(email) + '</a>' : '—') + '</div></div>'
+                + (recProduct ? '<div style="grid-column:span 2;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Recommended</div><div style="font-size:14px;color:var(--text-primary);font-weight:600;">' + escapeAdminHtml(recProduct) + '</div></div>' : '')
+                + '</div>';
 
             // Last-log pill — surfaces the most recent outcome at the top of the
             // drawer so Remy doesn't have to scroll to the call history. Pulled
@@ -6601,22 +6619,25 @@
                 + '</button>';
 
             return ''
-                + '<div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
+                // ── Header (SDR-drawer parity) ──
+                + '<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
                   + '<div style="flex:1;min-width:0;">'
-                    + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">' + escapeAdminHtml(niche || 'Prospect') + '</div>'
-                    + '<h2 style="font-family:var(--font-display);font-weight:800;font-size:1.85rem;letter-spacing:-0.02em;margin:0;line-height:1.15;">' + escapeAdminHtml(business) + '</h2>'
-                    + '<div style="margin-top:6px;color:var(--text-secondary);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + escapeAdminHtml(owner) + ' · score <strong style="color:var(--text-primary);">' + escapeAdminHtml(score) + '</strong> · ' + tierBadge(d.prospect_tier) + ' · ' + stageBadge(d.stage) + '</div>'
+                    + '<div style="font-family:var(--font-display);font-size:23px;font-weight:800;letter-spacing:-0.02em;line-height:1.15;">' + escapeAdminHtml(business) + '</div>'
+                    + '<div style="color:var(--text-primary);margin-top:6px;font-size:14px;">' + escapeAdminHtml(owner) + (d.address ? ' · ' + escapeAdminHtml(d.address) : '') + '</div>'
+                    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+                      + tierBadge(d.prospect_tier) + stageBadge(d.stage)
+                      + '<span style="font-size:11px;color:var(--text-muted);">Score ' + escapeAdminHtml(score) + '</span>'
+                      + (d.call_attempts ? '<span style="font-size:11px;color:var(--text-muted);">· ' + d.call_attempts + ' dial' + (d.call_attempts === 1 ? '' : 's') + '</span>' : '')
+                      + (d.website ? '<a href="' + escapeAdminHtml(d.website) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;margin-left:auto;">Website ↗</a>' : '')
+                    + '</div>'
                     + lastOutcomePill
                   + '</div>'
                   + closeDealCta
                 + '</div>'
 
-                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
-                + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">' + (mode === 'emailable' ? 'Owner email' : 'Direct line') + (d.owner_phone_strict && mode !== 'emailable' ? ' <span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-size:10px;">STRICT</span>' : '') + '</div>'
-                + contactBlock
-                + '<div style="margin-top:14px;"><button type="button" onclick="openEmailComposer(' + JSON.stringify(d.id) + ')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>Email this lead</button></div>'
-                + (recProduct ? '<div style="margin-top:14px;font-size:12px;"><span style="color:var(--text-secondary);">Recommended: </span><span style="color:var(--text-primary);font-weight:600;">' + escapeAdminHtml(recProduct) + '</span></div>' : '')
-                + '</div>'
+                + phoneCardHtml
+                + actionPillsHtml
+                + infoGridHtml
 
                 + '<form id="' + formId + '" onsubmit="event.preventDefault();' + submitFn + ';return false;" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
                 + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px;">' + (mode === 'emailable' ? 'Log email' : 'Log call') + '</h3>'
