@@ -1833,7 +1833,7 @@
             try {
                 const data = await fetchJSON(url);
                 if (data && data.content_md) {
-                    host.innerHTML = renderScriptMarkdown(data.content_md);
+                    host.innerHTML = renderScriptMarkdown(normalizeAgentSection(data.content_md, r));
                     if (metaEl && data.generated_at) metaEl.textContent = '· generated ' + new Date(data.generated_at).toLocaleDateString();
                     return;
                 }
@@ -1844,7 +1844,7 @@
                 if (e.status === 404) {
                     const synth = buildScriptFromResearch(r);
                     if (synth) {
-                        host.innerHTML = renderScriptMarkdown(synth);
+                        host.innerHTML = renderScriptMarkdown(normalizeAgentSection(synth, r));
                         if (metaEl) metaEl.textContent = '· auto-built from research';
                     } else {
                         host.textContent = 'No cold-call script for this lead yet. Use the pain points + business summary above.';
@@ -1884,6 +1884,27 @@
             }
             if (roi) md += '## Value anchor\n' + roi + '\n';
             return md;
+        }
+
+        // Niche → the STILO agent we lead with (mirrors the email playbook).
+        // Used to replace a brief's "Recommended STILO agent: Unknown".
+        function deriveAgent(niche) {
+            const n = String(niche || '').toLowerCase();
+            if (/(roof|plumb|hvac|contract|landscap|electric|garage|remodel|construction|trade|paving|fence|pool)/.test(n))
+                return { agent: 'Outbound Lead Response', oneLiner: 'Replies to every new lead within minutes, qualifies them, and pushes them to book, in English + Spanish.' };
+            if (/(gym|fitness|membership|yoga|pilates|crossfit|studio)/.test(n))
+                return { agent: 'Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
+            return { agent: 'AI Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
+        }
+        function normalizeAgentSection(md, lead) {
+            const re = /#{1,6}\s*Recommended STILO agent[\s\S]*?(?=\r?\n#{1,6}\s|$)/i;
+            const m = String(md || '').match(re);
+            if (!m) return md;
+            let prim = (m[0].match(/Primary:\*{0,2}\s*([^\r\n]+)/i) || [])[1] || '';
+            prim = prim.replace(/[*`]/g, '').trim();
+            if (prim && !/^(unknown|none|n\/?a|tbd)$/i.test(prim)) return md;
+            const d = deriveAgent(lead && (lead.niche || lead.category));
+            return md.replace(re, '## Recommended STILO agent\n- **Lead with:** ' + d.agent + '\n- ' + d.oneLiner + '\n');
         }
 
         // Minimal, safe Markdown -> HTML for the brief. Escapes first (no HTML

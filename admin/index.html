@@ -6423,45 +6423,136 @@
             }
         }
 
-        // Tiny markdown → HTML renderer scoped to what David's scripts use:
-        // headings (#, ##, ###), bold (**x**), italic (*x*), bulleted lists
-        // (- or *), numbered lists, inline code (`x`), paragraphs, hr (---).
-        // Deliberately small — no full markdown lib needed for cold-call scripts
-        // and pulling one in just bloats the bundle.
+        // ── Cold-call script rendering (parity with the SDR drawer) ──────────
+        // David's brief is markdown. We surface the Suggested opener in a green
+        // "say this first" box, the decision-maker in a blue box, strip the
+        // internal hook/diagnosis labels + the "Rep X extension" tail, and render
+        // the rest cleanly. The recommended STILO agent is normalized: when the
+        // brief leaves it "Unknown", we derive it from the niche so the rep
+        // always sees the agent we're actually selling.
+        function psDeriveAgent(niche) {
+            var n = String(niche || '').toLowerCase();
+            if (/(roof|plumb|hvac|contract|landscap|electric|garage|remodel|construction|trade|paving|fence|pool)/.test(n))
+                return { agent: 'Outbound Lead Response', oneLiner: 'Replies to every new lead within minutes, qualifies them, and pushes them to book, in English + Spanish.' };
+            if (/(gym|fitness|membership|yoga|pilates|crossfit|studio)/.test(n))
+                return { agent: 'Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
+            return { agent: 'AI Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
+        }
+        // When the brief's "Recommended STILO agent" is Unknown/none, swap in the
+        // niche-derived agent so the rep never sees "Primary: Unknown".
+        function psNormalizeAgentSection(md, lead) {
+            var re = /#{1,6}\s*Recommended STILO agent[\s\S]*?(?=\r?\n#{1,6}\s|$)/i;
+            var m = String(md || '').match(re);
+            if (!m) return md;
+            var prim = (m[0].match(/Primary:\*{0,2}\s*([^\r\n]+)/i) || [])[1] || '';
+            prim = prim.replace(/[*`]/g, '').trim();
+            if (prim && !/^(unknown|none|n\/?a|tbd)$/i.test(prim)) return md; // real agent already present
+            var d = psDeriveAgent(lead && (lead.niche || lead.category));
+            return md.replace(re, '## Recommended STILO agent\n- **Lead with:** ' + d.agent + '\n- ' + d.oneLiner + '\n');
+        }
+        function psOpenerBox(innerHtml) {
+            return '<div style="margin:12px 0;border:1px solid var(--green,#22c55e);background:rgba(34,197,94,0.12);border-radius:10px;padding:14px 16px;">'
+                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--green,#22c55e);text-transform:uppercase;margin-bottom:8px;">▶ Opener — say this first</div>'
+                + '<div style="font-size:15px;line-height:1.6;color:#fff;font-weight:500;">' + innerHtml + '</div></div>';
+        }
+        function psDmBox(value) {
+            return '<div style="margin:12px 0;border:1px solid rgba(37,99,235,0.45);background:rgba(37,99,235,0.12);border-radius:10px;padding:12px 16px;">'
+                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:4px;">Decision-maker</div>'
+                + '<div style="font-size:18px;font-weight:800;color:#fff;font-family:var(--font-display);">' + value + '</div></div>';
+        }
+        // Synthesize a brief from the lead's own research when David hasn't
+        // written one (the 404 path), so the operator is never empty-handed.
+        function psBuildScriptFromResearch(r) {
+            var dr = r && r.deep_research_json;
+            if (!dr) return null;
+            try { dr = typeof dr === 'string' ? JSON.parse(dr) : dr; } catch (_) { return null; }
+            var op = dr.suggested_opener || {};
+            var openerText = [op.line_1, op.line_2, op.line_3, op.line_4].filter(Boolean).join(' ').replace(/\[REP\]/g, 'STILO').trim();
+            var hook = (dr.hook_observable || '').trim();
+            var objs = Array.isArray(dr.likely_objections) ? dr.likely_objections : [];
+            var roi = (dr.automation_roi_estimate || '').trim();
+            if (!openerText && !hook && !objs.length) return null;
+            var md = '**Decision-maker:** ' + (r.owner_name || 'Owner') + '\n\n';
+            var ph = r.owner_phone || r.phone; if (ph) md += '**Phone:** ' + ph + '\n\n';
+            if (openerText) md += '**Open:**\n> ' + openerText + '\n\n';
+            if (hook) md += '## The hook\n> ' + hook + '\n\n';
+            if (objs.length) {
+                md += '## Likely objections\n';
+                objs.forEach(function (o) { if (o && o.trigger) md += '**They say:** "' + o.trigger + '"\n\n' + (o.response || '') + '\n\n'; });
+            }
+            if (roi) md += '## Value anchor\n' + roi + '\n';
+            return md;
+        }
         function renderScriptMarkdown(md) {
-            if (!md) return '';
-            // Escape HTML first so user content can't break out.
-            var s = String(md).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            // Headings
-            s = s.replace(/^###\s+(.+)$/gm, '<h4 style="font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--text-primary);letter-spacing:0.02em;">$1</h4>');
-            s = s.replace(/^##\s+(.+)$/gm,  '<h3 style="font-size:14px;font-weight:800;margin:18px 0 8px;color:var(--text-primary);letter-spacing:0.01em;">$1</h3>');
-            s = s.replace(/^#\s+(.+)$/gm,   '<h2 style="font-size:16px;font-weight:800;margin:20px 0 10px;color:var(--text-primary);">$1</h2>');
-            // Horizontal rule
-            s = s.replace(/^---+\s*$/gm, '<hr style="border:none;border-top:1px solid var(--border-subtle);margin:14px 0;"/>');
-            // Bold + italic + inline code
-            s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
-            s = s.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.06);border:1px solid var(--border-subtle);padding:1px 5px;border-radius:4px;font-size:0.92em;">$1</code>');
-            // Bulleted lists (one level)
-            s = s.replace(/(?:^|\n)((?:[ \t]*[-*]\s.+\n?)+)/g, function (m, block) {
-                var items = block.trim().split(/\n/).map(function (line) {
-                    return '<li style="margin:3px 0;">' + line.replace(/^[ \t]*[-*]\s+/, '') + '</li>';
-                }).join('');
-                return '\n<ul style="margin:6px 0 10px 20px;padding:0;">' + items + '</ul>';
-            });
-            // Numbered lists (one level)
-            s = s.replace(/(?:^|\n)((?:[ \t]*\d+\.\s.+\n?)+)/g, function (m, block) {
-                var items = block.trim().split(/\n/).map(function (line) {
-                    return '<li style="margin:3px 0;">' + line.replace(/^[ \t]*\d+\.\s+/, '') + '</li>';
-                }).join('');
-                return '\n<ol style="margin:6px 0 10px 22px;padding:0;">' + items + '</ol>';
-            });
-            // Paragraphs from remaining double-newline blocks
-            s = s.split(/\n{2,}/).map(function (block) {
-                if (/^\s*<(h\d|ul|ol|hr|p|div|li|strong|em)/i.test(block.trim())) return block;
-                return '<p style="margin:6px 0;">' + block.replace(/\n/g, '<br/>') + '</p>';
-            }).join('\n');
-            return s;
+            var src = String(md || '');
+            var lines = src.split('\n');
+            var plainOf = function (l) { return l.replace(/^[>#\s*]+/, '').replace(/\*\*/g, '').trim(); };
+            // Pre-extract the "Suggested opener" lines → green box at the "Open:" spot.
+            var suggested = [];
+            (function () {
+                var cap = false;
+                for (var i = 0; i < lines.length; i++) {
+                    var ln = lines[i], pl = plainOf(ln);
+                    if (/^#{1,6}\s/.test(ln) && /^suggested opener/i.test(pl)) { cap = true; continue; }
+                    if (cap) {
+                        if (/^#{1,6}\s/.test(ln) || /^rep\s+[a-z]\b.*extension/i.test(pl)) break;
+                        if (ln.trim()) suggested.push(pl);
+                    }
+                }
+            })();
+            var openerHtml = suggested.length ? suggested.map(escapeAdminHtml).join('<br><br>') : null;
+            var html = '', inList = false, expectOpener = false, skipSection = false;
+            var closeList = function () { if (inList) { html += '</ul>'; inList = false; } };
+            var inline = function (s) {
+                return escapeAdminHtml(s)
+                    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;">$1</strong>')
+                    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue);">$1</a>');
+            };
+            var P = 'font-size:14px;line-height:1.6;color:var(--text-primary);';
+            for (var k = 0; k < lines.length; k++) {
+                var line = lines[k].replace(/\s+$/, '');
+                var plain = plainOf(line);
+                if (/^rep\s+[a-z]\b.*extension/i.test(plain)) break;
+                if (/^#{1,6}\s/.test(line) && /^suggested opener/i.test(plain)) { skipSection = true; continue; }
+                if (skipSection) { if (/^#{1,6}\s/.test(line)) skipSection = false; else continue; }
+                if (!line.trim()) { closeList(); continue; }
+                // Strip internal hook/diagnosis labels (operator-facing noise).
+                if (/^the hook$/i.test(plain) || /^(observable|source|diagnosis|archetype|current tool)\b/i.test(plain)) continue;
+                if (/^decision[-\s]?maker\s*:/i.test(plain)) {
+                    closeList(); expectOpener = false;
+                    html += psDmBox(escapeAdminHtml(plain.replace(/^decision[-\s]?maker\s*:\s*/i, '')));
+                    continue;
+                }
+                var m;
+                var openMatch = plain.match(/^open\s*:?\s*(.*)$/i);
+                if (openMatch && /^open\b/i.test(plain)) {
+                    closeList();
+                    var rest = openMatch[1].replace(/^>\s*/, '').trim();
+                    if (openerHtml) html += psOpenerBox(openerHtml);
+                    else if (rest) html += psOpenerBox(inline(rest));
+                    else expectOpener = true;
+                    continue;
+                }
+                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+                    closeList(); expectOpener = false;
+                    var lvl = Math.min(m[1].length, 4);
+                    var size = lvl <= 1 ? 17 : lvl === 2 ? 15 : 14;
+                    html += '<div style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:' + size + 'px;margin:16px 0 7px;">' + inline(m[2]) + '</div>';
+                } else if ((m = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/))) {
+                    if (!inList) { html += '<ul style="margin:6px 0 12px;padding-left:20px;">'; inList = true; }
+                    html += '<li style="' + P + 'margin:5px 0;">' + inline(m[1]) + '</li>';
+                } else if ((m = line.match(/^>\s?(.*)$/))) {
+                    closeList();
+                    if (expectOpener && !openerHtml) { html += psOpenerBox(inline(m[1])); expectOpener = false; }
+                    else html += '<div style="border-left:3px solid var(--blue);padding:8px 12px;margin:7px 0;color:#fff;font-size:14px;line-height:1.6;background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
+                } else {
+                    closeList(); expectOpener = false;
+                    html += '<p style="' + P + 'margin:7px 0;">' + inline(line) + '</p>';
+                }
+            }
+            closeList();
+            return html;
         }
 
         async function loadColdCallScript(lead) {
@@ -6480,7 +6571,7 @@
                     body.innerHTML = '<div style="color:var(--text-muted);">No script returned for this lead.</div>';
                     return;
                 }
-                body.innerHTML = renderScriptMarkdown(data.content_md);
+                body.innerHTML = renderScriptMarkdown(psNormalizeAgentSection(data.content_md, lead));
                 if (meta) {
                     var when = data.generated_at ? new Date(data.generated_at).toLocaleDateString() : '';
                     meta.textContent = 'Script: ' + (data.filename || '').split('/').pop() + (when ? ' · generated ' + when : '');
@@ -6490,7 +6581,15 @@
                 // (prospect_reasoning) — that's internal debug, not for the
                 // operator's call screen.
                 if (e.status === 404) {
-                    body.innerHTML = '<div style="color:var(--text-muted);">No cold-call script for this lead yet. The nightly run at 02:00 UTC generates new scripts hourly thereafter.</div>';
+                    // No prepared brief — synthesize one from the lead's research
+                    // so the operator gets opener + hook + objections anyway.
+                    var synth = psBuildScriptFromResearch(lead);
+                    if (synth) {
+                        body.innerHTML = renderScriptMarkdown(psNormalizeAgentSection(synth, lead));
+                        if (meta) meta.textContent = 'Auto-built from this lead\'s research';
+                    } else {
+                        body.innerHTML = '<div style="color:var(--text-muted);">No cold-call script for this lead yet. Use the pain points + business summary above.</div>';
+                    }
                 } else if (e.status === 503) {
                     body.innerHTML = '<div style="color:var(--text-muted);">Cold-call scripts not connected yet — David needs to grant the service account access to the GCS bucket.</div>';
                 } else {
@@ -6514,6 +6613,12 @@
             // that fits this business. Fallbacks kept for legacy data.
             var reasoning  = d.prospect_reasoning || d.prospecting_reasoning || d.reasoning || d.talk_track || '';
             var recProduct = d.matched_product_name || d.recommended_product || d.recommendation || '';
+            // David's pipeline leaves matched_product_name "Unknown" on plenty of
+            // leads; show the niche-derived agent instead so the Pitch pill +
+            // Recommended line read the agent we're actually selling.
+            if (!recProduct || /^(unknown|none|n\/?a|tbd)$/i.test(String(recProduct).trim())) {
+                recProduct = psDeriveAgent(d.niche || d.category).agent;
+            }
             var history = d.call_history || d.calls || [];
 
             var outcomes = PROSPECT_OUTCOMES.map(function(o){
