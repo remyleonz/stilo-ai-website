@@ -40,7 +40,15 @@ async function callableFromSupabase(opts) {
         .select('*')
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false');
-    if (!isOwner) q = q.eq('has_cold_call_script', true);
+    if (!isOwner) {
+        q = q.eq('has_cold_call_script', true);
+    } else {
+        // Owner queues have no scripts, so require a contact name: the admin
+        // leads table drops rows without owner_name (hasOwner filter), and a
+        // named contact is what makes the lead genuinely callable. Owners have
+        // 350+ such leads each, well past the 50 cap.
+        q = q.not('owner_name', 'is', null).neq('owner_name', '');
+    }
 
     if (opts.assignedTo) q = q.eq('assigned_to', opts.assignedTo);
     // Tier filter must match what the dashboard DISPLAYS: brief_tier first
