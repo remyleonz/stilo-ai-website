@@ -1566,7 +1566,22 @@
                 </div>
                 <style>
                     .sdr-menu-item:hover { background: rgba(37,99,235,0.10); }
+                    .ab-arm-win { box-shadow: inset 3px 0 0 var(--green); }
                 </style>
+
+                <!-- Email A/B test results. Two template arms (A · Direct,
+                     B · Value); we track calendar-link clicks (Resend webhook)
+                     and bookings per arm. Honest about sample size: shows a
+                     "gathering data" note until each arm has real volume. -->
+                <details id="abPanel" style="margin-bottom:18px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
+                    <summary style="list-style:none;cursor:pointer;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Email A/B test</span>
+                        <span id="abPanelHint" style="font-size:12px;color:var(--text-muted);font-weight:500;">Subject + body, judged on clicks and bookings</span>
+                    </summary>
+                    <div style="padding:0 18px 16px;">
+                        <div id="abResults" style="font-size:13px;color:var(--text-muted);">Loading…</div>
+                    </div>
+                </details>
 
                 <!-- Live progress bar: visible only while a pipeline is queued or running.
                      Auto-hides on completion. Bar is indeterminate during scrape, becomes
@@ -2321,7 +2336,7 @@
             else if (page === 'activity') loadActivityFeed();
             else if (page === 'support') adminLoadSupportThreads();
             else if (page === 'settings') loadSettings();
-            else if (page === 'prospecting') loadProspectingPage();
+            else if (page === 'prospecting') { loadProspectingPage(); loadAbResults(); }
 
             // Close sidebar on mobile after selection
             closeSidebar();
@@ -5490,7 +5505,7 @@
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastCallStr + '</td>'
-                        + '<td style="padding:10px 14px;"><button onclick="event.stopPropagation();dialProspect(' + JSON.stringify(id) + ')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;">Call now</button></td>'
+                        + '<td style="padding:10px 14px;white-space:nowrap;"><button onclick="event.stopPropagation();dialProspect(' + JSON.stringify(id) + ')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Call now</button></td>'
                         + '</tr>';
                 }
                 if (mode === 'booked') {
@@ -5697,6 +5712,56 @@
                     + '</tr></thead><tbody>' + body + '</tbody></table>';
             } catch (e) {
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load shared leads: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+
+        /* ===== EMAIL A/B PANEL (admin) =====
+           Loads /api/prospects/ab-results and renders sent / clicked / booked
+           per template arm. Stays honest about sample size: shows a "gathering
+           data" note until each arm clears the minimum, only then names a leader. */
+        var abLoadedOnce = false;
+        async function loadAbResults() {
+            var box = document.getElementById('abResults');
+            var hint = document.getElementById('abPanelHint');
+            if (!box) return;
+            if (!abLoadedOnce) box.textContent = 'Loading…';
+            try {
+                var d = await prospectFetchJSON('/api/prospects/ab-results', { method: 'GET' });
+                abLoadedOnce = true;
+                var arms = d.arms || [];
+                var totalSent = arms.reduce(function (s, a) { return s + (a.sent || 0); }, 0);
+                if (!totalSent) {
+                    box.innerHTML = '<div style="padding:6px 0;">No A/B emails sent yet. Every email you send from a lead is auto-assigned template <strong>A · Direct</strong> or <strong>B · Value</strong>, and clicks plus bookings get tracked here.</div>';
+                    if (hint) hint.textContent = 'No data yet';
+                    return;
+                }
+                var rows = arms.map(function (a) {
+                    var win = (d.leader && d.leader === a.variant);
+                    return '<tr class="' + (win ? 'ab-arm-win' : '') + '">'
+                        + '<td style="padding:9px 10px;font-weight:700;color:var(--text-primary);">' + a.label + (win ? ' <span style="color:var(--green);font-size:11px;">▲ leading</span>' : '') + '</td>'
+                        + '<td style="padding:9px 10px;text-align:right;">' + a.sent + '</td>'
+                        + '<td style="padding:9px 10px;text-align:right;">' + a.clicked + ' <span style="color:var(--text-muted);">(' + a.click_rate + '%)</span></td>'
+                        + '<td style="padding:9px 10px;text-align:right;">' + a.replied + '</td>'
+                        + '<td style="padding:9px 10px;text-align:right;font-weight:700;color:var(--text-primary);">' + a.booked + ' <span style="color:var(--text-muted);font-weight:500;">(' + a.book_rate + '%)</span></td>'
+                        + '</tr>';
+                }).join('');
+                box.innerHTML =
+                    '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                    + '<thead><tr style="color:var(--text-muted);text-transform:uppercase;font-size:10px;letter-spacing:0.05em;">'
+                    + '<th style="text-align:left;padding:6px 10px;font-weight:600;">Template</th>'
+                    + '<th style="text-align:right;padding:6px 10px;font-weight:600;">Sent</th>'
+                    + '<th style="text-align:right;padding:6px 10px;font-weight:600;">Clicked</th>'
+                    + '<th style="text-align:right;padding:6px 10px;font-weight:600;">Replied</th>'
+                    + '<th style="text-align:right;padding:6px 10px;font-weight:600;">Booked</th>'
+                    + '</tr></thead><tbody>' + rows + '</tbody></table>'
+                    + '<div style="margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.5;">'
+                    + (d.enough_data
+                        ? (d.leader ? ('Enough data: <strong style="color:var(--text-primary);">' + (arms.filter(function(a){return a.variant===d.leader;})[0]||{}).label + '</strong> is converting best so far.') : 'Both arms have volume but are running even, no clear winner yet.')
+                        : ('Gathering data. A/B needs about ' + d.min_per_arm + ' sends per arm before a result means anything, so treat this as a running tally, not a verdict.'))
+                    + '</div>';
+                if (hint) hint.textContent = totalSent + ' sent · ' + (d.enough_data ? 'result ready' : 'gathering data');
+            } catch (e) {
+                box.innerHTML = '<div style="color:var(--red);">Could not load A/B results: ' + (e.message || 'unknown') + '</div>';
             }
         }
 
