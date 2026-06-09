@@ -1902,6 +1902,9 @@
         // both are Unknown/none. (Never clobber a real agent like LCR.)
         function resolveAgentName(md, lead) {
             const src = String(md || '');
+            // GCS cold-call SCRIPTS state it explicitly: "**PRODUCT TO PITCH ...:** <agent>".
+            const ptp = src.match(/PRODUCT TO PITCH[^\r\n]*?:\**\s*([A-Za-z][^\r\n*]*)/i);
+            if (ptp) { const pv = cleanAgent(ptp[1]); if (pv && !/^(unknown|none|n\/?a|tbd)$/i.test(pv)) return pv; }
             const sec = src.match(/#{1,6}\s*Recommended STILO agent\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
             if (sec) {
                 const lines = sec[1].split(/\r?\n/);

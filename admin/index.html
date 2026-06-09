@@ -6449,6 +6449,9 @@
         // agent with the niche guess — wrong.)
         function psResolveAgentName(md, lead) {
             var src = String(md || '');
+            // GCS cold-call SCRIPTS state it explicitly: "**PRODUCT TO PITCH ...:** <agent>".
+            var ptp = src.match(/PRODUCT TO PITCH[^\r\n]*?:\**\s*([A-Za-z][^\r\n*]*)/i);
+            if (ptp) { var pv = psCleanAgent(ptp[1]); if (pv && !/^(unknown|none|n\/?a|tbd)$/i.test(pv)) return pv; }
             var sec = src.match(/#{1,6}\s*Recommended STILO agent\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
             if (sec) {
                 var lines = sec[1].split(/\r?\n/);

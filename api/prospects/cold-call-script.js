@@ -143,9 +143,15 @@ async function getAccessToken() {
 // { lead_id, business_name, filename, generated_at }. When it lands we can
 // look up by business_name → exact filename in one fetch. Until then, we
 // fall back to listing the prefix and picking the newest match by slug.
+function escapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 async function findScriptByListing(token, slug) {
+    // List everything under the slug, then keep only dedicated SCRIPT files.
+    // David uses two filename conventions:
+    //   <slug>-script-<YYYY-MM-DD>.md              (older)
+    //   <slug>-<YYYY-MM-DD>-script-<YYYY-MM-DD>.md  (newer, doubled date)
+    // The old prefix `<slug>-script-` missed the newer doubled-date names.
     const url = 'https://storage.googleapis.com/storage/v1/b/' + BUCKET +
-        '/o?prefix=' + encodeURIComponent(PREFIX + slug + '-script-') +
+        '/o?prefix=' + encodeURIComponent(PREFIX + slug + '-') +
         '&fields=items(name,timeCreated,updated,size)';
     const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     if (!r.ok) {
@@ -153,10 +159,8 @@ async function findScriptByListing(token, slug) {
         throw new Error('gcs_list_failed: ' + text.slice(0, 240));
     }
     const j = await r.json();
-    const items = (j.items || []).filter(function (it) {
-        // Defensive: prefix match isn't enough if slug is a substring of another.
-        return it.name.startsWith(PREFIX + slug + '-script-') && it.name.endsWith('.md');
-    });
+    const re = new RegExp('^' + escapeRe(PREFIX) + escapeRe(slug) + '(?:-\\d{4}-\\d{2}-\\d{2})?-script-\\d{4}-\\d{2}-\\d{2}\\.md$', 'i');
+    const items = (j.items || []).filter(function (it) { return re.test(it.name); });
     if (!items.length) return null;
     // Pick the most recent by `updated` (falls back to lexicographic, which
     // also works because the date suffix is YYYY-MM-DD).
@@ -189,8 +193,36 @@ module.exports = async function handler(req, res) {
     const slug = (q.slug && String(q.slug).trim()) || slugify(q.business_name);
     if (!slug) return res.status(400).json({ error: 'missing_slug', detail: 'Pass ?slug=<lead-slug> or ?business_name=<name>.' });
 
-    // 1) Primary source: David's Supabase Storage briefs (cold-call-briefs).
-    // ?rep=a|b|c (from the lead's tentative_rep_assignment) speeds the lookup.
+    // 1) PRIMARY source: the dedicated cold-call SCRIPT in GCS
+    // (stilo-cold-call-scripts/cold-call/<slug>[-<date>]-script-<date>.md). This
+    // is the polished, A/B-tested script the rep reads on the call. The Supabase
+    // `cold-call-briefs` are RESEARCH (David's SAGE agent input), NOT scripts —
+    // showing them was the bug. David maintains the GCS scripts continuously.
+    let token = null;
+    try { token = await getAccessToken(); }
+    catch (e) { token = null; /* SA missing/unauthorized — fall through to the brief */ }
+    if (token) {
+        try {
+            const item = await findScriptByListing(token, slug);
+            if (item) {
+                const content = await readObject(token, item.name);
+                res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
+                return res.status(200).json({
+                    slug: slug,
+                    filename: item.name,
+                    generated_at: item.updated || item.timeCreated || null,
+                    size: item.size,
+                    content_md: content,
+                    source: 'gcs-script'
+                });
+            }
+        } catch (e) {
+            console.warn('[cold-call-script] GCS script lookup failed, trying brief:', e.message);
+        }
+    }
+
+    // 2) FALLBACK: the Supabase research brief, only when no dedicated script
+    // exists yet for this lead. Better than an empty card.
     try {
         const brief = await findBriefInSupabase(slug, q.rep);
         if (brief) {
@@ -200,44 +232,14 @@ module.exports = async function handler(req, res) {
                 filename: brief.name,
                 generated_at: brief.generated_at,
                 content_md: brief.content_md,
-                source: 'supabase'
+                source: 'supabase-brief'
             });
         }
     } catch (e) {
-        console.warn('[cold-call-script] supabase lookup failed, trying GCS:', e.message);
+        console.warn('[cold-call-script] brief lookup failed:', e.message);
     }
 
-    // 2) Fallback: legacy GCS bucket (older scripts).
-    let token;
-    try { token = await getAccessToken(); }
-    catch (e) {
-        if (e.code === 'NO_SA') {
-            // Supabase (primary) had no brief and the legacy GCS fallback isn't
-            // configured — treat as "no script yet" rather than a server error.
-            return res.status(404).json({ error: 'script_not_found', slug: slug });
-        }
-        return res.status(502).json({ error: 'gcs_auth_failed', detail: String(e.message || e) });
-    }
-
-    try {
-        const item = await findScriptByListing(token, slug);
-        if (!item) return res.status(404).json({ error: 'script_not_found', slug: slug });
-        const content = await readObject(token, item.name);
-
-        // Short edge cache so repeated drawer opens for the same lead don't
-        // hit GCS every time. David's hourly sync makes 5min staleness fine.
-        res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
-        return res.status(200).json({
-            slug: slug,
-            filename: item.name,
-            generated_at: item.updated || item.timeCreated || null,
-            size: item.size,
-            content_md: content
-        });
-    } catch (e) {
-        console.error('[cold-call-script]', e);
-        return res.status(502).json({ error: 'gcs_fetch_failed', detail: String(e.message || e) });
-    }
+    return res.status(404).json({ error: 'script_not_found', slug: slug });
 };
 
 // Re-export helpers so other endpoints (e.g. openphone/sync-from-supabase)
