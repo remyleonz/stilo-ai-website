@@ -77,6 +77,13 @@ const PLAYBOOKS = {
         painShort: "Finding new customers by hand is slow, and generic cold outreach mostly gets ignored.",
         oneLiner: "an agent that finds businesses matching your ideal customer, researches each one, and sends personalized outreach, so your pipeline keeps filling itself.",
         subjectTag: "filling your pipeline"
+    },
+    website: {
+        agent: 'Website Builder agent',
+        pain: "Your website isn't set up to turn visitors into booked appointments. There's no clear book-an-appointment button, so people who land on it ready to schedule end up leaving instead of booking, and you never even know they were there.",
+        painShort: "Your site has no clear book-an-appointment button, so visitors who are ready to schedule leave instead of booking.",
+        oneLiner: "a fast, modern site built to convert, with an obvious book-now button, click-to-call, and the trust signals that turn visitors into booked customers.",
+        subjectTag: "turning your site into booked appointments"
     }
 };
 
@@ -88,8 +95,26 @@ const PRODUCT_TO_PLAYBOOK = {
     'ai receptionist': 'receptionist',
     'outbound agent': 'lead_response',
     'outbound lead response': 'lead_response',
-    'lead generator': 'lead_gen'
+    'lead generator': 'lead_gen',
+    'website builder': 'website',
+    'website': 'website',
+    'forge': 'website'
 };
+
+// Map an agent DISPLAY NAME (or codename) to a playbook. Used when the lead's
+// cold-call script names the pitched agent (e.g. "Website Builder", "FORGE").
+// Handles the agency codenames: ECHO=receptionist, IGNITE=outbound,
+// REVIVE=reactivation, SCOUT=lead gen, FORGE=website.
+function playbookFromAgentName(name) {
+    const n = String(name || '').toLowerCase();
+    if (!n) return null;
+    if (/website|web ?site|web build|forge/.test(n)) return PLAYBOOKS.website;
+    if (/reactivat|lapsed|lost customer|\blcr\b|revive/.test(n)) return PLAYBOOKS.reactivation;
+    if (/receptionist|front desk|\becho\b/.test(n)) return PLAYBOOKS.receptionist;
+    if (/outbound|lead response|lead reply|ignite|speed to lead/.test(n)) return PLAYBOOKS.lead_response;
+    if (/lead gen|lead generat|prospect|\bscout\b/.test(n)) return PLAYBOOKS.lead_gen;
+    return null;
+}
 
 function pickPlaybook(niche) {
     const n = String(niche || '').toLowerCase();
@@ -99,13 +124,17 @@ function pickPlaybook(niche) {
 }
 
 // Choose the playbook for a lead. Priority:
-//   1. explicit agent key (composer override)
-//   2. the product David's engine picked (prospect_reasoning "product=...") —
-//      this is what the rep pitched on the call, so the email must match it.
-//   3. niche fallback.
+//   1. explicit agent key (composer dropdown override)
+//   2. the agent the cold-call SCRIPT names (David's brief, "Pitch: <agent>") —
+//      this is the human decision the rep reads off the screen, so it wins over
+//      the scoring engine. Passed in as opts.agentName.
+//   3. the product the scoring engine picked (prospect_reasoning "product=...").
+//   4. niche fallback.
 function pickPlaybookForLead(opts) {
     opts = opts || {};
     if (opts.agentKey && PLAYBOOKS[opts.agentKey]) return PLAYBOOKS[opts.agentKey];
+    const byName = playbookFromAgentName(opts.agentName);
+    if (byName) return byName;
     const reasoning = String(opts.prospectReasoning || '');
     const m = reasoning.match(/product=([^(]+)\(/i);
     if (m) {
@@ -313,7 +342,7 @@ function buildEmailHtml(opts) {
 
 module.exports = {
     CALENDAR_LINK, MARKETING_SITE, PLAYBOOKS, VARIANT_KEYS, VARIANT_LABELS,
-    escapeHtml, sanitizeCopy, pickPlaybook, pickPlaybookForLead, playbookKey, firstName, formatPhone,
+    escapeHtml, sanitizeCopy, pickPlaybook, pickPlaybookForLead, playbookFromAgentName, playbookKey, firstName, formatPhone,
     getSenderIdentity, templateBody, pickVariant, variantLabel, buildSubject, buildVariantBody,
     ensureBookingLink, footerText, buildEmailHtml
 };

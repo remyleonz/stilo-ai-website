@@ -15,6 +15,7 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const kit = require('./_email_kit');
+const scriptAgent = require('./_script_agent');
 
 function leadsClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -125,12 +126,22 @@ module.exports = async function handler(req, res) {
     const business = lead.name || 'your business';
     const niche = lead.category || '';
     const fName = kit.firstName(lead.owner_name);
-    // Pitch the agent we're ACTUALLY selling this lead: David's engine records
-    // it in prospect_reasoning ("product=LCR(...)"), which is what's on the
-    // cold-call script. body.agent lets the composer override. Niche is the
-    // last-resort fallback. This stops every email defaulting to AI Receptionist.
+    // Pitch the agent we're ACTUALLY selling this lead. Priority:
+    //   1. body.agent  — composer dropdown override (rep picked it)
+    //   2. the agent the cold-call SCRIPT names (David's brief "Pitch: <agent>") —
+    //      the human pick the rep reads off the screen. This can DIFFER from the
+    //      scoring engine (e.g. brief says Website Builder, engine says LCR), and
+    //      the script wins because that's what the rep pitched.
+    //   3. prospect_reasoning ("product=...") then niche.
+    // Only hit GCS for the script when there's no explicit dropdown override.
+    let scriptAgentName = null;
+    if (!body.agent) {
+        try { scriptAgentName = await scriptAgent.getScriptAgentName(lead.name); }
+        catch (_) { scriptAgentName = null; }
+    }
     const playbook = kit.pickPlaybookForLead({
         agentKey: body.agent,
+        agentName: scriptAgentName,
         prospectReasoning: lead.prospect_reasoning || lead.matched_product_name,
         niche: niche
     });
@@ -173,7 +184,8 @@ module.exports = async function handler(req, res) {
             { key: 'reactivation', label: 'Lost Customer Reactivation' },
             { key: 'receptionist', label: 'AI Receptionist' },
             { key: 'lead_response', label: 'Outbound Lead Response' },
-            { key: 'lead_gen', label: 'Lead Generator' }
+            { key: 'lead_gen', label: 'Lead Generator' },
+            { key: 'website', label: 'Website Builder' }
         ],
         sender: { name: sender.name, phone: sender.phone, footer: kit.footerText(sender) },
         source: source
