@@ -6518,6 +6518,7 @@
         async function openProspectDrawer(leadId, mode) {
             mode = mode || 'callable';
             prospectState.currentLeadId = leadId;
+            callbackState = { selectedIso: null, expandedDay: null };  // fresh picker per lead
             history.replaceState(null, '', '#lead=' + encodeURIComponent(leadId));
             var drawer = document.getElementById('prospectDrawer');
             var overlay = document.getElementById('prospectDrawerOverlay');
@@ -7017,17 +7018,8 @@
                 + (mode === 'emailable'
                     ? ''
                     : '<div id="prospectFollowupRow" style="display:none;">'
-                      + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">When should we call them back?</label>'
-                      + '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
-                      + '<input id="prospectNextCallbackDate" type="date" style="flex:1.4;min-width:140px;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">'
-                      + '<input id="prospectNextCallbackTime" type="time" step="900" style="flex:1;min-width:110px;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">'
-                      + '</div>'
-                      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'
-                      + '<button type="button" onclick="setCallbackPreset(2,0)" style="padding:5px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:11px;cursor:pointer;">In 2 hours</button>'
-                      + '<button type="button" onclick="setCallbackPreset(0,1,10,0)" style="padding:5px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:11px;cursor:pointer;">Tomorrow 10am</button>'
-                      + '<button type="button" onclick="setCallbackPreset(0,1,14,0)" style="padding:5px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:11px;cursor:pointer;">Tomorrow 2pm</button>'
-                      + '<button type="button" onclick="setCallbackPreset(0,7,10,0)" style="padding:5px 10px;background:transparent;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:11px;cursor:pointer;">Next week</button>'
-                      + '</div>'
+                      + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:8px;">When should we call them back?</label>'
+                      + '<div id="prospectCallbackPicker" style="margin-bottom:12px;padding:12px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.18);border-radius:8px;"></div>'
                       + '</div>')
                 // SDR attribution. Defaults to whoever's signed in. Overrideable
                 // for the rare case one of us is logging the other's call (e.g.
@@ -7213,7 +7205,11 @@
             var submitBtn = document.querySelector('#prospectCallForm button[type="submit"]');
             if (!sel) return;
             var match = PROSPECT_OUTCOMES.find(function(o){ return o.value === sel.value; });
-            if (row) row.style.display = (match && match.followUp) ? 'block' : 'none';
+            if (row) {
+                var showFollow = !!(match && match.followUp);
+                row.style.display = showFollow ? 'block' : 'none';
+                if (showFollow) renderCallbackPicker();
+            }
             // booked_meeting → render Google Calendar slot picker.
             if (sel.value === 'booked_meeting') {
                 if (pickerHost) { pickerHost.style.display = 'block'; loadBookingSlots(); }
@@ -7397,35 +7393,98 @@
             history.replaceState(null, '', window.location.pathname + window.location.search);
         }
 
-        // Quick presets that populate the date + time inputs.
-        // setCallbackPreset(hours, days, hour, minute) — when (hours) is non-zero
-        // we use it as a relative offset in hours; otherwise we add (days) days
-        // and set the wall-clock time to (hour, minute).
-        function setCallbackPreset(hoursOffset, daysOffset, hour, minute) {
-            var d = new Date();
-            if (hoursOffset && !daysOffset) {
-                d.setHours(d.getHours() + hoursOffset);
-            } else {
-                d.setDate(d.getDate() + (daysOffset || 0));
-                if (hour != null) d.setHours(hour);
-                if (minute != null) d.setMinutes(minute);
-                d.setSeconds(0);
+        /* ===== CALLBACK SLOT PICKER (calendar-style, 30-min slots 8am–8pm ET) ====
+           Same two-step day-cards + time-grid UI as the Booked-meeting picker,
+           but the slots are generated locally (a callback is just a reminder, it
+           doesn't need to check the Google Calendar). 7 days out, every day,
+           8:00 AM through 8:00 PM ET in 30-minute steps; past times on today are
+           hidden. The selected ISO is read by readCallbackDateTime(). */
+        var callbackState = { selectedIso: null, expandedDay: null };
+
+        // ET wall-clock helpers. The whole dashboard hardcodes EDT (-04:00),
+        // which is correct Mar–early-Nov; matches etCalendarBounds() elsewhere.
+        function etTodayYMD() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
+        function addDaysYMD(ymd, n) {
+            var p = ymd.split('-').map(Number);
+            var d = new Date(Date.UTC(p[0], p[1] - 1, p[2], 12, 0, 0));
+            d.setUTCDate(d.getUTCDate() + n);
+            return d.toISOString().slice(0, 10);
+        }
+        function etSlotIso(ymd, hh, mm) {
+            return new Date(ymd + 'T' + String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':00-04:00').toISOString();
+        }
+        function buildCallbackSlots() {
+            var slots = [];
+            var today = etTodayYMD();
+            var nowMs = Date.now();
+            for (var off = 0; off < 7; off++) {
+                var ymd = addDaysYMD(today, off);
+                for (var h = 8; h <= 20; h++) {
+                    for (var m = 0; m < 60; m += 30) {
+                        if (h === 20 && m > 0) break;   // 8:00 PM is the last slot
+                        var iso = etSlotIso(ymd, h, m);
+                        if (new Date(iso).getTime() <= nowMs + 60000) continue;  // hide past/near-now
+                        slots.push(iso);
+                    }
+                }
             }
-            var dateEl = document.getElementById('prospectNextCallbackDate');
-            var timeEl = document.getElementById('prospectNextCallbackTime');
-            if (dateEl) dateEl.value = d.toISOString().slice(0, 10);
-            if (timeEl) timeEl.value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+            return slots;
+        }
+
+        function renderCallbackPicker() {
+            var host = document.getElementById('prospectCallbackPicker');
+            if (!host) return;
+            var slots = buildCallbackSlots();
+            if (!slots.length) { host.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:12px;">No times left today. Pick a slot tomorrow.</div>'; return; }
+
+            var byDay = {}, dayOrder = [];
+            slots.forEach(function (iso) {
+                var key = bookingDayKey(iso);
+                if (!byDay[key]) { byDay[key] = []; dayOrder.push(key); }
+                byDay[key].push(iso);
+            });
+            if (!callbackState.expandedDay || !byDay[callbackState.expandedDay]) callbackState.expandedDay = dayOrder[0];
+
+            var dayCards = dayOrder.map(function (day) {
+                var isOpen = callbackState.expandedDay === day;
+                var hasSel = callbackState.selectedIso && byDay[day].indexOf(callbackState.selectedIso) !== -1;
+                var bg = isOpen ? 'var(--blue)' : (hasSel ? 'rgba(37,99,235,0.18)' : 'var(--bg-input)');
+                var border = (isOpen || hasSel) ? 'var(--blue)' : 'var(--border-medium)';
+                var color = isOpen ? 'white' : 'var(--text-primary)';
+                return '<button type="button" onclick="selectCallbackDay(\'' + day.replace(/'/g, "\\'") + '\')" '
+                    + 'style="flex:1;min-width:104px;padding:10px 8px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;color:' + color + ';font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3;transition:all 120ms;">'
+                    + escapeAdminHtml(day) + '</button>';
+            }).join('');
+            var html = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + dayCards + '</div>';
+
+            var timeButtons = (byDay[callbackState.expandedDay] || []).map(function (iso) {
+                var time = new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+                var sel = callbackState.selectedIso === iso;
+                var bg = sel ? 'var(--blue)' : 'var(--bg-input)';
+                var border = sel ? 'var(--blue)' : 'var(--border-medium)';
+                var color = sel ? 'white' : 'var(--text-primary)';
+                var shadow = sel ? 'box-shadow:0 0 0 2px rgba(37,99,235,0.35);' : '';
+                return '<button type="button" onclick="selectCallbackSlot(\'' + iso + '\')" '
+                    + 'style="padding:8px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:6px;color:' + color + ';font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all 100ms;' + shadow + '">'
+                    + escapeAdminHtml(time) + '</button>';
+            }).join('');
+            html += '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + escapeAdminHtml(callbackState.expandedDay) + ' · pick a time</div>'
+                + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;max-height:240px;overflow-y:auto;padding:2px;">' + timeButtons + '</div>';
+            host.innerHTML = html;
+        }
+
+        function selectCallbackDay(day) {
+            callbackState.expandedDay = (callbackState.expandedDay === day) ? null : day;
+            renderCallbackPicker();
+        }
+        function selectCallbackSlot(iso) {
+            callbackState.selectedIso = iso;
+            callbackState.expandedDay = bookingDayKey(iso);
+            renderCallbackPicker();
         }
 
         function readCallbackDateTime() {
-            var dateEl = document.getElementById('prospectNextCallbackDate');
-            var timeEl = document.getElementById('prospectNextCallbackTime');
-            if (!dateEl || !timeEl || !dateEl.value || !timeEl.value) return null;
-            // Construct a local-time Date and convert to ISO so the backend
-            // gets an unambiguous UTC timestamp.
-            var combined = new Date(dateEl.value + 'T' + timeEl.value + ':00');
-            if (isNaN(combined.getTime())) return null;
-            return combined.toISOString();
+            return callbackState.selectedIso || null;
         }
 
         async function submitCallLog() {
