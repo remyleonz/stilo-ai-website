@@ -6460,6 +6460,13 @@
                     if (val && !/^(unknown|none|n\/?a|tbd)$/i.test(val)) return val;
                 }
             }
+            // SDR briefs also carry "**Top solution:** <agent>"; David's owner
+            // briefs (dc/rl folders) state the pick as a "likely fit: <agent>"
+            // note instead of a "## Recommended STILO agent" section.
+            var top = src.match(/\*\*Top solution[s]?:\*\*\s*([^\r\n⭐]+)/i);
+            if (top) { var tv = psCleanAgent(top[1]); if (tv && !/^(unknown|none|n\/?a|tbd)$/i.test(tv)) return tv; }
+            var fit = src.match(/likely fit:\s*([^\r\n]+)/i);
+            if (fit) { var fv = psCleanAgent(fit[1].replace(/[·*].*$/, '')); if (fv && !/^(unknown|none|n\/?a|tbd)$/i.test(fv)) return fv; }
             var rec = src.match(/#{1,6}\s*Recommendation\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
             if (rec) {
                 var pm2 = rec[1].replace(/[*`]/g, '').match(/primary\s*:\s*([^\r\n]+)/i);

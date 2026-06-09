@@ -1913,6 +1913,12 @@
                     if (val && !/^(unknown|none|n\/?a|tbd)$/i.test(val)) return val;
                 }
             }
+            // SDR briefs also carry "**Top solution:** <agent>"; owner briefs
+            // (dc/rl) state it as a "likely fit: <agent>" note.
+            const top = src.match(/\*\*Top solution[s]?:\*\*\s*([^\r\n⭐]+)/i);
+            if (top) { const tv = cleanAgent(top[1]); if (tv && !/^(unknown|none|n\/?a|tbd)$/i.test(tv)) return tv; }
+            const fit = src.match(/likely fit:\s*([^\r\n]+)/i);
+            if (fit) { const fv = cleanAgent(fit[1].replace(/[·*].*$/, '')); if (fv && !/^(unknown|none|n\/?a|tbd)$/i.test(fv)) return fv; }
             const rec = src.match(/#{1,6}\s*Recommendation\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
             if (rec) {
                 const pm2 = rec[1].replace(/[*`]/g, '').match(/primary\s*:\s*([^\r\n]+)/i);
