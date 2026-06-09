@@ -184,6 +184,31 @@ async function readObject(token, name) {
     return await r.text();
 }
 
+// David's manifest (cold-call/manifest.json) is the source of truth: one entry
+// per lead { lead_id, business_name, filename, generated_at }. Keying off the
+// manifest filename means we can never grab the wrong file — the brief never has
+// "-script-" in its name. Cached at module scope (warm instances) for 5 min.
+let _manifest = null, _manifestAt = 0;
+async function loadManifest(token) {
+    if (_manifest && (Date.now() - _manifestAt) < 5 * 60 * 1000) return _manifest;
+    const raw = await readObject(token, PREFIX + 'manifest.json');
+    const j = JSON.parse(raw);
+    const scripts = Array.isArray(j) ? j : (j.scripts || []);
+    const byName = {}, bySlug = {};
+    for (const e of scripts) {
+        if (!e || !e.filename) continue;
+        if (e.business_name) byName[String(e.business_name).trim().toLowerCase()] = e;
+        // lead_id is the filename minus "-script-<date>.md"; strip a trailing
+        // date so it matches slugify(business_name).
+        const base = String(e.lead_id || e.filename.replace(/-script-\d{4}-\d{2}-\d{2}\.md$/i, ''))
+            .replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase();
+        if (base) bySlug[base] = e;
+    }
+    _manifest = { byName: byName, bySlug: bySlug };
+    _manifestAt = Date.now();
+    return _manifest;
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
     const gate = await assertAdminOrSdr(req, res);
@@ -193,50 +218,57 @@ module.exports = async function handler(req, res) {
     const slug = (q.slug && String(q.slug).trim()) || slugify(q.business_name);
     if (!slug) return res.status(400).json({ error: 'missing_slug', detail: 'Pass ?slug=<lead-slug> or ?business_name=<name>.' });
 
-    // 1) PRIMARY source: the dedicated cold-call SCRIPT in GCS
-    // (stilo-cold-call-scripts/cold-call/<slug>[-<date>]-script-<date>.md). This
-    // is the polished, A/B-tested script the rep reads on the call. The Supabase
-    // `cold-call-briefs` are RESEARCH (David's SAGE agent input), NOT scripts —
-    // showing them was the bug. David maintains the GCS scripts continuously.
+    // The dedicated cold-call SCRIPT lives in GCS
+    // (stilo-cold-call-scripts/cold-call/<filename>, always ending -script-<date>.md).
+    // Per David: render that file ONLY. NEVER read the Supabase cold-call-briefs
+    // bucket — those are his SAGE agent's internal RESEARCH (lead flags, objection
+    // lists), not the rep script. Showing the brief was the bug.
     let token = null;
     try { token = await getAccessToken(); }
-    catch (e) { token = null; /* SA missing/unauthorized — fall through to the brief */ }
-    if (token) {
-        try {
-            const item = await findScriptByListing(token, slug);
-            if (item) {
-                const content = await readObject(token, item.name);
-                res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
-                return res.status(200).json({
-                    slug: slug,
-                    filename: item.name,
-                    generated_at: item.updated || item.timeCreated || null,
-                    size: item.size,
-                    content_md: content,
-                    source: 'gcs-script'
-                });
-            }
-        } catch (e) {
-            console.warn('[cold-call-script] GCS script lookup failed, trying brief:', e.message);
-        }
+    catch (e) {
+        if (e.code === 'NO_SA') return res.status(404).json({ error: 'script_not_found', slug: slug });
+        return res.status(502).json({ error: 'gcs_auth_failed', detail: String(e.message || e) });
     }
 
-    // 2) FALLBACK: the Supabase research brief, only when no dedicated script
-    // exists yet for this lead. Better than an empty card.
+    // 1) PRIMARY: the manifest maps business_name → exact script filename, so we
+    //    can never grab the wrong file.
     try {
-        const brief = await findBriefInSupabase(slug, q.rep);
-        if (brief) {
+        const man = await loadManifest(token);
+        const entry = (q.business_name && man.byName[String(q.business_name).trim().toLowerCase()])
+            || man.bySlug[slug];
+        if (entry && entry.filename) {
+            const content = await readObject(token, PREFIX + entry.filename);
             res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
             return res.status(200).json({
                 slug: slug,
-                filename: brief.name,
-                generated_at: brief.generated_at,
-                content_md: brief.content_md,
-                source: 'supabase-brief'
+                filename: PREFIX + entry.filename,
+                generated_at: entry.generated_at || null,
+                content_md: content,
+                source: 'gcs-manifest'
             });
         }
     } catch (e) {
-        console.warn('[cold-call-script] brief lookup failed:', e.message);
+        console.warn('[cold-call-script] manifest lookup failed, trying listing:', e.message);
+    }
+
+    // 2) SECONDARY: prefix-list for <slug>...-script-<date>.md (a lead not yet in
+    //    the manifest). Still GCS scripts only — no brief fallback, ever.
+    try {
+        const item = await findScriptByListing(token, slug);
+        if (item) {
+            const content = await readObject(token, item.name);
+            res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
+            return res.status(200).json({
+                slug: slug,
+                filename: item.name,
+                generated_at: item.updated || item.timeCreated || null,
+                size: item.size,
+                content_md: content,
+                source: 'gcs-listing'
+            });
+        }
+    } catch (e) {
+        console.error('[cold-call-script] listing failed:', e.message);
     }
 
     return res.status(404).json({ error: 'script_not_found', slug: slug });
