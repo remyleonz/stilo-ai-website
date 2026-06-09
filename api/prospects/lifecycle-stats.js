@@ -148,6 +148,17 @@ async function localStats(sdrEmail) {
             return null;
         }
 
+        // Leads assigned to the rep but hidden from the call list because David
+        // hasn't shipped their sales script yet (snapshotted by the script sync).
+        // sb is the prospecting-scoped client created at the top of localStats.
+        let awaitingCount = 0;
+        try {
+            let aq = sb.from('awaiting_script').select('lead_id', { count: 'exact', head: true });
+            if (sdrEmail) aq = aq.eq('assigned_to', sdrEmail);
+            const { count } = await aq;
+            awaitingCount = count || 0;
+        } catch (_) { awaitingCount = 0; }
+
         return {
             tier_counts: {
                 hot:  scopedHot.count  || 0,
@@ -165,6 +176,7 @@ async function localStats(sdrEmail) {
             called_today_count:         scopedCt.count || 0,
             callbacks_due_today_count:  scopedCd.count || 0,
             dead_pool_count:            scopedDeadOut.count || 0,
+            awaiting_script_count:      awaitingCount,
             _scoping_applied: scoping_applied,
             _source: 'supabase_local'
         };
@@ -228,6 +240,7 @@ module.exports = async function handler(req, res) {
             // tier.dead (David's archive) — must come from the explicit
             // OUT_OF_PIPELINE query so we don't show 4,767 by accident.
             all_leads_count:           local ? local.all_leads_count : callableReady,
+            awaiting_script_count:     local ? local.awaiting_script_count : 0,
             called_today_count:        local ? local.called_today_count : 0,
             callbacks_due_today_count: local ? local.callbacks_due_today_count : 0,
             dead_pool_count:           local ? local.dead_pool_count : 0,

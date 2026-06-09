@@ -782,6 +782,9 @@
         <section class="page-content hidden" id="page-leads">
             <div class="section-title">My Leads</div>
 
+            <!-- Awaiting-script notice: assigned leads hidden until David ships their script -->
+            <div id="awaitingScriptBar" style="display:none;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.35);border-radius:10px;font-size:12px;color:var(--text-secondary);line-height:1.5;"></div>
+
             <!-- Workflow cards -->
             <div class="stat-grid" id="leadsWorkflowCards" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
                 <div class="stat-card accent-blue" data-workflow="callable" onclick="setLeadsSubtab('callable')" style="cursor:pointer;">
@@ -1435,6 +1438,14 @@
                 document.getElementById('lwfCalledToday').textContent = (stats.called_today_count != null) ? stats.called_today_count : (stats.activity && stats.activity.calls_today) || 0;
                 document.getElementById('lwfCallbacks').textContent = (stats.callbacks_due_today_count != null) ? stats.callbacks_due_today_count : (stats.tab_badges && stats.tab_badges.callbacks) || 0;
                 document.getElementById('lwfBooked').textContent = (stats.tab_badges && stats.tab_badges.booked) || (stats.activity && stats.activity.booked_this_week) || 0;
+                var awaiting = Number(stats.awaiting_script_count || 0);
+                var asb = document.getElementById('awaitingScriptBar');
+                if (asb) {
+                    if (awaiting > 0) {
+                        asb.innerHTML = '<span style="font-size:15px;">⏳</span> <span><strong>' + awaiting + ' of your lead' + (awaiting === 1 ? '' : 's') + ' ' + (awaiting === 1 ? 'is' : 'are') + ' waiting on a sales script from David.</strong> They\'re hidden from your call list until the script lands, then they reappear automatically.</span>';
+                        asb.style.display = 'flex';
+                    } else { asb.style.display = 'none'; }
+                }
             } catch (e) { console.error('[leads-stats]', e); }
         }
 
