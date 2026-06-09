@@ -5169,9 +5169,12 @@
         function applyClientFilters(rows) {
             var f = prospectState.filters;
             rows = rows.filter(function (r) {
-                var hasOwner = (r.owner_name && String(r.owner_name).trim()) || (r.contact_name && String(r.contact_name).trim());
+                // Callable only needs a dialable phone — owner name is optional
+                // (David's briefs often leave it for the rep to confirm on the
+                // call, so requiring it here hid most of every rep's scripted
+                // list, e.g. David's 239 scripted leads showed as ~43).
                 var hasPhone = (r.owner_phone && String(r.owner_phone).trim()) || (r.phone && String(r.phone).trim());
-                return hasOwner && hasPhone;
+                return !!hasPhone;
             });
             // Search across business name + owner name. Belt-and-suspenders:
             // we also pass q= to the upstream, but if the upstream doesn't

@@ -25,8 +25,16 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_K
 const leads = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });
 
 // rep-a = Luke, rep-b = Alejandro, rep-c = Jack. (Corrected 2026-06-01 after two
-// swaps: rep-a -> Luke, rep-c -> Jack.)
-const REP_EMAIL = { 'rep-a': 'huronfire5@gmail.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'jacksonmaguire0@gmail.com' };
+// swaps: rep-a -> Luke, rep-c -> Jack.) 2026-06-08: David added owner folders
+// dc = David Coira, rl = Remy Leon. Owner folders are processed LAST so they win
+// the handful of leads David placed in both an owner and his own folder.
+const REP_EMAIL = {
+    'rep-a': 'huronfire5@gmail.com',
+    'rep-b': 'aleb1027@gmail.com',
+    'rep-c': 'jacksonmaguire0@gmail.com',
+    'dc':    'davidcoira@stiloaipartners.com',
+    'rl':    'remyleon@stiloaipartners.com'
+};
 function slugify(s) {
     // Standard Python slugify (matches David's brief filenames): delete
     // punctuation, then hyphenate whitespace/underscores/hyphens.
@@ -55,7 +63,8 @@ async function main() {
 
     // 2. Walk the brief folders, match to leads.
     const report = {};
-    const updates = { 'rep-a': [], 'rep-b': [], 'rep-c': [] };
+    const updates = {};
+    Object.keys(REP_EMAIL).forEach(f => { updates[f] = []; });
     const unmatched = [];
     for (const folder of Object.keys(REP_EMAIL)) {
         report[folder] = { briefs: 0, matched: 0, with_phone: 0, missing_phone: [], with_name: 0, missing_name: [] };
