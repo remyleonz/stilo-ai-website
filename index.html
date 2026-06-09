@@ -41,7 +41,6 @@
     <link rel="preload" as="image" href="/assets/professional.png">
     <link rel="preload" as="image" href="/assets/AUtoServices.png">
     <link rel="preload" as="image" href="/assets/realestate.png">
-    <link rel="preload" as="image" href="/assets/salons.png">
 
     <script type="application/ld+json">
     {
@@ -194,25 +193,27 @@ nav{
 }
 nav.scrolled{padding:10px 0;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:rgba(6,6,10,0.62);border-bottom:1px solid var(--stroke)}
 .nav-inner{
-  width:var(--container);margin:0 auto;
-  display:flex;align-items:center;gap:28px;justify-content:space-between;
+  width:min(1340px,94vw);margin:0 auto;
+  display:flex;align-items:center;gap:36px;justify-content:flex-start;
 }
+.nav-cta{margin-left:auto}
 .nav-logo{
   display:inline-flex;align-items:center;gap:10px;
   font-family:var(--font-display);font-weight:700;font-size:0.98rem;letter-spacing:0.04em;text-transform:uppercase;
   color:var(--fg);transition:opacity .2s;
 }
 .nav-logo:hover{opacity:0.85}
-.nav-logo-mark{height:40px;width:auto;object-fit:contain;display:none;background:transparent;filter:brightness(1.55) saturate(1.12) drop-shadow(0 2px 10px rgba(45,79,184,0.5))}
-/* Official wordmark — bigger, Lindgren-scale presence in the header. */
-.nav-logo-wordmark{height:84px;width:auto;display:none;object-fit:contain;filter:brightness(1.5) contrast(1.04) saturate(1.12) drop-shadow(0 2px 12px rgba(45,79,184,0.5))}
-nav.scrolled .nav-logo-wordmark{height:64px}
+.nav-logo-mark{height:40px;width:auto;object-fit:contain;display:none;background:transparent;filter:brightness(1.28) saturate(1.05) drop-shadow(0 2px 8px rgba(0,0,0,0.45))}
+/* Official wordmark — only a gentle lift so it stays legible on dark without
+   going neon (was brightness 1.5, which read too electric vs the asset). */
+.nav-logo-wordmark{height:76px;width:auto;display:none;object-fit:contain;filter:brightness(1.22) saturate(1.04) drop-shadow(0 2px 10px rgba(0,0,0,0.5))}
+nav.scrolled .nav-logo-wordmark{height:60px}
 .nav-logo.has-wordmark .nav-logo-text{display:none !important}
 .nav-logo.has-wordmark .nav-logo-wordmark{display:inline-block}
 .nav-logo-text{display:none}
 @media (max-width:720px){
   .nav-logo.has-wordmark .nav-logo-wordmark{display:none !important}
-  .nav-logo-mark{display:inline-block;height:34px}
+  .nav-logo-mark{display:inline-block;height:62px}
   .nav-logo-text{display:none !important}
 }
 .nav-links{display:flex;list-style:none;gap:6px}
@@ -243,14 +244,17 @@ nav.scrolled .nav-logo-wordmark{height:64px}
 .menu-toggle span{position:relative}
 .menu-toggle span::before{position:absolute;top:-7px}
 .menu-toggle span::after{position:absolute;top:7px}
+/* Drops down from behind the header (Lindgren-style), so it reads as the
+   header expanding rather than a side panel. */
 .mobile-menu{
-  position:fixed;top:0;right:0;bottom:0;width:min(360px,80vw);
-  background:var(--bg-plate);border-left:1px solid var(--stroke);
-  padding:90px 24px calc(28px + env(safe-area-inset-bottom)) 24px;z-index:45;
-  transform:translateX(100%);transition:transform .35s var(--ease-out);
+  position:fixed;top:0;left:0;right:0;
+  background:var(--bg-plate);border-bottom:1px solid var(--stroke);
+  box-shadow:0 24px 60px rgba(0,0,0,0.6);
+  padding:96px 22px calc(30px + env(safe-area-inset-bottom)) 22px;z-index:45;
+  transform:translateY(-102%);transition:transform .42s var(--ease-out);
   display:flex;flex-direction:column;gap:4px;
 }
-.mobile-menu.open{transform:translateX(0)}
+.mobile-menu.open{transform:translateY(0)}
 .mobile-menu a{padding:14px 6px;border-bottom:1px solid var(--stroke);font-size:1rem;text-align:left}
 .mobile-menu .btn-primary{
   display:flex;justify-content:center;align-items:center;
@@ -796,20 +800,20 @@ flex-wrap:wrap}
 }
 .hero-emboss img{
   width:min(820px,62%);height:auto;max-width:none;
-  opacity:0.5;
+  opacity:0.78;
   transform:translateY(-6%);
   mix-blend-mode:screen;
-  filter:saturate(1.35) brightness(1.25)
-    drop-shadow(0 2px 0 rgba(255,255,255,0.14))
-    drop-shadow(0 -2px 3px rgba(0,0,0,0.6));
+  filter:saturate(1.25) brightness(1.35)
+    drop-shadow(0 2px 0 rgba(255,255,255,0.16))
+    drop-shadow(0 -2px 3px rgba(0,0,0,0.55));
 }
-@media (max-width:720px){.hero-emboss img{width:84%;opacity:0.42}}
+@media (max-width:720px){.hero-emboss img{width:88%;opacity:0.7}}
 /* Headline: single line, all caps, pinned bottom-left, slow rise on load.
    Scoped to .hero h1.hero-headline so it beats the legacy .hero h1 rule. */
 .hero h1.hero-headline{
   font-family:var(--font-display);
   font-weight:700;text-transform:uppercase;font-optical-sizing:none;
-  font-size:clamp(1.7rem,4.6vw,4.1rem);
+  font-size:clamp(1.5rem,4.15vw,3.7rem);
   line-height:0.98;letter-spacing:0.012em;
   color:#fff;text-align:left;margin:0;white-space:nowrap;
   text-shadow:0 6px 34px rgba(0,0,0,0.6),0 2px 10px rgba(0,0,0,0.5);
@@ -818,7 +822,8 @@ flex-wrap:wrap}
   will-change:opacity,transform,filter;
 }
 @keyframes heroRiseV7{to{opacity:1;transform:translateY(0);filter:blur(0)}}
-@media (max-width:560px){.hero h1.hero-headline{white-space:normal;max-width:14ch;font-size:clamp(2rem,11vw,3rem)}}
+/* Mobile: keep it on ONE line (was wrapping to three). */
+@media (max-width:560px){.hero h1.hero-headline{white-space:nowrap;font-size:clamp(0.85rem,4.7vw,1.6rem)}}
 @media (prefers-reduced-motion:reduce){.hero h1.hero-headline{opacity:1;transform:none;filter:none;animation:none}}
 
 /* Ambient hero background: aurora orbs + video slot */
@@ -1404,7 +1409,7 @@ flex-wrap:wrap}
 }
 .industry-tabs{
   display:grid !important;
-  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
   gap:10px !important;
   margin-bottom:56px;
   position:relative;z-index:1;
@@ -1691,10 +1696,10 @@ h2{
   line-height:1.02;
 }
 h2 em,.section-header .gradient-text em{
-  font-family:var(--font-accent);
-  font-style:italic;font-weight:500;
+  font-family:var(--font-display);
+  font-style:normal;font-weight:700;
   background:none;-webkit-text-fill-color:initial;color:var(--accent-glow);
-  letter-spacing:0.005em;
+  letter-spacing:0.012em;
 }
 .section-header .gradient-text{
   font-family:var(--font-display);
@@ -1823,24 +1828,20 @@ section,.partners{background:transparent !important}
    pattern. Each agent ships its own mockup pair. */
 .agent-copy-wrap{max-width:1100px;margin:0 auto}
 .agent-content{display:none}
-.agent-content.active{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:64px;align-items:center;animation:apFade .5s var(--ease-out)}
-@media (max-width:960px){.agent-content.active{grid-template-columns:1fr;gap:36px}}
-/* Mobile: screenshots first, then the copy + CTA centered underneath.
-   column-reverse flips the DOM order (copy-text, then mockups) so the
-   screenshots sit on top and the headline + body + CTA land centered below. */
-@media (max-width:760px){
-  .agents-master .agent-content.active{display:flex !important;flex-direction:column;gap:32px}
-  .agents-master .agent-content.active .agent-mockups{order:0}
-  .agents-master .agent-content.active .agent-copy-text{order:1;align-items:center;text-align:center}
-  .agents-master .agent-content.active .agent-panel-body{max-width:46ch}
-  .agents-master .agent-content.active .agent-copy-cta{align-self:center}
-}
-.agent-copy-text{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+/* Stacked + centered: title, body, then the screenshots underneath with a
+   generous gap. (Body now sits between the demo video and the screenshots.) */
+.agent-content.active{display:flex;flex-direction:column;align-items:center;text-align:center;gap:58px;max-width:940px;margin:0 auto;animation:apFade .5s var(--ease-out)}
+.agent-content.active .agent-copy-text{order:0}
+.agent-content.active .agent-mockups{order:1}
+@media (max-width:760px){.agent-content.active{gap:40px}}
+.agent-copy-text{display:flex;flex-direction:column;align-items:center;text-align:center}
+/* Shared CTA, centered below all panels. */
+.agent-copy-cta-wrap{text-align:center;margin-top:54px}
 .agent-content h2{
   font-size:clamp(1.8rem,2.6vw,2.6rem);
-  margin:0 0 16px;
+  margin:0 0 18px;
   text-transform:uppercase;
-  letter-spacing:-0.02em;
+  letter-spacing:0.012em;
   line-height:1.06;
   color:#fff;
   text-shadow:none;
@@ -1932,32 +1933,17 @@ section,.partners{background:transparent !important}
 .agent-panel-bullets{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:30px}
 .agent-panel-bullets li{padding-left:24px;position:relative;color:var(--fg-2);font-size:0.96rem;line-height:1.5}
 
-/* V3.1: bullets + stat side by side instead of stacked.
-   Grid-ifies the active agent-content so the stat badge sits to the
-   right of the bullets and lines up with their top edge. */
+/* V4 (2026-06-08): centered vertical stack — title, body, then screenshots
+   with a generous gap. (Authoritative; overrides the old side-by-side grid.) */
 .agent-content.active{
-  display:grid !important;
-  grid-template-columns:minmax(0,1fr) auto;
-  column-gap:32px;row-gap:20px;
+  display:flex !important;
+  flex-direction:column;
   align-items:center;
+  text-align:center;
+  gap:58px;
 }
-.agent-content.active > h2,
-.agent-content.active > .agent-panel-body{
-  grid-column:1 / -1;
-  margin-bottom:0;
-}
-.agent-content.active > .agent-panel-bullets{
-  grid-column:1;
-  margin-bottom:0;
-}
-.agent-content.active > .agent-panel-stat{
-  grid-column:2;
-  align-self:start;
-  margin-top:0;
-}
-@media (max-width:720px){
-  .agent-content.active{grid-template-columns:1fr}
-  .agent-content.active > .agent-panel-stat{grid-column:1}
+@media (max-width:760px){
+  .agent-content.active{gap:40px}
 }
 .agent-panel-bullets li::before{
   content:"";position:absolute;left:0;top:0.55em;width:10px;height:10px;border-radius:50%;
@@ -2386,7 +2372,7 @@ section,.partners{background:transparent !important}
 /* HERO V3.2 — bigger, one-line, lower position */
 .hero{padding:96px 0 80px !important;align-items:center !important}
 .hero .container{padding-top:80px}
-.hero h1{
+.hero h1:not(.hero-headline){
   font-size:clamp(2.2rem,4.6vw,4rem) !important;
   letter-spacing:-0.02em !important;line-height:1.0 !important;
   white-space:normal !important;
@@ -2397,7 +2383,7 @@ section,.partners{background:transparent !important}
 .hero-sub{font-size:clamp(1.05rem,1.3vw,1.3rem) !important;color:#ffffff !important;margin-top:24px !important}
 .hero-ctas{margin-top:32px !important}
 @media (max-width:760px){
-  .hero h1{font-size:clamp(1.8rem,7vw,2.6rem) !important;white-space:normal !important}
+  .hero h1:not(.hero-headline){font-size:clamp(1.8rem,7vw,2.6rem) !important;white-space:normal !important}
   .hero h1 .line{display:block}
   .hero h1 .line + .line::before{content:""}
 }
@@ -2538,37 +2524,22 @@ section,.partners{background:transparent !important}
 .booking-card .booking-msg.ok{color:#10b981}
 .booking-card .booking-confirm{margin-top:14px}
 
-/* STICKY CTA — hide on desktop, circular + smaller on mobile */
+/* STICKY CTA removed per Remy (the floating Start pill read as ghost UI). */
 .sticky-cta{display:none !important}
-.sticky-cta.dismissed{display:none !important;opacity:0;pointer-events:none}
-@media (max-width:720px){
-  .sticky-cta{
-    display:flex !important;
-    width:auto !important;height:auto !important;
-    padding:8px 14px 8px 18px !important;
-    border-radius:999px !important;
-    font-size:0.78rem !important;
-    bottom:14px !important;right:14px !important;
-  }
-  .sticky-cta .btn-primary{
-    padding:8px 14px !important;font-size:0.74rem !important;
-    border-radius:999px !important;letter-spacing:0.04em !important;
-  }
-}
 
 /* Final mobile ordering for the agent detail block. This lives late in
    the cascade so the legacy two-column agent rules cannot reassert. */
 @media (max-width:720px){
   .agent-content.active{
-    display:grid !important;
-    grid-template-columns:1fr !important;
-    gap:22px !important;
+    display:flex !important;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:40px !important;
   }
-  .agent-copy-text{display:contents !important}
-  .agent-copy-text h2{order:1}
-  .agent-copy-text .agent-panel-body{order:2}
+  .agent-copy-text{display:flex !important;flex-direction:column;align-items:center;text-align:center}
   .agent-mockups{
-    order:3;
+    order:3;width:100%;
     min-height:430px !important;
     display:block !important;
     perspective:1000px !important;
@@ -2579,7 +2550,6 @@ section,.partners{background:transparent !important}
   }
   .agent-mockup-back{top:0 !important;right:0 !important;bottom:auto !important;left:auto !important;transform:rotate(2deg) !important;z-index:1}
   .agent-mockup-front{top:128px !important;left:0 !important;right:auto !important;bottom:auto !important;transform:rotate(-2deg) !important;z-index:2}
-  .agent-copy-cta{order:4;justify-self:start;margin-top:34px}
 }
 
     
@@ -2738,15 +2708,15 @@ section .section-header h2 .gradient-text em {
   width:min(540px,62%);
   aspect-ratio:1/1;
   padding:44px;
-  display:flex;flex-direction:column;justify-content:flex-start;gap:16px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:16px;
   border-radius:24px;
   background:
-    radial-gradient(135% 135% at 18% 14%,rgba(45,79,184,0.30),transparent 56%),
+    radial-gradient(135% 135% at 50% 18%,rgba(45,79,184,0.28),transparent 60%),
     linear-gradient(165deg,var(--bg-elevated) 0%,var(--bg-plate) 100%);
   border:1px solid var(--stroke-hi);
   box-shadow:0 50px 110px rgba(0,0,0,0.6),0 0 0 1px rgba(45,79,184,0.12),inset 0 1px 0 rgba(255,255,255,0.05);
   overflow:hidden;
-  opacity:0;transform:translateY(96px) scale(0.9);filter:blur(10px);
+  opacity:0;filter:blur(10px);
   transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1.15s cubic-bezier(.22,1.32,.36,1),filter .9s ease;
   will-change:opacity,transform,filter;
 }
@@ -2754,26 +2724,21 @@ section .section-header h2 .gradient-text em {
   content:"";position:absolute;top:0;left:0;right:0;height:1px;
   background:linear-gradient(90deg,transparent,rgba(90,123,232,0.7),transparent);
 }
-.step-card.in-view{opacity:1;transform:none;filter:blur(0);}
-/* Big overlap so the corners clearly stack (was edge-to-edge). */
-.step-card-1{align-self:flex-start;z-index:1;}
-.step-card-2{align-self:flex-end;margin-top:-205px;z-index:2;}
-.step-card-3{align-self:flex-start;margin-top:-205px;z-index:3;}
-/* Number: SOLID brand-blue, in normal flow at the top so the card fills out. */
-.step-card-index{
-  font-family:var(--font-display);font-weight:700;font-optical-sizing:none;
-  font-size:clamp(4rem,7.5vw,7rem);line-height:0.8;
-  color:var(--accent-glow);
-  letter-spacing:0.01em;pointer-events:none;
-  text-shadow:0 0 44px rgba(45,79,184,0.55);
-}
+/* Directional jump-in on scroll: Audit from the left, Build from the right,
+   Run from the left. Each card animates in as it enters the viewport. */
+.step-card.in-view{opacity:1;transform:translateX(0) scale(1);filter:blur(0);}
+.step-card-1{align-self:flex-start;z-index:1;transform:translateX(-160px) scale(0.9);}
+.step-card-2{align-self:flex-end;margin-top:-205px;z-index:2;transform:translateX(160px) scale(0.9);}
+.step-card-3{align-self:flex-start;margin-top:-205px;z-index:3;transform:translateX(-160px) scale(0.9);}
+.step-card-index{display:none;}
+.step-card-body{text-align:center;}
 .step-card-body h3{
   font-family:var(--font-display);font-size:clamp(1.9rem,2.7vw,2.7rem);
   text-transform:uppercase;font-weight:700;font-optical-sizing:none;letter-spacing:0.02em;
   color:#fff;margin:0 0 14px;line-height:1;
 }
 .step-card-body p{
-  color:#fff;font-size:1.04rem;line-height:1.6;max-width:34ch;margin:0;
+  color:#fff;font-size:1.04rem;line-height:1.6;max-width:34ch;margin:0 auto;
 }
 @media (max-width:760px){
   .steps-stack{max-width:460px;}
@@ -2787,62 +2752,47 @@ section .section-header h2 .gradient-text em {
 /* WHY-US comparison — rebuilt as a polished product component (2026-06-05).
    Bigger type, brighter notes, solid filled checks, a highlighted STILO
    column with a blue wash + halo. No more thin gray spreadsheet. */
+/* Two-column comparison (2026-06-08): STILO vs typical agency, headers on top,
+   one clean statement per cell. No feature-title column, no per-cell labels. */
 .why-compare{
-  max-width:1060px;margin:0 auto;
+  max-width:900px;margin:0 auto;
   border:1px solid var(--stroke-hi);border-radius:22px;overflow:hidden;
   background:var(--bg-plate);
   box-shadow:0 50px 120px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.04);
 }
 .why-compare-head,.wc-row{
-  display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) minmax(0,1fr);
+  display:grid;grid-template-columns:1fr 1fr;
 }
 .why-compare-head{border-bottom:1px solid var(--stroke-hi);}
-.why-compare-head>div{
-  padding:24px 30px;font-family:var(--font-display);
-  font-weight:600;text-transform:uppercase;letter-spacing:0.14em;font-size:0.82rem;
-  display:flex;align-items:center;
+.why-compare-head .wc-col{
+  padding:22px 26px;font-family:var(--font-display);font-optical-sizing:none;
+  font-weight:700;text-transform:uppercase;letter-spacing:0.1em;font-size:0.95rem;
+  display:flex;align-items:center;justify-content:center;text-align:center;
 }
-.wc-col{justify-content:center;text-align:center;}
 .wc-col.wc-stilo{color:#fff;}
 .wc-col.wc-them{color:var(--fg-3);}
-/* Highlight the STILO column down the whole table. */
+/* Highlight the STILO column (header + every cell). */
 .why-compare .wc-stilo{
-  background:linear-gradient(180deg,rgba(45,79,184,0.18),rgba(45,79,184,0.06));
+  background:linear-gradient(180deg,rgba(45,79,184,0.16),rgba(45,79,184,0.05));
   box-shadow:inset 1px 0 0 var(--accent-line),inset -1px 0 0 var(--accent-line);
 }
-.wc-row{border-top:1px solid var(--stroke);align-items:stretch;}
-.wc-feature{padding:32px 30px;display:flex;flex-direction:column;justify-content:center;}
-.wc-feature h3{
-  font-family:var(--font-display);
-  font-size:1.4rem;text-transform:uppercase;font-weight:600;
-  letter-spacing:0.012em;margin:0;color:#fff;line-height:1.08;
-}
-.wc-feature p{color:var(--fg-2);font-size:0.95rem;line-height:1.55;margin:8px 0 0;}
+.wc-row{border-top:1px solid var(--stroke);}
 .wc-cell{
-  padding:30px 26px;display:flex;flex-direction:row;align-items:center;
-  justify-content:center;text-align:left;gap:14px;
+  padding:26px 26px;display:flex;flex-direction:row;align-items:center;gap:15px;
 }
 .wc-mark{
-  width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
-  font-size:1.05rem;font-weight:700;flex-shrink:0;line-height:1;
+  width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  font-size:1rem;font-weight:700;flex-shrink:0;line-height:1;
 }
 .wc-check{background:var(--accent);color:#fff;border:1px solid var(--accent-hi);box-shadow:0 6px 18px rgba(45,79,184,0.45);}
-.wc-x{background:rgba(255,255,255,0.05);color:var(--fg-2);border:1px solid var(--stroke-hi);}
-.wc-note{font-size:1.04rem;line-height:1.38;max-width:22ch;color:#fff;font-weight:500;}
+.wc-x{background:rgba(255,255,255,0.05);color:var(--fg-3);border:1px solid var(--stroke-hi);}
+.wc-note{font-size:1.02rem;line-height:1.4;color:#fff;font-weight:500;}
 .wc-cell.wc-them .wc-note{color:var(--fg-2);font-weight:400;}
 @media (max-width:760px){
-  .why-compare-head{display:none}
-  .wc-row{grid-template-columns:1fr 1fr;grid-template-areas:"feat feat" "stilo them"}
-  .wc-feature{grid-area:feat;padding:26px 22px 8px}
-  .wc-feature h3{font-size:1.25rem}
-  .wc-cell.wc-stilo{grid-area:stilo}
-  .wc-cell.wc-them{grid-area:them}
-  .wc-cell{padding:18px 18px 24px;gap:10px;flex-direction:column;align-items:flex-start;text-align:left}
-  .wc-cell::before{
-    content:attr(data-label);font-family:var(--font-mono);
-    font-size:0.62rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--fg-3);
-  }
-  .wc-note{font-size:0.95rem;max-width:none}
+  .why-compare-head .wc-col{font-size:0.72rem;padding:14px 10px;letter-spacing:0.06em;}
+  .wc-cell{padding:18px 13px;gap:10px;flex-direction:column;align-items:center;text-align:center;}
+  .wc-mark{width:30px;height:30px;font-size:0.9rem;}
+  .wc-note{font-size:0.9rem;line-height:1.35;}
 }
 
 /* ===== 2026-06-05b: sitewide Bodoni weight + optical-sizing fix =====
@@ -2868,7 +2818,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 <nav id="topNav">
   <div class="nav-inner">
     <a href="/" class="nav-logo has-wordmark" id="navLogoLink" onclick="location.href='/';return false;">
-      <img class="nav-logo-mark" src="/assets/StiloLogoOfficial.png" alt="STILO AI PARTNERS" />
+      <img class="nav-logo-mark" src="/assets/STILOMOBILELOGO.png" alt="STILO AI PARTNERS" />
       <img class="nav-logo-wordmark" src="/assets/StiloLogoOfficial.png" alt="STILO AI PARTNERS" />
       <span class="nav-logo-text">STILO AI PARTNERS</span>
     </a>
@@ -2962,9 +2912,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
     <div class="agent-copy-wrap">
       <div class="agent-content active" data-agent-content="receptionist">
         <div class="agent-copy-text">
-          <h2>Never lose a call to <em>voicemail</em>.</h2>
+          <h2>Never lose a call to <em>voicemail</em></h2>
           <p class="agent-panel-body">A 24/7 voice agent trained on your hours, services, and pricing. Picks up in under two rings, qualifies the caller, books straight into your calendar, and sends a summary to your team. Transfers to a human when something needs one.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -2980,9 +2929,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 
       <div class="agent-content" data-agent-content="lead-reply">
         <div class="agent-copy-text">
-          <h2>Reply to every lead <em>in under a minute</em>.</h2>
+          <h2>Reply to every lead <em>in under a minute</em></h2>
           <p class="agent-panel-body">Connects to your forms, ads, and inbox. New lead lands, the agent replies via text, email, or voice within sixty seconds, qualifies the lead, and books them straight into your calendar.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -2998,9 +2946,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 
       <div class="agent-content" data-agent-content="reactivation">
         <div class="agent-copy-text">
-          <h2>Bring <em>dormant customers</em> back.</h2>
+          <h2>Bring <em>dormant customers</em> back</h2>
           <p class="agent-panel-body">Scans your customer history for people who haven&rsquo;t visited in six-plus months and sends personalized outreach with offers tailored to their past behavior, then routes the bookings straight to your calendar.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -3016,9 +2963,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 
       <div class="agent-content" data-agent-content="lead-gen">
         <div class="agent-copy-text">
-          <h2>Find your <em>next best customers</em>.</h2>
+          <h2>Find your <em>next best customers</em></h2>
           <p class="agent-panel-body">Builds targeted prospect lists based on your ideal customer profile, location, and industry. Ranks leads by fit, enriches contact data, and initiates outreach sequences.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -3034,9 +2980,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 
       <div class="agent-content" data-agent-content="website">
         <div class="agent-copy-text">
-          <h2>A site built <em>to convert</em>.</h2>
+          <h2>A site built <em>to convert</em></h2>
           <p class="agent-panel-body">Researches your market, competitors, and customers, then builds a site designed to convert visitors into booked appointments. Every page is written for your services and pricing.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -3052,9 +2997,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 
       <div class="agent-content" data-agent-content="seo">
         <div class="agent-copy-text">
-          <h2>Show up in <em>ChatGPT, Google AI, Perplexity</em>.</h2>
+          <h2>Show up in <em>ChatGPT, Google AI, Perplexity</em></h2>
           <p class="agent-panel-body">Optimizes your site structure, content, and metadata so AI engines recommend your business. When someone asks &ldquo;best provider near me,&rdquo; you show up in the answer.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -3070,9 +3014,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 
       <div class="agent-content" data-agent-content="growth">
         <div class="agent-copy-text">
-          <h2>Know what to do next, <em>every week</em>.</h2>
+          <h2>Know what to do next, <em>every week</em></h2>
           <p class="agent-panel-body">Monitors your market, tracks competitor moves, and ships you a weekly brief with three specific actions. Where you&rsquo;re being out-positioned, what&rsquo;s breaking in your favor, and what to ship this week.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -3088,9 +3031,8 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
 
       <div class="agent-content" data-agent-content="sales">
         <div class="agent-copy-text">
-          <h2>Sells <em>while you sleep</em>.</h2>
+          <h2>Sells <em>while you sleep</em></h2>
           <p class="agent-panel-body">Listens to every call and email thread, rewrites your scripts and sequences against what actually closes, and sends the outbound follow-ups for you on a cadence you control. Per-rep scorecards, real-time deal-risk alerts, and a weekly playbook on what&rsquo;s moving deals.</p>
-          <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
         </div>
         <div class="agent-mockups">
           <div class="agent-mockup agent-mockup-back">
@@ -3102,6 +3044,10 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
             <div class="agent-mockup-body"><div class="label">Carlos &middot; this week</div><div class="value">A</div><div class="row"><b>Talk-ratio</b><span>54%</span></div><div class="row"><b>Discovery questions</b><span>9 / call</span></div><div class="row"><b>Next-step rate</b><span>78%</span></div><div class="row"><b>Deal-risk alerts</b><span>2 open</span></div></div>
           </div>
         </div>
+      </div>
+
+      <div class="agent-copy-cta-wrap fade-in">
+        <a href="#contact" class="agent-copy-cta">Talk to a partner</a>
       </div>
 
       </div>
@@ -3195,7 +3141,6 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
       <button class="industry-tab" data-industry="professional"><span class="industry-tab-num">06</span>Professional Services</button>
       <button class="industry-tab" data-industry="auto"><span class="industry-tab-num">07</span>Auto Services</button>
       <button class="industry-tab" data-industry="real-estate"><span class="industry-tab-num">08</span>Real Estate</button>
-      <button class="industry-tab" data-industry="salons"><span class="industry-tab-num">09</span>Salons &amp; Barbershops</button>
     </div>
 
     <!-- HOME SERVICES -->
@@ -3203,7 +3148,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
       <!-- Industry hero image. Swap to /assets/industries/home-services.jpg for an owned asset. -->
       <div class="industry-image"><img src="/assets/homeservices.png" alt="Tradesperson on the job for home services" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Stop losing jobs when you are in a customer's home.</h3>
+        <h3 class="industry-title">Stop losing jobs when you are in a customer's home</h3>
         <p class="industry-pain">38% of inbound calls to a home services business go to voicemail. Each call is worth $400-$3,000. The next plumber on Google gets the job.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3222,7 +3167,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
       <!-- Industry hero image. Swap to /assets/industries/med-spa.jpg for an owned asset. -->
       <div class="industry-image"><img src="/assets/medspas.png" alt="Med spa wellness treatment" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Bring back the clients you already paid to acquire.</h3>
+        <h3 class="industry-title">Bring back the clients you already paid to acquire</h3>
         <p class="industry-pain">Med spa clients churn at 35% per year. Most never get a personalized reactivation. Your dormant list is the highest-margin revenue you are not capturing.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3240,7 +3185,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
     <div class="industry-panel" data-industry-panel="insurance">
       <div class="industry-image"><img src="/assets/insurance.png" alt="Insurance agent meeting with a client" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Quote the caller before they reach the next agency.</h3>
+        <h3 class="industry-title">Quote the caller before they reach the next agency</h3>
         <p class="industry-pain">People shopping for coverage call a few agencies and buy from the first one that picks up and quotes. Miss the call and the policy gets written somewhere else. Speed and follow-up win the premium.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3258,7 +3203,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
     <div class="industry-panel" data-industry-panel="marketing">
       <div class="industry-image"><img src="/assets/marketing.png" alt="Marketing and web design agency team at work" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Run your own pipeline as well as your clients'.</h3>
+        <h3 class="industry-title">Run your own pipeline as well as your clients'</h3>
         <p class="industry-pain">Agencies build sharp funnels for clients and run leaky ones for themselves. Discovery calls go to voicemail and proposals stall while you are heads-down on delivery. Warm leads cool off fast.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3276,7 +3221,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
     <div class="industry-panel" data-industry-panel="professional">
       <div class="industry-image"><img src="/assets/professional.png" alt="Accountant reviewing documents with a client" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Bill more hours. Stop fielding the same calls.</h3>
+        <h3 class="industry-title">Bill more hours. Stop fielding the same calls</h3>
         <p class="industry-pain">Every call about intake, status, or scheduling is time you cannot bill. Prospects who can't reach you call the next firm. The work that pays keeps getting interrupted by the phone.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3295,7 +3240,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
       <!-- Industry hero image. Swap to /assets/industries/real-estate.jpg for an owned asset. -->
       <div class="industry-image"><img src="/assets/realestate.png" alt="Modern luxury home for realtors" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Stop losing leads to the next agent who picks up first.</h3>
+        <h3 class="industry-title">Stop losing leads to the next agent who picks up first</h3>
         <p class="industry-pain">Realtors close 1 in 10 leads. The other 9 just did not get followed up with. Speed-to-lead is the entire game and you are losing it to brokers with bigger teams.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3309,30 +3254,12 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
       </div>
     </div>
 
-    <!-- SALONS & BARBERSHOPS -->
-    <div class="industry-panel" data-industry-panel="salons">
-      <div class="industry-image"><img src="/assets/salons.png" alt="Modern hair salon and barbershop interior" loading="eager" decoding="async"></div>
-      <div class="industry-content">
-        <h3 class="industry-title">Keep every chair booked, even when your hands are full.</h3>
-        <p class="industry-pain">Stylists and barbers cannot answer the phone mid-cut, so booking calls roll to voicemail and walk to the shop down the street. No-shows and empty chairs quietly eat the week's revenue.</p>
-        <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
-      </div>
-      <div class="industry-system">
-        <div class="industry-system-label">The system we'd build</div>
-        <div class="industry-agent-stack">
-          <div class="industry-agent"><span class="industry-agent-num">01</span><div><b>Receptionist</b><span>Books and reschedules appointments while you are on the chair</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">02</span><div><b>Lost Customer Reactivation</b><span>Texts clients due for their next cut or color</span></div></div>
-          <div class="industry-agent"><span class="industry-agent-num">03</span><div><b>Outbound Lead Reply</b><span>Answers DMs and form leads before they book elsewhere</span></div></div>
-        </div>
-      </div>
-    </div>
-
     <!-- AUTO SERVICES -->
     <div class="industry-panel" data-industry-panel="auto">
       <!-- Industry hero image. Swap to /assets/industries/auto.jpg for an owned asset. -->
       <div class="industry-image"><img src="/assets/AUtoServices.png" alt="Auto repair shop" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Customers call from the side of the road. Pick up first.</h3>
+        <h3 class="industry-title">Customers call from the side of the road. Pick up first</h3>
         <p class="industry-pain">When a car needs work, the customer calls the first shop that answers. Voicemail means they call the next shop. You compete on speed before you compete on price.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3351,7 +3278,7 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
       <!-- Industry hero image. Swap to /assets/industries/medical.jpg for an owned asset. -->
       <div class="industry-image"><img src="/assets/Medical.png" alt="Modern dental and medical clinic" loading="eager" decoding="async"></div>
       <div class="industry-content">
-        <h3 class="industry-title">Fill the chair, every chair, every day.</h3>
+        <h3 class="industry-title">Fill the chair, every chair, every day</h3>
         <p class="industry-pain">Dental patients miss 30% of their 6-month recall appointments because nobody calls them. Every empty chair is profit you already had on the schedule.</p>
         <a href="#contact" class="industry-cta">Talk to a partner <span aria-hidden="true">&rarr;</span></a>
       </div>
@@ -3397,41 +3324,28 @@ h1,h2,.gradient-text,.section-header .gradient-text,.section-header h2,
     </div>
     <div class="why-compare fade-in">
       <div class="why-compare-head">
-        <div class="wc-feature-head"></div>
-        <div class="wc-col wc-stilo">STILO AI PARTNERS</div>
+        <div class="wc-col wc-stilo">STILO AI Partners</div>
         <div class="wc-col wc-them">Typical agency</div>
       </div>
 
       <div class="wc-row">
-        <div class="wc-feature">
-          <h3>Custom, not configured.</h3>
-        </div>
-        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Trained on your real business</span></div>
-        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Generic template, your logo glued on</span></div>
+        <div class="wc-cell wc-stilo"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Agents trained on your real calls, customers, and pricing</span></div>
+        <div class="wc-cell wc-them"><span class="wc-mark wc-x">&times;</span><span class="wc-note">A generic template with your logo dropped on top</span></div>
       </div>
 
       <div class="wc-row">
-        <div class="wc-feature">
-          <h3>We run it for you.</h3>
-        </div>
-        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Monitored and tuned every week</span></div>
-        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Handed a dashboard, then gone</span></div>
+        <div class="wc-cell wc-stilo"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">We watch and tune every agent, every week</span></div>
+        <div class="wc-cell wc-them"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Handed a login, then left to figure it out</span></div>
       </div>
 
       <div class="wc-row">
-        <div class="wc-feature">
-          <h3>One connected system.</h3>
-        </div>
-        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Agents share one brain</span></div>
-        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Nine tools duct-taped together</span></div>
+        <div class="wc-cell wc-stilo"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">One system where every agent shares a brain</span></div>
+        <div class="wc-cell wc-them"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Nine disconnected tools duct-taped together</span></div>
       </div>
 
       <div class="wc-row">
-        <div class="wc-feature">
-          <h3>AI plus human review.</h3>
-        </div>
-        <div class="wc-cell wc-stilo" data-label="STILO AI PARTNERS"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">Human signoff before launch</span></div>
-        <div class="wc-cell wc-them" data-label="Typical agency"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Unchecked AI ships raw</span></div>
+        <div class="wc-cell wc-stilo"><span class="wc-mark wc-check">&#10003;</span><span class="wc-note">A human signs off before it talks to a customer</span></div>
+        <div class="wc-cell wc-them"><span class="wc-mark wc-x">&times;</span><span class="wc-note">Unchecked AI shipped straight to your clients</span></div>
       </div>
     </div>
     <div style="text-align:center;margin-top:64px;" class="fade-in">
@@ -4103,8 +4017,12 @@ if (!canvas) { /* no-op */ } else if (reduced) {
     });
   },{threshold:0.14,rootMargin:'0px 0px -60px 0px'});
   els.forEach(function(el){obs.observe(el);});
-  // Safety net: if something prevents IO (tab throttling, headless preview), force in-view after 3s
-  setTimeout(function(){els.forEach(function(el){el.classList.add('in-view');});},3000);
+  // Safety net: if something prevents IO (tab throttling, headless preview),
+  // force in-view after 3s — but NOT the step cards, whose whole point is the
+  // directional jump-in on scroll (the observer reveals those reliably).
+  setTimeout(function(){
+    document.querySelectorAll('.fade-in,.process-step').forEach(function(el){el.classList.add('in-view');});
+  },3000);
 
   // Belt-and-suspenders: if GSAP tweens never fire (rAF throttled), kill any tween
   // that's still holding a card invisible so the content stays accessible.
