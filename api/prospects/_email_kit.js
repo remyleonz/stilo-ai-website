@@ -46,26 +46,37 @@ function sanitizeCopy(text) {
 // Keyword match against the lead's niche/category. Default is the AI
 // Receptionist (ECHO): it fits almost any phone-dependent local business and
 // is our cheapest entry point.
+// Each playbook carries: `pain` (full, for the long variant), `painShort` (one
+// punchy sentence, for the short variant), `oneLiner` (what the agent does), and
+// `subjectTag` (a short value phrase the value-led subject line interpolates).
 const PLAYBOOKS = {
     receptionist: {
         agent: 'AI Receptionist',
         pain: "Most calls that come in after you close, or while your team is with a customer, never get answered. For local businesses that's roughly 62% of calls going to voicemail, and a lot of those callers just dial the next place on the list.",
-        oneLiner: "a 24/7 voice agent that answers every call, books appointments, and captures the lead, in English and Spanish, so nothing slips after hours."
+        painShort: "Right now a chunk of your calls after hours or during busy stretches go unanswered, and those callers just dial the next place on the list.",
+        oneLiner: "a 24/7 voice agent that answers every call, books appointments, and captures the lead, in English and Spanish, so nothing slips after hours.",
+        subjectTag: "the calls you're missing"
     },
     lead_response: {
         agent: 'Outbound Lead Response agent',
         pain: "When a new lead comes in from your site or an ad, the first business to call back almost always wins the job. Most shops take hours to respond. By then the customer has already booked someone else.",
-        oneLiner: "an agent that replies to every new lead by email and a callback within minutes, qualifies them, and pushes them to book, in English and Spanish."
+        painShort: "When a new lead comes in, whoever calls back first usually wins the job, and most shops take hours to respond.",
+        oneLiner: "an agent that replies to every new lead by email and a callback within minutes, qualifies them, and pushes them to book, in English and Spanish.",
+        subjectTag: "calling new leads back first"
     },
     reactivation: {
         agent: 'Lost Customer Reactivation agent',
         pain: "You've got hundreds of past customers sitting in your records who just stopped coming back. That's revenue you already earned once, going untouched every month.",
-        oneLiner: "an agent that finds the customers who went quiet and wins them back with personalized email and text offers, on autopilot."
+        painShort: "You've got hundreds of past customers who quietly stopped coming back, revenue you already earned once.",
+        oneLiner: "an agent that finds the customers who went quiet and wins them back with personalized email and text offers, on autopilot.",
+        subjectTag: "winning back past customers"
     },
     lead_gen: {
         agent: 'Lead Generator agent',
         pain: "Finding new customers by hand is slow and hit or miss, and most cold outreach gets ignored because it isn't personalized.",
-        oneLiner: "an agent that finds businesses matching your ideal customer, researches each one, and sends personalized outreach, so your pipeline keeps filling itself."
+        painShort: "Finding new customers by hand is slow, and generic cold outreach mostly gets ignored.",
+        oneLiner: "an agent that finds businesses matching your ideal customer, researches each one, and sends personalized outreach, so your pipeline keeps filling itself.",
+        subjectTag: "filling your pipeline"
     }
 };
 
@@ -184,6 +195,66 @@ function templateBody(opts) {
     ].join('\n');
 }
 
+// ── A/B template variants ────────────────────────────────────────────────
+// Two arms, deliberately different in BOTH subject and body so the test
+// isolates framing (the agent + pain content is identical, set by the
+// playbook). A re-send to the same lead always lands the same arm.
+//   A · Direct — short, casual subject, gets to the point
+//   B · Value  — longer, value-led subject, leads with the cost of the problem
+//                (this is the proven baseline templateBody)
+// Assignment is deterministic by lead id (even→A, odd→B) so re-opening or
+// re-drafting a lead never flips its arm: the body shown is the body sent.
+const VARIANT_KEYS = ['A', 'B'];
+const VARIANT_LABELS = { A: 'A · Direct', B: 'B · Value' };
+
+function pickVariant(leadId) {
+    const n = parseInt(leadId, 10);
+    if (!isFinite(n)) return 'B';
+    return (n % 2 === 0) ? 'A' : 'B';
+}
+
+function variantLabel(v) { return VARIANT_LABELS[v] || ('Variant ' + v); }
+
+// Subject line per arm. A = casual follow-up, B = value-led with the playbook tag.
+function buildSubject(variant, opts) {
+    const business = opts.business || 'your business';
+    const first = opts.firstName;
+    const pb = opts.playbook || {};
+    if (variant === 'A') {
+        return first ? (first + ', quick follow-up from STILO') : ('Quick follow-up from STILO, ' + business);
+    }
+    return 'An idea for ' + business + ': ' + (pb.subjectTag || 'a quick idea');
+}
+
+// Short, direct body (Variant A). Same playbook content as B, tighter framing.
+function directBody(opts) {
+    const greet = opts.firstName ? ('Hi ' + opts.firstName + ',') : 'Hi there,';
+    const sdrFirst = firstName(opts.senderName) || 'the STILO team';
+    const business = opts.business || 'your business';
+    const pb = opts.playbook;
+    return [
+        greet,
+        '',
+        "This is " + sdrFirst + " from STILO AI Partners, following up on my call to " + business + " earlier.",
+        '',
+        "Short version: " + (pb.painShort || pb.pain),
+        '',
+        "We build an AI agent that fixes that, " + pb.agent + ": " + pb.oneLiner,
+        '',
+        "We're a small Miami team. We build it and run it for you, most clients see a difference inside 30 days, and there's no long contract.",
+        '',
+        "Worth 15 minutes to see if it fits?",
+        CALENDAR_LINK,
+        '',
+        "If now isn't the time, no problem, just say the word."
+    ].join('\n');
+}
+
+// Body for a given arm. B is the proven long template (templateBody).
+function buildVariantBody(variant, opts) {
+    return variant === 'A' ? directBody(opts) : templateBody(opts);
+}
+
 // Guarantee the booking link is in the body exactly once. If the model dropped
 // it, append a clean booking line.
 function ensureBookingLink(body) {
@@ -241,7 +312,8 @@ function buildEmailHtml(opts) {
 }
 
 module.exports = {
-    CALENDAR_LINK, MARKETING_SITE, PLAYBOOKS,
+    CALENDAR_LINK, MARKETING_SITE, PLAYBOOKS, VARIANT_KEYS, VARIANT_LABELS,
     escapeHtml, sanitizeCopy, pickPlaybook, pickPlaybookForLead, playbookKey, firstName, formatPhone,
-    getSenderIdentity, templateBody, ensureBookingLink, footerText, buildEmailHtml
+    getSenderIdentity, templateBody, pickVariant, variantLabel, buildSubject, buildVariantBody,
+    ensureBookingLink, footerText, buildEmailHtml
 };

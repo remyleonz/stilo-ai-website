@@ -136,9 +136,14 @@ module.exports = async function handler(req, res) {
     });
     const sender = await kit.getSenderIdentity(gate.email);
 
-    // Default = the deterministic template: pulls the client's business + the
-    // recommended agent (by niche) + the rep's footer. Reliable, identical every
-    // time, no AI cost or variability. AI drafting is opt-in via use_ai:true.
+    // A/B arm for this lead. Deterministic by lead id (even→A, odd→B) so the
+    // arm is stable across re-draws and re-sends. The composer can force an arm
+    // (body.variant) for previewing, but normal use leaves it auto.
+    const variant = (body.variant === 'A' || body.variant === 'B') ? body.variant : kit.pickVariant(id);
+
+    // Default = the deterministic template for this arm: business + the agent
+    // we're actually selling + the rep's footer. Reliable, no AI cost. AI
+    // drafting is opt-in via use_ai:true (and is excluded from the A/B body).
     let source = 'template';
     let draft = null;
     if (body.use_ai === true) {
@@ -148,11 +153,11 @@ module.exports = async function handler(req, res) {
         });
         if (draft) source = 'gemini';
     }
-    if (!draft) draft = kit.templateBody({ firstName: fName, business: business, senderName: sender.name, playbook: playbook });
+    if (!draft) draft = kit.buildVariantBody(variant, { firstName: fName, business: business, senderName: sender.name, playbook: playbook });
 
     draft = kit.ensureBookingLink(kit.sanitizeCopy(draft));
 
-    const subject = 'Following up, ' + business + ' + STILO AI';
+    const subject = kit.buildSubject(variant, { business: business, firstName: fName, playbook: playbook });
 
     const toEmail = lead.owner_email || lead.email || researchEmail(lead) || '';
 
@@ -160,6 +165,8 @@ module.exports = async function handler(req, res) {
         to_email: toEmail,
         subject: subject,
         body: draft,
+        variant: variant,
+        variant_label: kit.variantLabel(variant),
         agent: playbook.agent,
         agent_key: kit.playbookKey(playbook),
         agents: [

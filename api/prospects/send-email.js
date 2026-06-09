@@ -34,6 +34,8 @@ module.exports = async function handler(req, res) {
     const to = (body.to || '').trim();
     const subject = (body.subject || '').trim() || 'Following up from STILO AI Partners';
     const message = (body.body || '').trim();
+    // A/B arm the rep actually sent (set by draft-email). Only A or B are valid.
+    const variant = (body.variant === 'A' || body.variant === 'B') ? body.variant : null;
     if (id == null) return res.status(400).json({ error: 'missing_id' });
     if (!validEmail(to)) return res.status(400).json({ error: 'invalid_to_email' });
     if (message.length < 20) return res.status(400).json({ error: 'empty_body' });
@@ -95,6 +97,7 @@ module.exports = async function handler(req, res) {
             from_address: fromEmail,
             provider: 'resend',
             provider_message_id: sendResult.id || null,
+            variant: variant,
             status: 'sent'
         });
         if (logErr) console.error('[send-email] lead_messages log failed:', logErr.message);
