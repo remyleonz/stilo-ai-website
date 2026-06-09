@@ -2,9 +2,13 @@
  * POST /api/prospects/save-notes
  * Body: { id, notes }
  *
- * Persists the SDR's free-text notes for a lead to prospecting.leads.call_notes.
- * Called on autosave (debounced) + when the lead drawer closes, so notes never
- * get lost if the rep doesn't formally log a call. Survives across sessions.
+ * Persists the rep's free-text panel notes to prospecting.leads.rep_notes — a
+ * field written ONLY by this endpoint. We deliberately do NOT use call_notes:
+ * that's the per-call disposition field that log-call / book-meeting / David's
+ * upstream rewrite on every outcome ("[ts] not interested", "Booked …"), which
+ * was wiping the rep's sticky note. rep_notes is never touched by any
+ * call-logging path, so a note the rep types ("email them about LCR") survives
+ * every state change (callback / booked / dead pool) and every session forever.
  */
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
@@ -22,7 +26,7 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
     const { error } = await sb.from('leads')
-        .update({ call_notes: notes, updated_at: new Date().toISOString() })
+        .update({ rep_notes: notes, updated_at: new Date().toISOString() })
         .eq('id', id);
     if (error) return res.status(500).json({ error: 'save_failed', detail: error.message });
     return res.status(200).json({ ok: true, id: id, saved_len: notes.length });

@@ -6938,8 +6938,8 @@
                       + prospectOutcomeChip('do_not_call', 'Do Not Call', 'Sends to Dead Pool', 'var(--red)')
                       + '</div>'
                       + '<select id="prospectOutcome" onchange="onOutcomeChange()" style="display:none;">' + outcomes + '</select>')
-                + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Notes</label>'
-                + '<textarea id="prospectNotes" rows="3" placeholder="What was said, who answered, next move..." style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;margin-bottom:12px;font-family:inherit;"></textarea>'
+                + '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Notes <span id="prospectNotesSaved" style="font-size:11px;color:var(--text-tertiary);"></span></label>'
+                + '<textarea id="prospectNotes" rows="3" placeholder="Notes about this lead. Saved automatically and kept forever." oninput="scheduleProspectNotesSave(' + (d.id != null ? d.id : 'null') + ')" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;margin-bottom:12px;font-family:inherit;">' + escapeAdminHtml(d.rep_notes != null ? d.rep_notes : (d.call_notes || '')) + '</textarea>'
                 + (mode === 'emailable'
                     ? ''
                     : '<div id="prospectBookingPicker" style="display:none;margin-bottom:12px;padding:12px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.18);border-radius:8px;">'
@@ -7281,7 +7281,44 @@
             }
         }
 
+        /* ===== LEAD NOTES (autosave) =====
+           Parity with the SDR drawer. The Notes box persists to
+           prospecting.leads.rep_notes — a protected column written ONLY by
+           save-notes, never by any call-logging path. It pre-fills with the
+           saved note, autosaves ~0.8s after typing stops, and flushes on drawer
+           close, so an admin note ("email them about LCR") survives every state
+           change (callback / booked / dead) and every session. Previously the
+           admin box had NO pre-fill and NO autosave, so admin notes never
+           persisted at all. */
+        var _pNotesTimer = null, _pNotesDirty = false, _pNotesLeadId = null;
+        function scheduleProspectNotesSave(leadId) {
+            if (leadId == null) return;
+            _pNotesDirty = true; _pNotesLeadId = leadId;
+            var msg = document.getElementById('prospectNotesSaved');
+            if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Saving…'; }
+            if (_pNotesTimer) clearTimeout(_pNotesTimer);
+            _pNotesTimer = setTimeout(function () { saveProspectNotesNow(leadId); }, 800);
+        }
+        async function saveProspectNotesNow(leadId) {
+            if (_pNotesTimer) { clearTimeout(_pNotesTimer); _pNotesTimer = null; }
+            if (!_pNotesDirty || leadId == null) return;
+            var el = document.getElementById('prospectNotes');
+            var notes = el ? el.value : '';
+            _pNotesDirty = false;
+            try {
+                await prospectFetchJSON('/api/prospects/save-notes', { method: 'POST', body: JSON.stringify({ id: leadId, notes: notes }) });
+                var msg = document.getElementById('prospectNotesSaved');
+                if (msg) { msg.style.color = 'var(--green,#22c55e)'; msg.textContent = 'Saved ✓'; }
+            } catch (e) {
+                _pNotesDirty = true; // let a later flush retry
+                var m2 = document.getElementById('prospectNotesSaved');
+                if (m2) { m2.style.color = 'var(--red)'; m2.textContent = 'Save failed'; }
+            }
+        }
+
         function closeProspectDrawer() {
+            // Flush any unsaved note before the drawer goes away.
+            try { if (_pNotesDirty && _pNotesLeadId) saveProspectNotesNow(_pNotesLeadId); } catch (e) {}
             var drawer = document.getElementById('prospectDrawer');
             var overlay = document.getElementById('prospectDrawerOverlay');
             // Must match the drawer's width (920px) — anything smaller leaves

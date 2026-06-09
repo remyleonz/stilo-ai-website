@@ -1686,10 +1686,13 @@
         }
 
         /* ===== LEAD NOTES (autosave) =====
-           The drawer notes field persists to prospecting.leads.call_notes. It
-           pre-fills with the saved notes, autosaves ~0.8s after the rep stops
-           typing, and flushes on drawer close — so notes survive across
-           sessions even if the rep never logs a call. */
+           The drawer notes field persists to prospecting.leads.rep_notes — a
+           protected column written ONLY by save-notes, never by any call-logging
+           path (log-call / book-meeting / David's upstream all write call_notes,
+           which is why notes used to vanish when a lead moved to callback/booked/
+           dead). It pre-fills with the saved note, autosaves ~0.8s after the rep
+           stops typing, and flushes on drawer close — so notes survive every
+           state change and every session. */
         var _notesTimer = null, _notesDirty = false, _notesLeadId = null;
         function scheduleNotesSave(leadId) {
             _notesDirty = true; _notesLeadId = leadId;
@@ -2225,7 +2228,7 @@
                 + outcomeChip(r.id, 'openDnc(' + r.id + ')', 'Do Not Call', 'Requires a reason note', 'var(--red)')
                 + '</div>'
                 + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:4px;"><span class="stat-label">Notes</span><span id="notesSavedMsg" style="font-size:11px;color:var(--text-tertiary);">Saves automatically</span></div>'
-                + '<textarea id="callNote" placeholder="Notes about this lead or call. Saved automatically." rows="3" oninput="scheduleNotesSave(' + r.id + ')" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;resize:vertical;">' + escapeHtml(r.call_notes || '') + '</textarea>'
+                + '<textarea id="callNote" placeholder="Notes about this lead or call. Saved automatically." rows="3" oninput="scheduleNotesSave(' + r.id + ')" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;resize:vertical;">' + escapeHtml(r.rep_notes != null ? r.rep_notes : (r.call_notes || '')) + '</textarea>'
                 + '<div id="sdrOutcomeMsg" style="font-size:12px;margin-top:8px;min-height:14px;"></div>'
                 // ── Callback scheduler (hidden until Interested) ──
                 + '<div id="sdrCallbackBox" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'
