@@ -853,12 +853,12 @@
             border-collapse: collapse;
         }
 
-        /* Leads tab: intrinsic-width table, columns sit packed at the left of
-           the card. Overrides the global `table { width:100% }` so business
-           name and owner column aren't separated by a giant flex gap.
-           Cells default to normal wrap (overrideable per cell). */
+        /* Leads tab: table fills the full width of the card. Business is the
+           only free-wrapping column (browser default), so it absorbs the slack
+           and the short columns don't open gaps between each other. Every other
+           cell sets white-space:nowrap inline. */
         .prospect-table-host table {
-            width: auto;
+            width: 100%;
         }
         .prospect-table-host td,
         .prospect-table-host th {
@@ -5484,12 +5484,12 @@
                     var overdue = dueMs != null && dueMs < Date.now();
                     var lastCallStr = fmtETp(r.last_called_at);
                     return '<tr data-lastts="' + (tsToMsP(r.last_called_at) == null ? '' : tsToMsP(r.last_called_at)) + '" onclick="openProspectDrawer(\'' + id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);transition:background 100ms;" onmouseenter="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseleave="this.style.background=\'transparent\'">'
-                        + '<td style="padding:10px 14px;font-size:12px;color:' + (overdue ? 'var(--red)' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + escapeAdminHtml(dueStr) + (overdue ? ' (overdue)' : '') + '</td>'
+                        + '<td style="padding:10px 14px;font-size:12px;white-space:nowrap;color:' + (overdue ? 'var(--red)' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + escapeAdminHtml(dueStr) + (overdue ? ' (overdue)' : '') + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-weight:600;">' + escapeAdminHtml(business) + '</td>'
-                        + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(owner) + '</td>'
-                        + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">' + escapeAdminHtml(phone) + '</td>'
-                        + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;">' + escapeAdminHtml(niche) + '</td>'
-                        + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;">' + lastCallStr + '</td>'
+                        + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:13px;white-space:nowrap;">' + escapeAdminHtml(owner) + '</td>'
+                        + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
+                        + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
+                        + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastCallStr + '</td>'
                         + '<td style="padding:10px 14px;"><button onclick="event.stopPropagation();dialProspect(' + JSON.stringify(id) + ')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;">Call now</button></td>'
                         + '</tr>';
                 }
@@ -5705,6 +5705,7 @@
            agent) → edit → send-email (Resend). Footer + booking link appended
            server-side. Same endpoints the SDR dashboard uses. */
         var emailComposerLeadId = null;
+        var emailComposerVariant = null;
         function ecValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim()); }
         function setEcSending(on) {
             var b = document.getElementById('ecSendBtn');
@@ -5728,17 +5729,19 @@
                 document.getElementById('ecSubject').value = d.subject || '';
                 document.getElementById('ecBody').value = d.body || '';
                 document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
-                status.textContent = 'Draft ready for the ' + (d.agent || 'recommended agent') + '. Edit anything, then send. Name, phone, booking link, and footer are added automatically.';
+                status.textContent = 'Draft ready for the ' + (d.agent || 'recommended agent') + '. Edit anything, then send. Name, phone, booking link, and footer are added automatically.' + abSuffix(d);
                 if (!d.to_email) { var m = document.getElementById('ecMsg'); m.style.color = '#f59e0b'; m.textContent = 'No email on file. Type the prospect\'s email above.'; document.getElementById('ecTo').focus(); }
             } catch (e) { status.style.color = 'var(--red)'; status.textContent = 'Could not draft: ' + (e.message || 'unknown'); }
         }
         function fillAgentSelect(d) {
+            emailComposerVariant = d.variant || null;
             var sel = document.getElementById('ecAgent');
             if (!sel || !d.agents) return;
             sel.innerHTML = d.agents.map(function (a) {
                 return '<option value="' + a.key + '"' + (a.key === d.agent_key ? ' selected' : '') + '>' + a.label + '</option>';
             }).join('');
         }
+        function abSuffix(d) { return d && d.variant_label ? ' Running A/B template ' + d.variant_label + '.' : ''; }
         async function redraftEmail() {
             if (!emailComposerLeadId) return;
             var sel = document.getElementById('ecAgent');
@@ -5755,7 +5758,7 @@
                 document.getElementById('ecBody').value = d.body || '';
                 document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
                 if (keepTo) document.getElementById('ecTo').value = keepTo;
-                status.textContent = 'Re-drafted for the ' + (d.agent || label) + '. Edit anything, then send.';
+                status.textContent = 'Re-drafted for the ' + (d.agent || label) + '. Edit anything, then send.' + abSuffix(d);
             } catch (e) { status.style.color = 'var(--red)'; status.textContent = 'Could not re-draft: ' + (e.message || 'unknown'); }
         }
         function closeEmailComposer() { document.getElementById('emailComposerModal').style.display = 'none'; }
@@ -5768,7 +5771,7 @@
             if (body.length < 20) { msg.style.color = 'var(--red)'; msg.textContent = 'The message looks empty.'; return; }
             setEcSending(true); msg.style.color = 'var(--text-muted)'; msg.textContent = 'Sending…';
             try {
-                await prospectFetchJSON('/api/prospects/send-email', { method: 'POST', body: JSON.stringify({ id: emailComposerLeadId, to: to, subject: subject, body: body }) });
+                await prospectFetchJSON('/api/prospects/send-email', { method: 'POST', body: JSON.stringify({ id: emailComposerLeadId, to: to, subject: subject, body: body, variant: emailComposerVariant }) });
                 msg.style.color = 'var(--green,#10b981)'; msg.textContent = 'Sent to ' + to + '.';
                 setTimeout(closeEmailComposer, 1300);
             } catch (e) {
