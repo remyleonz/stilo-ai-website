@@ -180,12 +180,17 @@ module.exports = async function handler(req, res) {
         variant_label: kit.variantLabel(variant),
         agent: playbook.agent,
         agent_key: kit.playbookKey(playbook),
+        // All 8 sellable STILO agents (matches service_offerings.md). A rep can
+        // pick any of these to re-draft if the call turned toward a different one.
         agents: [
-            { key: 'reactivation', label: 'Lost Customer Reactivation' },
             { key: 'receptionist', label: 'AI Receptionist' },
             { key: 'lead_response', label: 'Outbound Lead Response' },
+            { key: 'reactivation', label: 'Lost Customer Reactivation' },
             { key: 'lead_gen', label: 'Lead Generator' },
-            { key: 'website', label: 'Website Builder' }
+            { key: 'website', label: 'Website Builder' },
+            { key: 'seo', label: 'AI SEO' },
+            { key: 'growth', label: 'Growth Intelligence' },
+            { key: 'custom', label: 'Custom Automations' }
         ],
         sender: { name: sender.name, phone: sender.phone, footer: kit.footerText(sender) },
         source: source

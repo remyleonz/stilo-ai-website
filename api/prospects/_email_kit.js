@@ -84,6 +84,27 @@ const PLAYBOOKS = {
         painShort: "Your site has no clear book-an-appointment button, so visitors who are ready to schedule leave instead of booking.",
         oneLiner: "a fast, modern site built to convert, with an obvious book-now button, click-to-call, and the trust signals that turn visitors into booked customers.",
         subjectTag: "turning your site into booked appointments"
+    },
+    seo: {
+        agent: 'AI SEO agent',
+        pain: "When someone asks ChatGPT, Gemini, or Google for the best in your area, an AI summary answers now, and it only names a few businesses. If you're not optimized for that, you're invisible at the exact moment people are deciding who to call.",
+        painShort: "When people ask ChatGPT or Google for the best in your area, an AI summary names a few businesses, and right now yours isn't one of them.",
+        oneLiner: "an agent that gets you cited in AI search results (ChatGPT, Gemini, Google AI Overviews) with schema, content, and citations, so AI assistants point buyers to you.",
+        subjectTag: "showing up in AI search"
+    },
+    growth: {
+        agent: 'Growth Intelligence agent',
+        pain: "You've got real data, your POS numbers, reviews, ad spend, booking patterns, but no one connecting it into a plan. So calls get made on gut feel, and the things quietly costing you money can go unnoticed for months.",
+        painShort: "You've got POS, review, and ad data, but no one connecting it into a plan, so money leaks where no one's looking.",
+        oneLiner: "a strategy agent that maps your data and sends a clear weekly read on what's working, what to fix, and what to test, like an analyst on staff for a fraction of the cost.",
+        subjectTag: "turning your numbers into a plan"
+    },
+    custom: {
+        agent: 'Custom Automations agent',
+        pain: "There's probably a repetitive task eating your team's hours every week, chasing invoices, replying to reviews, sending reminders, that no off-the-shelf tool quite fixes.",
+        painShort: "There's likely a repetitive task eating your team's hours every week that no off-the-shelf tool quite fixes.",
+        oneLiner: "a custom automation built around your exact workflow, wiring the tools you already use together so the busywork just runs itself.",
+        subjectTag: "automating the busywork"
     }
 };
 
@@ -98,7 +119,19 @@ const PRODUCT_TO_PLAYBOOK = {
     'lead generator': 'lead_gen',
     'website builder': 'website',
     'website': 'website',
-    'forge': 'website'
+    'forge': 'website',
+    'ai seo': 'seo',
+    'seo': 'seo',
+    'geo': 'seo',
+    'signal': 'seo',
+    'ontology': 'growth',
+    'growth intelligence': 'growth',
+    'growth': 'growth',
+    'oracle': 'growth',
+    'custom automations': 'custom',
+    'custom automation': 'custom',
+    'custom': 'custom',
+    'flux': 'custom'
 };
 
 // Map an agent DISPLAY NAME (or codename) to a playbook. Used when the lead's
@@ -109,6 +142,9 @@ function playbookFromAgentName(name) {
     const n = String(name || '').toLowerCase();
     if (!n) return null;
     if (/website|web ?site|web build|forge/.test(n)) return PLAYBOOKS.website;
+    if (/\bseo\b|geo|generative engine|ai search|\bsignal\b/.test(n)) return PLAYBOOKS.seo;
+    if (/growth intel|ontology|strategy intel|business intelligence|\boracle\b/.test(n)) return PLAYBOOKS.growth;
+    if (/custom automation|bespoke|\bflux\b|\bcustom\b/.test(n)) return PLAYBOOKS.custom;
     if (/reactivat|lapsed|lost customer|\blcr\b|revive/.test(n)) return PLAYBOOKS.reactivation;
     if (/receptionist|front desk|\becho\b/.test(n)) return PLAYBOOKS.receptionist;
     if (/outbound|lead response|lead reply|ignite|speed to lead/.test(n)) return PLAYBOOKS.lead_response;
