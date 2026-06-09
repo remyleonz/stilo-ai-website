@@ -132,7 +132,7 @@
   --ease-out:cubic-bezier(.2,.7,.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;scroll-padding-top:88px}
+html{scroll-behavior:smooth;scroll-padding-top:88px;overflow-x:hidden}
 body{
   font-family:var(--font-body);
   background:var(--bg-void);
@@ -696,8 +696,8 @@ html.lenis,html.lenis body{height:auto}
 /* ========== RESPONSIVE ========== */
 @media (max-width:960px){
   .nav-links,.nav-cta{display:none}
-  .nav-inner{display:flex;justify-content:space-between}
-  .menu-toggle{display:block}
+  .nav-inner{display:flex !important;justify-content:space-between}
+  .menu-toggle{display:block;margin-left:auto}
   .process-track{grid-template-columns:1fr}
   .why-grid{grid-template-columns:1fr}
   .why-card:nth-child(n){grid-column:auto;grid-row:auto}
@@ -1937,15 +1937,16 @@ section,.partners{background:transparent !important}
 .agent-panel-bullets{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:30px}
 .agent-panel-bullets li{padding-left:24px;position:relative;color:var(--fg-2);font-size:0.96rem;line-height:1.5}
 
-/* V4 (2026-06-08): centered vertical stack — title, body, then screenshots
-   with a generous gap. (Authoritative; overrides the old side-by-side grid.) */
+/* V5 (2026-06-09): desktop side-by-side — copy LEFT, screenshots RIGHT.
+   Mobile (<=720) stacks + centers via the late @media(max-width:720px) block. */
 .agent-content.active{
-  display:flex !important;
-  flex-direction:column;
+  display:grid !important;
+  grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);
   align-items:center;
-  text-align:center;
-  gap:58px;
+  gap:56px;
+  text-align:left;
 }
+.agent-content.active .agent-copy-text{align-items:flex-start;text-align:left;}
 @media (max-width:760px){
   .agent-content.active{gap:40px}
 }
@@ -2061,7 +2062,7 @@ section,.partners{background:transparent !important}
   .agents-grid{grid-template-columns:1fr;gap:40px}
   .agents-right{order:-1;min-height:380px}/* visual above content on mobile */
   .agent-visual-wrap{min-height:380px}
-  .agents-master .section-header{text-align:left}
+  .agents-master .section-header{text-align:center}
   .agent-panel-visual{min-height:380px}
 }
 
@@ -2404,10 +2405,10 @@ section,.partners{background:transparent !important}
 .case-tab .case-tab-num,
 .industry-tab .industry-tab-num{display:none !important}
 
-/* STAT BADGE — constrain width so it doesn't eat bullet space */
+/* Desktop agent layout: copy LEFT, screenshots RIGHT. */
 .agent-content.active{
-  grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) !important;
-  column-gap:28px !important;
+  grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr) !important;
+  column-gap:56px !important;
 }
 .agent-panel-stat{
   max-width:200px !important;
