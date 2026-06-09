@@ -1033,6 +1033,11 @@
                 <div id="emailComposerStatus" style="font-size:12px;color:var(--text-tertiary);margin-bottom:16px;line-height:1.5;">Drafting…</div>
 
                 <div style="margin-bottom:12px;">
+                    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Agent we're pitching</label>
+                    <select id="ecAgent" onchange="redraftEmail()" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></select>
+                    <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Auto-picked from the cold-call script. Switch it to re-draft for a different agent.</div>
+                </div>
+                <div style="margin-bottom:12px;">
                     <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">To</label>
                     <input id="ecTo" type="email" placeholder="client@email.com" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">
                 </div>
@@ -1731,14 +1736,16 @@
             var status = document.getElementById('emailComposerStatus');
             status.style.color = 'var(--text-tertiary)';
             status.textContent = 'Drafting a personalized email with the AI sales agent…';
+            document.getElementById('ecAgent').innerHTML = '';
             setEcSending(false);
             try {
                 var d = await fetchJSON('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify({ id: leadId }) });
+                fillAgentSelect(d);
                 document.getElementById('ecTo').value = d.to_email || '';
                 document.getElementById('ecSubject').value = d.subject || '';
                 document.getElementById('ecBody').value = d.body || '';
                 document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
-                status.textContent = (d.source === 'gemini' ? 'Drafted by the AI sales agent' : 'Draft ready') + '. Edit anything, then send. Your name, phone, the booking link, and footer are added automatically.';
+                status.textContent = 'Draft ready for the ' + (d.agent || 'recommended agent') + '. Edit anything, then send. Your name, phone, the booking link, and footer are added automatically.';
                 if (!d.to_email) {
                     var m = document.getElementById('ecMsg');
                     m.style.color = '#f59e0b';
@@ -1748,6 +1755,35 @@
             } catch (e) {
                 status.style.color = 'var(--red)';
                 status.textContent = 'Could not draft: ' + (e.message || 'unknown');
+            }
+        }
+        function fillAgentSelect(d) {
+            var sel = document.getElementById('ecAgent');
+            if (!sel || !d.agents) return;
+            sel.innerHTML = d.agents.map(function (a) {
+                return '<option value="' + a.key + '"' + (a.key === d.agent_key ? ' selected' : '') + '>' + a.label + '</option>';
+            }).join('');
+        }
+        async function redraftEmail() {
+            if (!emailComposerLeadId) return;
+            var sel = document.getElementById('ecAgent');
+            var agent = sel ? sel.value : null;
+            var label = sel ? sel.options[sel.selectedIndex].text : '';
+            var status = document.getElementById('emailComposerStatus');
+            var keepTo = document.getElementById('ecTo').value;
+            status.style.color = 'var(--text-tertiary)';
+            status.textContent = 'Re-drafting for the ' + label + '…';
+            try {
+                var d = await fetchJSON('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify({ id: emailComposerLeadId, agent: agent }) });
+                fillAgentSelect(d);
+                document.getElementById('ecSubject').value = d.subject || '';
+                document.getElementById('ecBody').value = d.body || '';
+                document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
+                if (keepTo) document.getElementById('ecTo').value = keepTo;
+                status.textContent = 'Re-drafted for the ' + (d.agent || label) + '. Edit anything, then send.';
+            } catch (e) {
+                status.style.color = 'var(--red)';
+                status.textContent = 'Could not re-draft: ' + (e.message || 'unknown');
             }
         }
         function closeEmailComposer() { document.getElementById('emailComposerModal').style.display = 'none'; }

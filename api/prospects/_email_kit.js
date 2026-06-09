@@ -59,18 +59,62 @@ const PLAYBOOKS = {
     },
     reactivation: {
         agent: 'Lost Customer Reactivation agent',
-        pain: "You've got hundreds of past customers sitting in your database who just stopped coming back. That's revenue you already earned once, going untouched every month.",
+        pain: "You've got hundreds of past customers sitting in your records who just stopped coming back. That's revenue you already earned once, going untouched every month.",
         oneLiner: "an agent that finds the customers who went quiet and wins them back with personalized email and text offers, on autopilot."
+    },
+    lead_gen: {
+        agent: 'Lead Generator agent',
+        pain: "Finding new customers by hand is slow and hit or miss, and most cold outreach gets ignored because it isn't personalized.",
+        oneLiner: "an agent that finds businesses matching your ideal customer, researches each one, and sends personalized outreach, so your pipeline keeps filling itself."
     }
+};
+
+// David's scoring engine records the product to sell in `prospect_reasoning`
+// (e.g. "product=LCR(28)"). THIS is what's on the cold-call script, so the
+// email must pitch the same agent. Map his product label → our playbook.
+const PRODUCT_TO_PLAYBOOK = {
+    'lcr': 'reactivation',
+    'ai receptionist': 'receptionist',
+    'outbound agent': 'lead_response',
+    'outbound lead response': 'lead_response',
+    'lead generator': 'lead_gen'
 };
 
 function pickPlaybook(niche) {
     const n = String(niche || '').toLowerCase();
     if (/(roof|plumb|hvac|contract|landscap|electric|garage|remodel|construction|trade|paving|fence|pool)/.test(n)) return PLAYBOOKS.lead_response;
     if (/(gym|fitness|membership|yoga|pilates|crossfit|studio)/.test(n)) return PLAYBOOKS.reactivation;
-    // medspa, dental, salon, vet, clinic, restaurant, auto, law, real estate,
-    // and everything else → answer-the-phone is the universal pain.
     return PLAYBOOKS.receptionist;
+}
+
+// Choose the playbook for a lead. Priority:
+//   1. explicit agent key (composer override)
+//   2. the product David's engine picked (prospect_reasoning "product=...") —
+//      this is what the rep pitched on the call, so the email must match it.
+//   3. niche fallback.
+function pickPlaybookForLead(opts) {
+    opts = opts || {};
+    if (opts.agentKey && PLAYBOOKS[opts.agentKey]) return PLAYBOOKS[opts.agentKey];
+    const reasoning = String(opts.prospectReasoning || '');
+    const m = reasoning.match(/product=([^(]+)\(/i);
+    if (m) {
+        const pb = PRODUCT_TO_PLAYBOOK[m[1].trim().toLowerCase()];
+        if (pb && PLAYBOOKS[pb]) return PLAYBOOKS[pb];
+    }
+    // Keyword fallback — also catches matched_product_name strings that don't
+    // use the "product=" format, or product codes not in the map above.
+    const lc = reasoning.toLowerCase();
+    if (/\blcr\b|reactivat|lapsed/.test(lc)) return PLAYBOOKS.reactivation;
+    if (/receptionist/.test(lc)) return PLAYBOOKS.receptionist;
+    if (/outbound|lead response/.test(lc)) return PLAYBOOKS.lead_response;
+    if (/lead gen/.test(lc)) return PLAYBOOKS.lead_gen;
+    return pickPlaybook(opts.niche);
+}
+
+// Reverse lookup: playbook object → its key (for returning to the composer).
+function playbookKey(pb) {
+    for (const k in PLAYBOOKS) { if (PLAYBOOKS[k] === pb) return k; }
+    return null;
 }
 
 function firstName(full) {
@@ -197,7 +241,7 @@ function buildEmailHtml(opts) {
 }
 
 module.exports = {
-    CALENDAR_LINK, MARKETING_SITE,
-    escapeHtml, sanitizeCopy, pickPlaybook, firstName, formatPhone,
+    CALENDAR_LINK, MARKETING_SITE, PLAYBOOKS,
+    escapeHtml, sanitizeCopy, pickPlaybook, pickPlaybookForLead, playbookKey, firstName, formatPhone,
     getSenderIdentity, templateBody, ensureBookingLink, footerText, buildEmailHtml
 };

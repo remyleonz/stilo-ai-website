@@ -117,7 +117,7 @@ module.exports = async function handler(req, res) {
     // a non-existent column makes PostgREST 400 and surfaced to the SDR/admin as
     // "Could not draft: lead_read_failed". Use category as the niche signal.
     const { data: lead, error } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,category,address,deep_research_json')
+        .select('id,name,owner_name,owner_email,email,category,address,deep_research_json,prospect_reasoning,matched_product_name')
         .eq('id', id).maybeSingle();
     if (error) return res.status(500).json({ error: 'lead_read_failed', detail: error.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
@@ -125,7 +125,15 @@ module.exports = async function handler(req, res) {
     const business = lead.name || 'your business';
     const niche = lead.category || '';
     const fName = kit.firstName(lead.owner_name);
-    const playbook = kit.pickPlaybook(niche);
+    // Pitch the agent we're ACTUALLY selling this lead: David's engine records
+    // it in prospect_reasoning ("product=LCR(...)"), which is what's on the
+    // cold-call script. body.agent lets the composer override. Niche is the
+    // last-resort fallback. This stops every email defaulting to AI Receptionist.
+    const playbook = kit.pickPlaybookForLead({
+        agentKey: body.agent,
+        prospectReasoning: lead.prospect_reasoning || lead.matched_product_name,
+        niche: niche
+    });
     const sender = await kit.getSenderIdentity(gate.email);
 
     // Default = the deterministic template: pulls the client's business + the
@@ -153,6 +161,13 @@ module.exports = async function handler(req, res) {
         subject: subject,
         body: draft,
         agent: playbook.agent,
+        agent_key: kit.playbookKey(playbook),
+        agents: [
+            { key: 'reactivation', label: 'Lost Customer Reactivation' },
+            { key: 'receptionist', label: 'AI Receptionist' },
+            { key: 'lead_response', label: 'Outbound Lead Response' },
+            { key: 'lead_gen', label: 'Lead Generator' }
+        ],
         sender: { name: sender.name, phone: sender.phone, footer: kit.footerText(sender) },
         source: source
     });
