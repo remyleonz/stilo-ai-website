@@ -31,7 +31,9 @@ const SCOPE  = 'https://www.googleapis.com/auth/devstorage.read_only';
 // (A=jack, B=luke, C=alejandro). This is the current source of truth; the GCS
 // path below is kept as a fallback for older scripts.
 const BRIEFS_BUCKET = 'cold-call-briefs';
-const REP_FOLDERS = { a: 'rep-a', b: 'rep-b', c: 'rep-c' };
+// rep-a/b/c are the SDR folders; dc/rl are David's owner brief folders (David
+// Coira / Remy Leon), added 2026-06-08. All are searched for a lead's brief.
+const REP_FOLDERS = { a: 'rep-a', b: 'rep-b', c: 'rep-c', dc: 'dc', rl: 'rl' };
 
 // Find the newest brief for a slug in Supabase Storage. Searches the rep folder
 // matching the tag hint first (fast), then the others. Returns
