@@ -5101,18 +5101,12 @@
 
                 // Awaiting-script notice — leads assigned but hidden until David
                 // ships their sales script.
-                var awaiting = Number(data.awaiting_script_count || 0);
+                // The "waiting on a sales script from David" banner was removed
+                // (it read as clutter). Unscripted leads are still hidden from the
+                // call list and reappear automatically once David's script lands;
+                // we just don't surface a banner about it anymore.
                 var asb = document.getElementById('awaitingScriptBar');
-                var ast = document.getElementById('awaitingScriptText');
-                if (asb && ast) {
-                    if (awaiting > 0) {
-                        var who = prospectState.filters.sdr ? 'this rep' : 'the team';
-                        ast.innerHTML = '<strong style="color:var(--text-primary);">' + awaiting + ' lead' + (awaiting === 1 ? '' : 's') + ' for ' + who + ' ' + (awaiting === 1 ? 'is' : 'are') + ' waiting on a sales script from David</strong> — hidden from the call list until he sends them. They\'ll reappear automatically once their script lands.';
-                        asb.style.display = 'flex';
-                    } else {
-                        asb.style.display = 'none';
-                    }
-                }
+                if (asb) asb.style.display = 'none';
 
                 populateNicheFilter();
             } catch (e) {

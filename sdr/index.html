@@ -1443,14 +1443,11 @@
                 document.getElementById('lwfCalledToday').textContent = (stats.called_today_count != null) ? stats.called_today_count : (stats.activity && stats.activity.calls_today) || 0;
                 document.getElementById('lwfCallbacks').textContent = (stats.callbacks_due_today_count != null) ? stats.callbacks_due_today_count : (stats.tab_badges && stats.tab_badges.callbacks) || 0;
                 document.getElementById('lwfBooked').textContent = (stats.tab_badges && stats.tab_badges.booked) || (stats.activity && stats.activity.booked_this_week) || 0;
-                var awaiting = Number(stats.awaiting_script_count || 0);
+                // "Waiting on a sales script from David" banner removed (clutter).
+                // Unscripted leads stay hidden and reappear automatically once the
+                // script lands; we just don't show a banner about it.
                 var asb = document.getElementById('awaitingScriptBar');
-                if (asb) {
-                    if (awaiting > 0) {
-                        asb.innerHTML = '<span style="font-size:15px;">⏳</span> <span><strong>' + awaiting + ' of your lead' + (awaiting === 1 ? '' : 's') + ' ' + (awaiting === 1 ? 'is' : 'are') + ' waiting on a sales script from David.</strong> They\'re hidden from your call list until the script lands, then they reappear automatically.</span>';
-                        asb.style.display = 'flex';
-                    } else { asb.style.display = 'none'; }
-                }
+                if (asb) asb.style.display = 'none';
             } catch (e) { console.error('[leads-stats]', e); }
         }
 
