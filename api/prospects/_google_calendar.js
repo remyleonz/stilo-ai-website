@@ -12,6 +12,19 @@
  */
 const { createClient } = require('@supabase/supabase-js');
 
+// Where Remy re-links the booking calendar. Opening this (signed into Google as
+// remyleon@stiloaipartners.com) mints a fresh refresh token into oauth_tokens.
+const REAUTH_URL = '/api/oauth?provider=google-calendar&action=start';
+
+// True when the failure is a dead refresh token (expired/revoked), which is
+// fixable only by re-authorizing, not by retrying. Google returns
+// "invalid_grant" for this. Refresh tokens expire after 7 days while the OAuth
+// consent screen is in "Testing" mode (publish it to Production to stop that).
+function isReauthError(err) {
+    const m = String((err && err.message) || err || '');
+    return /invalid_grant|oauth_refresh_failed|Token has been expired or revoked/i.test(m);
+}
+
 async function getCalendarRefreshToken() {
     // Prefer the most-recently-authorized token in the DB.
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
@@ -40,4 +53,4 @@ async function accessTokenFromRefresh(refreshToken) {
     return (await r.json()).access_token;
 }
 
-module.exports = { getCalendarRefreshToken, accessTokenFromRefresh };
+module.exports = { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL };

@@ -7236,6 +7236,7 @@
             host.innerHTML = '<div style="padding:18px;color:var(--text-muted);font-size:12px;">Loading available slots…</div>';
             try {
                 var data = await prospectFetchJSON('/api/prospects/calendar-availability?days=7');
+                if (data.needs_reauth) { renderCalendarReauth(host, data.reauth_url); return; }
                 bookingState.configured = data.configured !== false;
                 bookingState.slots = data.slots || [];
                 bookingState.selectedIso = null;
@@ -7257,6 +7258,26 @@
                     + (detail ? '<div style="margin-top:6px;color:var(--text-muted);font-size:11px;font-family:var(--font-mono);white-space:pre-wrap;">' + escapeAdminHtml(detail.slice(0, 500)) + '</div>' : '')
                     + '</div>';
             }
+        }
+
+        // The booking calendar's Google token expired (refresh tokens last 7
+        // days while the OAuth app is in Testing mode). Show a one-click
+        // reconnect instead of a raw error. Opening the link signed into Google
+        // as remyleon@stiloaipartners.com mints a fresh token; we re-check after.
+        function renderCalendarReauth(host, reauthUrl) {
+            var url = reauthUrl || '/api/oauth?provider=google-calendar&action=start';
+            host.innerHTML =
+                '<div style="padding:16px;background:rgba(234,179,8,0.10);border:1px solid var(--yellow,#eab308);border-radius:10px;font-size:13px;line-height:1.55;">'
+                + '<div style="font-weight:700;color:var(--yellow,#eab308);margin-bottom:6px;">Booking calendar needs reconnecting</div>'
+                + '<div style="color:var(--text-secondary);margin-bottom:12px;">Google expired the calendar connection. Click below (signed in as remyleon@stiloaipartners.com) to reconnect. Takes about 10 seconds.</div>'
+                + '<button onclick="openCalendarReauth(\'' + url + '\')" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;">Reconnect Google Calendar</button>'
+                + '<button onclick="loadBookingSlots()" style="margin-left:8px;background:none;color:var(--text-secondary);border:1px solid var(--border-medium);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;">I reconnected, recheck</button>'
+                + '</div>';
+        }
+        function openCalendarReauth(url) {
+            window.open(url, 'stilo_cal_reauth', 'width=520,height=680');
+            // Re-check shortly after the popup likely finished the consent flow.
+            setTimeout(loadBookingSlots, 6000);
         }
 
         function bookingDayKey(iso) {
@@ -7552,6 +7573,11 @@
                         + (resp.email && resp.email.id ? ' · email sent' : (resp.email && resp.email.skipped ? ' · email skipped (' + resp.email.skipped + ')' : ''));
                     setTimeout(function () { advanceToNextProspect(leadId); }, 1800);
                 } catch (e) {
+                    if (e.status === 409 && e.body && e.body.error === 'calendar_reauth_required') {
+                        msgEl.style.color = 'var(--yellow,#eab308)';
+                        msgEl.innerHTML = 'The booking calendar disconnected. <a href="#" onclick="openCalendarReauth(\'' + (e.body.reauth_url || '/api/oauth?provider=google-calendar&action=start') + '\');return false;" style="color:var(--blue);font-weight:700;">Reconnect Google Calendar</a> then book again.';
+                        return;
+                    }
                     msgEl.style.color = 'var(--red)';
                     msgEl.textContent = 'Booking failed: ' + (e.message || 'unknown');
                 }

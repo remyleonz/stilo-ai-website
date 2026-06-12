@@ -13,7 +13,7 @@
  * shows a "Configure Google Calendar" prompt instead of a broken picker.
  */
 const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
-const { getCalendarRefreshToken, accessTokenFromRefresh } = require('./_google_calendar');
+const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL } = require('./_google_calendar');
 
 // Matches Remy's Google booking page ("STILO AI PARTNERS MEETING"):
 // Mon–Fri, 10:00am–7:00pm ET, 15-minute appointments. Weekends are skipped
@@ -92,6 +92,18 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ slots: free, configured: true });
     } catch (e) {
         console.error('[calendar-availability]', e);
+        // Dead refresh token (expired/revoked). Not retryable: it needs a
+        // re-auth. Return 200 + needs_reauth so the picker shows a clean
+        // "Reconnect Google Calendar" prompt instead of a raw error dump.
+        if (isReauthError(e)) {
+            return res.status(200).json({
+                configured: false,
+                needs_reauth: true,
+                reauth_url: REAUTH_URL,
+                detail: 'The booking calendar connection expired and needs to be reconnected.',
+                slots: []
+            });
+        }
         return res.status(502).json({ error: 'calendar_query_failed', detail: String(e.message || e) });
     }
 };

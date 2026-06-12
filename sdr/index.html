@@ -2441,6 +2441,10 @@
             setBookBtnEnabled(false);
             try {
                 var data = await fetchJSON('/api/prospects/calendar-availability?days=7');
+                if (data.needs_reauth) {
+                    host.innerHTML = '<div style="padding:14px;background:rgba(234,179,8,0.12);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:12px;line-height:1.5;">The booking calendar connection expired. Ping Remy to reconnect it, then your slots will show. In the meantime, use "Interested, follow up" to set a callback.</div>';
+                    return;
+                }
                 if (data.configured === false) {
                     host.innerHTML = '<div style="padding:14px;background:rgba(234,179,8,0.12);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:12px;line-height:1.5;">Google Calendar is not connected yet. Remy needs to authorize the booking calendar before slots will appear.</div>';
                     return;
@@ -2557,6 +2561,10 @@
                 setTimeout(function () { closeLeadDrawer(); loadLeads(); loadOverview(); }, 1800);
             } catch (e) {
                 if (btn) { btn.disabled = false; btn.textContent = 'Book + send invite'; }
+                if (e.status === 409 && e.body && e.body.error === 'calendar_reauth_required') {
+                    if (msg) { msg.style.color = 'var(--yellow,#eab308)'; msg.textContent = 'The booking calendar disconnected. Ping Remy to reconnect it, then book again. For now, set a callback with "Interested, follow up".'; }
+                    return;
+                }
                 if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Booking failed: ' + (e.message || 'unknown'); }
             }
         }

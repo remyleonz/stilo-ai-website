@@ -14,7 +14,7 @@
  * "Configure Google Calendar" prompt instead of a broken flow.
  */
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
-const { getCalendarRefreshToken, accessTokenFromRefresh } = require('./_google_calendar');
+const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL } = require('./_google_calendar');
 const { createClient } = require('@supabase/supabase-js');
 
 function buildEmailHtml(opts) {
@@ -115,8 +115,23 @@ module.exports = async function handler(req, res) {
     const startIso = new Date(whenIso).toISOString();
     const endIso = new Date(new Date(whenIso).getTime() + durationMin * 60000).toISOString();
 
+    let accessToken;
     try {
-        const accessToken = await accessTokenFromRefresh(refreshToken);
+        accessToken = await accessTokenFromRefresh(refreshToken);
+    } catch (e) {
+        // Dead refresh token: surface a clean reconnect signal so the booking
+        // button shows "reconnect the calendar" instead of a generic failure.
+        if (isReauthError(e)) {
+            return res.status(409).json({
+                error: 'calendar_reauth_required',
+                reauth_url: REAUTH_URL,
+                detail: 'The booking calendar connection expired and needs to be reconnected before meetings can be booked.'
+            });
+        }
+        return res.status(502).json({ error: 'calendar_auth_failed', detail: String(e.message || e) });
+    }
+
+    try {
         // Pull the contact (name / email / phone) onto the event so Remy's
         // calendar shows who he's meeting — the same fields Google's booking
         // form would have collected, but auto-filled from our lead data so the
