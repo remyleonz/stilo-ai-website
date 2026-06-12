@@ -7006,8 +7006,10 @@
                 + (mode === 'emailable'
                     ? ''
                     : '<div id="prospectBookingPicker" style="display:none;margin-bottom:12px;padding:12px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.18);border-radius:8px;">'
-                      + '<label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Pick a 15-minute slot from your calendar</label>'
-                      + '<div id="prospectBookingSlots"></div>'
+                      + '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;font-weight:700;">Book the meeting below, then mark it</div>'
+                      + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">Pick a time with the prospect and enter THEIR name and email so Google sends them the invite and Meet link. Then click "Mark as booked" so it lands on the dashboard.</div>'
+                      + '<iframe src="' + BOOKING_EMBED_URL + '" style="border:0;width:100%;height:520px;border-radius:8px;background:#fff;" frameborder="0"></iframe>'
+                      + '<div style="margin-top:6px;"><a href="' + BOOKING_EMBED_URL + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--blue);">Open the booking page in a new tab instead</a></div>'
                       + '</div>')
                 + (mode === 'emailable'
                     ? ''
@@ -7204,9 +7206,9 @@
                 row.style.display = showFollow ? 'block' : 'none';
                 if (showFollow) renderCallbackPicker();
             }
-            // booked_meeting → render Google Calendar slot picker.
+            // booked_meeting → show the embedded Google booking page.
             if (sel.value === 'booked_meeting') {
-                if (pickerHost) { pickerHost.style.display = 'block'; loadBookingSlots(); }
+                if (pickerHost) { pickerHost.style.display = 'block'; }
             } else {
                 if (pickerHost) pickerHost.style.display = 'none';
             }
@@ -7219,11 +7221,18 @@
                     submitBtn.style.display = 'none';
                 } else {
                     submitBtn.style.display = 'block';
-                    submitBtn.textContent = sel.value === 'booked_meeting' ? 'Book + send invite'
+                    submitBtn.textContent = sel.value === 'booked_meeting' ? 'Mark as booked'
                         : (match && match.followUp ? 'Schedule the callback' : 'Log this outcome');
                 }
             }
         }
+
+        // Google Appointment Scheduling page ("STILO AI PARTNERS MEETING").
+        // Booking happens entirely on Google's side (no OAuth token, never
+        // expires, works from any rep's Google account). The rep books in the
+        // embed, then logs the booked_meeting outcome; sync-bookings enriches
+        // the Booked tab with the real time + Meet link when it runs.
+        var BOOKING_EMBED_URL = 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ2oPH2fzwUuTsyXrj1shb8S3vUJYwLsip7IWCAk495hglVFeAiuixMPYPYF6DgUVnQQlVICaV1B?gv=true';
 
         // ─── Booking slot picker (Google Calendar free/busy) ───────────────────
         // Two-step UI: day cards first, then time slots for the selected day.
@@ -7553,33 +7562,28 @@
                 return;
             }
 
-            // Booked meeting → run the full booking flow (calendar event + email + log-call).
+            // Booked meeting → the rep already booked it on the embedded Google
+            // page (Google created the event + sent the invite/Meet link). We
+            // just record the outcome so it lands on the Booked tab. No Calendar
+            // API, so this never depends on the OAuth token.
             if (outcome === 'booked_meeting') {
-                if (!bookingState.selectedIso) {
-                    msgEl.style.color = 'var(--red)';
-                    msgEl.textContent = 'Pick a slot from your calendar above before booking.';
-                    return;
-                }
-                msgEl.textContent = 'Booking on Google Calendar + sending email…';
                 msgEl.style.color = 'var(--text-muted)';
+                msgEl.textContent = 'Marking as booked…';
                 try {
-                    var resp = await prospectFetchJSON('/api/prospects/book-meeting', {
-                        method: 'POST',
-                        body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 })
-                    });
+                    var bookedBody = { id: leadId, outcome: 'booked_meeting', notes: notes };
+                    var lb = document.getElementById('prospectLoggedBy');
+                    if (lb && lb.value) bookedBody.logged_by_override = lb.value;
+                    await prospectFetchJSON('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(bookedBody) });
+                    // Best-effort: pull the real time + Meet link onto the Booked
+                    // tab if the calendar sync is connected. Booking is already
+                    // recorded regardless of whether this succeeds.
+                    try { await prospectFetchJSON('/api/prospects/sync-bookings?force=1', { method: 'POST' }); } catch (_) {}
                     msgEl.style.color = 'var(--green,#10b981)';
-                    msgEl.innerHTML = 'Booked. <a href="' + escapeAdminHtml(resp.event_link || '#') + '" target="_blank" style="color:var(--blue);">Open in Google Calendar</a>'
-                        + (resp.meet_link ? ' · <a href="' + escapeAdminHtml(resp.meet_link) + '" target="_blank" style="color:var(--blue);">Meet link</a>' : '')
-                        + (resp.email && resp.email.id ? ' · email sent' : (resp.email && resp.email.skipped ? ' · email skipped (' + resp.email.skipped + ')' : ''));
-                    setTimeout(function () { advanceToNextProspect(leadId); }, 1800);
+                    msgEl.textContent = 'Booked. It will show on the Booked tab.';
+                    setTimeout(function () { advanceToNextProspect(leadId); }, 1500);
                 } catch (e) {
-                    if (e.status === 409 && e.body && e.body.error === 'calendar_reauth_required') {
-                        msgEl.style.color = 'var(--yellow,#eab308)';
-                        msgEl.innerHTML = 'The booking calendar disconnected. <a href="#" onclick="openCalendarReauth(\'' + (e.body.reauth_url || '/api/oauth?provider=google-calendar&action=start') + '\');return false;" style="color:var(--blue);font-weight:700;">Reconnect Google Calendar</a> then book again.';
-                        return;
-                    }
                     msgEl.style.color = 'var(--red)';
-                    msgEl.textContent = 'Booking failed: ' + (e.message || 'unknown');
+                    msgEl.textContent = 'Could not record it: ' + (e.message || 'unknown');
                 }
                 return;
             }

@@ -2243,21 +2243,17 @@
                 + '<textarea id="dncNote" placeholder="Reason…" rows="2" oninput="document.getElementById(\'dncConfirmBtn\').disabled = !this.value.trim(); document.getElementById(\'dncConfirmBtn\').style.opacity = this.value.trim()?1:0.5;" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;resize:vertical;"></textarea>'
                 + '<button id="dncConfirmBtn" disabled onclick="confirmDnc(' + r.id + ')" style="margin-top:10px;width:100%;padding:11px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Confirm Do Not Call</button>'
                 + '</div>'
-                // ── Booking slot picker (hidden until Booked meeting) ──
+                // ── Booking (hidden until Booked meeting) ──
+                // Books straight on the Google Appointment Scheduling page (no
+                // OAuth, never expires, works from any Google account). The rep
+                // books in the embed, then taps "Mark as booked" to log it.
                 + '<div id="sdrBookingPicker" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'
-                + '<div class="section-title" style="font-size:13px;margin-bottom:4px;">Pick a time on Remy\'s calendar</div>'
-                + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">Books the meeting, emails the prospect the Google Meet link, and adds it to Remy\'s calendar.</div>'
-                // Editable email field — required before booking so the prospect
-                // actually receives the invite + Meet link. Pre-filled when we
-                // have it; the rep confirms or types it from the call.
-                + '<div style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:10px 12px;margin-bottom:14px;">'
-                + '<div class="stat-label" style="margin-bottom:6px;">Send invite + confirmation to <span style="color:var(--red);">*</span></div>'
-                + '<input id="sdrBookingEmail" type="email" value="' + escapeHtml(r.owner_email || r.email || '') + '" placeholder="client@email.com" oninput="updateBookBtn()" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">'
-                + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:5px;">' + ((r.owner_email || r.email) ? 'Confirm this is right on the call before you book.' : 'No email on file — ask for it on the call and type it here.') + '</div>'
-                + '</div>'
-                + '<div id="sdrBookingSlots"></div>'
+                + '<div class="section-title" style="font-size:13px;margin-bottom:4px;">Book the meeting</div>'
+                + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;line-height:1.5;">Pick a time with the prospect below and enter THEIR name and email so Google sends them the invite and Meet link. Then tap "Mark as booked".</div>'
+                + '<iframe src="' + BOOKING_EMBED_URL + '" style="border:0;width:100%;height:520px;border-radius:8px;background:#fff;" frameborder="0"></iframe>'
+                + '<div style="margin-top:6px;"><a href="' + BOOKING_EMBED_URL + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--blue);">Open the booking page in a new tab</a></div>'
                 + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
-                + '<button id="sdrBookBtn" onclick="confirmBooking(' + r.id + ')" disabled style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'
+                + '<button id="sdrBookBtn" onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Mark as booked</button>'
                 + '</div>';
         }
 
@@ -2424,12 +2420,14 @@
            → confirm → /api/prospects/book-meeting creates the event, emails
            the prospect, and flips the lead to booked. */
         var bookingState = { slots: [], selectedIso: null, expandedDay: null };
+        // Google Appointment Scheduling page ("STILO AI PARTNERS MEETING").
+        // Booking runs entirely on Google's side — no OAuth token, never expires.
+        var BOOKING_EMBED_URL = 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ2oPH2fzwUuTsyXrj1shb8S3vUJYwLsip7IWCAk495hglVFeAiuixMPYPYF6DgUVnQQlVICaV1B?gv=true';
 
         function openBookingPicker(leadId) {
             hideOutcomeBoxes();
             var host = document.getElementById('sdrBookingPicker');
             if (host) host.style.display = 'block';
-            loadBookingSlots();
             if (host) host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
@@ -2536,36 +2534,28 @@
         }
 
         async function confirmBooking(leadId) {
-            if (!bookingState.selectedIso) return;
             var msg = document.getElementById('sdrBookingMsg');
             var btn = document.getElementById('sdrBookBtn');
-            var email = bookingEmail();
-            if (!validEmail(email)) {
-                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter the client\'s email before booking — they need it to get the Meet link.'; }
-                var inp = document.getElementById('sdrBookingEmail'); if (inp) inp.focus();
-                return;
-            }
-            if (btn) { btn.disabled = true; btn.textContent = 'Booking…'; }
-            if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Booking on Google Calendar + emailing the prospect…'; }
+            // The meeting is already booked on the embedded Google page (Google
+            // sent the invite + Meet link). We just record the outcome so it
+            // lands on the Booked tab. No Calendar API, so no OAuth dependency.
+            if (btn) { btn.disabled = true; btn.textContent = 'Marking…'; }
+            if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Marking as booked…'; }
             try {
-                var resp = await fetchJSON('/api/prospects/book-meeting', {
+                var note = document.getElementById('callNote') ? document.getElementById('callNote').value : '';
+                await fetchJSON('/api/prospects/log-call', {
                     method: 'POST',
-                    body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15, email: email })
+                    body: JSON.stringify({ id: leadId, lead_id: leadId, outcome: 'booked_meeting', notes: note })
                 });
-                if (msg) {
-                    msg.style.color = 'var(--green)';
-                    msg.innerHTML = 'Booked. ' + (resp.event_link ? '<a href="' + escapeHtml(resp.event_link) + '" target="_blank" style="color:var(--blue);">Open in Calendar</a>' : '')
-                        + (resp.meet_link ? ' · <a href="' + escapeHtml(resp.meet_link) + '" target="_blank" style="color:var(--blue);">Meet link</a>' : '')
-                        + (resp.email && resp.email.id ? ' · email sent' : (resp.email && resp.email.skipped ? ' · email skipped' : ''));
-                }
-                setTimeout(function () { closeLeadDrawer(); loadLeads(); loadOverview(); }, 1800);
+                // Best-effort: enrich the Booked tab with the real time + Meet
+                // link if the calendar sync is connected. Booking is recorded
+                // either way.
+                try { await fetchJSON('/api/prospects/sync-bookings?force=1', { method: 'POST' }); } catch (_) {}
+                if (msg) { msg.style.color = 'var(--green)'; msg.textContent = 'Booked. It will show on your Booked tab.'; }
+                setTimeout(function () { closeLeadDrawer(); loadLeads(); loadOverview(); }, 1500);
             } catch (e) {
-                if (btn) { btn.disabled = false; btn.textContent = 'Book + send invite'; }
-                if (e.status === 409 && e.body && e.body.error === 'calendar_reauth_required') {
-                    if (msg) { msg.style.color = 'var(--yellow,#eab308)'; msg.textContent = 'The booking calendar disconnected. Ping Remy to reconnect it, then book again. For now, set a callback with "Interested, follow up".'; }
-                    return;
-                }
-                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Booking failed: ' + (e.message || 'unknown'); }
+                if (btn) { btn.disabled = false; btn.textContent = 'Mark as booked'; }
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Could not record it: ' + (e.message || 'unknown'); }
             }
         }
 
