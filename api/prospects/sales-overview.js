@@ -38,7 +38,7 @@ module.exports = async function handler(req, res) {
 
     // Deals by stage (full rows for the expand panels).
     const { data: deals } = await pub.from('deals')
-        .select('id, business_name, contact_name, sdr_id, stage, agent_codes, upfront_fee_cents, monthly_retainer_cents, paid_at, churned_at, churn_reason, created_at, meeting_event_link')
+        .select('id, business_name, contact_name, sdr_id, stage, agent_codes, upfront_fee_cents, monthly_retainer_cents, paid_at, churned_at, churn_reason, created_at')
         .order('created_at', { ascending: false });
     const byStage = function (s) { return (deals || []).filter(function (d) { return d.stage === s; }); };
     const onboarding = byStage('ONBOARDING');
