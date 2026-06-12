@@ -2055,13 +2055,22 @@
 
         function sdrFromEmail(email) {
             var e = String(email || '').trim().toLowerCase();
+            if (!e) return { sdrKey: null, displayName: 'Unknown' };
             if (e === 'remyleon@stiloaipartners.com' || e === 'remyleon11@gmail.com') {
                 return { sdrKey: 'remy', displayName: 'Remy Leon' };
             }
             if (e === 'davidcoira@stiloaipartners.com') {
                 return { sdrKey: 'david', displayName: 'David Coira' };
             }
-            return { sdrKey: null, displayName: e || 'Unknown' };
+            // Resolve every other rep (Luke, Jack, Alejandro, ...) from the live
+            // roster so attribution shows real names, not raw emails.
+            var roster = (window.__SDR_ROSTER || []);
+            for (var i = 0; i < roster.length; i++) {
+                if (roster[i].email && roster[i].email.toLowerCase() === e) {
+                    return { sdrKey: roster[i].sdr_key || null, displayName: roster[i].display_name || e.split('@')[0] };
+                }
+            }
+            return { sdrKey: null, displayName: e.split('@')[0] };
         }
 
         function grantAdminAccess(session) {
