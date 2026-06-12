@@ -1566,6 +1566,8 @@
                             + '</tr>';
                     });
                     html += '</tbody></table>';
+                } else if (sub === 'callbacks') {
+                    html = callbackTableHtml(rows);
                 } else {
                     html = standardLeadTableHtml(rows);
                 }
@@ -1573,6 +1575,35 @@
             } catch (e) {
                 wrap.innerHTML = '<div class="empty-state">Failed to load: ' + escapeHtml(e.message) + '</div>';
             }
+        }
+
+        // Callbacks table: sorted by the actual callback time (soonest / most
+        // overdue first). The time lives in next_action_due_at or the legacy
+        // next_callback_at, so coalesce; rows with neither sort last.
+        function callbackTableHtml(rows) {
+            var FAR = 8640000000000000;
+            var sorted = (rows || []).slice().sort(function (a, b) {
+                var ax = new Date(a.next_action_due_at || a.next_callback_at || FAR).getTime();
+                var bx = new Date(b.next_action_due_at || b.next_callback_at || FAR).getTime();
+                if (isNaN(ax)) ax = FAR; if (isNaN(bx)) bx = FAR;
+                return ax - bx;
+            });
+            var now = Date.now();
+            var html = '<table><thead><tr><th>Due</th><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Last call</th></tr></thead><tbody>';
+            sorted.slice(0, 200).forEach(function (r) {
+                var due = r.next_action_due_at || r.next_callback_at || null;
+                var dms = tsToMs(due);
+                var overdue = dms != null && dms < now;
+                html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
+                    + '<td style="white-space:nowrap;color:' + (overdue ? 'var(--red)' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + escapeHtml(due ? fmtET(due) : '—') + (overdue ? ' (overdue)' : '') + '</td>'
+                    + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
+                    + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
+                    + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
+                    + '<td>' + escapeHtml(r.niche || '—') + '</td>'
+                    + '<td style="white-space:nowrap;">' + fmtET(r.last_called_at) + '</td>'
+                    + '</tr>';
+            });
+            return html + '</tbody></table>';
         }
 
         // Standard lead table (Business / Owner / Phone / Niche / Tier / Last

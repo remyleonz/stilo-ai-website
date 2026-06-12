@@ -1681,6 +1681,7 @@
                     <button class="prospect-subtab" data-subtab="emailable" onclick="switchProspectTab('emailable')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Cold Email</button>
                     <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Call Back <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="booked" onclick="switchProspectTab('booked')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Booked Meeting <span id="prospectBookedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,0.18);color:var(--green,#10b981);font-size:10px;font-weight:700;">0</span></button>
+                    <button class="prospect-subtab" data-subtab="emailed" onclick="switchProspectTab('emailed')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Emailed <span id="prospectEmailedBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(45,79,184,0.22);color:#5A7BE8;font-size:10px;font-weight:700;">0</span></button>
                     <!-- Inbound from marketing site quiz. Lead Reply Agent has already emailed them; this is for follow-up. -->
                     <button class="prospect-subtab" data-subtab="quiz-leads" onclick="switchProspectTab('quiz-leads')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Quiz Leads <span id="prospectQuizLeadsBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(45,79,184,0.22);color:#5A7BE8;font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab" data-subtab="my-history" onclick="switchProspectTab('my-history')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">My Call History</button>
@@ -1723,6 +1724,7 @@
                 <div id="prospectTableCallsToday" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <div id="prospectTableMyHistory" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <div id="prospectTableShared" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="prospectTableEmailed" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <!-- Quiz Leads: inbound from the marketing site quiz (public.quiz_submissions). -->
                 <div id="prospectTableQuizLeads" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
                     <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Quiz Leads will load when you open this tab.</div>
@@ -5655,10 +5657,12 @@
             if (quizHost) quizHost.style.display                              = name === 'quiz-leads'   ? '' : 'none';
             var sharedHost = document.getElementById('prospectTableShared');
             if (sharedHost) sharedHost.style.display                          = name === 'shared'       ? '' : 'none';
+            var emailedHost = document.getElementById('prospectTableEmailed');
+            if (emailedHost) emailedHost.style.display                        = name === 'emailed'      ? '' : 'none';
             var myHistoryControls = document.getElementById('prospectMyHistoryControls');
             if (myHistoryControls) myHistoryControls.style.display            = name === 'my-history'   ? 'flex' : 'none';
             // Filter bar useful only for the broad inbound lists; hide on cold-call lifecycle stages.
-            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today' || name === 'my-history' || name === 'quiz-leads' || name === 'shared');
+            var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today' || name === 'my-history' || name === 'quiz-leads' || name === 'shared' || name === 'emailed');
             document.getElementById('prospectFilterBar').style.display = hideFilter ? 'none' : 'flex';
             if (name === 'callable')          loadProspectCallable();
             else if (name === 'emailable')    loadProspectEmailable();
@@ -5669,6 +5673,43 @@
             else if (name === 'my-history')   loadMyHistory();
             else if (name === 'quiz-leads')   loadQuizLeads();
             else if (name === 'shared')       loadProspectShared();
+            else if (name === 'emailed')      loadProspectEmailed();
+        }
+
+        /* ===== EMAILED (leads we've sent an email to) =====
+           Sitewide for admins (every rep's sends), with who sent each one.
+           Sourced from /api/prospects/emailed (prospecting.lead_messages). */
+        async function loadProspectEmailed() {
+            var host = document.getElementById('prospectTableEmailed');
+            if (!host) return;
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading emailed leads...</div>';
+            try {
+                var qs = prospectState.filters.sdr ? ('?assigned_to=' + encodeURIComponent(prospectState.filters.sdr)) : '';
+                var data = await prospectFetchJSON('/api/prospects/emailed' + qs);
+                var rows = data.results || [];
+                var badge = document.getElementById('prospectEmailedBadge');
+                if (badge) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
+                if (!rows.length) { host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No emails sent yet.</div>'; return; }
+                var html = '<table style="width:100%;border-collapse:collapse;"><thead><tr style="text-align:left;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">'
+                    + '<th style="padding:10px 14px;">Business</th><th style="padding:10px 14px;">Owner</th><th style="padding:10px 14px;">Emailed to</th><th style="padding:10px 14px;">By</th><th style="padding:10px 14px;">Niche</th><th style="padding:10px 14px;">Sent</th></tr></thead><tbody>';
+                rows.slice(0, 400).forEach(function (r) {
+                    var em = r._email || {};
+                    var sent = em.at ? new Date(em.at).toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short' }) : '—';
+                    var by = (em.by || '').split('@')[0] || '—';
+                    html += '<tr onclick="openProspectDrawer(' + (r.id || 'null') + ')" style="cursor:pointer;border-top:1px solid var(--border-subtle);">'
+                        + '<td style="padding:10px 14px;"><strong>' + escapeAdminHtml(r.business_name || r.name || ('Lead ' + r.id)) + '</strong></td>'
+                        + '<td style="padding:10px 14px;">' + escapeAdminHtml(r.owner_name || '—') + '</td>'
+                        + '<td style="padding:10px 14px;">' + escapeAdminHtml(em.to || '—') + '</td>'
+                        + '<td style="padding:10px 14px;">' + escapeAdminHtml(by) + '</td>'
+                        + '<td style="padding:10px 14px;">' + escapeAdminHtml(r.niche || r.category || '—') + '</td>'
+                        + '<td style="padding:10px 14px;white-space:nowrap;color:var(--text-secondary);">' + escapeAdminHtml(sent) + '</td>'
+                        + '</tr>';
+                });
+                html += '</tbody></table>';
+                host.innerHTML = html;
+            } catch (e) {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
         }
 
         /* ===== SHARED WITH ME (cross-dashboard lead sharing) =====
@@ -6121,6 +6162,18 @@
             }
         }
 
+        // Sort callbacks chronologically by the actual callback time (soonest /
+        // most overdue first). The time can live in either next_action_due_at or
+        // the legacy next_callback_at, so coalesce; rows with neither sort last.
+        function sortByCallbackDue(rows) {
+            var FAR = 8640000000000000;
+            return (rows || []).slice().sort(function (a, b) {
+                var ax = new Date(a.next_action_due_at || a.next_callback_at || FAR).getTime();
+                var bx = new Date(b.next_action_due_at || b.next_callback_at || FAR).getTime();
+                if (isNaN(ax)) ax = FAR; if (isNaN(bx)) bx = FAR;
+                return ax - bx;
+            });
+        }
         async function loadProspectCallbacks(opts) {
             opts = opts || {};
             var host = document.getElementById('prospectTableCallbacks');
@@ -6129,7 +6182,7 @@
             var dueOnly = !!prospectState.dueTodayOnly;
             var cached = !opts.force && !dueOnly && prospectState.cache.callbacks;
             if (cached) {
-                prospectState.rows = applyClientFilters(cached);
+                prospectState.rows = sortByCallbackDue(applyClientFilters(cached));
                 host.innerHTML = renderProspectTable(prospectState.rows, 'callbacks');
             } else {
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading callbacks...</div>';
@@ -6140,7 +6193,7 @@
                 var data = await prospectFetchJSON('/api/prospects/list-callbacks' + qs);
                 var raw = data.results || [];
                 if (!dueOnly) prospectState.cache.callbacks = raw;
-                var rows = applyClientFilters(raw);
+                var rows = sortByCallbackDue(applyClientFilters(raw));
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'callbacks');
                 var badge = document.getElementById('prospectCallbackBadge');
