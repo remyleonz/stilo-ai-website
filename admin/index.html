@@ -6939,6 +6939,24 @@
                 + '<span style="display:inline-block;vertical-align:-1px;margin-right:6px;">⚡</span>Close Deal'
                 + '</button>';
 
+            // Booked-meeting card: the one thing the operator needs on a booked
+            // lead — the time + a Join Meet button. Shown above everything else.
+            var isBookedLead = (d.last_called_outcome === 'booked_meeting') || !!d.meeting_scheduled_at;
+            var meetingCardHtml = '';
+            if (isBookedLead) {
+                var mWhen = d.meeting_scheduled_at ? new Date(d.meeting_scheduled_at) : null;
+                var mWhenStr = mWhen ? mWhen.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'Time not set yet';
+                meetingCardHtml = '<div style="margin-bottom:16px;padding:14px 16px;background:rgba(22,163,74,0.10);border:1px solid rgba(22,163,74,0.40);border-radius:12px;">'
+                    + '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#16a34a;margin-bottom:6px;">Meeting booked</div>'
+                    + '<div style="font-size:17px;font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(mWhenStr) + '</div>'
+                    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
+                      + (d.meeting_meet_link ? '<a href="' + escapeAdminHtml(d.meeting_meet_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;">Join Google Meet</a>' : '')
+                      + (d.meeting_event_link ? '<a href="' + escapeAdminHtml(d.meeting_event_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);">Open in Calendar</a>' : '')
+                    + '</div>'
+                    + ((!d.meeting_meet_link && !d.meeting_event_link) ? '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">The Meet link appears once the calendar sync runs.</div>' : '')
+                  + '</div>';
+            }
+
             return ''
                 // ── Header (SDR-drawer parity) ──
                 + '<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
@@ -6956,6 +6974,7 @@
                   + closeDealCta
                 + '</div>'
 
+                + meetingCardHtml
                 + phoneCardHtml
                 + actionPillsHtml
                 + infoGridHtml
@@ -7010,6 +7029,11 @@
                       + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">Pick a time with the prospect and enter THEIR name and email so Google sends them the invite and Meet link. Then click "Mark as booked" so it lands on the dashboard.</div>'
                       + '<iframe src="' + BOOKING_EMBED_URL + '" style="border:0;width:100%;height:520px;border-radius:8px;background:#fff;" frameborder="0"></iframe>'
                       + '<div style="margin-top:6px;"><a href="' + BOOKING_EMBED_URL + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--blue);">Open the booking page in a new tab instead</a></div>'
+                      + '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-medium);">'
+                        + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Meeting date &amp; time</label>'
+                        + '<input id="prospectBookWhen" type="datetime-local" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;">'
+                        + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">If the prospect already booked themselves, enter the time here so it shows on the Booked tab. Otherwise leave blank and the calendar sync fills it in.</div>'
+                      + '</div>'
                       + '</div>')
                 + (mode === 'emailable'
                     ? ''
@@ -7570,13 +7594,14 @@
                 msgEl.style.color = 'var(--text-muted)';
                 msgEl.textContent = 'Marking as booked…';
                 try {
-                    var bookedBody = { id: leadId, outcome: 'booked_meeting', notes: notes };
-                    var lb = document.getElementById('prospectLoggedBy');
-                    if (lb && lb.value) bookedBody.logged_by_override = lb.value;
-                    await prospectFetchJSON('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(bookedBody) });
-                    // Best-effort: pull the real time + Meet link onto the Booked
-                    // tab if the calendar sync is connected. Booking is already
-                    // recorded regardless of whether this succeeds.
+                    var whenEl = document.getElementById('prospectBookWhen');
+                    var whenIso = (whenEl && whenEl.value) ? new Date(whenEl.value).toISOString() : null;
+                    await prospectFetchJSON('/api/prospects/mark-booked', {
+                        method: 'POST',
+                        body: JSON.stringify({ lead_id: leadId, when_iso: whenIso, notes: notes })
+                    });
+                    // Best-effort: pull the real time + Meet link from the calendar
+                    // if the sync is connected. The booking is already recorded.
                     try { await prospectFetchJSON('/api/prospects/sync-bookings?force=1', { method: 'POST' }); } catch (_) {}
                     msgEl.style.color = 'var(--green,#10b981)';
                     msgEl.textContent = 'Booked. It will show on the Booked tab.';

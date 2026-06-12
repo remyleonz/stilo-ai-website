@@ -2173,6 +2173,23 @@
                     + '</div>';
             }
 
+            // Booked-meeting card: the time + a Join Meet button, shown above
+            // everything else on a booked lead.
+            var sdrMeetingCard = '';
+            if ((r.last_called_outcome === 'booked_meeting') || r.meeting_scheduled_at) {
+                var mw = r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at) : null;
+                var mwStr = mw ? mw.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'Time not set yet';
+                sdrMeetingCard = '<div style="margin-bottom:18px;padding:14px 16px;background:rgba(22,163,74,0.10);border:1px solid rgba(22,163,74,0.40);border-radius:12px;">'
+                    + '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#16a34a;margin-bottom:6px;">Meeting booked</div>'
+                    + '<div style="font-size:17px;font-weight:700;color:var(--text-primary);">' + escapeHtml(mwStr) + '</div>'
+                    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
+                      + (r.meeting_meet_link ? '<a href="' + escapeHtml(r.meeting_meet_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;">Join Google Meet</a>' : '')
+                      + (r.meeting_event_link ? '<a href="' + escapeHtml(r.meeting_event_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);">Open in Calendar</a>' : '')
+                    + '</div>'
+                    + ((!r.meeting_meet_link && !r.meeting_event_link) ? '<div style="font-size:11px;color:var(--text-tertiary);margin-top:8px;">The Meet link appears once the calendar sync runs.</div>' : '')
+                  + '</div>';
+            }
+
             return ''
                 // ── Header ──
                 + '<div style="margin-bottom:16px;">'
@@ -2185,6 +2202,7 @@
                 + (r.website ? '<a href="' + escapeHtml(r.website) + '" target="_blank" style="font-size:12px;color:var(--blue);margin-left:auto;">Website ↗</a>' : '')
                 + '</div>'
                 + '</div>'
+                + sdrMeetingCard
                 // ── Prominent phone + Call in Quo ──
                 + '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg,rgba(37,99,235,0.10),rgba(37,99,235,0.02));border:1px solid rgba(37,99,235,0.35);border-radius:12px;padding:16px 18px;margin-bottom:20px;">'
                 + '<div style="min-width:0;">'
@@ -2252,6 +2270,11 @@
                 + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;line-height:1.5;">Pick a time with the prospect below and enter THEIR name and email so Google sends them the invite and Meet link. Then tap "Mark as booked".</div>'
                 + '<iframe src="' + BOOKING_EMBED_URL + '" style="border:0;width:100%;height:520px;border-radius:8px;background:#fff;" frameborder="0"></iframe>'
                 + '<div style="margin-top:6px;"><a href="' + BOOKING_EMBED_URL + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--blue);">Open the booking page in a new tab</a></div>'
+                + '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-medium);">'
+                  + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Meeting date &amp; time</label>'
+                  + '<input id="sdrBookWhen" type="datetime-local" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">'
+                  + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">If the prospect already booked themselves, enter the time so it shows on your Booked tab. Otherwise leave blank.</div>'
+                + '</div>'
                 + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
                 + '<button id="sdrBookBtn" onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Mark as booked</button>'
                 + '</div>';
@@ -2543,9 +2566,11 @@
             if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Marking as booked…'; }
             try {
                 var note = document.getElementById('callNote') ? document.getElementById('callNote').value : '';
-                await fetchJSON('/api/prospects/log-call', {
+                var whenEl = document.getElementById('sdrBookWhen');
+                var whenIso = (whenEl && whenEl.value) ? new Date(whenEl.value).toISOString() : null;
+                await fetchJSON('/api/prospects/mark-booked', {
                     method: 'POST',
-                    body: JSON.stringify({ id: leadId, lead_id: leadId, outcome: 'booked_meeting', notes: note })
+                    body: JSON.stringify({ lead_id: leadId, when_iso: whenIso, notes: note })
                 });
                 // Best-effort: enrich the Booked tab with the real time + Meet
                 // link if the calendar sync is connected. Booking is recorded

@@ -45,6 +45,39 @@ async function resolveSdr(sb, leadId, assignedTo) {
     return assignedTo || null;
 }
 
+// Email Remy the moment a meeting lands on the calendar, so he never has to
+// find out by opening Google Calendar. Sent via Resend to the master inbox.
+async function notifyNewBooking(b) {
+    if (!process.env.RESEND_API_KEY) return;
+    const to = process.env.STILO_REPLY_TO || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    const from = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    const whenStr = b.when
+        ? new Date(b.when).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET'
+        : 'time TBD';
+    const esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    const leadUrl = 'https://stiloaipartners.com/admin/#lead=' + b.lead_id;
+    const html = [
+        '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;font-size:15px;line-height:1.55;">',
+        '<p style="font-size:18px;font-weight:700;margin:0 0 12px;">New meeting booked</p>',
+        '<p style="margin:0 0 6px;"><strong>' + esc(b.business || 'Lead') + '</strong>' + (b.owner ? ' (' + esc(b.owner) + ')' : '') + '</p>',
+        '<p style="margin:0 0 6px;">When: <strong>' + esc(whenStr) + '</strong></p>',
+        '<p style="margin:0 0 6px;">Booked by: ' + esc(b.booker_name || b.booker_email || 'prospect') + '</p>',
+        b.meet ? '<p style="margin:14px 0;"><a href="' + esc(b.meet) + '" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:8px;">Join Google Meet</a></p>' : '',
+        '<p style="margin:12px 0 0;"><a href="' + esc(leadUrl) + '" style="color:#2563EB;">Open the lead in the dashboard</a></p>',
+        '</div>'
+    ].join('');
+    await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            from: '"STILO Bookings" <' + from + '>',
+            to: [to],
+            subject: 'New meeting booked: ' + (b.business || 'lead') + ' · ' + whenStr,
+            html: html
+        })
+    });
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET' && req.method !== 'POST') return methodNotAllowed(res, 'GET, POST');
 
@@ -104,25 +137,38 @@ module.exports = async function handler(req, res) {
         const start = (e.start && (e.start.dateTime || e.start.date)) || null;
         if (!start || e.status === 'cancelled') continue;
         // External attendees = the booker(s). Drop our own org + Remy's gmail.
+        // Keep the display name so we can fall back to name matching when the
+        // email they booked with isn't the one we have on the lead.
         const guests = (e.attendees || [])
-            .map(function (a) { return (a.email || '').toLowerCase().trim(); })
-            .filter(function (em) { return em && !/@stiloaipartners\.com$/.test(em) && em !== 'remyleon11@gmail.com'; });
+            .map(function (a) { return { email: (a.email || '').toLowerCase().trim(), name: (a.displayName || '').trim() }; })
+            .filter(function (g) { return g.email && !/@stiloaipartners\.com$/.test(g.email) && g.email !== 'remyleon11@gmail.com'; });
         if (!guests.length) continue;
 
         const meetLink = e.hangoutLink
             || ((e.conferenceData && e.conferenceData.entryPoints || []).find(function (p) { return p.entryPointType === 'video'; }) || {}).uri
             || null;
 
-        for (const email of guests) {
+        const SEL = 'id, name, owner_name, assigned_to, meeting_event_id, last_called_outcome, call_attempts';
+        for (const guest of guests) {
+            const email = guest.email;
             let lead;
             try {
-                const { data } = await sb.from('leads')
-                    .select('id, name, assigned_to, meeting_event_id, last_called_outcome, call_attempts')
+                const { data } = await sb.from('leads').select(SEL)
                     .or('owner_email.ilike.' + email + ',email.ilike.' + email)
                     .limit(1);
                 lead = data && data[0];
             } catch (_) { lead = null; }
-            if (!lead) { unmatched.push(email); continue; }
+            // Fallback: the prospect booked with a different email than we have.
+            // Match the booker's name to a lead's owner_name, but ONLY when it's
+            // unambiguous (exactly one match) so we never attach to the wrong lead.
+            if (!lead && guest.name && guest.name.length > 2) {
+                try {
+                    const { data } = await sb.from('leads').select(SEL)
+                        .ilike('owner_name', '%' + guest.name + '%').limit(2);
+                    if (data && data.length === 1) lead = data[0];
+                } catch (_) { /* keep unmatched */ }
+            }
+            if (!lead) { unmatched.push(guest.name ? (guest.email + ' (' + guest.name + ')') : guest.email); continue; }
             if (lead.meeting_event_id === e.id) continue; // already processed (incl. SDR-booked)
 
             const sdr = await resolveSdr(sb, lead.id, lead.assigned_to);
@@ -139,6 +185,11 @@ module.exports = async function handler(req, res) {
                     updated_at: new Date().toISOString()
                 }).eq('id', lead.id);
                 booked.push({ lead_id: lead.id, business: lead.name, email: email, sdr: sdr, when: start });
+                // Tell Remy a meeting just landed, so he never has to discover it
+                // by opening Google Calendar. Best-effort; never block the sync.
+                try {
+                    await notifyNewBooking({ business: lead.name, owner: lead.owner_name, booker_email: email, booker_name: guest.name, when: start, meet: meetLink, lead_id: lead.id });
+                } catch (_) { /* notification is best-effort */ }
             } catch (err) {
                 console.error('[sync-bookings] update failed', lead.id, err && err.message);
             }
