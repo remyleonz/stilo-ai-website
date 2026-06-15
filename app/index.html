@@ -2133,12 +2133,14 @@
             loadSummaryMetrics(agentIds);
         }
 
-        // Prices come from the public quiz; we mirror them here so the plan card
-        // can show the real monthly without a round-trip. Cents.
+        // Mirror of monthlyFeeCents in api/_agents.js (the source of truth that
+        // drives Stripe checkout + admin Close Deal). Kept here so the plan card
+        // can show the real monthly without a round-trip. Cents. If you change a
+        // price in _agents.js, update this map too or the dashboard will lie.
         // business_profile is intentionally absent — it's free and never billed.
         var AGENT_MONTHLY_CENTS = {
-            echo: 45000, ignite: 65000, revive: 80000, scout: 100000,
-            forge: 20000, signal: 0, oracle: 100000, pitch: 200000, flux: 0
+            echo: 100000, ignite: 150000, revive: 150000, scout: 200000,
+            forge: 20000, signal: 0, oracle: 200000, pitch: 200000, flux: 0
         };
 
         // Mirror of evaluateBusinessProfile() in api/_agents.js. Pure function
