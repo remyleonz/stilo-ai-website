@@ -30,13 +30,15 @@ async function sendViaResend({ to, subject, html, attachments, fromName }) {
 function buildHtmlBody(deal) {
     const total = (deal.upfront_fee_cents || 0) + (deal.monthly_retainer_cents || 0);
     const f = c => '$' + (Number(c || 0) / 100).toLocaleString();
+    const { AGENTS } = require('../../_agents');
+    const agentNames = (deal.agent_codes || []).map(c => (AGENTS[c] && AGENTS[c].name) || c).join(', ');
     return `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0a0a0f;max-width:560px;margin:0 auto;line-height:1.55;">
   <p>Hi ${deal.contact_name || ''},</p>
   <p>Great talking with you. As promised, attached is the proposal for ${deal.business_name}.</p>
   <p><strong>Quick recap:</strong></p>
   <ul>
-    <li>Agents: ${(deal.agent_codes || []).join(', ').toUpperCase()}</li>
+    <li>Agents: ${agentNames}</li>
     <li>One-time setup: ${f(deal.upfront_fee_cents)}</li>
     <li>Monthly retainer: ${f(deal.monthly_retainer_cents)} / mo</li>
     <li>Due today: <strong>${f(total)}</strong></li>
@@ -59,7 +61,7 @@ module.exports = async function handler(req, res) {
     const { data: deal, error } = await gate.sb.from('deals').select('*').eq('id', dealId).maybeSingle();
     if (error || !deal) return res.status(404).json({ error: 'deal_not_found' });
 
-    const subject = body.subject || `STILO AI Partners — Proposal for ${deal.business_name}`;
+    const subject = body.subject || `STILO AI Partners: Proposal for ${deal.business_name}`;
     const html = body.body || buildHtmlBody(deal);
 
     // Inline the PDF as attachment if available

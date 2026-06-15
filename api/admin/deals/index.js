@@ -196,12 +196,16 @@ async function handleCreate(sb, userId, req, res) {
                     metadata: { deal_id: deal.id, business_name: deal.business_name }
                 });
                 // Add line items
+                const { AGENTS: AGENT_DEFS } = require('../../_agents');
+                const agentNames = (deal.agent_codes || [])
+                    .map(function (c) { return (AGENT_DEFS[c] && AGENT_DEFS[c].name) || c; })
+                    .join(', ');
                 if (deal.upfront_fee_cents > 0) {
                     await stripe.invoiceItems.create({
                         customer: customer.id, invoice: invoice.id,
                         amount: deal.upfront_fee_cents,
                         currency: 'usd',
-                        description: 'STILO AI — Setup fee (' + (deal.agent_codes || []).join(', ').toUpperCase() + ')'
+                        description: 'STILO AI: Setup fee (' + agentNames + ')'
                     });
                 }
                 if (deal.monthly_retainer_cents > 0) {
@@ -209,7 +213,7 @@ async function handleCreate(sb, userId, req, res) {
                         customer: customer.id, invoice: invoice.id,
                         amount: deal.monthly_retainer_cents,
                         currency: 'usd',
-                        description: 'STILO AI — Monthly retainer (first month)'
+                        description: 'STILO AI: Monthly retainer (first month)'
                     });
                 }
                 const finalized = await stripe.invoices.finalizeInvoice(invoice.id);

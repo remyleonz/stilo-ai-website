@@ -66,7 +66,7 @@ async function sendConfirmationEmail(opts) {
             from: fromName + ' <' + fromEmail + '>',
             to: [opts.toEmail],
             reply_to: replyTo,
-            subject: 'Confirmed — ' + (opts.businessName || 'STILO discovery call'),
+            subject: 'Confirmed: ' + (opts.businessName || 'STILO discovery call'),
             html: buildEmailHtml(opts)
         })
     });
