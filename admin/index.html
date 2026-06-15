@@ -1529,6 +1529,27 @@
                 </div>
             </div>
 
+            <!-- Add meeting transcript (manual paste; the Tactiq path stores automatically) -->
+            <div id="addMeetingModal" style="display:none;position:fixed;inset:0;z-index:320;background:rgba(0,0,0,0.62);align-items:flex-start;justify-content:center;padding:34px 20px;overflow-y:auto;">
+                <div style="background:var(--bg-card);border:1px solid var(--border-medium);border-radius:14px;max-width:640px;width:100%;padding:24px 26px;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <div style="font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:-0.01em;">Add meeting transcript</div>
+                        <button onclick="closeAddMeeting()" aria-label="Close" style="background:none;border:none;color:var(--text-tertiary);font-size:24px;line-height:1;cursor:pointer;">&times;</button>
+                    </div>
+                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Title</label>
+                        <input id="amTitle" type="text" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></div>
+                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Summary / notes (optional)</label>
+                        <textarea id="amSummary" rows="4" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;line-height:1.5;resize:vertical;"></textarea></div>
+                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Full transcript (paste from Tactiq)</label>
+                        <textarea id="amTranscript" rows="10" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;line-height:1.5;resize:vertical;"></textarea></div>
+                    <div id="amMsg" style="font-size:12px;color:var(--text-muted);min-height:16px;margin-bottom:8px;"></div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button onclick="closeAddMeeting()" style="padding:10px 16px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+                        <button id="amSaveBtn" onclick="saveMeeting()" style="padding:10px 20px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Save</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ============================================================
                  Prospecting (cold-call list, cold-email list, dead pool)
                  Backed by /api/prospects/* proxy → David's prospecting backend
@@ -6839,6 +6860,64 @@
             }
         }
 
+        /* ===== MEETING TRANSCRIPTS (Tactiq + manual) ===== */
+        function renderMeetingsSection(d) {
+            var meetings = Array.isArray(d.meetings) ? d.meetings : [];
+            var rows = meetings.length
+                ? meetings.map(renderMeetingRow).join('')
+                : '<div style="color:var(--text-muted);font-size:12px;line-height:1.5;">No meeting transcripts yet. After a sales call, the Tactiq summary lands here, or paste one with "Add".</div>';
+            return '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-top:16px;">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+                  + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin:0;">Meeting transcripts</h3>'
+                  + '<button type="button" onclick="openAddMeeting(' + (d.id != null ? d.id : 'null') + ')" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;">+ Add</button>'
+                + '</div>' + rows + '</div>';
+        }
+        function renderMeetingRow(m) {
+            var when = m.occurred_at ? new Date(m.occurred_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET'
+                : (m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');
+            var dur = m.duration_seconds ? (Math.round(m.duration_seconds / 60) + ' min') : '';
+            var meta = [when, dur, (m.source === 'manual' ? 'manual' : 'Tactiq')].filter(Boolean).join(' · ');
+            var body = '';
+            if (m.summary) body += '<div style="margin-top:8px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:3px;">Summary</div><div style="font-size:13px;line-height:1.55;color:var(--text-primary);white-space:pre-wrap;">' + escapeAdminHtml(m.summary) + '</div></div>';
+            if (m.action_items) body += '<div style="margin-top:10px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:3px;">Action items</div><div style="font-size:13px;line-height:1.55;color:var(--text-primary);white-space:pre-wrap;">' + escapeAdminHtml(m.action_items) + '</div></div>';
+            if (m.transcript) body += '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;color:var(--blue);">Full transcript</summary><div style="margin-top:6px;font-size:12px;line-height:1.5;color:var(--text-secondary);white-space:pre-wrap;max-height:320px;overflow-y:auto;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;padding:10px;">' + escapeAdminHtml(m.transcript) + '</div></details>';
+            if (!body) body = '<div style="margin-top:6px;color:var(--text-muted);font-size:12px;">No content captured.</div>';
+            return '<details style="border-top:1px solid var(--border-subtle);padding:10px 0;">'
+                + '<summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:baseline;">'
+                  + '<span style="font-weight:700;font-size:13px;color:var(--text-primary);">' + escapeAdminHtml(m.title || 'Sales meeting') + '</span>'
+                  + '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + escapeAdminHtml(meta) + '</span>'
+                + '</summary>' + body + '</details>';
+        }
+        var addMeetingLeadId = null;
+        function openAddMeeting(leadId) {
+            addMeetingLeadId = leadId;
+            document.getElementById('amTitle').value = 'Sales meeting';
+            document.getElementById('amSummary').value = '';
+            document.getElementById('amTranscript').value = '';
+            document.getElementById('amMsg').textContent = '';
+            document.getElementById('addMeetingModal').style.display = 'flex';
+        }
+        function closeAddMeeting() { document.getElementById('addMeetingModal').style.display = 'none'; }
+        async function saveMeeting() {
+            var msg = document.getElementById('amMsg');
+            var title = document.getElementById('amTitle').value.trim();
+            var summary = document.getElementById('amSummary').value.trim();
+            var transcript = document.getElementById('amTranscript').value.trim();
+            if (!summary && !transcript) { msg.style.color = 'var(--red)'; msg.textContent = 'Paste a summary or transcript.'; return; }
+            var btn = document.getElementById('amSaveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                await prospectFetchJSON('/api/prospects/meeting-transcript', { method: 'POST', body: JSON.stringify({
+                    lead_id: addMeetingLeadId, source: 'manual', title: title || 'Sales meeting',
+                    summary: summary || null, transcript: transcript || null, occurred_at: new Date().toISOString()
+                }) });
+                closeAddMeeting();
+                if (typeof openProspectDrawer === 'function') openProspectDrawer(addMeetingLeadId);
+            } catch (e) {
+                btn.disabled = false; btn.textContent = 'Save';
+                msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + (e.message || 'unknown');
+            }
+        }
+
         function renderProspectDrawer(data, mode) {
             var d = data || {};
             var business = d.business_name || d.business || d.name || '—';
@@ -7129,6 +7208,10 @@
                 + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Call history</h3>'
                 + historyHtml
                 + '</div>'
+
+                // Meeting transcripts — sales-meeting summaries (Tactiq) + pasted
+                // transcripts, so the future sales agent learns from real calls.
+                + renderMeetingsSection(d)
 
                 // Activity timeline — the canonical event feed for this lead:
                 // every call, every stage transition (NEW → CONTACTED →

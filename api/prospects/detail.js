@@ -59,6 +59,23 @@ async function fetchCallHistory(leadId) {
     } catch (_) { return []; }
 }
 
+// Sales-meeting records (Tactiq summaries + manual transcripts) for the lead's
+// "Meeting transcripts" panel section. Newest first.
+async function fetchMeetings(leadId) {
+    if (leadId == null || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return [];
+    try {
+        const sb = leadsClient();
+        const { data, error } = await sb.from('lead_meetings')
+            .select('id, source, tactiq_meeting_id, title, occurred_at, duration_seconds, attendees, summary, action_items, transcript, meet_url, created_by, created_at')
+            .eq('lead_id', leadId)
+            .order('occurred_at', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false })
+            .limit(50);
+        if (error) return [];
+        return data || [];
+    } catch (_) { return []; }
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
     const gate = await assertAdminOrSdr(req, res);
@@ -71,12 +88,14 @@ module.exports = async function handler(req, res) {
 
     // Fetch lead + call history in parallel — most leads have 0 calls, so
     // the lead_calls query is essentially free. Merge after both resolve.
-    const [lead, callHistory] = await Promise.all([
+    const [lead, callHistory, meetings] = await Promise.all([
         fetchLead({ id: id, phone: q.phone, business_name: q.business_name, email: q.email }),
-        id != null ? fetchCallHistory(id) : Promise.resolve([])
+        id != null ? fetchCallHistory(id) : Promise.resolve([]),
+        id != null ? fetchMeetings(id) : Promise.resolve([])
     ]);
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
     lead.call_history = callHistory;
+    lead.meetings = meetings;
     const status = 200;
     const json = lead;
 
