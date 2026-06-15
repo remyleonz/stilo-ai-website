@@ -175,7 +175,7 @@ async function tcr10dlcEnsureCampaign(brandSid, profile, config, sampleMessages)
       method: 'POST',
       headers: { 'Authorization': auth, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        FriendlyName: 'STILO REVIVE - ' + (profile.business_legal_name || 'client'),
+        FriendlyName: 'STILO Reactivation - ' + (profile.business_legal_name || 'client'),
       }).toString(),
     });
     const ms = await msResp.json().catch(() => ({}));
@@ -229,7 +229,7 @@ const HANDLERS = {
 
   flux: {
     async run() {
-      throw new Error('FLUX is custom-implemented per client. Provisioning happens out-of-band.');
+      throw new Error('Custom Automations is custom-implemented per client. Provisioning happens out-of-band.');
     },
   },
 
@@ -326,7 +326,7 @@ const HANDLERS = {
         return {
           provisioned: false,
           updates,
-          human_review: 'PROSPECTING_API_URL not set; SCOUT config saved but no Cloud Run instance to push to. Deploy the prospecting backend and set the env var.',
+          human_review: 'PROSPECTING_API_URL not set; Lead Generator config saved but no Cloud Run instance to push to. Deploy the prospecting backend and set the env var.',
         };
       }
 
@@ -382,7 +382,7 @@ const HANDLERS = {
 
       if (!resp.ok) {
         const t = await resp.text();
-        throw new Error('SCOUT push to Cloud Run returned ' + resp.status + ': ' + t.slice(0, 400));
+        throw new Error('Lead Generator push to Cloud Run returned ' + resp.status + ': ' + t.slice(0, 400));
       }
       const json = await resp.json().catch(() => ({}));
       updates.scout_config_id = json.config_id || null;
@@ -427,7 +427,7 @@ const HANDLERS = {
           const fname = path.join(queueDir, agent.client_id + '_' + Date.now() + '.json');
           fs.writeFileSync(fname, JSON.stringify(manifest, null, 2));
           updates.forge_manifest_file = fname;
-          notes.push('Manifest queued for FORGE skill at ' + fname);
+          notes.push('Manifest queued for the Website Builder skill at ' + fname);
         } catch (e) {
           notes.push('Could not write manifest: ' + e.message);
         }
@@ -439,7 +439,7 @@ const HANDLERS = {
       return {
         provisioned: true,
         updates,
-        human_review: 'FORGE site queued for build. Run the Website Builder Agent skill to deploy. ' + notes.join(' '),
+        human_review: 'Website build queued. Run the Website Builder Agent skill to deploy. ' + notes.join(' '),
       };
     },
   },
@@ -517,7 +517,7 @@ const HANDLERS = {
         provisioned: true,
         updates,
         human_review: writeRes.written
-          ? 'ORACLE config written. Next scheduled run picks it up.'
+          ? 'Growth Intelligence config written. Next scheduled run picks it up.'
           : (writeRes.note + ' Push manually if running off-host.'),
       };
     },

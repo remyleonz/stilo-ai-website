@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Create the PITCH (AI Sales Agent — coaching + outbound automation) product
-# + prices in Stripe LIVE mode, then push the resulting price IDs to Vercel
-# for the stilo-ai project.
+# Create the Sales Agent (AI Sales Agent: coaching + outbound automation)
+# product + prices in Stripe LIVE mode, then push the resulting price IDs to
+# Vercel for the stilo-ai project.
 #
 # Repositioned 2026-05-26: was "AI Sales Coach" at $2,500 + $1,500/mo
 # (coaching only). Now bundles email automation on top of coaching —
@@ -29,7 +29,7 @@ if [[ "$STRIPE_LIVE_KEY" != sk_live_* ]] && [[ "$STRIPE_LIVE_KEY" != rk_live_* ]
   exit 1
 fi
 
-echo "Creating PITCH product in LIVE mode (AI Sales Agent)..."
+echo "Creating Sales Agent product in LIVE mode (AI Sales Agent)..."
 PRODUCT=$(curl -s "https://api.stripe.com/v1/products" \
   -u "${STRIPE_LIVE_KEY}:" \
   -d "name=PITCH - AI Sales Agent" \
@@ -40,7 +40,7 @@ PRODUCT=$(curl -s "https://api.stripe.com/v1/products" \
 PRODUCT_ID=$(echo "$PRODUCT" | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
 echo "PRODUCT_ID=$PRODUCT_ID"
 
-echo "Creating PITCH setup (\$2,500) price..."
+echo "Creating Sales Agent setup (\$2,500) price..."
 SETUP=$(curl -s "https://api.stripe.com/v1/prices" \
   -u "${STRIPE_LIVE_KEY}:" \
   -d "product=$PRODUCT_ID" \
@@ -50,7 +50,7 @@ SETUP=$(curl -s "https://api.stripe.com/v1/prices" \
 SETUP_ID=$(echo "$SETUP" | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
 echo "SETUP_ID=$SETUP_ID"
 
-echo "Creating PITCH monthly (\$2,000/mo, coaching + automation) price..."
+echo "Creating Sales Agent monthly (\$2,000/mo, coaching + automation) price..."
 MONTHLY=$(curl -s "https://api.stripe.com/v1/prices" \
   -u "${STRIPE_LIVE_KEY}:" \
   -d "product=$PRODUCT_ID" \
@@ -70,7 +70,7 @@ vercel env add STRIPE_PRICE_PITCH_SETUP production --value "$SETUP_ID" --yes
 vercel env add STRIPE_PRICE_PITCH_MONTHLY production --value "$MONTHLY_ID" --yes
 
 echo ""
-echo "Done. LIVE PITCH price IDs are now in Vercel Production."
+echo "Done. LIVE Sales Agent price IDs are now in Vercel Production."
 echo "  STRIPE_PRICE_PITCH_SETUP = $SETUP_ID"
 echo "  STRIPE_PRICE_PITCH_MONTHLY = $MONTHLY_ID"
 echo ""

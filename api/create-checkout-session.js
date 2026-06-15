@@ -58,7 +58,7 @@ module.exports = async function createCheckoutSession(req, res) {
   if (normalized.length === 0) {
     return res.status(400).json({
       error:
-        'No valid self-serve agents selected. FLUX is consult-only; book a call for custom work.',
+        'No valid self-serve agents selected. Custom Automations is consult-only; book a call for custom work.',
       rejected: rejected,
     });
   }

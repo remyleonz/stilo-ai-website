@@ -1759,7 +1759,7 @@
                         <select id="agentTypeFilter" onchange="loadAgentsTable()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="">All agents</option>
                             <option value="echo">Receptionist</option>
-                            <option value="ignite">Outbound Lead Caller</option>
+                            <option value="ignite">Lead Response</option>
                             <option value="revive">Customer Reactivation</option>
                             <option value="scout">Lead Generator</option>
                             <option value="forge">Website Builder</option>
@@ -3766,7 +3766,7 @@
         // Remy at a glance what each agent does for that client.
         var AGENT_DISPLAY = {
             echo:    { name: 'Receptionist',          desc: 'Answers every call, books on the calendar, captures messages 24/7.' },
-            ignite:  { name: 'Outbound Lead Caller',  desc: 'Calls fresh leads within 60s, qualifies them, books the meeting.' },
+            ignite:  { name: 'Lead Response',         desc: 'Calls fresh leads within 60s, qualifies them, books the meeting.' },
             revive:  { name: 'Customer Reactivation', desc: 'Wins back lapsed customers with personalized outbound campaigns.' },
             scout:   { name: 'Lead Generator',        desc: 'Scrapes, scores, and enriches niche-specific B2B leads weekly.' },
             forge:   { name: 'Website Builder',       desc: 'Designs, ships, and maintains a high-converting site for the business.' },
@@ -7915,13 +7915,11 @@
                 + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Agents (check all that apply)</label>'
                   + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' + agentsHtml + '</div></div>'
 
-                + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">'
                   + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Upfront fee ($)</label>'
                     + '<input name="upfront_fee" id="dealUpfront" type="number" min="0" value="0" step="50" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
                   + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Monthly retainer ($)</label>'
                     + '<input name="monthly_retainer" id="dealMonthly" type="number" min="0" value="0" step="50" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
-                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Discount %</label>'
-                    + '<input name="discount_pct" type="number" min="0" max="100" value="0" step="5" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
                 + '</div>'
 
                 + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">SDR credit</label>'
@@ -8010,7 +8008,6 @@
                 agent_codes: agentCodes,
                 upfront_fee_cents: Math.round(parseFloat(fd.get('upfront_fee') || 0) * 100),
                 monthly_retainer_cents: Math.round(parseFloat(fd.get('monthly_retainer') || 0) * 100),
-                discount_pct: parseFloat(fd.get('discount_pct') || 0) / 100,
                 sdr_id: fd.get('sdr_id') || null,
                 payment_method: fd.get('payment_method'),
                 notes: fd.get('notes')

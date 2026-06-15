@@ -74,11 +74,11 @@ This is the longest part. You're going to create 7 "products" (one per agent you
 1. In the Stripe dashboard (still in Test mode), click **Product catalog** in the left sidebar. If you don't see it, click **More** first, then **Product catalog**.
 2. Click the blue **+ Create product** button (top right).
 
-### Create product 1: ECHO — AI Receptionist
+### Create product 1: AI Receptionist
 
 A new form appears. Fill it in like this:
 
-- **Name**: `ECHO — AI Receptionist`
+- **Name**: `AI Receptionist`
 - **Description**: `24/7 voice agent that answers, books, and captures every call.`
 - **Image**: skip
 
@@ -101,39 +101,39 @@ After creation, Stripe shows you the product page with the 2 prices listed. Each
 **Write both price IDs down somewhere (a note, a Google Doc, anywhere):**
 
 ```
-ECHO setup price ID:   price_1TMttw0BxnILdaJWA1aQNx0k
-ECHO monthly price ID:  price_1TMttw0BxnILdaJWVIjqcPbc
+Receptionist setup price ID:   price_1TMttw0BxnILdaJWA1aQNx0k
+Receptionist monthly price ID:  price_1TMttw0BxnILdaJWVIjqcPbc
 ```
 
 ### Create products 2-7 the same way
 
 Use this table. For each row, create a product, add 2 prices (one-time setup + recurring monthly), and save the 2 price IDs.
 
-| Product name                     | Setup (one-time) | Monthly (recurring) |
-|----------------------------------|-----------------:|--------------------:|
-| IGNITE — Lead Response           |         2000.00  |             650.00  |
-| REVIVE — Customer Reactivation   |         2500.00  |             800.00  |
-| SCOUT — Lead Generator           |         2500.00  |            1000.00  |
-| FORGE — AI Website               |         1250.00  |             200.00  |
-| ORACLE — Growth Intelligence     |         3000.00  |            1000.00  |
+| Product name                | Setup (one-time) | Monthly (recurring) |
+|-----------------------------|-----------------:|--------------------:|
+| Lead Response Agent         |         2000.00  |             650.00  |
+| Customer Reactivation       |         2500.00  |             800.00  |
+| Lead Generator              |         2500.00  |            1000.00  |
+| AI Website                  |         1250.00  |             200.00  |
+| Growth Intelligence         |         3000.00  |            1000.00  |
 
-### Special case: SIGNAL
+### Special case: AI SEO
 
-SIGNAL is a one-time purchase only, no monthly. Create it with ONE price:
+AI SEO is a one-time purchase only, no monthly. Create it with ONE price:
 
-- **Name**: `SIGNAL — AI SEO (GEO)`
+- **Name**: `AI SEO (GEO)`
 - Price 1: **One-time**, `1000.00` USD
 - (No second price)
 
-### Special case: FLUX
+### Special case: Custom Automations
 
-FLUX is "consult-only" (no Stripe product). The website already prevents people from buying FLUX through checkout. **Skip FLUX entirely.**
+Custom Automations is "consult-only" (no Stripe product). The website already prevents people from buying Custom Automations through checkout. **Skip Custom Automations entirely.**
 
 ### When you're done
 
 You should have 13 price IDs total:
-- 7 setup prices (one per agent except FLUX)
-- 6 monthly prices (everyone except SIGNAL and FLUX)
+- 7 setup prices (one per agent except Custom Automations)
+- 6 monthly prices (everyone except AI SEO and Custom Automations)
 
 Double-check them in a note file like this:
 
@@ -291,7 +291,7 @@ Now that your site is live:
    - Phone: any
    - Business: Planet Fitness Miami
 4. Click through the 10 quiz questions, picking any answers. Choose the highest-revenue option on the revenue question to trigger the "Partner" tier (all 7 agents pre-selected).
-5. On the results screen, confirm the agent cards show (ECHO, IGNITE, REVIVE, SCOUT, FORGE, SIGNAL, ORACLE). FLUX should NOT be checked.
+5. On the results screen, confirm the agent cards show (Receptionist, Lead Response, Reactivation, Lead Generator, Website, AI SEO, Growth Intelligence). Custom Automations should NOT be checked.
 6. Click **Proceed to Checkout**.
 7. Stripe's checkout page loads. Pay with:
    - Card number: `4242 4242 4242 4242`

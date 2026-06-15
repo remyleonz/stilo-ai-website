@@ -34,7 +34,7 @@
  *   select       requires options: [{ value, label }]
  *   time-range   { open, close } per day key (key must end in "_hours")
  *   csv-upload   file picker, value is the uploaded file path
- *   key-value-list  array of { key, value } pairs (e.g. REVIVE offer tiers)
+ *   key-value-list  array of { key, value } pairs (e.g. Reactivation offer tiers)
  *
  * The wizard renderer in app/index.html picks the right control per type.
  * Steps that don't appear here (or agents without an onboardingSchema)
@@ -141,7 +141,7 @@ var AGENTS = {
         { key: 'business_legal_name', label: 'Legal business name', type: 'text', required: true, editable: true },
         { key: 'business_dba', label: 'DBA / trade name (if different)', type: 'text', editable: true },
         { key: 'business_ein', label: 'EIN (optional)', type: 'text', editable: true,
-          help: 'Used by REVIVE for 10DLC SMS brand registration. Skip for now if you do not have it handy.' },
+          help: 'Used by the Reactivation agent for 10DLC SMS brand registration. Skip for now if you do not have it handy.' },
         { key: 'website', label: 'Website', type: 'url', editable: true },
         { key: 'owner_first_name', label: 'Owner first name', type: 'text', required: true, editable: true },
         { key: 'owner_last_name', label: 'Owner last name', type: 'text', required: true, editable: true },
@@ -152,12 +152,12 @@ var AGENTS = {
           help: 'Where customer replies should land. Defaults to owner email.' },
         { key: 'main_business_phone', label: 'Main business phone (the number you give to customers today)', type: 'tel', required: true, editable: true },
         { key: 'street_address', label: 'Street address', type: 'text', required: true, editable: true,
-          help: 'What ECHO reads back when a caller asks for your location.' },
+          help: 'What the Receptionist reads back when a caller asks for your location.' },
         { key: 'city', label: 'City', type: 'text', required: true, editable: true },
         { key: 'state', label: 'State', type: 'select', required: true, editable: true, options: US_STATE_OPTIONS },
         { key: 'zip', label: 'Zip code', type: 'text', required: true, editable: true },
         { key: 'service_area_zips', label: 'Zip codes you serve (comma-separated)', type: 'text', editable: true,
-          help: 'Used by SCOUT, IGNITE, and SIGNAL to recognize in-market vs out-of-market.' },
+          help: 'Used by the Lead Generator, Lead Response, and AI SEO agents to recognize in-market vs out-of-market.' },
         { key: 'timezone', label: 'Timezone', type: 'select', required: true, editable: true, options: TIMEZONE_OPTIONS },
       ]},
 
@@ -207,9 +207,9 @@ var AGENTS = {
             { value: 'mixed', label: 'Mixed' },
           ] },
         { key: 'top_services', label: 'Top services with pricing', type: 'key-value-list', required: true, editable: true,
-          help: 'Service name → price or range. Example: "Botox" → "$12-15/unit". ECHO and IGNITE quote these to callers.' },
+          help: 'Service name → price or range. Example: "Botox" → "$12-15/unit". The Receptionist and Lead Response agents quote these to callers.' },
         { key: 'services_we_dont_do', label: 'Services you DO NOT offer', type: 'textarea', editable: true,
-          help: 'IGNITE and ECHO use this to politely redirect leads asking for things outside your scope.' },
+          help: 'The Lead Response and Receptionist agents use this to politely redirect leads asking for things outside your scope.' },
         { key: 'main_offer', label: 'Your one-sentence main offer', type: 'textarea', editable: true,
           help: 'What every agent leads with. Example: "Miami\'s only fully-licensed med spa with same-day Botox appointments."' },
       ]},
@@ -233,7 +233,7 @@ var AGENTS = {
             { value: 'sms_callback', label: 'Promise a callback next morning' },
           ] },
         { key: 'max_daily_capacity', label: 'Max bookings/calls owner can handle per day', type: 'number', editable: true,
-          help: 'Used by ECHO and IGNITE to avoid over-booking the calendar.' },
+          help: 'Used by the Receptionist and Lead Response agents to avoid over-booking the calendar.' },
       ]},
 
       // Step 4: Brand voice ────────────────────────────────────────────
@@ -262,7 +262,7 @@ var AGENTS = {
         { key: 'communication_samples', label: 'Paste 2-3 sample emails or texts you have actually sent', type: 'textarea', editable: true,
           help: 'Used to calibrate brand voice. Confidential. Separate samples with a blank line.' },
         { key: 'languages_spoken', label: 'Languages your business speaks (comma-separated)', type: 'text', editable: true,
-          help: 'Miami: typically "English, Spanish". ECHO and IGNITE can auto-switch.' },
+          help: 'Miami: typically "English, Spanish". The Receptionist and Lead Response agents can auto-switch.' },
       ]},
 
       // Step 5: Knowledge base ─────────────────────────────────────────
@@ -281,7 +281,7 @@ var AGENTS = {
           ],
           minItems: 3 },
         { key: 'owner_story', label: 'Your story / why this business exists (1 paragraph)', type: 'textarea', editable: true,
-          help: 'Used by REVIVE in nurture emails and FORGE on the About page.' },
+          help: 'Used by the Reactivation agent in nurture emails and the Website agent on the About page.' },
         { key: 'credentials', label: 'Awards, certifications, licenses, or notable press', type: 'textarea', editable: true },
         { key: 'insurance_carriers', label: 'Insurance carriers you accept', type: 'text', editable: true,
           help: 'Comma-separated. Common pre-call question for med spa, dental, and law.',
@@ -297,17 +297,17 @@ var AGENTS = {
           help: 'Drop your logo into your website CDN, Google Drive (public link), or Imgur and paste the URL.' },
         { key: 'logo_dark_url', label: 'Logo URL (dark background variant, optional)', type: 'url', editable: true },
         { key: 'brand_color_hex', label: 'Primary brand color (hex)', type: 'text', editable: true,
-          help: 'Format: #2563EB. Used by FORGE for the website and REVIVE for email accents.' },
+          help: 'Format: #2563EB. Used by the Website agent for the website and the Reactivation agent for email accents.' },
         { key: 'photo_urls', label: 'Photo URLs (comma-separated, 3-5 photos)', type: 'textarea', editable: true,
-          help: 'Interior, team, work-product. Used by FORGE for the website hero and REVIVE for email content.' },
+          help: 'Interior, team, work-product. Used by the Website agent for the website hero and the Reactivation agent for email content.' },
         { key: 'video_intro_url', label: 'Owner intro video URL (≤60 seconds, optional)', type: 'url', editable: true,
-          help: 'YouTube, Vimeo, or direct mp4. Used in REVIVE win-back emails.' },
+          help: 'YouTube, Vimeo, or direct mp4. Used in the Reactivation agent\'s win-back emails.' },
       ]},
 
       // Step 7: Compliance & legal ─────────────────────────────────────
       { step: 7, fields: [
         { key: 'state_of_operation', label: 'Primary state of operation', type: 'select', required: true, editable: true,
-          help: 'Drives TCPA rules and recording disclosures for IGNITE/ECHO/REVIVE.',
+          help: 'Drives TCPA rules and recording disclosures for the Lead Response, Receptionist, and Reactivation agents.',
           options: US_STATE_OPTIONS },
         // Niche-specific licenses
         { key: 'real_estate_license_number', label: 'Real estate license number', type: 'text', required: true, editable: true,
@@ -331,7 +331,7 @@ var AGENTS = {
         { key: 'required_disclosures', label: 'Disclosures every agent must include', type: 'textarea', editable: true,
           help: 'Examples: "Individual results may vary.", "Paid for by [Firm].", state-specific recording notice. Read verbatim by every agent.' },
         { key: 'tcpa_consent_acknowledgment', label: 'I confirm my lead intake forms and customer database have collected proper TCPA consent for automated calls, SMS, and email', type: 'boolean', required: true,
-          help: 'Required by FCC 2026 rules for IGNITE and REVIVE. Read more at stiloaipartners.com/legal/tcpa-template' },
+          help: 'Required by FCC 2026 rules for the Lead Response and Reactivation agents. Read more at stiloaipartners.com/legal/tcpa-template' },
         { key: 'owner_consent', label: 'I authorize STILO AI Partners agents to communicate with my customers and prospects on my behalf, in accordance with the inputs in this profile', type: 'boolean', required: true },
       ]},
 
@@ -362,7 +362,7 @@ var AGENTS = {
             { value: 'acuity', label: 'Acuity Scheduling' },
             { value: 'none', label: 'No calendar tool' },
           ] },
-        { key: 'email_sender_domain', label: 'Email domain you want REVIVE/IGNITE to send from', type: 'text', editable: true,
+        { key: 'email_sender_domain', label: 'Email domain you want the Reactivation and Lead Response agents to send from', type: 'text', editable: true,
           help: 'Example: yourbusiness.com. We will help you add DKIM/SPF records. Leave blank if you only want SMS+voice.' },
         { key: 'phone_strategy', label: 'How should agents handle phone numbers?', type: 'select', editable: true,
           help: 'Each voice/SMS agent can override. This is the default.',
@@ -380,8 +380,8 @@ var AGENTS = {
 
   echo: {
     code: 'echo',
-    name: 'ECHO - AI Receptionist',
-    shortName: 'ECHO',
+    name: 'AI Receptionist',
+    shortName: 'Receptionist',
     setupFeeCents: 200000,
     monthlyFeeCents: 100000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_ECHO_SETUP',
@@ -401,22 +401,22 @@ var AGENTS = {
 
       // Step 1: Phone strategy ─────────────────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'ECHO answers calls on a phone number. You have three options:\n\n1. **Forward your existing number to ECHO** (easiest, recommended). Keep your current number. We give you a new STILO number, and you tell your phone carrier to forward all calls (or only when busy / no-answer) to that STILO number. Your customers still call your old number; ECHO picks up. Most carriers support call forwarding from the dial pad: `*72` to enable, `*73` to disable. We will give you your exact code after you pick this option.\n\n2. **Get a new number from STILO** (clean slate). Pick the area code (305, 786, 954 for Miami). We provision the number through Twilio and ECHO answers it directly. Use this if you do not have a business number yet, or you want to test ECHO on a new number first.\n\n3. **Port your existing number to STILO** (advanced). We legally move ownership of your number to Twilio. Takes 7-14 days, requires a recent phone bill and Letter of Authorization. Use this only if you are sure you want STILO to be the long-term owner of the number. Most clients pick option 1 instead.',
+        tutorial: 'The Receptionist answers calls on a phone number. You have three options:\n\n1. **Forward your existing number to the Receptionist** (easiest, recommended). Keep your current number. We give you a new STILO number, and you tell your phone carrier to forward all calls (or only when busy / no-answer) to that STILO number. Your customers still call your old number; the Receptionist picks up. Most carriers support call forwarding from the dial pad: `*72` to enable, `*73` to disable. We will give you your exact code after you pick this option.\n\n2. **Get a new number from STILO** (clean slate). Pick the area code (305, 786, 954 for Miami). We provision the number through Twilio and the Receptionist answers it directly. Use this if you do not have a business number yet, or you want to test the Receptionist on a new number first.\n\n3. **Port your existing number to STILO** (advanced). We legally move ownership of your number to Twilio. Takes 7-14 days, requires a recent phone bill and Letter of Authorization. Use this only if you are sure you want STILO to be the long-term owner of the number. Most clients pick option 1 instead.',
         fields: [
-        { key: 'phone_strategy', label: 'How should ECHO get a phone number?', type: 'select', required: true, editable: true,
+        { key: 'phone_strategy', label: 'How should your Receptionist get a phone number?', type: 'select', required: true, editable: true,
           options: [
-            { value: 'forward_existing', label: 'Forward my existing number to ECHO (recommended)' },
+            { value: 'forward_existing', label: 'Forward my existing number to the Receptionist (recommended)' },
             { value: 'new_stilo_number', label: 'Provision a new STILO number' },
             { value: 'port_existing', label: 'Port my existing number to STILO (7-14 days)' },
           ] },
         // forward_existing
-        { key: 'existing_number_to_forward', label: 'Number you will forward to ECHO', type: 'tel', required: true, editable: true,
+        { key: 'existing_number_to_forward', label: 'Number you will forward to the Receptionist', type: 'tel', required: true, editable: true,
           showIf: { phone_strategy: 'forward_existing' },
           help: 'Format: +13055551234. We use this to confirm you own the number.' },
         { key: 'forwarding_method', label: 'When to forward', type: 'select', editable: true,
           showIf: { phone_strategy: 'forward_existing' },
           options: [
-            { value: 'always', label: 'Always forward (ECHO answers everything)' },
+            { value: 'always', label: 'Always forward (the Receptionist answers everything)' },
             { value: 'no_answer', label: 'Forward when nobody picks up' },
             { value: 'busy', label: 'Forward when busy' },
             { value: 'no_answer_or_busy', label: 'Forward when busy OR nobody picks up' },
@@ -446,9 +446,9 @@ var AGENTS = {
 
       // Step 2: Voice & greeting ───────────────────────────────────────
       { step: 2,
-        tutorial: 'Pick the voice your callers will hear. Click each option to play a sample. Adrian and Amy are the most-tested for Miami inbound. We can swap voices at any time.\n\nThe greeting is what ECHO says first when picking up. Default works for most businesses. If you want a custom one, keep it under 12 seconds and include your business name. ECHO will read it word-for-word.\n\nBilingual: leave Spanish auto-detect ON if you serve a Miami market. ECHO listens to the first 2-3 seconds of the caller and switches to Spanish if needed. The voice stays the same; the language changes.',
+        tutorial: 'Pick the voice your callers will hear. Click each option to play a sample. Adrian and Amy are the most-tested for Miami inbound. We can swap voices at any time.\n\nThe greeting is what the Receptionist says first when picking up. Default works for most businesses. If you want a custom one, keep it under 12 seconds and include your business name. The Receptionist will read it word-for-word.\n\nBilingual: leave Spanish auto-detect ON if you serve a Miami market. The Receptionist listens to the first 2-3 seconds of the caller and switches to Spanish if needed. The voice stays the same; the language changes.',
         fields: [
-        { key: 'voice_id', label: 'Pick ECHO\'s voice', type: 'audio-preview-select', required: true, editable: true,
+        { key: 'voice_id', label: 'Pick your Receptionist\'s voice', type: 'audio-preview-select', required: true, editable: true,
           help: 'Click each option to hear a sample.',
           options: [
             { value: '11labs-Adrian', label: 'Adrian — warm male, professional', preview: 'https://retell.ai/voices/adrian.mp3' },
@@ -465,24 +465,24 @@ var AGENTS = {
           showIf: { greeting_style: 'custom' },
           help: 'Keep under 12 seconds. Include your business name. Example: "Thanks for calling Glow Med Spa, this is Amy. Whether you\'re calling about Botox, lasers, or something new, I\'m here to help."' },
         { key: 'spanish_autoswitch', label: 'Auto-switch to Spanish if caller speaks Spanish', type: 'boolean', editable: true,
-          help: 'Recommended ON for Miami. ECHO detects in 2-3 seconds and switches.' },
+          help: 'Recommended ON for Miami. The Receptionist detects in 2-3 seconds and switches.' },
         { key: 'caller_id_display_name', label: 'Caller ID display name (15 chars max)', type: 'text', editable: true,
-          help: 'What shows on the caller\'s phone when ECHO calls them back. Defaults to truncated business name.' },
-        { key: 'voicemail_message', label: 'Voicemail message (if ECHO is busy or call drops)', type: 'textarea', editable: true,
+          help: 'What shows on the caller\'s phone when the Receptionist calls them back. Defaults to truncated business name.' },
+        { key: 'voicemail_message', label: 'Voicemail message (if the Receptionist is busy or call drops)', type: 'textarea', editable: true,
           help: 'Defaults to: "You\'ve reached [Business Name]. Please leave your name, number, and a quick message and we\'ll get right back to you."' },
       ]},
 
       // Step 3: Booking integration ────────────────────────────────────
       { step: 3, blocking: true,
-        tutorial: 'When a caller wants to book, ECHO needs a calendar to check availability and write the appointment. Pick the system you actually use.\n\n**Cal.com (recommended for new clients)**: free, native Retell integration. Sign up at cal.com → create an event type called "Consultation" or "New Patient" → paste your username and event slug below.\n\n**Calendly**: paste the public URL of your event type (e.g. calendly.com/yourname/consult).\n\n**Google Calendar**: click "Connect Google Calendar" below. We use OAuth — we never see your password. ECHO will read availability and write events to whichever calendar you select after connecting.\n\n**GoHighLevel calendar**: paste the calendar ID (Settings → Calendars → click your calendar → ID is at the end of the URL).\n\n**Square Appointments / Acuity**: not yet supported in Phase A. Pick "Send booking link by SMS" instead — ECHO will text the booking link to the caller.\n\n**Send booking link by SMS**: ECHO will offer to text your existing booking link to the caller, then end the call. Simplest if you do not want ECHO writing to your calendar directly.',
+        tutorial: 'When a caller wants to book, the Receptionist needs a calendar to check availability and write the appointment. Pick the system you actually use.\n\n**Cal.com (recommended for new clients)**: free, native Retell integration. Sign up at cal.com → create an event type called "Consultation" or "New Patient" → paste your username and event slug below.\n\n**Calendly**: paste the public URL of your event type (e.g. calendly.com/yourname/consult).\n\n**Google Calendar**: click "Connect Google Calendar" below. We use OAuth — we never see your password. The Receptionist will read availability and write events to whichever calendar you select after connecting.\n\n**GoHighLevel calendar**: paste the calendar ID (Settings → Calendars → click your calendar → ID is at the end of the URL).\n\n**Square Appointments / Acuity**: not yet supported in Phase A. Pick "Send booking link by SMS" instead — the Receptionist will text the booking link to the caller.\n\n**Send booking link by SMS**: the Receptionist will offer to text your existing booking link to the caller, then end the call. Simplest if you do not want the Receptionist writing to your calendar directly.',
         fields: [
-        { key: 'booking_method', label: 'How should ECHO book appointments?', type: 'select', required: true, editable: true,
+        { key: 'booking_method', label: 'How should your Receptionist book appointments?', type: 'select', required: true, editable: true,
           options: [
             { value: 'cal_com', label: 'Cal.com (recommended)' },
             { value: 'calendly', label: 'Calendly' },
             { value: 'google_calendar', label: 'Google Calendar' },
             { value: 'gohighlevel_calendar', label: 'GoHighLevel calendar' },
-            { value: 'sms_booking_link', label: 'Send booking link by SMS (ECHO does not write to calendar)' },
+            { value: 'sms_booking_link', label: 'Send booking link by SMS (the Receptionist does not write to calendar)' },
             { value: 'no_booking', label: 'No booking — just take a message' },
           ] },
         // Cal.com
@@ -508,7 +508,7 @@ var AGENTS = {
           showIf: { booking_method: 'sms_booking_link' } },
         // Common config
         { key: 'max_bookings_per_day', label: 'Max bookings per day (cap)', type: 'number', editable: true,
-          help: 'Defaults to your Business Profile capacity. ECHO will say "we are fully booked" beyond this.' },
+          help: 'Defaults to your Business Profile capacity. The Receptionist will say "we are fully booked" beyond this.' },
         { key: 'buffer_minutes', label: 'Buffer between bookings (minutes)', type: 'number', editable: true },
         { key: 'lead_time_hours', label: 'Minimum lead time before next slot (hours)', type: 'number', editable: true,
           help: 'Example: 24 means "no bookings within the next 24 hours, only same-week+1day."' },
@@ -519,34 +519,34 @@ var AGENTS = {
 
       // Step 4: Call routing & emergencies ─────────────────────────────
       { step: 4,
-        tutorial: 'Define what counts as an emergency for your business and what ECHO should do when a caller mentions one. For med spa, that might be allergic reaction or excessive bleeding. For HVAC, no AC at midnight. For real estate, contract issue requiring same-day response.\n\nWhen a caller says one of your emergency keywords, ECHO can: take a message and SMS the owner immediately, transfer the call live to the owner cell, or escalate based on time-of-day rules.\n\nDefaults below are pulled from your niche playbook. Edit to fit your operation.',
+        tutorial: 'Define what counts as an emergency for your business and what the Receptionist should do when a caller mentions one. For med spa, that might be allergic reaction or excessive bleeding. For HVAC, no AC at midnight. For real estate, contract issue requiring same-day response.\n\nWhen a caller says one of your emergency keywords, the Receptionist can: take a message and SMS the owner immediately, transfer the call live to the owner cell, or escalate based on time-of-day rules.\n\nDefaults below are pulled from your niche playbook. Edit to fit your operation.',
         fields: [
         { key: 'emergency_keywords', label: 'Emergency keywords (comma-separated)', type: 'text', editable: true,
           help: 'Niche defaults are loaded for you. Add or remove based on what counts as urgent in your operation.' },
-        { key: 'emergency_action', label: 'What ECHO does on an emergency keyword', type: 'select', required: true, editable: true,
+        { key: 'emergency_action', label: 'What the Receptionist does on an emergency keyword', type: 'select', required: true, editable: true,
           options: [
             { value: 'transfer_to_owner', label: 'Transfer the call live to owner cell' },
             { value: 'sms_owner_keep_caller', label: 'SMS owner immediately and keep caller on the line until owner picks up' },
             { value: 'sms_owner_take_message', label: 'Take a detailed message and SMS owner with the transcript' },
             { value: 'voicemail_only', label: 'Send to voicemail (no escalation)' },
           ] },
-        { key: 'emergency_phone', label: 'Emergency phone (where ECHO transfers or texts)', type: 'tel', editable: true,
+        { key: 'emergency_phone', label: 'Emergency phone (where the Receptionist transfers or texts)', type: 'tel', editable: true,
           help: 'Defaults to owner cell from Business Profile.',
           showIf_not: { emergency_action: 'voicemail_only' } },
         { key: 'transfer_phrases', label: 'Phrases that trigger live transfer (comma-separated)', type: 'text', editable: true,
           help: 'Default: "talk to a person, speak to someone, transfer me, get me a human".' },
         { key: 'transfer_hours_text', label: 'Transfer hours (free text)', type: 'text', editable: true,
-          help: 'Example: "Mon-Fri 9am-7pm, Sat 10am-3pm". Outside these hours ECHO uses your Business Profile after-hours rule.' },
-        { key: 'do_not_transfer_callers', label: 'Callers ECHO should NEVER transfer (e.g. spam keywords)', type: 'textarea', editable: true,
+          help: 'Example: "Mon-Fri 9am-7pm, Sat 10am-3pm". Outside these hours the Receptionist uses your Business Profile after-hours rule.' },
+        { key: 'do_not_transfer_callers', label: 'Callers the Receptionist should NEVER transfer (e.g. spam keywords)', type: 'textarea', editable: true,
           help: 'Comma-separated keywords. Example: "warranty, extended auto warranty, IRS, social security number".' },
       ]},
 
       // Step 5: CRM logging ────────────────────────────────────────────
       { step: 5, blocking: true,
-        tutorial: 'After every call, ECHO writes a structured note to your CRM: caller info, what they wanted, what ECHO did, full transcript. Pick the CRM you use.\n\n**GoHighLevel**: Settings → Private Integrations → Create. Name it "STILO ECHO". Scopes: Contacts (read+write), Notes (write), Conversations (write). Copy the token. Your Location ID is in Settings → Business Profile.\n\n**Follow Up Boss**: Admin → API → Create API Key. Copy it.\n\n**HubSpot, Pipedrive, Salesforce**: provide the API key. We use the standard Contacts and Activities APIs.\n\n**Google Sheet**: Open a fresh sheet → Extensions → Apps Script. Paste our template (link below). Deploy → Web app → Anyone, anonymous. Copy the deployment URL.\n\n**No CRM (skip)**: ECHO will email you a daily call summary instead. Pick this if you do not have a CRM yet.\n\nClick "Run test" once you paste credentials. The wizard will not advance until the test passes.',
+        tutorial: 'After every call, the Receptionist writes a structured note to your CRM: caller info, what they wanted, what the Receptionist did, full transcript. Pick the CRM you use.\n\n**GoHighLevel**: Settings → Private Integrations → Create. Name it "STILO Receptionist". Scopes: Contacts (read+write), Notes (write), Conversations (write). Copy the token. Your Location ID is in Settings → Business Profile.\n\n**Follow Up Boss**: Admin → API → Create API Key. Copy it.\n\n**HubSpot, Pipedrive, Salesforce**: provide the API key. We use the standard Contacts and Activities APIs.\n\n**Google Sheet**: Open a fresh sheet → Extensions → Apps Script. Paste our template (link below). Deploy → Web app → Anyone, anonymous. Copy the deployment URL.\n\n**No CRM (skip)**: the Receptionist will email you a daily call summary instead. Pick this if you do not have a CRM yet.\n\nClick "Run test" once you paste credentials. The wizard will not advance until the test passes.',
         fields: [
-        { key: 'crm_choice', label: 'Where should ECHO log calls?', type: 'select', required: true, editable: true,
-          help: 'Defaults to your Business Profile CRM. You can override here for ECHO specifically.',
+        { key: 'crm_choice', label: 'Where should your Receptionist log calls?', type: 'select', required: true, editable: true,
+          help: 'Defaults to your Business Profile CRM. You can override here for the Receptionist specifically.',
           options: [
             { value: 'gohighlevel', label: 'GoHighLevel' },
             { value: 'follow_up_boss', label: 'Follow Up Boss' },
@@ -577,7 +577,7 @@ var AGENTS = {
           showIf: { crm_choice: 'generic_webhook' } },
         { key: 'crm_credentials.bearer_token', label: 'Bearer token (optional)', type: 'password', editable: true,
           showIf: { crm_choice: 'generic_webhook' } },
-        { key: 'log_tags', label: 'Tags to apply to every ECHO-logged call', type: 'text', editable: true,
+        { key: 'log_tags', label: 'Tags to apply to every Receptionist-logged call', type: 'text', editable: true,
           help: 'Comma-separated. Default: "echo, ai-receptionist". Plus your niche.' },
         { key: 'crm_test_passed', label: 'Test the CRM connection', type: 'connection-test',
           target: '/api/integration-test',
@@ -587,10 +587,10 @@ var AGENTS = {
 
       // Step 6: Test call ──────────────────────────────────────────────
       { step: 6, blocking: true,
-        tutorial: 'You will not let ECHO answer real customer calls until you have heard it on the phone. This step makes sure of that.\n\n1. Enter a phone number you can answer right now (your cell is ideal).\n2. Click one of the test scenarios below. We trigger a real call from ECHO to your number within 90 seconds.\n3. Pick up. Talk to ECHO as if you were the caller in that scenario. Push back, ask off-script questions, raise objections.\n4. After the call, decide: did ECHO sound on-brand? Did it book correctly / route correctly / handle the emergency keyword?\n5. Check the box at the bottom only if you would be comfortable with ECHO answering your real customers tomorrow.\n\nRecommended: run all 3 niche scenarios.',
+        tutorial: 'You will not let the Receptionist answer real customer calls until you have heard it on the phone. This step makes sure of that.\n\n1. Enter a phone number you can answer right now (your cell is ideal).\n2. Click one of the test scenarios below. We trigger a real call from the Receptionist to your number within 90 seconds.\n3. Pick up. Talk to the Receptionist as if you were the caller in that scenario. Push back, ask off-script questions, raise objections.\n4. After the call, decide: did the Receptionist sound on-brand? Did it book correctly / route correctly / handle the emergency keyword?\n5. Check the box at the bottom only if you would be comfortable with the Receptionist answering your real customers tomorrow.\n\nRecommended: run all 3 niche scenarios.',
         fields: [
         { key: 'test_phone_number', label: 'Your phone number for test calls (E.164)', type: 'tel', required: true, editable: true,
-          help: 'ECHO will call this number when you click a scenario.' },
+          help: 'The Receptionist will call this number when you click a scenario.' },
         { key: 'test_scenarios', label: 'Run a test scenario', type: 'phone-test-trigger', required: true,
           target: '/api/agents-test-call',
           help: 'Pick at least one. The wizard unlocks once you rate one thumbs up. Scenarios are pulled from your niche playbook.',
@@ -602,7 +602,7 @@ var AGENTS = {
           ] },
         { key: 'test_calls_log', label: 'Test calls history', type: 'test-calls-log', editable: false },
         { key: 'test_call_passed', label: 'I rated at least one test call thumbs up', type: 'boolean', required: true,
-          help: 'Hard gate. ECHO cannot go live without one passing test.' },
+          help: 'Hard gate. The Receptionist cannot go live without one passing test.' },
       ]},
 
       // Step 7: Review & go live ───────────────────────────────────────
@@ -617,17 +617,17 @@ var AGENTS = {
             { key: 'crm_test_passed', label: 'CRM logging connected' },
             { key: 'test_call_passed', label: 'Test call passed' },
           ] },
-        { key: 'ready_for_review', label: 'I have reviewed all my answers and want STILO to activate ECHO', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed all my answers and want STILO to activate the Receptionist', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review',
-          help: 'STILO Partners runs a final pre-flight check (phone provisioning, calendar, CRM, voice) before ECHO answers a real call. We aim for under 1 business day. You will receive an email the moment ECHO is live.' },
+          help: 'STILO Partners runs a final pre-flight check (phone provisioning, calendar, CRM, voice) before the Receptionist answers a real call. We aim for under 1 business day. You will receive an email the moment the Receptionist is live.' },
       ]},
     ],
   },
   ignite: {
     code: 'ignite',
-    name: 'IGNITE - Lead Response Agent',
-    shortName: 'IGNITE',
+    name: 'Lead Response Agent',
+    shortName: 'Lead Response',
     setupFeeCents: 250000,
     monthlyFeeCents: 150000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_IGNITE_SETUP',
@@ -656,7 +656,7 @@ var AGENTS = {
 
       // ── Step 1: Compliance Gate ───────────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'The FCC ruled in early 2026 that AI-generated voices fall under the same TCPA rules as live cold calls. That means before IGNITE can call your leads, your lead form must collect their explicit consent to be contacted by automated calls.\n\nIf your form already has a checkbox like "I agree to be contacted by phone, email, or text" that is enough.\n\nIf it does not, you have two easy options:\n\n1. Open your form builder (your website CMS, GoHighLevel, Typeform, etc.) and add a required checkbox above your submit button with this exact wording: **"By submitting, I agree to be contacted by [Your Business Name] via automated phone calls, SMS, or email at the contact info I provided. Consent is not required to purchase."**\n2. Or copy our template at [stiloaipartners.com/legal/tcpa-template](https://stiloaipartners.com/legal/tcpa-template), paste it into your form, and screenshot it for your records.\n\nOnce that is in place, paste the exact line you used into the field below. We keep it on file as proof.',
+        tutorial: 'The FCC ruled in early 2026 that AI-generated voices fall under the same TCPA rules as live cold calls. That means before the Lead Response agent can call your leads, your lead form must collect their explicit consent to be contacted by automated calls.\n\nIf your form already has a checkbox like "I agree to be contacted by phone, email, or text" that is enough.\n\nIf it does not, you have two easy options:\n\n1. Open your form builder (your website CMS, GoHighLevel, Typeform, etc.) and add a required checkbox above your submit button with this exact wording: **"By submitting, I agree to be contacted by [Your Business Name] via automated phone calls, SMS, or email at the contact info I provided. Consent is not required to purchase."**\n2. Or copy our template at [stiloaipartners.com/legal/tcpa-template](https://stiloaipartners.com/legal/tcpa-template), paste it into your form, and screenshot it for your records.\n\nOnce that is in place, paste the exact line you used into the field below. We keep it on file as proof.',
         fields: [
         { key: 'agent_state', label: 'Primary state of operation', type: 'select', required: true, editable: true,
           help: 'Drives state-specific recording disclosures and compliance language.',
@@ -692,25 +692,25 @@ var AGENTS = {
           help: 'Required by FCC 2026 rules. Your form must say something like "By submitting, you agree to receive automated calls/texts from us."' },
         { key: 'consent_language_excerpt', label: 'Paste the exact consent line from your form', type: 'textarea', required: true, editable: true,
           help: 'We keep this on file as proof of compliance. If you do not have one, copy our template at stiloaipartners.com/legal/tcpa-template' },
-        { key: 'understand_ai_disclosure', label: 'I understand IGNITE will identify itself as automated at the start of every call (per FCC 2026 rules)', type: 'boolean', required: true },
+        { key: 'understand_ai_disclosure', label: 'I understand the Lead Response agent will identify itself as automated at the start of every call (per FCC 2026 rules)', type: 'boolean', required: true },
         { key: 'compliance_confirmed', label: 'All four boxes above are checked truthfully', type: 'boolean', required: true,
           help: 'This is a hard gate. The agent cannot go live without this.' },
       ]},
 
       // ── Step 2: Business Identity ──────────────────────────────────
       // Most fields here are now redundant with Business Profile and pre-fill
-      // from the merged config. This step exists primarily to confirm IGNITE
-      // is being deployed for the right niche (since IGNITE's playbook
+      // from the merged config. This step exists primarily to confirm the Lead Response agent
+      // is being deployed for the right niche (since the Lead Response agent's playbook
       // selection drives every downstream behavior).
       { step: 2, fields: [
         { key: 'confirm_business_name', label: 'Confirm business name (from your profile)', type: 'text', editable: true },
-        { key: 'niche', label: 'IGNITE niche (from your profile)', type: 'select', required: true, editable: true,
-          help: 'IGNITE uses a niche-specific playbook for the call script, qualification framework, and objection handlers.',
+        { key: 'niche', label: 'Lead Response niche (from your profile)', type: 'select', required: true, editable: true,
+          help: 'The Lead Response agent uses a niche-specific playbook for the call script, qualification framework, and objection handlers.',
           options: NICHE_OPTIONS },
         { key: 'main_offer', label: 'Your main offer in one sentence', type: 'textarea', editable: true,
-          help: 'IGNITE leads with this in the first reply.' },
+          help: 'The Lead Response agent leads with this in the first reply.' },
         { key: 'agent_count', label: 'Number of agents / reps on the team', type: 'number', editable: true,
-          help: 'Drives how many concurrent leads IGNITE can transfer at peak.' },
+          help: 'Drives how many concurrent leads the Lead Response agent can transfer at peak.' },
       ]},
 
       // ── Step 3: Niche-specific playbook ───────────────────────────
@@ -720,7 +720,7 @@ var AGENTS = {
       // qualification questions used at runtime — this step is for the few
       // niches where the questions need explicit owner choices.
       { step: 3,
-        tutorial: 'For real estate: these answers shape how IGNITE qualifies leads on the first call using the LPMAMA framework (Location, Price, Motivation, Agent, Mortgage, Appointment).\n\nFor other niches: this step shows niche-specific qualification options pulled from your playbook. You confirm or override.',
+        tutorial: 'For real estate: these answers shape how the Lead Response agent qualifies leads on the first call using the LPMAMA framework (Location, Price, Motivation, Agent, Mortgage, Appointment).\n\nFor other niches: this step shows niche-specific qualification options pulled from your playbook. You confirm or override.',
         fields: [
         // Real estate fields
         { key: 'handle_buyer_leads', label: 'We handle buyer leads', type: 'boolean', editable: true,
@@ -734,7 +734,7 @@ var AGENTS = {
         { key: 'price_range_max', label: 'Typical maximum price ($)', type: 'number', editable: true,
           showIf: { niche: 'real_estate' } },
         { key: 'pre_approval_required', label: 'Require pre-approval before showing', type: 'boolean', editable: true,
-          help: 'If yes, IGNITE asks early and offers a lender referral if not pre-approved.',
+          help: 'If yes, the Lead Response agent asks early and offers a lender referral if not pre-approved.',
           showIf: { niche: 'real_estate' } },
         { key: 'working_with_other_agent_disqualifier', label: 'If lead is already working with another agent', type: 'select', editable: true,
           showIf: { niche: 'real_estate' },
@@ -747,7 +747,7 @@ var AGENTS = {
         // Med spa fields
         { key: 'med_spa_treatments_offered', label: 'Treatments offered (comma-separated)', type: 'textarea', editable: true,
           showIf: { niche: 'med_spa' },
-          help: 'Botox, fillers, laser hair removal, CoolSculpting, etc. IGNITE quotes ranges per treatment.' },
+          help: 'Botox, fillers, laser hair removal, CoolSculpting, etc. The Lead Response agent quotes ranges per treatment.' },
         { key: 'med_spa_first_visit_required', label: 'First visit must be in-person consult', type: 'boolean', editable: true,
           showIf: { niche: 'med_spa' } },
         // Law fields
@@ -767,18 +767,18 @@ var AGENTS = {
         { key: 'service_24_7', label: 'Offer 24/7 emergency service', type: 'boolean', editable: true,
           showIf: { niche: 'plumbing_roofing' } },
         // Generic catch-all when no niche-specific fields apply
-        { key: 'qualification_notes', label: 'Anything special IGNITE should ask leads in your niche?', type: 'textarea', editable: true,
+        { key: 'qualification_notes', label: 'Anything special the Lead Response agent should ask leads in your niche?', type: 'textarea', editable: true,
           help: 'Free-form. The niche playbook pre-loads default qualification questions; add anything specific to your operation.' },
         { key: 'service_area_zips', label: 'Service area zip codes (auto-loaded from profile)', type: 'text', editable: true,
-          help: 'IGNITE recognizes when a lead is outside your market.' },
+          help: 'The Lead Response agent recognizes when a lead is outside your market.' },
         { key: 'disqualifying_zip_codes', label: 'Zip codes you do NOT serve', type: 'text', editable: true,
           showIf: { niche: 'real_estate' } },
       ]},
 
       // ── Step 4: Lead Sources & Webhook ────────────────────────────
       { step: 4, fields: [
-        { key: 'webhook_url', label: 'Your IGNITE webhook URL', type: 'webhook-url',
-          help: 'Point your CRM, ad platform, or website form to this URL. IGNITE picks up the lead in under 2 minutes.' },
+        { key: 'webhook_url', label: 'Your Lead Response webhook URL', type: 'webhook-url',
+          help: 'Point your CRM, ad platform, or website form to this URL. The Lead Response agent picks up the lead in under 2 minutes.' },
         { key: 'lead_sources', label: 'Where will leads come from?', type: 'select', required: true, editable: true,
           help: 'Pick your primary source. You can add more later.',
           options: [
@@ -797,10 +797,10 @@ var AGENTS = {
 
       // ── Step 5: CRM Connection ─────────────────────────────────────
       { step: 5, blocking: true,
-        tutorial: 'IGNITE writes call notes, qualification details, and outcomes back to your CRM after every call so your team picks up exactly where the AI left off. Pick the CRM you actually use day-to-day. We will then ask only for the credentials that CRM needs.\n\n**GoHighLevel**: Log in. Settings → Private Integrations → Create. Name it "STILO IGNITE", check the boxes for Contacts (read+write) and Notes (write). Copy the token. Your Location ID is in Settings → Business Profile, near the bottom.\n\n**Follow Up Boss**: Log in. Admin → API. Click Create API Key. Copy it.\n\n**Google Sheet** (no real CRM): Open a fresh sheet → Extensions → Apps Script. Paste our template from [stiloaipartners.com/legal/sheets-template](https://stiloaipartners.com/legal/sheets-template). Click Deploy → New deployment → Web app. Anyone, anonymous. Copy the deployment URL.\n\n**Other / not sure**: pick "Other / use a webhook" and paste any URL that accepts a JSON POST. Zapier and Make both give you these.\n\nAfter you paste credentials, click "Run test" below. The wizard will not let you advance until the CRM responds with a green check.',
+        tutorial: 'The Lead Response agent writes call notes, qualification details, and outcomes back to your CRM after every call so your team picks up exactly where the AI left off. Pick the CRM you actually use day-to-day. We will then ask only for the credentials that CRM needs.\n\n**GoHighLevel**: Log in. Settings → Private Integrations → Create. Name it "STILO Lead Response", check the boxes for Contacts (read+write) and Notes (write). Copy the token. Your Location ID is in Settings → Business Profile, near the bottom.\n\n**Follow Up Boss**: Log in. Admin → API. Click Create API Key. Copy it.\n\n**Google Sheet** (no real CRM): Open a fresh sheet → Extensions → Apps Script. Paste our template from [stiloaipartners.com/legal/sheets-template](https://stiloaipartners.com/legal/sheets-template). Click Deploy → New deployment → Web app. Anyone, anonymous. Copy the deployment URL.\n\n**Other / not sure**: pick "Other / use a webhook" and paste any URL that accepts a JSON POST. Zapier and Make both give you these.\n\nAfter you paste credentials, click "Run test" below. The wizard will not let you advance until the CRM responds with a green check.',
         fields: [
         { key: 'crm_choice', label: 'Which CRM do you use?', type: 'select', required: true, editable: true,
-          help: 'IGNITE writes call notes, qualification, and outcomes back to your CRM after every call.',
+          help: 'The Lead Response agent writes call notes, qualification, and outcomes back to your CRM after every call.',
           options: [
             { value: 'gohighlevel', label: 'GoHighLevel' },
             { value: 'follow_up_boss', label: 'Follow Up Boss (real estate)' },
@@ -842,7 +842,7 @@ var AGENTS = {
 
       // ── Step 6: Calendar & Booking ────────────────────────────────
       { step: 6,
-        tutorial: 'When IGNITE talks to a lead and they want to book a showing, the AI books directly on your calendar. Pick whichever calendar you actually use.\n\n**Cal.com (recommended)**: Free at [cal.com](https://cal.com). Sign up, create an event type called "Showing 30min" or similar, then enter your username and the event slug below. Cal.com is the cleanest because Retell has a native integration, fewer moving parts.\n\n**Calendly**: Already using it? Just paste the public URL of the event type you want IGNITE to book on (something like `calendly.com/yourname/showing`).\n\n**Google Calendar**: Click Connect Google Calendar below. We use OAuth — you sign into Google, approve, and we get a token to write events. We never see your password.\n\n**GoHighLevel calendar**: If you already use GHL for booking, paste the calendar ID (Settings → Calendars → click your calendar → the ID is at the end of the URL).\n\n**No booking, just transfer**: Pick this if you want IGNITE to live-transfer the call to you when a lead wants to book. Skip the calendar test below.',
+        tutorial: 'When the Lead Response agent talks to a lead and they want to book a showing, the AI books directly on your calendar. Pick whichever calendar you actually use.\n\n**Cal.com (recommended)**: Free at [cal.com](https://cal.com). Sign up, create an event type called "Showing 30min" or similar, then enter your username and the event slug below. Cal.com is the cleanest because Retell has a native integration, fewer moving parts.\n\n**Calendly**: Already using it? Just paste the public URL of the event type you want the Lead Response agent to book on (something like `calendly.com/yourname/showing`).\n\n**Google Calendar**: Click Connect Google Calendar below. We use OAuth — you sign into Google, approve, and we get a token to write events. We never see your password.\n\n**GoHighLevel calendar**: If you already use GHL for booking, paste the calendar ID (Settings → Calendars → click your calendar → the ID is at the end of the URL).\n\n**No booking, just transfer**: Pick this if you want the Lead Response agent to live-transfer the call to you when a lead wants to book. Skip the calendar test below.',
         fields: [
         { key: 'booking_method', label: 'How do leads book appointments / showings?', type: 'select', required: true, editable: true,
           options: [
@@ -872,7 +872,7 @@ var AGENTS = {
           showIf: { booking_method: 'gohighlevel_calendar' } },
         // Common
         { key: 'showings_per_week_max', label: 'Max showings/appointments per week', type: 'number', editable: true,
-          help: 'IGNITE will not over-book your calendar.' },
+          help: 'The Lead Response agent will not over-book your calendar.' },
         { key: 'buffer_minutes_between_showings', label: 'Buffer between bookings (minutes)', type: 'number', editable: true },
         { key: 'timezone', label: 'Timezone', type: 'select', required: true, editable: true,
           options: [
@@ -893,13 +893,13 @@ var AGENTS = {
       // ── Step 7: Live Transfer ──────────────────────────────────────
       { step: 7, fields: [
         { key: 'transfer_enabled', label: 'Allow live transfer to a human agent', type: 'boolean', editable: true,
-          help: 'When the lead asks to talk to someone, IGNITE warm-transfers the call.' },
+          help: 'When the lead asks to talk to someone, the Lead Response agent warm-transfers the call.' },
         { key: 'agent_cell', label: 'Primary agent cell phone (E.164: +13055551234)', type: 'tel', editable: true,
           showIf: { transfer_enabled: true } },
         { key: 'backup_cell', label: 'Backup cell phone (optional)', type: 'tel', editable: true,
           showIf: { transfer_enabled: true } },
         { key: 'transfer_hours_text', label: 'Transfer hours (free text)', type: 'text', editable: true,
-          help: 'Example: "Mon-Fri 9am-7pm, Sat 10am-3pm". IGNITE only transfers within these hours.',
+          help: 'Example: "Mon-Fri 9am-7pm, Sat 10am-3pm". The Lead Response agent only transfers within these hours.',
           showIf: { transfer_enabled: true } },
         { key: 'outside_hours_behavior', label: 'Outside transfer hours, do this instead', type: 'select', editable: true,
           showIf: { transfer_enabled: true },
@@ -916,9 +916,9 @@ var AGENTS = {
 
       // ── Step 8: Voice & Phone ──────────────────────────────────────
       { step: 8,
-        tutorial: 'Pick the voice your leads will hear and the area code your IGNITE outbound calls come from.\n\n**Voice picker**: click each voice to play a 5-second sample. There is no right answer, just pick the one that sounds most like the agent you would hire to make these calls. Adrian (warm male, professional) is the safe default. Amy (friendly female, conversational) works well for high-end residential. We can swap voices any time.\n\n**Area code**: defaults to your office phone area code. Local area codes pick up 4x more often than 800 numbers, leave this matching your market.\n\n**Spanish auto-detect**: if your leads sometimes speak Spanish, leave this on. IGNITE detects the language in the first 2 seconds and switches automatically. The voice stays the same; the language changes.\n\n**Voicemail message**: IGNITE leaves this message if the lead does not pick up. Keep it short and personalized — mention the lead name and the property they inquired about, plus one reason to call back. Example: "Hi, this is calling from Premier Realty about your inquiry. Give us a quick call back when you get a chance, there are a few details about that property that are not on Zillow yet."',
+        tutorial: 'Pick the voice your leads will hear and the area code your Lead Response outbound calls come from.\n\n**Voice picker**: click each voice to play a 5-second sample. There is no right answer, just pick the one that sounds most like the agent you would hire to make these calls. Adrian (warm male, professional) is the safe default. Amy (friendly female, conversational) works well for high-end residential. We can swap voices any time.\n\n**Area code**: defaults to your office phone area code. Local area codes pick up 4x more often than 800 numbers, leave this matching your market.\n\n**Spanish auto-detect**: if your leads sometimes speak Spanish, leave this on. The Lead Response agent detects the language in the first 2 seconds and switches automatically. The voice stays the same; the language changes.\n\n**Voicemail message**: The Lead Response agent leaves this message if the lead does not pick up. Keep it short and personalized — mention the lead name and the property they inquired about, plus one reason to call back. Example: "Hi, this is calling from Premier Realty about your inquiry. Give us a quick call back when you get a chance, there are a few details about that property that are not on Zillow yet."',
         fields: [
-        { key: 'voice_id', label: 'Pick a voice for IGNITE', type: 'audio-preview-select', required: true, editable: true,
+        { key: 'voice_id', label: 'Pick a voice for the Lead Response agent', type: 'audio-preview-select', required: true, editable: true,
           help: 'Click each voice to hear a sample.',
           options: [
             { value: '11labs-Adrian', label: 'Adrian — warm male, professional', preview: 'https://retell.ai/voices/adrian.mp3' },
@@ -934,7 +934,7 @@ var AGENTS = {
           ],
         },
         { key: 'language_detection', label: 'Auto-switch to Spanish if lead speaks Spanish', type: 'boolean', editable: true },
-        { key: 'area_code', label: 'Area code for your IGNITE outbound number', type: 'text', editable: true,
+        { key: 'area_code', label: 'Area code for your Lead Response outbound number', type: 'text', editable: true,
           help: 'Defaults to your office phone area code. Leads recognize local area codes 4x more often.' },
         { key: 'caller_id_display_name', label: 'Caller ID display name (15 chars max)', type: 'text', editable: true,
           help: 'Defaults to your business name truncated to 15 chars.' },
@@ -947,15 +947,15 @@ var AGENTS = {
           ],
         },
         { key: 'voicemail_message', label: 'Voicemail message (if lead does not pick up)', type: 'textarea', editable: true,
-          help: 'IGNITE leaves this if the lead\'s phone goes to voicemail.' },
+          help: 'The Lead Response agent leaves this if the lead\'s phone goes to voicemail.' },
       ]},
 
       // ── Step 9: Knowledge Base Supplement ─────────────────────────
       { step: 9,
-        tutorial: 'IGNITE already knows your brand voice and basic FAQ from the universal onboarding. This step is where you teach it the questions specific to your inbound leads, plus the answers you want the AI to give.\n\nThink about the last 10 leads who called you. What questions did they ask in the first 60 seconds? Type each one into the list below and write the exact 1-2 sentence answer you want IGNITE to give. The AI will use these word-for-word.\n\nMinimum: 5 questions and 3 objections. Aim for 8-10 of each. The more specific you are, the better IGNITE handles your leads on day one.\n\nFor real estate clients, **active listings** is huge. Paste in the top 3-5 listings you want IGNITE aware of: address, price, beds/baths, key features. The AI will reference these naturally if a lead mentions a specific property.\n\nFor competitor brokerages, list the names you want IGNITE to acknowledge politely. If a lead says "I am working with Compass," IGNITE will say something like "Compass is a great firm. The reason a lot of buyers we work with come over to us is..." rather than disparaging them.',
+        tutorial: 'The Lead Response agent already knows your brand voice and basic FAQ from the universal onboarding. This step is where you teach it the questions specific to your inbound leads, plus the answers you want the AI to give.\n\nThink about the last 10 leads who called you. What questions did they ask in the first 60 seconds? Type each one into the list below and write the exact 1-2 sentence answer you want the Lead Response agent to give. The AI will use these word-for-word.\n\nMinimum: 5 questions and 3 objections. Aim for 8-10 of each. The more specific you are, the better the Lead Response agent handles your leads on day one.\n\nFor real estate clients, **active listings** is huge. Paste in the top 3-5 listings you want the Lead Response agent aware of: address, price, beds/baths, key features. The AI will reference these naturally if a lead mentions a specific property.\n\nFor competitor brokerages, list the names you want the Lead Response agent to acknowledge politely. If a lead says "I am working with Compass," the Lead Response agent will say something like "Compass is a great firm. The reason a lot of buyers we work with come over to us is..." rather than disparaging them.',
         fields: [
         { key: 'common_lead_questions', label: 'Common questions leads ask + your approved answers', type: 'array-of-objects', editable: true,
-          help: 'IGNITE uses these verbatim. Add at least 5.',
+          help: 'The Lead Response agent uses these verbatim. Add at least 5.',
           schema: [
             { key: 'question', label: 'Question', type: 'text' },
             { key: 'approved_answer', label: 'Approved answer', type: 'textarea' },
@@ -973,12 +973,12 @@ var AGENTS = {
         { key: 'properties_currently_listed', label: 'Active listings or top services (free text or paste a list)', type: 'textarea', editable: true,
           help: 'Real estate: paste 3-5 active listings. Other industries: paste your top services with prices.' },
         { key: 'competitor_brokerages_to_acknowledge', label: 'Competitors to acknowledge professionally (comma-separated)', type: 'text', editable: true,
-          help: 'If a lead mentions any of these, IGNITE acknowledges without disparaging.' },
+          help: 'If a lead mentions any of these, the Lead Response agent acknowledges without disparaging.' },
       ]},
 
       // ── Step 10: Brand Voice for Voice Channel ────────────────────
       { step: 10, fields: [
-        { key: 'voice_pace', label: 'How fast should IGNITE talk?', type: 'select', editable: true,
+        { key: 'voice_pace', label: 'How fast should the Lead Response agent talk?', type: 'select', editable: true,
           options: [
             { value: 'slow', label: 'Slow and deliberate' },
             { value: 'conversational', label: 'Conversational (recommended)' },
@@ -992,17 +992,17 @@ var AGENTS = {
             { value: 'concise', label: 'Concise and direct' },
           ],
         },
-        { key: 'words_to_avoid_on_call', label: 'Words IGNITE should never say on calls (comma-separated)', type: 'text', editable: true },
+        { key: 'words_to_avoid_on_call', label: 'Words the Lead Response agent should never say on calls (comma-separated)', type: 'text', editable: true },
         { key: 'mandatory_disclosures', label: 'Mandatory disclosures (state-specific or company-required)', type: 'textarea', editable: true,
-          help: 'IGNITE will read these verbatim during the call when triggered. Leave blank if none.' },
+          help: 'The Lead Response agent will read these verbatim during the call when triggered. Leave blank if none.' },
       ]},
 
       // ── Step 11: Test Your Agent ──────────────────────────────────
       { step: 11, blocking: true,
-        tutorial: 'You will not let IGNITE near a real lead until you have heard it talk. This step is your dress rehearsal.\n\n1. Enter a phone number you can answer right now (your cell is best).\n2. Click one of the scenario buttons. We send a synthetic lead through the same webhook your real leads will hit. Within 90 seconds, IGNITE calls the number you entered.\n3. Pick up. Talk to the AI as if you were the lead in that scenario. Push back, ask questions, raise objections.\n4. After the call, decide: did it sound on-brand? Did it ask the right qualifying questions? Did it handle objections well?\n5. Check the box at the bottom only if you would be comfortable with this AI talking to your real leads.\n\nRecommended: run all 4 scenarios at least once before you submit.\n\n**Hot Buyer**: pre-approved, ready to tour this weekend. Tests the booking flow.\n**Cold Lead**: just browsing, no timeline. Tests the soft-pitch private listing alerts flow.\n**Seller Inquiry**: home valuation request. Tests the seller branch.\n**Voicemail**: just hang up. Tests the voicemail message and follow-up cadence.',
+        tutorial: 'You will not let the Lead Response agent near a real lead until you have heard it talk. This step is your dress rehearsal.\n\n1. Enter a phone number you can answer right now (your cell is best).\n2. Click one of the scenario buttons. We send a synthetic lead through the same webhook your real leads will hit. Within 90 seconds, the Lead Response agent calls the number you entered.\n3. Pick up. Talk to the AI as if you were the lead in that scenario. Push back, ask questions, raise objections.\n4. After the call, decide: did it sound on-brand? Did it ask the right qualifying questions? Did it handle objections well?\n5. Check the box at the bottom only if you would be comfortable with this AI talking to your real leads.\n\nRecommended: run all 4 scenarios at least once before you submit.\n\n**Hot Buyer**: pre-approved, ready to tour this weekend. Tests the booking flow.\n**Cold Lead**: just browsing, no timeline. Tests the soft-pitch private listing alerts flow.\n**Seller Inquiry**: home valuation request. Tests the seller branch.\n**Voicemail**: just hang up. Tests the voicemail message and follow-up cadence.',
         fields: [
         { key: 'test_phone_number', label: 'Your phone number for test calls', type: 'tel', required: true, editable: true,
-          help: 'IGNITE will call this number when you click a scenario below.' },
+          help: 'The Lead Response agent will call this number when you click a scenario below.' },
         { key: 'test_scenarios', label: 'Run a test scenario', type: 'phone-test-trigger', required: true,
           help: 'Pick at least one scenario. The wizard unlocks once you rate one thumbs up.',
           target: '/api/agents-test-call',
@@ -1023,17 +1023,17 @@ var AGENTS = {
       { step: 12, blocking: true, fields: [
         { key: 'review_summary', label: 'Final checklist', type: 'final-review', editable: false,
           help: 'Computed from previous steps.' },
-        { key: 'ready_for_review', label: 'I have reviewed all my answers and want STILO to activate IGNITE', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed all my answers and want STILO to activate the Lead Response agent', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review',
-          help: 'STILO Partners runs a final pre-flight check on every new IGNITE agent (compliance, CRM, calendar, brand voice, test call) before it talks to your real leads. We aim to have you live within 1 business day. You will receive an email the moment IGNITE is active.' },
+          help: 'STILO Partners runs a final pre-flight check on every new Lead Response agent (compliance, CRM, calendar, brand voice, test call) before it talks to your real leads. We aim to have you live within 1 business day. You will receive an email the moment the Lead Response agent is active.' },
       ]},
     ],
   },
   revive: {
     code: 'revive',
-    name: 'REVIVE - Customer Reactivation',
-    shortName: 'REVIVE',
+    name: 'Customer Reactivation',
+    shortName: 'Reactivation',
     setupFeeCents: 250000,
     monthlyFeeCents: 150000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_REVIVE_SETUP',
@@ -1054,7 +1054,7 @@ var AGENTS = {
 
       // Step 1: Upload customer database ───────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'REVIVE works off a clean list of past customers. The fastest path is exporting from where they already live.\n\n**From your POS** (Square, Toast, Clover): Reports → Customers → Export CSV.\n\n**From your CRM** (GHL, Follow Up Boss, HubSpot): Contacts → All → Export.\n\n**From your booking system** (Cal.com, Acuity, Square Appointments): Customers → Export.\n\nMinimum required columns: name, email or phone, last interaction date. Lifetime value (LTV) is a major bonus, lets us prioritize VIPs first.',
+        tutorial: 'The Reactivation agent works off a clean list of past customers. The fastest path is exporting from where they already live.\n\n**From your POS** (Square, Toast, Clover): Reports → Customers → Export CSV.\n\n**From your CRM** (GHL, Follow Up Boss, HubSpot): Contacts → All → Export.\n\n**From your booking system** (Cal.com, Acuity, Square Appointments): Customers → Export.\n\nMinimum required columns: name, email or phone, last interaction date. Lifetime value (LTV) is a major bonus, lets us prioritize VIPs first.',
         fields: [
         { key: 'source_choice', label: 'Where is your customer data coming from?', type: 'select', required: true, editable: true,
           options: [
@@ -1078,7 +1078,7 @@ var AGENTS = {
 
       // Step 2: Map columns ────────────────────────────────────────────
       { step: 2,
-        tutorial: 'Tell REVIVE which column in your CSV holds which piece of data. Type the EXACT header from your file (case-sensitive). If your CSV says "First Name", type "First Name", not "first_name".',
+        tutorial: 'Tell the Reactivation agent which column in your CSV holds which piece of data. Type the EXACT header from your file (case-sensitive). If your CSV says "First Name", type "First Name", not "first_name".',
         fields: [
         { key: 'col_first_name', label: 'Column for first name', type: 'text', required: true, editable: true },
         { key: 'col_last_name', label: 'Column for last name', type: 'text', editable: true },
@@ -1087,10 +1087,10 @@ var AGENTS = {
           help: 'Required if you want SMS reactivation.' },
         { key: 'col_last_interaction_date', label: 'Column for last visit / purchase date', type: 'text', required: true, editable: true },
         { key: 'col_ltv', label: 'Column for lifetime value (LTV)', type: 'text', editable: true,
-          help: 'Lets REVIVE prioritize VIPs. Skip if you don\'t track this.' },
+          help: 'Lets the Reactivation agent prioritize VIPs. Skip if you don\'t track this.' },
         { key: 'col_tags', label: 'Column for tags / segments / treatment type', type: 'text', editable: true },
         { key: 'col_consent_source', label: 'Column for consent record (TCPA)', type: 'text', editable: true,
-          help: 'If your data has an "opted-in" or "consent_date" column, point to it. Otherwise leave blank — REVIVE will treat unknowns conservatively.' },
+          help: 'If your data has an "opted-in" or "consent_date" column, point to it. Otherwise leave blank — the Reactivation agent will treat unknowns conservatively.' },
         { key: 'preview_count', label: 'How many records does the file contain?', type: 'number', editable: true },
       ]},
 
@@ -1109,7 +1109,7 @@ var AGENTS = {
           ],
           minItems: 1 },
         { key: 'booking_link', label: 'Where should every offer point?', type: 'url', required: true, editable: true,
-          help: 'Defaults to your Business Profile booking system. Override here if you want a special REVIVE-only landing page.' },
+          help: 'Defaults to your Business Profile booking system. Override here if you want a special Reactivation-only landing page.' },
         { key: 'reply_handler', label: 'When a customer replies, what should happen?', type: 'select', editable: true,
           options: [
             { value: 'route_to_owner', label: 'Email reply lands in owner inbox' },
@@ -1120,7 +1120,7 @@ var AGENTS = {
 
       // Step 4: Email sender domain ────────────────────────────────────
       { step: 4, blocking: true,
-        tutorial: 'REVIVE sends emails from YOUR domain so they don\'t look like spam. We use Resend, which means you need to add two DNS records: SPF and DKIM. Most domain registrars (GoDaddy, Namecheap, Cloudflare) let you add these in 60 seconds.\n\n1. Click "Generate DNS records" below. We\'ll show you the exact records to copy.\n2. Log into your domain registrar.\n3. Add the SPF record (TXT type) and DKIM record (TXT type, prefix `resend._domainkey`).\n4. Save. DNS propagation takes 5 minutes to 48 hours, usually under 30 minutes.\n5. Click "Verify" below. If both records are detected, you\'re live.\n\nDNS still propagating? You can finish other steps and come back here. The wizard will let you submit once verification passes.',
+        tutorial: 'The Reactivation agent sends emails from YOUR domain so they don\'t look like spam. We use Resend, which means you need to add two DNS records: SPF and DKIM. Most domain registrars (GoDaddy, Namecheap, Cloudflare) let you add these in 60 seconds.\n\n1. Click "Generate DNS records" below. We\'ll show you the exact records to copy.\n2. Log into your domain registrar.\n3. Add the SPF record (TXT type) and DKIM record (TXT type, prefix `resend._domainkey`).\n4. Save. DNS propagation takes 5 minutes to 48 hours, usually under 30 minutes.\n5. Click "Verify" below. If both records are detected, you\'re live.\n\nDNS still propagating? You can finish other steps and come back here. The wizard will let you submit once verification passes.',
         fields: [
         { key: 'sender_domain', label: 'Domain you want to send from', type: 'text', required: true, editable: true,
           help: 'Example: yourbusiness.com (NO https:// prefix).' },
@@ -1159,7 +1159,7 @@ var AGENTS = {
 
       // Step 6: Compliance & consent ───────────────────────────────────
       { step: 6, blocking: true,
-        tutorial: 'TCPA + CAN-SPAM make non-consented marketing illegal. This step locks down your compliance posture.\n\nFor each record in your CSV, we tag whether you have:\n- Express written consent (best, opt-in checkbox at signup)\n- Implied consent (existing business relationship)\n- No consent (must NOT receive marketing SMS; can receive transactional only)\n\nIf you don\'t have consent records, REVIVE defaults to email-only for those records and asks for SMS opt-in BEFORE sending any SMS.',
+        tutorial: 'TCPA + CAN-SPAM make non-consented marketing illegal. This step locks down your compliance posture.\n\nFor each record in your CSV, we tag whether you have:\n- Express written consent (best, opt-in checkbox at signup)\n- Implied consent (existing business relationship)\n- No consent (must NOT receive marketing SMS; can receive transactional only)\n\nIf you don\'t have consent records, the Reactivation agent defaults to email-only for those records and asks for SMS opt-in BEFORE sending any SMS.',
         fields: [
         { key: 'consent_status_default', label: 'For records without an explicit consent column', type: 'select', required: true, editable: true,
           options: [
@@ -1196,7 +1196,7 @@ var AGENTS = {
 
       // Step 8: Test send & review ─────────────────────────────────────
       { step: 8, blocking: true,
-        tutorial: 'Before REVIVE goes live to your real list, send yourself a copy of every segment\'s message. Confirm the offer text, sender, links, and unsubscribe footer all look right.',
+        tutorial: 'Before the Reactivation agent goes live to your real list, send yourself a copy of every segment\'s message. Confirm the offer text, sender, links, and unsubscribe footer all look right.',
         fields: [
         { key: 'test_email', label: 'Test email address (yours)', type: 'email', required: true, editable: true },
         { key: 'test_phone', label: 'Test phone (yours, E.164)', type: 'tel', editable: true,
@@ -1208,7 +1208,7 @@ var AGENTS = {
             { key: 'tcpa_acknowledgment', label: 'TCPA consent confirmed' },
             { key: 'test_send_completed', label: 'Test send passed' },
           ] },
-        { key: 'ready_for_review', label: 'I have reviewed everything and want STILO to activate REVIVE', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed everything and want STILO to activate the Reactivation agent', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
@@ -1217,8 +1217,8 @@ var AGENTS = {
   },
   scout: {
     code: 'scout',
-    name: 'SCOUT - Lead Generator',
-    shortName: 'SCOUT',
+    name: 'Lead Generator',
+    shortName: 'Lead Generator',
     setupFeeCents: 300000,
     monthlyFeeCents: 200000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_SCOUT_SETUP',
@@ -1237,7 +1237,7 @@ var AGENTS = {
 
       // Step 1: Ideal customer profile ─────────────────────────────────
       { step: 1,
-        tutorial: 'Defaults are pre-loaded from your niche playbook. Edit them to match exactly who you want SCOUT to scrape.\n\nSCOUT scrapes Google Maps + finds owner emails. The narrower the ICP, the higher the conversion. "All restaurants in Florida" returns garbage. "Independent Italian restaurants in Miami-Dade with 4.5+ star ratings, 100+ reviews, no chain affiliation" returns gold.',
+        tutorial: 'Defaults are pre-loaded from your niche playbook. Edit them to match exactly who you want the Lead Generator to scrape.\n\nThe Lead Generator scrapes Google Maps + finds owner emails. The narrower the ICP, the higher the conversion. "All restaurants in Florida" returns garbage. "Independent Italian restaurants in Miami-Dade with 4.5+ star ratings, 100+ reviews, no chain affiliation" returns gold.',
         fields: [
         { key: 'icp_industry_terms', label: 'Search terms for what you sell to (comma-separated)', type: 'textarea', required: true, editable: true,
           help: 'Example for med spa lead-gen: "med spa, aesthetics clinic, dermatology, plastic surgery". 6-9 variations is the sweet spot.' },
@@ -1274,7 +1274,7 @@ var AGENTS = {
 
       // Step 3: Output destination ─────────────────────────────────────
       { step: 3, blocking: true,
-        tutorial: 'Where do enriched leads go? Three options, can combine.\n\n1. **CSV emailed weekly**: simple, no integration. You get a Friday email with the week\'s leads.\n2. **Push to your CRM**: leads land directly in GoHighLevel / Follow Up Boss / HubSpot / etc. as new contacts with tags.\n3. **Push to IGNITE**: if you also bought IGNITE, SCOUT can hand off leads as "synthetic inbound" so IGNITE calls them within 2 minutes. This is the highest-conversion path but requires both agents.',
+        tutorial: 'Where do enriched leads go? Three options, can combine.\n\n1. **CSV emailed weekly**: simple, no integration. You get a Friday email with the week\'s leads.\n2. **Push to your CRM**: leads land directly in GoHighLevel / Follow Up Boss / HubSpot / etc. as new contacts with tags.\n3. **Push to the Lead Response agent**: if you also bought the Lead Response agent, the Lead Generator can hand off leads as "synthetic inbound" so the Lead Response agent calls them within 2 minutes. This is the highest-conversion path but requires both agents.',
         fields: [
         { key: 'destination_csv_email', label: 'Email me a weekly CSV', type: 'boolean', editable: true },
         { key: 'csv_email_recipient', label: 'CSV email recipient', type: 'email', editable: true,
@@ -1299,8 +1299,8 @@ var AGENTS = {
           showIf: { crm_push_choice: 'webhook' } },
         { key: 'crm_push_tags', label: 'Tags to apply on push', type: 'text', editable: true,
           help: 'Comma-separated. Default: "scout, prospecting, {niche}".' },
-        { key: 'destination_ignite_handoff', label: 'Hand off to IGNITE for outbound calls', type: 'boolean', editable: true,
-          help: 'Requires an active IGNITE agent. Highest-conversion path.' },
+        { key: 'destination_ignite_handoff', label: 'Hand off to the Lead Response agent for outbound calls', type: 'boolean', editable: true,
+          help: 'Requires an active Lead Response agent. Highest-conversion path.' },
         { key: 'crm_push_test', label: 'Test CRM connection', type: 'connection-test',
           target: '/api/integration-test',
           showIf: { destination_crm_push: true } },
@@ -1308,10 +1308,10 @@ var AGENTS = {
 
       // Step 4: Volume & cadence ───────────────────────────────────────
       { step: 4,
-        tutorial: 'SCOUT scrapes 24/7 and self-paces against your weekly target. The Cloud Run worker runs at off-peak hours so it doesn\'t hit Google rate-limits.',
+        tutorial: 'The Lead Generator scrapes 24/7 and self-paces against your weekly target. The Cloud Run worker runs at off-peak hours so it doesn\'t hit Google rate-limits.',
         fields: [
         { key: 'leads_per_week_target', label: 'Target new leads per week', type: 'number', required: true, editable: true,
-          help: 'Default: 100. SCOUT will pause if it hits this number; resumes Monday.' },
+          help: 'Default: 100. The Lead Generator will pause if it hits this number; resumes Monday.' },
         { key: 'max_total_leads', label: 'Hard ceiling on total leads ever', type: 'number', editable: true,
           help: 'Optional. Defaults to unlimited. Set if you want to cap on-disk lead count.' },
         { key: 'paid_sources_budget_usd', label: 'Monthly budget for paid enrichment ($USD)', type: 'number', editable: true,
@@ -1322,9 +1322,9 @@ var AGENTS = {
 
       // Step 5: Owner-email rule ───────────────────────────────────────
       { step: 5, blocking: true,
-        tutorial: 'SCOUT only marks an owner email as "confirmed" when both are true:\n\n1. A NAME is found near "owner", "founder", "CEO", "president", or "principal" on the business website or a search result.\n2. An EMAIL whose prefix matches that name (john.smith@..., jsmith@..., john@... all match "John Smith"; info@, contact@, hello@ never match anyone).\n\nIf one without the other → not confirmed. Cold outreach to the wrong person burns the domain.\n\nThis rule cannot be relaxed. Confirm you understand it.',
+        tutorial: 'The Lead Generator only marks an owner email as "confirmed" when both are true:\n\n1. A NAME is found near "owner", "founder", "CEO", "president", or "principal" on the business website or a search result.\n2. An EMAIL whose prefix matches that name (john.smith@..., jsmith@..., john@... all match "John Smith"; info@, contact@, hello@ never match anyone).\n\nIf one without the other → not confirmed. Cold outreach to the wrong person burns the domain.\n\nThis rule cannot be relaxed. Confirm you understand it.',
         fields: [
-        { key: 'owner_email_rule_acknowledged', label: 'I understand SCOUT will not mark an email as confirmed unless name + email match. info@/contact@/hello@ are never confirmed.', type: 'boolean', required: true },
+        { key: 'owner_email_rule_acknowledged', label: 'I understand the Lead Generator will not mark an email as confirmed unless name + email match. info@/contact@/hello@ are never confirmed.', type: 'boolean', required: true },
         { key: 'unconfirmed_email_handling', label: 'For leads with no confirmed owner email', type: 'select', editable: true,
           options: [
             { value: 'exclude', label: 'Exclude from output (only confirmed-owner leads in CSV/CRM)' },
@@ -1335,16 +1335,16 @@ var AGENTS = {
 
       // Step 6: Test scrape & review ───────────────────────────────────
       { step: 6, blocking: true,
-        tutorial: 'Before SCOUT runs at scale, fire a test scrape: 1 niche, 10 leads. Confirms the ICP filter works as you intended and the email-finder hits.',
+        tutorial: 'Before the Lead Generator runs at scale, fire a test scrape: 1 niche, 10 leads. Confirms the ICP filter works as you intended and the email-finder hits.',
         fields: [
         { key: 'test_scrape_niche', label: 'Test niche (one term from your ICP)', type: 'text', required: true, editable: true },
         { key: 'test_scrape_city', label: 'Test city', type: 'text', required: true, editable: true,
           help: 'Default: "Miami FL".' },
         { key: 'test_scrape_button', label: 'Run test scrape (10 leads)', type: 'connection-test',
           target: '/api/integration-test',
-          help: 'Hits the SCOUT Cloud Run service with your config.' },
+          help: 'Hits the Lead Generator\'s Cloud Run service with your config.' },
         { key: 'test_scrape_passed', label: 'Test results look right (real businesses, accurate filter)', type: 'boolean', required: true },
-        { key: 'ready_for_review', label: 'I have reviewed and want STILO to activate SCOUT', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed and want STILO to activate the Lead Generator', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
@@ -1353,8 +1353,8 @@ var AGENTS = {
   },
   forge: {
     code: 'forge',
-    name: 'FORGE - AI Website',
-    shortName: 'FORGE',
+    name: 'AI Website',
+    shortName: 'Website',
     setupFeeCents: 125000,
     monthlyFeeCents: 20000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_FORGE_SETUP',
@@ -1433,7 +1433,7 @@ var AGENTS = {
         { key: 'pages', label: 'Pages to include', type: 'textarea', required: true, editable: true,
           help: 'Pre-loaded from niche playbook. Edit the list (one page name per line). Examples: Home, Services, About, Gallery, FAQ, Contact, Booking.' },
         { key: 'has_blog', label: 'Include a blog', type: 'boolean', editable: true,
-          help: 'Recommended for SEO (SIGNAL benefits).' },
+          help: 'Recommended for SEO (the AI SEO agent benefits).' },
         { key: 'has_gallery', label: 'Include a photo / before-after gallery', type: 'boolean', editable: true },
         { key: 'has_team_page', label: 'Include a team / about page', type: 'boolean', editable: true },
         { key: 'has_faq', label: 'Include an FAQ page (auto-generates from KB)', type: 'boolean', editable: true,
@@ -1442,7 +1442,7 @@ var AGENTS = {
 
       // Step 4: Content sources ────────────────────────────────────────
       { step: 4,
-        tutorial: 'FORGE pulls 80% of content from your Business Profile (services, hours, photos, KB, brand voice). Use this step to add anything that isn\'t in the profile yet: testimonials, case studies, additional photos.',
+        tutorial: 'The Website agent pulls 80% of content from your Business Profile (services, hours, photos, KB, brand voice). Use this step to add anything that isn\'t in the profile yet: testimonials, case studies, additional photos.',
         fields: [
         { key: 'testimonials', label: 'Testimonials (with consent)', type: 'array-of-objects', editable: true,
           schema: [
@@ -1460,7 +1460,7 @@ var AGENTS = {
 
       // Step 5: Booking integration ────────────────────────────────────
       { step: 5,
-        tutorial: 'When a visitor books on the website, the appointment lands in your calendar — same calendar ECHO and IGNITE write to. The form also posts to your CRM with a tag.',
+        tutorial: 'When a visitor books on the website, the appointment lands in your calendar — same calendar the Receptionist and Lead Response agents write to. The form also posts to your CRM with a tag.',
         fields: [
         { key: 'booking_method', label: 'Booking method (defaults to your Business Profile calendar)', type: 'select', editable: true,
           options: [
@@ -1482,14 +1482,14 @@ var AGENTS = {
 
       // Step 6: SEO basics ─────────────────────────────────────────────
       { step: 6,
-        tutorial: 'Pre-loaded keyword targets from your niche playbook. SIGNAL (if you have it) does the deep keyword research; FORGE just bakes the basics into the site so you\'re not starting from zero.',
+        tutorial: 'Pre-loaded keyword targets from your niche playbook. The AI SEO agent (if you have it) does the deep keyword research; the Website agent just bakes the basics into the site so you\'re not starting from zero.',
         fields: [
         { key: 'target_keywords', label: 'Top 10 target keywords', type: 'textarea', required: true, editable: true,
           help: 'One per line. Pre-loaded from niche playbook. Example for med spa Miami: "med spa near me", "botox miami", "filler 33131".' },
         { key: 'meta_title_template', label: 'Page title template', type: 'text', editable: true,
           help: 'Default: "{page} | {business_name} | {city}".' },
-        { key: 'has_signal_addon', label: 'I also have SIGNAL (deep SEO) for this site', type: 'boolean', editable: true,
-          help: 'If yes, FORGE skips weekly keyword updates; SIGNAL handles it.' },
+        { key: 'has_signal_addon', label: 'I also have the AI SEO agent (deep SEO) for this site', type: 'boolean', editable: true,
+          help: 'If yes, the Website agent skips weekly keyword updates; the AI SEO agent handles it.' },
         { key: 'google_business_profile_url', label: 'Google Business Profile URL (if claimed)', type: 'url', editable: true },
       ]},
 
@@ -1506,8 +1506,8 @@ var AGENTS = {
   },
   signal: {
     code: 'signal',
-    name: 'SIGNAL - AI SEO (GEO)',
-    shortName: 'SIGNAL',
+    name: 'AI SEO (GEO)',
+    shortName: 'AI SEO',
     setupFeeCents: 100000,
     monthlyFeeCents: 0,
     stripeSetupPriceEnv: 'STRIPE_PRICE_SIGNAL_SETUP',
@@ -1525,11 +1525,11 @@ var AGENTS = {
 
       // Step 1: Site to optimize ───────────────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'SIGNAL works on a website you own. Two paths:\n\n1. **You also have FORGE**: SIGNAL plugs straight into the FORGE site, no extra setup.\n2. **You have an existing site elsewhere**: paste the URL. SIGNAL crawls it to extract current content, meta, and schema. The crawl runs once and is read-only.',
+        tutorial: 'The AI SEO agent works on a website you own. Two paths:\n\n1. **You also have the Website agent**: the AI SEO agent plugs straight into the Website agent site, no extra setup.\n2. **You have an existing site elsewhere**: paste the URL. The AI SEO agent crawls it to extract current content, meta, and schema. The crawl runs once and is read-only.',
         fields: [
-        { key: 'site_source', label: 'Which site is SIGNAL optimizing?', type: 'select', required: true, editable: true,
+        { key: 'site_source', label: 'Which site is the AI SEO agent optimizing?', type: 'select', required: true, editable: true,
           options: [
-            { value: 'forge', label: 'My FORGE site (auto-linked)' },
+            { value: 'forge', label: 'My Website agent site (auto-linked)' },
             { value: 'external_wordpress', label: 'WordPress site (I have admin access)' },
             { value: 'external_squarespace', label: 'Squarespace site' },
             { value: 'external_shopify', label: 'Shopify site' },
@@ -1537,12 +1537,12 @@ var AGENTS = {
           ] },
         { key: 'site_url', label: 'Site URL', type: 'url', required: true, editable: true,
           help: 'Format: https://yourbusiness.com (full URL).' },
-        { key: 'admin_access_method', label: 'How will SIGNAL push changes?', type: 'select', editable: true,
+        { key: 'admin_access_method', label: 'How will the AI SEO agent push changes?', type: 'select', editable: true,
           showIf_not: { site_source: 'forge' },
           options: [
             { value: 'wp_admin', label: 'WordPress admin login' },
             { value: 'plugin', label: 'Custom plugin (we install)' },
-            { value: 'manual', label: 'Manual: SIGNAL gives me a quarterly checklist, I implement' },
+            { value: 'manual', label: 'Manual: the AI SEO agent gives me a quarterly checklist, I implement' },
             { value: 'cms_api', label: 'CMS API access' },
           ] },
         { key: 'crawl_completed', label: 'Run baseline crawl', type: 'connection-test',
@@ -1552,7 +1552,7 @@ var AGENTS = {
 
       // Step 2: Google Business Profile ────────────────────────────────
       { step: 2,
-        tutorial: 'For local SEO, your Google Business Profile (GBP) matters more than your website. SIGNAL optimizes both.\n\nIf you don\'t have a GBP yet, we\'ll guide you through claiming one. The Google verification process takes 5-14 days (postcard) but you can start optimizing immediately.',
+        tutorial: 'For local SEO, your Google Business Profile (GBP) matters more than your website. The AI SEO agent optimizes both.\n\nIf you don\'t have a GBP yet, we\'ll guide you through claiming one. The Google verification process takes 5-14 days (postcard) but you can start optimizing immediately.',
         fields: [
         { key: 'gbp_status', label: 'Google Business Profile status', type: 'select', required: true, editable: true,
           options: [
@@ -1566,10 +1566,10 @@ var AGENTS = {
         { key: 'gbp_oauth', label: 'Connect Google Business Profile', type: 'oauth-button',
           target: '/api/oauth?provider=google-business&action=start',
           showIf: { gbp_status: 'owned_verified' },
-          help: 'OAuth lets SIGNAL post updates, respond to reviews, and update your hours.' },
+          help: 'OAuth lets the AI SEO agent post updates, respond to reviews, and update your hours.' },
         { key: 'gbp_claim_help_requested', label: 'I want STILO to help me claim and verify my listing', type: 'boolean', editable: true,
           showIf_not: { gbp_status: 'owned_verified' } },
-        { key: 'review_response_strategy', label: 'How should SIGNAL handle reviews?', type: 'select', editable: true,
+        { key: 'review_response_strategy', label: 'How should the AI SEO agent handle reviews?', type: 'select', editable: true,
           options: [
             { value: 'auto_thank_positive', label: 'Auto-respond to 5-star reviews (positive only); flag the rest for me' },
             { value: 'all_for_review', label: 'Draft all responses but I approve before posting' },
@@ -1579,7 +1579,7 @@ var AGENTS = {
 
       // Step 3: Keyword targets ────────────────────────────────────────
       { step: 3,
-        tutorial: 'Niche-specific keywords are pre-loaded from your niche playbook (high-intent + local). SIGNAL also pulls live volume + difficulty from DataForSEO and shows the projected ranking opportunity for each.',
+        tutorial: 'Niche-specific keywords are pre-loaded from your niche playbook (high-intent + local). The AI SEO agent also pulls live volume + difficulty from DataForSEO and shows the projected ranking opportunity for each.',
         fields: [
         { key: 'target_keywords', label: 'Target keywords', type: 'array-of-objects', required: true, editable: true,
           help: 'Pre-loaded from your niche playbook. Aim for 20 keywords: 8 high-intent, 8 local, 4 informational.',
@@ -1590,32 +1590,32 @@ var AGENTS = {
           ],
           minItems: 10 },
         { key: 'service_areas_for_geo', label: 'Cities or zip codes to rank in (comma-separated)', type: 'text', editable: true,
-          help: 'SIGNAL builds a service-area page per city. Limit to 3-5 to start.' },
+          help: 'The AI SEO agent builds a service-area page per city. Limit to 3-5 to start.' },
       ]},
 
       // Step 4: Competitor benchmarks ──────────────────────────────────
       { step: 4,
-        tutorial: 'Pick 3-5 local competitors. SIGNAL tracks their rankings weekly and alerts you when they outrank you on a target keyword.',
+        tutorial: 'Pick 3-5 local competitors. The AI SEO agent tracks their rankings weekly and alerts you when they outrank you on a target keyword.',
         fields: [
         { key: 'competitors', label: 'Competitor URLs', type: 'textarea', required: true, editable: true,
-          help: 'One URL per line. SIGNAL tracks their rank weekly.' },
+          help: 'One URL per line. The AI SEO agent tracks their rank weekly.' },
         { key: 'competitor_alerts', label: 'Alert me when a competitor outranks me on a target keyword', type: 'boolean', editable: true },
       ]},
 
       // Step 5: AI search optimization ─────────────────────────────────
       { step: 5,
-        tutorial: 'Ranking on Google is one game. Showing up when someone asks ChatGPT, Perplexity, or Claude "best med spa in Miami" is another. SIGNAL optimizes for both.\n\nThe AI assistants prefer pages that:\n- Have FAQ schema with the answer in the first 200 words\n- List structured business data (LocalBusiness schema)\n- Match high-authority citations across the web\n- Have unique, specific content (not boilerplate)',
+        tutorial: 'Ranking on Google is one game. Showing up when someone asks ChatGPT, Perplexity, or Claude "best med spa in Miami" is another. The AI SEO agent optimizes for both.\n\nThe AI assistants prefer pages that:\n- Have FAQ schema with the answer in the first 200 words\n- List structured business data (LocalBusiness schema)\n- Match high-authority citations across the web\n- Have unique, specific content (not boilerplate)',
         fields: [
         { key: 'enable_ai_search_optimization', label: 'Optimize for ChatGPT, Perplexity, and Claude visibility', type: 'boolean', required: true, editable: true,
           help: 'Recommended ON. No extra cost.' },
         { key: 'schema_types_to_add', label: 'Schema types to add (pre-loaded from niche)', type: 'text', editable: true,
           help: 'Examples for med spa: MedicalBusiness, MedicalProcedure, FAQPage, LocalBusiness.' },
         { key: 'citation_priorities', label: 'Citation sources to claim/optimize (pre-loaded from niche)', type: 'textarea', editable: true,
-          help: 'One per line. SIGNAL helps you claim each.' },
+          help: 'One per line. The AI SEO agent helps you claim each.' },
         { key: 'test_query_check', label: 'Run an AI search visibility test', type: 'connection-test',
           target: '/api/integration-test',
           help: 'We query "best {your niche} in {your city}" against ChatGPT and Perplexity and report whether you appear.' },
-        { key: 'ready_for_review', label: 'I have reviewed and want STILO to activate SIGNAL', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed and want STILO to activate the AI SEO agent', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
@@ -1624,8 +1624,8 @@ var AGENTS = {
   },
   oracle: {
     code: 'oracle',
-    name: 'ORACLE - Growth Intelligence',
-    shortName: 'ORACLE',
+    name: 'Growth Intelligence',
+    shortName: 'Growth Intelligence',
     setupFeeCents: 300000,
     monthlyFeeCents: 200000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_ORACLE_SETUP',
@@ -1644,7 +1644,7 @@ var AGENTS = {
 
       // Step 1: Data sources ───────────────────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'ORACLE works on real numbers. Connect the systems that hold your data, and ORACLE pulls weekly to build dashboards and reports.\n\nMost connections are OAuth (no password sharing). The rest use API keys.\n\nIf you skip a source, ORACLE works around it — but the more sources, the better the analysis.',
+        tutorial: 'Growth Intelligence works on real numbers. Connect the systems that hold your data, and it pulls weekly to build dashboards and reports.\n\nMost connections are OAuth (no password sharing). The rest use API keys.\n\nIf you skip a source, Growth Intelligence works around it — but the more sources, the better the analysis.',
         fields: [
         { key: 'connect_quickbooks', label: 'Connect QuickBooks / Xero', type: 'oauth-button',
           target: '/api/oauth?provider=quickbooks&action=start',
@@ -1672,12 +1672,12 @@ var AGENTS = {
         { key: 'pos_credentials.api_key', label: 'POS API key', type: 'password', editable: true,
           showIf_not: { connect_pos: 'none' } },
         { key: 'data_sources_minimum_check', label: 'I have connected at least 2 data sources', type: 'boolean', required: true,
-          help: 'ORACLE needs at least 2 sources for cross-source analysis. Required.' },
+          help: 'Growth Intelligence needs at least 2 sources for cross-source analysis. Required.' },
       ]},
 
       // Step 2: KPIs & targets ─────────────────────────────────────────
       { step: 2,
-        tutorial: 'Niche-specific KPI defaults are pre-loaded. Edit targets to match your goals. ORACLE tracks your performance against these targets every week and flags gaps in the report.',
+        tutorial: 'Niche-specific KPI defaults are pre-loaded. Edit targets to match your goals. Growth Intelligence tracks your performance against these targets every week and flags gaps in the report.',
         fields: [
         { key: 'kpis', label: 'KPIs to track (pre-loaded from niche)', type: 'array-of-objects', required: true, editable: true,
           help: 'Pre-filled from your niche playbook. Edit targets to match your goals.',
@@ -1714,22 +1714,22 @@ var AGENTS = {
         { key: 'report_recipients', label: 'Recipients (comma-separated emails)', type: 'text', required: true, editable: true,
           help: 'Defaults to owner email. Add your accountant, partners, or coach.' },
         { key: 'report_alert_thresholds', label: 'Alert me when a P1 KPI is more than X% off target', type: 'number', editable: true,
-          help: 'Default: 15%. ORACLE sends an immediate email if any P1 metric breaches this threshold.' },
+          help: 'Default: 15%. Growth Intelligence sends an immediate email if any P1 metric breaches this threshold.' },
       ]},
 
       // Step 4: Competitive set ────────────────────────────────────────
       { step: 4,
-        tutorial: 'ORACLE benchmarks your numbers against typical performance for your niche AND your specific competitors. If you have SCOUT, we pull competitor data automatically.',
+        tutorial: 'Growth Intelligence benchmarks your numbers against typical performance for your niche AND your specific competitors. If you have the Lead Generator, we pull competitor data automatically.',
         fields: [
         { key: 'competitors', label: 'Competitors to benchmark against', type: 'textarea', editable: true,
-          help: 'One per line: name + city. Auto-suggested from SCOUT if you have it.' },
+          help: 'One per line: name + city. Auto-suggested from the Lead Generator if you have it.' },
         { key: 'use_niche_benchmarks', label: 'Compare me against niche benchmarks (peer averages)', type: 'boolean', editable: true,
-          help: 'ORACLE has aggregate data on typical performance for each niche. Recommended ON.' },
+          help: 'Growth Intelligence has aggregate data on typical performance for each niche. Recommended ON.' },
       ]},
 
       // Step 5: Strategic context ──────────────────────────────────────
       { step: 5,
-        tutorial: 'The single most important field in this whole wizard. ORACLE writes its monthly executive review around answering this question. Be specific.',
+        tutorial: 'The single most important field in this whole wizard. Growth Intelligence writes its monthly executive review around answering this question. Be specific.',
         fields: [
         { key: 'biggest_strategic_question', label: 'The one strategic question you want answered every month', type: 'textarea', required: true, editable: true,
           help: 'Examples: "Why is our show rate dropping?", "Are we charging enough?", "Which marketing channel actually works?", "Should we open a second location?"' },
@@ -1742,7 +1742,7 @@ var AGENTS = {
             { value: 'expanding', label: 'Expanding (new locations / services)' },
           ] },
         { key: 'recent_strategic_changes', label: 'Strategic changes in the last 6 months', type: 'textarea', editable: true,
-          help: 'New service line, price increase, hire, location, marketing pivot. Helps ORACLE attribute changes correctly.' },
+          help: 'New service line, price increase, hire, location, marketing pivot. Helps Growth Intelligence attribute changes correctly.' },
       ]},
 
       // Step 6: Baseline & review ──────────────────────────────────────
@@ -1752,7 +1752,7 @@ var AGENTS = {
         { key: 'baseline_preview_received', label: 'I have received and reviewed the baseline analysis preview', type: 'boolean', editable: true },
         { key: 'baseline_accurate', label: 'The baseline numbers match my own books', type: 'boolean', editable: true,
           help: 'If no, STILO will reconnect data sources or correct mappings before going live.' },
-        { key: 'ready_for_review', label: 'I am ready for STILO to activate ORACLE', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I am ready for STILO to activate Growth Intelligence', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
@@ -1788,7 +1788,7 @@ var AGENTS = {
 
       // Step 1: Sales motion & goals ──────────────────────────────────
       { step: 1,
-        tutorial: 'the Sales Agent is your AI Sales Agent. It listens to your cold calls + meetings + reads every email thread, rewrites scripts + email sequences against what actually converts, and (once you flip the switch in Step 6) sends the rewritten outbound emails on a cadence you control. Two halves: coaching (always on) + automation (opt-in). First job: tell us how you sell today.',
+        tutorial: 'The Sales Agent is your AI Sales Agent. It listens to your cold calls + meetings + reads every email thread, rewrites scripts + email sequences against what actually converts, and (once you flip the switch in Step 6) sends the rewritten outbound emails on a cadence you control. Two halves: coaching (always on) + automation (opt-in). First job: tell us how you sell today.',
         fields: [
         { key: 'sales_motion', label: 'How do you primarily sell?', type: 'select', required: true, editable: true,
           options: [
@@ -1802,7 +1802,7 @@ var AGENTS = {
           help: 'the Sales Agent uses this to weight which calls/emails matter most.' },
         { key: 'sales_cycle_days', label: 'Typical sales cycle (days from first touch to close)', type: 'number', editable: true },
         { key: 'current_close_rate_pct', label: 'Current close rate (% of qualified leads that buy)', type: 'number', editable: true,
-          help: 'Best estimate. the Sales Agent builds a baseline and tracks lift from here.' },
+          help: 'Best estimate. The Sales Agent builds a baseline and tracks lift from here.' },
         { key: 'top_objections_today', label: 'Top 3 objections you hear right now', type: 'textarea', required: true, editable: true,
           help: 'One per line. Price, timing, "not the right person", etc.' },
         { key: 'biggest_sales_question', label: 'The one sales question you want answered every week', type: 'textarea', required: true, editable: true,
@@ -1819,7 +1819,7 @@ var AGENTS = {
 
       // Step 2: Connect your sources ──────────────────────────────────
       { step: 2, blocking: true,
-        tutorial: 'the Sales Agent needs raw material. Connect whichever sources you have. The more it sees, the sharper the coaching. Nothing is forwarded outside of STILO; transcripts and emails are stored encrypted.\n\nMinimum: one source. Recommended: call transcripts + email.\n\n**Call transcripts**: Gong, Fathom, Otter, Fireflies, Zoom Cloud, OpenPhone, or upload .txt/.vtt files manually. Most tools have a "share with API" toggle that gives a token.\n\n**Cold email**: connect Gmail/Outlook via OAuth, or paste an Apollo/Instantly/Smartlead API key. the Sales Agent only reads the threads tagged with the labels you specify.\n\n**CRM notes**: defaults to the CRM from your Business Profile. the Sales Agent pulls deal stages, lost reasons, and rep notes to correlate with what was said on the call.',
+        tutorial: 'The Sales Agent needs raw material. Connect whichever sources you have. The more it sees, the sharper the coaching. Nothing is forwarded outside of STILO; transcripts and emails are stored encrypted.\n\nMinimum: one source. Recommended: call transcripts + email.\n\n**Call transcripts**: Gong, Fathom, Otter, Fireflies, Zoom Cloud, OpenPhone, or upload .txt/.vtt files manually. Most tools have a "share with API" toggle that gives a token.\n\n**Cold email**: connect Gmail/Outlook via OAuth, or paste an Apollo/Instantly/Smartlead API key. The Sales Agent only reads the threads tagged with the labels you specify.\n\n**CRM notes**: defaults to the CRM from your Business Profile. The Sales Agent pulls deal stages, lost reasons, and rep notes to correlate with what was said on the call.',
         fields: [
         { key: 'connect_call_source', label: 'Where do your call recordings/transcripts live?', type: 'select', required: true, editable: true,
           options: [
@@ -1830,7 +1830,7 @@ var AGENTS = {
             { value: 'zoom_cloud', label: 'Zoom Cloud Recording' },
             { value: 'openphone', label: 'OpenPhone' },
             { value: 'aircall', label: 'Aircall' },
-            { value: 'retell_calls', label: 'STILO ECHO/IGNITE call recordings' },
+            { value: 'retell_calls', label: 'STILO Receptionist / Lead Response call recordings' },
             { value: 'manual_upload', label: 'I will upload transcripts manually' },
             { value: 'none_yet', label: 'No call recordings today (set up later)' },
           ] },
@@ -1884,7 +1884,7 @@ var AGENTS = {
           target: '/api/integration-test',
           help: 'Pulls a sample call + a sample email thread to verify access. Required before advancing.' },
         { key: 'consent_to_process_transcripts', label: 'I have authority to share these transcripts and emails with STILO for sales coaching analysis', type: 'boolean', required: true,
-          help: 'Standard. the Sales Agent will not pull data without this.' },
+          help: 'Standard. The Sales Agent will not pull data without this.' },
       ]},
 
       // Step 3: Team & pipeline ───────────────────────────────────────
@@ -1914,30 +1914,30 @@ var AGENTS = {
         { key: 'qualification_notes', label: 'Custom qualification criteria (if not standard)', type: 'textarea', editable: true,
           showIf: { qualification_framework: 'custom' } },
         { key: 'lost_deal_reasons', label: 'The 3-5 most common reasons you lose deals', type: 'textarea', required: true, editable: true,
-          help: 'One per line. the Sales Agent cross-checks these against call transcripts to find which losses were preventable.' },
+          help: 'One per line. The Sales Agent cross-checks these against call transcripts to find which losses were preventable.' },
       ]},
 
       // Step 4: Scripts & templates ───────────────────────────────────
       { step: 4,
-        tutorial: 'Paste what you use today. the Sales Agent benchmarks every call/email against these baselines and rewrites weaker performers. Leave fields blank if you do not have one yet — the Sales Agent will draft a first version from your niche playbook.',
+        tutorial: 'Paste what you use today. The Sales Agent benchmarks every call/email against these baselines and rewrites weaker performers. Leave fields blank if you do not have one yet — the Sales Agent will draft a first version from your niche playbook.',
         fields: [
         { key: 'current_cold_call_script', label: 'Current cold-call opener / script', type: 'textarea', editable: true,
-          help: 'Paste your current opener. the Sales Agent rewrites it after the first 20 calls of data.' },
+          help: 'Paste your current opener. The Sales Agent rewrites it after the first 20 calls of data.' },
         { key: 'current_cold_email_template', label: 'Current cold email subject + body', type: 'textarea', editable: true,
-          help: 'Paste your best-performing template. the Sales Agent generates A/B variants.' },
+          help: 'Paste your best-performing template. The Sales Agent generates A/B variants.' },
         { key: 'current_followup_sequence', label: 'Current follow-up cadence (number of touches + days)', type: 'textarea', editable: true,
           help: 'Example: "Day 1 email, Day 3 call, Day 7 email, Day 14 LinkedIn".' },
         { key: 'current_demo_outline', label: 'Demo or discovery call outline', type: 'textarea', editable: true,
-          help: 'The structure you follow. the Sales Agent scores adherence and flags drift.' },
+          help: 'The structure you follow. The Sales Agent scores adherence and flags drift.' },
         { key: 'current_closing_questions', label: 'How you ask for the sale', type: 'textarea', editable: true,
-          help: 'Verbatim if possible. the Sales Agent finds which phrasing converts.' },
+          help: 'Verbatim if possible. The Sales Agent finds which phrasing converts.' },
         { key: 'objection_responses', label: 'Approved responses to your top objections', type: 'array-of-objects', editable: true,
           schema: [
             { key: 'objection', label: 'Objection', type: 'text' },
             { key: 'response', label: 'Your response', type: 'textarea' },
           ] },
         { key: 'brand_voice_constraints', label: 'Words or claims your reps must NEVER say', type: 'textarea', editable: true,
-          help: 'Compliance, legal, or brand restrictions. the Sales Agent flags any call/email that crosses them.' },
+          help: 'Compliance, legal, or brand restrictions. The Sales Agent flags any call/email that crosses them.' },
       ]},
 
       // Step 5: Coaching cadence ──────────────────────────────────────
@@ -1978,7 +1978,7 @@ var AGENTS = {
       // through the mailbox connected in step 2. Defaults to OFF — safer to
       // ship coaching first, flip automation on once trust is built.
       { step: 6,
-        tutorial: 'Email automation (the "agent" half of AI Sales Agent). Optional. the Sales Agent can send the rewritten cold emails + follow-ups from the same mailbox you connected in step 2. You set the rules; the Sales Agent respects them. Start conservative — most clients run human-review-first for the first 30 days, then flip to auto-send once they trust the output.',
+        tutorial: 'Email automation (the "agent" half of AI Sales Agent). Optional. The Sales Agent can send the rewritten cold emails + follow-ups from the same mailbox you connected in step 2. You set the rules; the Sales Agent respects them. Start conservative — most clients run human-review-first for the first 30 days, then flip to auto-send once they trust the output.',
         fields: [
         { key: 'automation_enabled', label: 'Turn on email automation', type: 'boolean', editable: true,
           help: 'If off, the Sales Agent stays in coaching-only mode and you get all the analytics + rewrites without any auto-send. You can flip this on later.' },
@@ -2015,10 +2015,10 @@ var AGENTS = {
           help: 'Default: "lawyer", "legal", "complaint", "lawsuit", "fraud", "scam". Add anything specific to your business.' },
         { key: 'dnc_list_url', label: 'URL or doc with your existing Do-Not-Contact list', type: 'text', editable: true,
           showIf: { automation_enabled: true },
-          help: 'Optional. the Sales Agent ingests this before the first send and never emails anyone on it.' },
+          help: 'Optional. The Sales Agent ingests this before the first send and never emails anyone on it.' },
         { key: 'automation_consent', label: 'I have authority to send outbound email from these mailboxes on behalf of this business', type: 'boolean', required: true,
           showIf: { automation_enabled: true },
-          help: 'Required by law (CAN-SPAM in the US, similar elsewhere). the Sales Agent will not auto-send without this checked.' },
+          help: 'Required by law (CAN-SPAM in the US, similar elsewhere). The Sales Agent will not auto-send without this checked.' },
         ]},
 
       // Step 7: Review & go live ──────────────────────────────────────
@@ -2044,8 +2044,8 @@ var AGENTS = {
   },
   flux: {
     code: 'flux',
-    name: 'FLUX - Custom Automations',
-    shortName: 'FLUX',
+    name: 'Custom Automations',
+    shortName: 'Custom Automations',
     setupFeeCents: 100000, // starting at, scoped per project
     monthlyFeeCents: 0,
     stripeSetupPriceEnv: null,

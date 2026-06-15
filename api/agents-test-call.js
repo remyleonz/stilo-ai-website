@@ -214,7 +214,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (agent.agent_code !== 'ignite') {
-      return res.status(400).json({ error: 'Test calls only supported for IGNITE in Phase A' });
+      return res.status(400).json({ error: 'Test calls only supported for the Lead Response Agent in Phase A' });
     }
 
     const config = agent.config || {};

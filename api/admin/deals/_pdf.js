@@ -16,15 +16,15 @@ const GREY = rgb(0.42, 0.42, 0.45);
 const LIGHT = rgb(0.85, 0.85, 0.88);
 
 const AGENT_DESCRIPTIONS = {
-    echo:    { name: 'ECHO',    desc: 'AI Receptionist — 24/7 inbound call answering, booking, lead capture.' },
-    ignite:  { name: 'IGNITE',  desc: 'Lead Response — instant text/email reply to every form fill, ad lead, or missed call.' },
-    revive:  { name: 'REVIVE',  desc: 'Customer Reactivation — wins back dormant customers via personalized outreach.' },
-    scout:   { name: 'SCOUT',   desc: 'Lead Generator — Google Maps scraping + scoring + cold outreach drafting.' },
-    forge:   { name: 'FORGE',   desc: 'AI Website — high-converting modern site with built-in chat and booking.' },
-    signal:  { name: 'SIGNAL',  desc: 'AI SEO / GEO — local visibility, schema, AI-search optimization.' },
-    oracle:  { name: 'ORACLE',  desc: 'Growth Intelligence — weekly KPI brief + opportunity flagging.' },
-    pitch:   { name: 'PITCH',   desc: 'AI Sales Coach — listens to call transcripts, ships scorecards + script rewrites.' },
-    flux:    { name: 'FLUX',    desc: 'Custom Automations — workflow + integration buildout to your spec.' }
+    echo:    { name: 'AI Receptionist',        desc: '24/7 inbound call answering, booking, and lead capture.' },
+    ignite:  { name: 'Lead Response Agent',    desc: 'Instant text and email reply to every form fill, ad lead, or missed call.' },
+    revive:  { name: 'Customer Reactivation',  desc: 'Wins back dormant customers via personalized outreach.' },
+    scout:   { name: 'Lead Generator',         desc: 'Google Maps scraping, scoring, and cold outreach drafting.' },
+    forge:   { name: 'AI Website',             desc: 'High-converting modern site with built-in chat and booking.' },
+    signal:  { name: 'AI SEO (GEO)',           desc: 'Local visibility, schema, and AI-search optimization.' },
+    oracle:  { name: 'Growth Intelligence',    desc: 'Weekly KPI brief with opportunity flagging.' },
+    pitch:   { name: 'AI Sales Agent',         desc: 'Listens to call transcripts, ships scorecards and script rewrites.' },
+    flux:    { name: 'Custom Automations',     desc: 'Workflow and integration buildout to your spec.' }
 };
 
 function formatMoney(cents) {

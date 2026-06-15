@@ -2,9 +2,9 @@
 /**
  * Seed demo deals for Marcus Lindsey Cleaning + Randy Rejuvenation Clinic.
  *
- * Marcus (last month, the 10th):  SCOUT (lead_generator)  $4,000 + $2,000/mo
- * Randy  (this month):  FORGE (website)         $6,000 + $500/mo
- *                       SIGNAL (ai_seo)         $1,500 one-time
+ * Marcus (last month, the 10th):  Lead Generator (scout)  $4,000 + $2,000/mo
+ * Randy  (this month):  Website (forge)         $6,000 + $500/mo
+ *                       AI SEO (signal)         $1,500 one-time
  *
  * Both flagged with notes='SEED:2026-05-26 — temporary; see memory note
  * for removal instructions.' so cleanup is easy later.
@@ -175,7 +175,7 @@ async function main() {
         .update({ agent_type: 'scout' })
         .eq('client_id', marcusClientId)
         .eq('agent_type', 'lead_generator');
-    console.log('[Marcus] ensuring SCOUT client_agent (idempotent)...');
+    console.log('[Marcus] ensuring Lead Generator client_agent (idempotent)...');
     await ensureClientAgent(marcusClientId, 'scout', 'active', lastMonth);
     console.log('[Marcus] ensuring deal...');
     const marcusDealId = await ensureDeal({
@@ -189,7 +189,7 @@ async function main() {
         stage: 'ONBOARDING',
         closed_at: lastMonth,
         paid_at: lastMonth,
-        notes: SEED_TAG + ' — Marcus Lindsey Cleaning, SCOUT (Lead Generator), $4,000 + $2,000/mo. Friends-and-family. Eventually make this agent free per Remy.'
+        notes: SEED_TAG + ' — Marcus Lindsey Cleaning, Lead Generator, $4,000 + $2,000/mo. Friends-and-family. Eventually make this agent free per Remy.'
     });
     console.log('  → deal', marcusDealId);
     console.log();
@@ -203,7 +203,7 @@ async function main() {
         phone: null
     });
     console.log('  client_id', randyClientId);
-    console.log('[Randy] ensuring FORGE + SIGNAL client_agents...');
+    console.log('[Randy] ensuring Website + AI SEO client_agents...');
     await ensureClientAgent(randyClientId, 'forge', 'active', thisMonth);
     await ensureClientAgent(randyClientId, 'signal', 'active', thisMonth);
     console.log('[Randy] ensuring deal...');
@@ -218,7 +218,7 @@ async function main() {
         stage: 'ONBOARDING',
         closed_at: thisMonth,
         paid_at: thisMonth,
-        notes: SEED_TAG + ' — Randy Rejuvenation Clinic, FORGE Website ($6,000 + $500/mo) + SIGNAL AI SEO ($1,500 one-time). Closed this month. Eventually remove this client entirely per Remy.'
+        notes: SEED_TAG + ' — Randy Rejuvenation Clinic, Website ($6,000 + $500/mo) + AI SEO ($1,500 one-time). Closed this month. Eventually remove this client entirely per Remy.'
     });
     console.log('  → deal', randyDealId);
     console.log();

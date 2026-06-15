@@ -231,49 +231,49 @@
     // Agent configuration
     // ============================================
     const AGENTS = {
-      echo:   { name: 'ECHO',   role: 'AI Receptionist',       primary: 'calls_handled',      kpis: [
+      echo:   { name: 'AI Receptionist',   role: 'Answers and books calls',       primary: 'calls_handled',      kpis: [
         {key:'calls_handled', label:'Calls handled', fmt:'int'},
         {key:'avg_duration', label:'Avg duration', fmt:'duration'},
         {key:'booked_appointments', label:'Appointments booked', fmt:'int'},
         {key:'missed_calls', label:'Missed calls', fmt:'int', invert:true}
       ]},
-      ignite: { name: 'IGNITE', role: 'Lead Response Agent',   primary: 'leads_received',     kpis: [
+      ignite: { name: 'Lead Response Agent', role: 'Replies to new leads in seconds',   primary: 'leads_received',     kpis: [
         {key:'leads_received', label:'Leads received', fmt:'int'},
         {key:'response_time_avg', label:'Avg response', fmt:'seconds'},
         {key:'qualified', label:'Qualified leads', fmt:'int'},
         {key:'conversion_rate', label:'Conversion rate', fmt:'percent'}
       ]},
-      revive: { name: 'REVIVE', role: 'Customer Reactivation', primary: 'dormant_engaged',    kpis: [
+      revive: { name: 'Customer Reactivation', role: 'Wins back dormant customers', primary: 'dormant_engaged',    kpis: [
         {key:'dormant_engaged', label:'Dormant engaged', fmt:'int'},
         {key:'replies', label:'Replies', fmt:'int'},
         {key:'recovered_revenue', label:'Recovered revenue', fmt:'usd'},
         {key:'churn_saved', label:'Churn saved', fmt:'int'}
       ]},
-      scout:  { name: 'SCOUT',  role: 'Lead Generator',        primary: 'prospects_found',    kpis: [
+      scout:  { name: 'Lead Generator',  role: 'Finds and qualifies prospects',        primary: 'prospects_found',    kpis: [
         {key:'prospects_found', label:'Prospects found', fmt:'int'},
         {key:'contacted', label:'Contacted', fmt:'int'},
         {key:'meetings_set', label:'Meetings set', fmt:'int'},
         {key:'pipeline_value', label:'Pipeline value', fmt:'usd'}
       ]},
-      forge:  { name: 'FORGE',  role: 'AI Website',            primary: 'page_views',         kpis: [
+      forge:  { name: 'AI Website',  role: 'Builds and updates your site',            primary: 'page_views',         kpis: [
         {key:'page_views', label:'Page views', fmt:'int'},
         {key:'conversion_rate', label:'Conversion rate', fmt:'percent'},
         {key:'avg_session', label:'Avg session', fmt:'duration'},
         {key:'leads_captured', label:'Leads captured', fmt:'int'}
       ]},
-      signal: { name: 'SIGNAL', role: 'AI SEO (GEO)',          primary: 'ai_impressions',     kpis: [
+      signal: { name: 'AI SEO (GEO)', role: 'Gets you found in AI search',          primary: 'ai_impressions',     kpis: [
         {key:'ai_impressions', label:'AI impressions', fmt:'int'},
         {key:'ranked_queries', label:'Ranked queries', fmt:'int'},
         {key:'citations', label:'Citations', fmt:'int'},
         {key:'click_throughs', label:'Click-throughs', fmt:'int'}
       ]},
-      oracle: { name: 'ORACLE', role: 'Growth Intelligence',   primary: 'reports_delivered',  kpis: [
+      oracle: { name: 'Growth Intelligence', role: 'Turns your data into reports',   primary: 'reports_delivered',  kpis: [
         {key:'reports_delivered', label:'Reports delivered', fmt:'int'},
         {key:'anomalies_flagged', label:'Anomalies flagged', fmt:'int'},
         {key:'forecast_accuracy', label:'Forecast accuracy', fmt:'percent'},
         {key:'opportunities', label:'Opportunities', fmt:'int'}
       ]},
-      flux:   { name: 'FLUX',   role: 'Custom Automations',    primary: 'automations_running',kpis: [
+      flux:   { name: 'Custom Automations',   role: 'Automates your busywork',    primary: 'automations_running',kpis: [
         {key:'automations_running', label:'Automations running', fmt:'int'},
         {key:'tasks_executed', label:'Tasks executed', fmt:'int'},
         {key:'hours_saved', label:'Hours saved', fmt:'int'},
