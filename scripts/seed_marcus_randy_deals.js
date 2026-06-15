@@ -175,7 +175,7 @@ async function main() {
         .update({ agent_type: 'scout' })
         .eq('client_id', marcusClientId)
         .eq('agent_type', 'lead_generator');
-    console.log('[Marcus] ensuring Lead Generator client_agent (idempotent)...');
+    console.log('[Marcus] ensuring B2B Lead Generator client_agent (idempotent)...');
     await ensureClientAgent(marcusClientId, 'scout', 'active', lastMonth);
     console.log('[Marcus] ensuring deal...');
     const marcusDealId = await ensureDeal({
@@ -189,7 +189,7 @@ async function main() {
         stage: 'ONBOARDING',
         closed_at: lastMonth,
         paid_at: lastMonth,
-        notes: SEED_TAG + ' — Marcus Lindsey Cleaning, Lead Generator, $4,000 + $2,000/mo. Friends-and-family. Eventually make this agent free per Remy.'
+        notes: SEED_TAG + ' — Marcus Lindsey Cleaning, B2B Lead Generator, $4,000 + $2,000/mo. Friends-and-family. Eventually make this agent free per Remy.'
     });
     console.log('  → deal', marcusDealId);
     console.log();

@@ -326,7 +326,7 @@ const HANDLERS = {
         return {
           provisioned: false,
           updates,
-          human_review: 'PROSPECTING_API_URL not set; Lead Generator config saved but no Cloud Run instance to push to. Deploy the prospecting backend and set the env var.',
+          human_review: 'PROSPECTING_API_URL not set; B2B Lead Generator config saved but no Cloud Run instance to push to. Deploy the prospecting backend and set the env var.',
         };
       }
 
@@ -382,7 +382,7 @@ const HANDLERS = {
 
       if (!resp.ok) {
         const t = await resp.text();
-        throw new Error('Lead Generator push to Cloud Run returned ' + resp.status + ': ' + t.slice(0, 400));
+        throw new Error('B2B Lead Generator push to Cloud Run returned ' + resp.status + ': ' + t.slice(0, 400));
       }
       const json = await resp.json().catch(() => ({}));
       updates.scout_config_id = json.config_id || null;
@@ -517,7 +517,7 @@ const HANDLERS = {
         provisioned: true,
         updates,
         human_review: writeRes.written
-          ? 'Growth Intelligence config written. Next scheduled run picks it up.'
+          ? 'Ontology config written. Next scheduled run picks it up.'
           : (writeRes.note + ' Push manually if running off-host.'),
       };
     },

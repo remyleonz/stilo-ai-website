@@ -1759,12 +1759,12 @@
                         <select id="agentTypeFilter" onchange="loadAgentsTable()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
                             <option value="">All agents</option>
                             <option value="echo">Receptionist</option>
-                            <option value="ignite">Lead Response</option>
-                            <option value="revive">Customer Reactivation</option>
-                            <option value="scout">Lead Generator</option>
-                            <option value="forge">Website Builder</option>
+                            <option value="ignite">Outbound Lead Reply</option>
+                            <option value="revive">Lost Customer Reactivation</option>
+                            <option value="scout">B2B Lead Generator</option>
+                            <option value="forge">Website</option>
                             <option value="signal">AI SEO</option>
-                            <option value="oracle">Growth Intelligence</option>
+                            <option value="oracle">Ontology</option>
                             <option value="pitch">AI Sales Agent</option>
                             <option value="flux">Custom Automations</option>
                         </select>
@@ -3361,15 +3361,15 @@
         }
 
         var AGENT_FEES_MONTHLY = {
-            echo: 45000, ignite: 65000, revive: 80000, scout: 100000,
-            forge: 20000, signal: 0, oracle: 100000, pitch: 200000, flux: 0,
+            echo: 100000, ignite: 150000, revive: 150000, scout: 200000,
+            forge: 20000, signal: 0, oracle: 200000, pitch: 150000, flux: 0,
         };
         // Used by the Revenue tab to split a multi-agent deal's upfront
         // proportionally across the agents in agent_codes (since deals only
         // store a single upfront total). Mirrors setupFeeCents in _agents.js.
         var AGENT_FEES_SETUP = {
-            echo: 150000, ignite: 200000, revive: 250000, scout: 300000,
-            forge: 125000, signal: 100000, oracle: 300000, pitch: 250000, flux: 100000,
+            echo: 200000, ignite: 250000, revive: 250000, scout: 300000,
+            forge: 200000, signal: 100000, oracle: 300000, pitch: 250000, flux: 100000,
         };
 
         async function loadAgentsTable() {
@@ -3765,13 +3765,13 @@
         // Used by the Revenue tab and the client drawer. Descriptions tell
         // Remy at a glance what each agent does for that client.
         var AGENT_DISPLAY = {
-            echo:    { name: 'Receptionist',          desc: 'Answers every call, books on the calendar, captures messages 24/7.' },
-            ignite:  { name: 'Lead Response',         desc: 'Calls fresh leads within 60s, qualifies them, books the meeting.' },
-            revive:  { name: 'Customer Reactivation', desc: 'Wins back lapsed customers with personalized outbound campaigns.' },
-            scout:   { name: 'Lead Generator',        desc: 'Scrapes, scores, and enriches niche-specific B2B leads weekly.' },
-            forge:   { name: 'Website Builder',       desc: 'Designs, ships, and maintains a high-converting site for the business.' },
-            signal:  { name: 'AI SEO',                desc: 'Optimizes the site for AI Overviews + Google Search — content + technical.' },
-            oracle:  { name: 'Growth Intelligence',   desc: 'Weekly strategy report: what is working, what to test, what to fix.' },
+            echo:    { name: 'Receptionist',                desc: 'Answers every call, books on the calendar, captures messages 24/7.' },
+            ignite:  { name: 'Outbound Lead Reply',        desc: 'Calls fresh leads within 60s, qualifies them, books the meeting.' },
+            revive:  { name: 'Lost Customer Reactivation', desc: 'Wins back lapsed customers with personalized outbound campaigns.' },
+            scout:   { name: 'B2B Lead Generator',         desc: 'Scrapes, scores, and enriches niche-specific B2B leads weekly.' },
+            forge:   { name: 'Website',                    desc: 'Designs, ships, and maintains a high-converting site for the business.' },
+            signal:  { name: 'AI SEO',                     desc: 'Optimizes the site for AI Overviews + Google Search, content + technical.' },
+            oracle:  { name: 'Ontology',                   desc: 'Weekly strategy report: what is working, what to test, what to fix.' },
             flux:    { name: 'Custom Automations',    desc: 'Wires existing tools (CRM, calendar, billing) so nothing falls through cracks.' },
             pitch:   { name: 'AI Sales Agent',        desc: 'Coaches sales reps on every call and runs opt-in email automation.' },
             business_profile: { name: 'Business Profile', desc: 'Foundational onboarding profile that gates the paid agents.' }
@@ -5927,11 +5927,11 @@
         var QUIZ_AGENT_LABEL = {
             'receptionist':  'Receptionist',
             'lead-response': 'Outbound Lead Reply',
-            'reactivation':  'Customer Reactivation',
-            'lead-gen':      'Lead Generator',
-            'website':       'Website Builder',
+            'reactivation':  'Lost Customer Reactivation',
+            'lead-gen':      'B2B Lead Generator',
+            'website':       'Website',
             'seo':           'AI SEO',
-            'growth-intel':  'Growth Intelligence',
+            'growth-intel':  'Ontology',
             'sales-coach':   'AI Sales Manager',
             'custom':        'Custom Automations'
         };
@@ -6637,10 +6637,10 @@
         function psDeriveAgent(niche) {
             var n = String(niche || '').toLowerCase();
             if (/(roof|plumb|hvac|contract|landscap|electric|garage|remodel|construction|trade|paving|fence|pool)/.test(n))
-                return { agent: 'Outbound Lead Response', oneLiner: 'Replies to every new lead within minutes, qualifies them, and pushes them to book, in English + Spanish.' };
+                return { agent: 'Outbound Lead Reply', oneLiner: 'Replies to every new lead within minutes, qualifies them, and pushes them to book, in English + Spanish.' };
             if (/(gym|fitness|membership|yoga|pilates|crossfit|studio)/.test(n))
-                return { agent: 'Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
-            return { agent: 'AI Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
+                return { agent: 'Lost Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
+            return { agent: 'Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
         }
         function psCleanAgent(s) { return String(s || '').replace(/\(.*?\)/g, '').replace(/[*`]/g, '').trim(); }
         // The agent we're selling. Prefer David's brief: the human line under

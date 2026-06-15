@@ -49,15 +49,15 @@ Authentication → URL Configuration:
 
 In the Stripe dashboard (test mode), Products → Add product. Create one product for each of the 7 self-serve agents. For each product add the two prices below. Custom Automations is consult-only, no Stripe product needed.
 
-| Agent                  | Product name                | Setup price (one-time) | Monthly price (recurring) |
-|------------------------|-----------------------------|-----------------------:|--------------------------:|
-| Receptionist           | AI Receptionist             |              $1,500.00 |                   $450.00 |
-| Lead Response          | Lead Response Agent         |              $2,000.00 |                   $650.00 |
-| Reactivation           | Customer Reactivation       |              $2,500.00 |                   $800.00 |
-| Lead Generator         | Lead Generator              |              $2,500.00 |                 $1,000.00 |
-| Website                | AI Website                  |              $1,250.00 |                   $200.00 |
-| AI SEO                 | AI SEO (GEO)                |              $1,000.00 |             (none, skip)  |
-| Growth Intelligence    | Growth Intelligence         |              $3,000.00 |                 $1,000.00 |
+| Agent                  | Product name                  | Setup price (one-time) | Monthly price (recurring) |
+|------------------------|-------------------------------|-----------------------:|--------------------------:|
+| Receptionist           | Receptionist                  |              $1,500.00 |                   $450.00 |
+| Outbound Lead Reply    | Outbound Lead Reply           |              $2,000.00 |                   $650.00 |
+| Reactivation           | Lost Customer Reactivation    |              $2,500.00 |                   $800.00 |
+| B2B Lead Generator     | B2B Lead Generator            |              $2,500.00 |                 $1,000.00 |
+| Website                | Website                       |              $2,000.00 |                   $200.00 |
+| AI SEO                 | AI SEO                        |              $1,000.00 |             (none, skip)  |
+| Ontology               | Ontology                      |              $3,000.00 |                 $1,000.00 |
 
 Copy each `price_...` ID. You will need 13 of them (7 setup + 6 monthly; AI SEO has no monthly).
 
@@ -137,7 +137,7 @@ Open http://localhost:8081.
 ## 5. End-to-end test (fake Planet Fitness)
 
 1. Open the site, scroll to "Find your AI team", complete the 10-question quiz as Jessica @ Planet Fitness Miami (email = a Stripe test inbox you control).
-2. On the recommendation screen, make sure Receptionist + Lead Response + Lead Generator + AI SEO are ticked.
+2. On the recommendation screen, make sure Receptionist + Outbound Lead Reply + B2B Lead Generator + AI SEO are ticked.
 3. Click **Proceed to Checkout**. You land on Stripe hosted Checkout.
 4. Pay with test card `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP.
 5. You're redirected to `/dashboard.html?welcome=true&session_id=...`.
@@ -145,7 +145,7 @@ Open http://localhost:8081.
 7. In Supabase, verify:
    - `clients` row exists (linked by email via `handle_new_user()` when Jessica signs up, OR parked in the webhook logs until she does)
    - 4 `client_agents` rows, all `status=onboarding`
-   - `onboarding_steps` rows for each agent (Receptionist has 7, Lead Response has 5, Lead Generator has 4, AI SEO has 3)
+   - `onboarding_steps` rows for each agent (Receptionist has 7, Outbound Lead Reply has 5, B2B Lead Generator has 4, AI SEO has 3)
 
 If Jessica hasn't signed up yet (no Supabase auth user), the webhook logs `Parked purchase` and exits. She signs up via `auth.html` with the same email, `handle_new_user()` creates the `clients` row, and you re-run a reconciliation (future: admin-dashboard button).
 

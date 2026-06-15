@@ -183,13 +183,13 @@ module.exports = async function handler(req, res) {
         // All 8 sellable STILO agents (matches service_offerings.md). A rep can
         // pick any of these to re-draft if the call turned toward a different one.
         agents: [
-            { key: 'receptionist', label: 'AI Receptionist' },
+            { key: 'receptionist', label: 'Receptionist' },
             { key: 'lead_response', label: 'Outbound Lead Response' },
             { key: 'reactivation', label: 'Lost Customer Reactivation' },
-            { key: 'lead_gen', label: 'Lead Generator' },
-            { key: 'website', label: 'Website Builder' },
+            { key: 'lead_gen', label: 'B2B Lead Generator' },
+            { key: 'website', label: 'Website' },
             { key: 'seo', label: 'AI SEO' },
-            { key: 'growth', label: 'Growth Intelligence' },
+            { key: 'growth', label: 'Ontology' },
             { key: 'custom', label: 'Custom Automations' }
         ],
         sender: { name: sender.name, phone: sender.phone, footer: kit.footerText(sender) },

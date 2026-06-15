@@ -50,13 +50,13 @@ function str(v, max) {
 
 // Map quiz agent id -> friendly name used in the first-touch email
 var AGENT_NAME = {
-  'receptionist': 'AI Receptionist',
+  'receptionist': 'Receptionist',
   'lead-response': 'Outbound Lead Reply Agent',
-  'reactivation': 'Lost Customer Reactivation Agent',
-  'lead-gen': 'Lead Generator',
-  'website': 'Website Builder',
+  'reactivation': 'Lost Customer Reactivation',
+  'lead-gen': 'B2B Lead Generator',
+  'website': 'Website',
   'seo': 'AI SEO',
-  'growth-intel': 'Growth Intelligence',
+  'growth-intel': 'Ontology',
   'sales-coach': 'AI Sales Manager',
   'custom': 'Custom Automations'
 };

@@ -1972,10 +1972,10 @@
         function deriveAgent(niche) {
             const n = String(niche || '').toLowerCase();
             if (/(roof|plumb|hvac|contract|landscap|electric|garage|remodel|construction|trade|paving|fence|pool)/.test(n))
-                return { agent: 'Outbound Lead Response', oneLiner: 'Replies to every new lead within minutes, qualifies them, and pushes them to book, in English + Spanish.' };
+                return { agent: 'Outbound Lead Reply', oneLiner: 'Replies to every new lead within minutes, qualifies them, and pushes them to book, in English + Spanish.' };
             if (/(gym|fitness|membership|yoga|pilates|crossfit|studio)/.test(n))
-                return { agent: 'Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
-            return { agent: 'AI Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
+                return { agent: 'Lost Customer Reactivation', oneLiner: 'Wins back past customers who went quiet with personalized email + text offers, on autopilot.' };
+            return { agent: 'Receptionist', oneLiner: 'A 24/7 voice agent that answers every call, books the appointment, and captures the lead, in English + Spanish.' };
         }
         function cleanAgent(s) { return String(s || '').replace(/\(.*?\)/g, '').replace(/[*`]/g, '').trim(); }
         // The agent we're selling: prefer David's brief ("Recommended STILO

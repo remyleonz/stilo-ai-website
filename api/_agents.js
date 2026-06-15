@@ -141,7 +141,7 @@ var AGENTS = {
         { key: 'business_legal_name', label: 'Legal business name', type: 'text', required: true, editable: true },
         { key: 'business_dba', label: 'DBA / trade name (if different)', type: 'text', editable: true },
         { key: 'business_ein', label: 'EIN (optional)', type: 'text', editable: true,
-          help: 'Used by the Reactivation agent for 10DLC SMS brand registration. Skip for now if you do not have it handy.' },
+          help: 'Used by the Lost Customer Reactivation agent for 10DLC SMS brand registration. Skip for now if you do not have it handy.' },
         { key: 'website', label: 'Website', type: 'url', editable: true },
         { key: 'owner_first_name', label: 'Owner first name', type: 'text', required: true, editable: true },
         { key: 'owner_last_name', label: 'Owner last name', type: 'text', required: true, editable: true },
@@ -157,7 +157,7 @@ var AGENTS = {
         { key: 'state', label: 'State', type: 'select', required: true, editable: true, options: US_STATE_OPTIONS },
         { key: 'zip', label: 'Zip code', type: 'text', required: true, editable: true },
         { key: 'service_area_zips', label: 'Zip codes you serve (comma-separated)', type: 'text', editable: true,
-          help: 'Used by the Lead Generator, Lead Response, and AI SEO agents to recognize in-market vs out-of-market.' },
+          help: 'Used by the B2B Lead Generator, Outbound Lead Reply, and AI SEO agents to recognize in-market vs out-of-market.' },
         { key: 'timezone', label: 'Timezone', type: 'select', required: true, editable: true, options: TIMEZONE_OPTIONS },
       ]},
 
@@ -207,9 +207,9 @@ var AGENTS = {
             { value: 'mixed', label: 'Mixed' },
           ] },
         { key: 'top_services', label: 'Top services with pricing', type: 'key-value-list', required: true, editable: true,
-          help: 'Service name → price or range. Example: "Botox" → "$12-15/unit". The Receptionist and Lead Response agents quote these to callers.' },
+          help: 'Service name → price or range. Example: "Botox" → "$12-15/unit". The Receptionist and Outbound Lead Reply agents quote these to callers.' },
         { key: 'services_we_dont_do', label: 'Services you DO NOT offer', type: 'textarea', editable: true,
-          help: 'The Lead Response and Receptionist agents use this to politely redirect leads asking for things outside your scope.' },
+          help: 'The Outbound Lead Reply and Receptionist agents use this to politely redirect leads asking for things outside your scope.' },
         { key: 'main_offer', label: 'Your one-sentence main offer', type: 'textarea', editable: true,
           help: 'What every agent leads with. Example: "Miami\'s only fully-licensed med spa with same-day Botox appointments."' },
       ]},
@@ -233,7 +233,7 @@ var AGENTS = {
             { value: 'sms_callback', label: 'Promise a callback next morning' },
           ] },
         { key: 'max_daily_capacity', label: 'Max bookings/calls owner can handle per day', type: 'number', editable: true,
-          help: 'Used by the Receptionist and Lead Response agents to avoid over-booking the calendar.' },
+          help: 'Used by the Receptionist and Outbound Lead Reply agents to avoid over-booking the calendar.' },
       ]},
 
       // Step 4: Brand voice ────────────────────────────────────────────
@@ -262,7 +262,7 @@ var AGENTS = {
         { key: 'communication_samples', label: 'Paste 2-3 sample emails or texts you have actually sent', type: 'textarea', editable: true,
           help: 'Used to calibrate brand voice. Confidential. Separate samples with a blank line.' },
         { key: 'languages_spoken', label: 'Languages your business speaks (comma-separated)', type: 'text', editable: true,
-          help: 'Miami: typically "English, Spanish". The Receptionist and Lead Response agents can auto-switch.' },
+          help: 'Miami: typically "English, Spanish". The Receptionist and Outbound Lead Reply agents can auto-switch.' },
       ]},
 
       // Step 5: Knowledge base ─────────────────────────────────────────
@@ -281,7 +281,7 @@ var AGENTS = {
           ],
           minItems: 3 },
         { key: 'owner_story', label: 'Your story / why this business exists (1 paragraph)', type: 'textarea', editable: true,
-          help: 'Used by the Reactivation agent in nurture emails and the Website agent on the About page.' },
+          help: 'Used by the Lost Customer Reactivation agent in nurture emails and the Website agent on the About page.' },
         { key: 'credentials', label: 'Awards, certifications, licenses, or notable press', type: 'textarea', editable: true },
         { key: 'insurance_carriers', label: 'Insurance carriers you accept', type: 'text', editable: true,
           help: 'Comma-separated. Common pre-call question for med spa, dental, and law.',
@@ -297,17 +297,17 @@ var AGENTS = {
           help: 'Drop your logo into your website CDN, Google Drive (public link), or Imgur and paste the URL.' },
         { key: 'logo_dark_url', label: 'Logo URL (dark background variant, optional)', type: 'url', editable: true },
         { key: 'brand_color_hex', label: 'Primary brand color (hex)', type: 'text', editable: true,
-          help: 'Format: #2563EB. Used by the Website agent for the website and the Reactivation agent for email accents.' },
+          help: 'Format: #2563EB. Used by the Website agent for the website and the Lost Customer Reactivation agent for email accents.' },
         { key: 'photo_urls', label: 'Photo URLs (comma-separated, 3-5 photos)', type: 'textarea', editable: true,
-          help: 'Interior, team, work-product. Used by the Website agent for the website hero and the Reactivation agent for email content.' },
+          help: 'Interior, team, work-product. Used by the Website agent for the website hero and the Lost Customer Reactivation agent for email content.' },
         { key: 'video_intro_url', label: 'Owner intro video URL (≤60 seconds, optional)', type: 'url', editable: true,
-          help: 'YouTube, Vimeo, or direct mp4. Used in the Reactivation agent\'s win-back emails.' },
+          help: 'YouTube, Vimeo, or direct mp4. Used in the Lost Customer Reactivation agent\'s win-back emails.' },
       ]},
 
       // Step 7: Compliance & legal ─────────────────────────────────────
       { step: 7, fields: [
         { key: 'state_of_operation', label: 'Primary state of operation', type: 'select', required: true, editable: true,
-          help: 'Drives TCPA rules and recording disclosures for the Lead Response, Receptionist, and Reactivation agents.',
+          help: 'Drives TCPA rules and recording disclosures for the Outbound Lead Reply, Receptionist, and Lost Customer Reactivation agents.',
           options: US_STATE_OPTIONS },
         // Niche-specific licenses
         { key: 'real_estate_license_number', label: 'Real estate license number', type: 'text', required: true, editable: true,
@@ -331,7 +331,7 @@ var AGENTS = {
         { key: 'required_disclosures', label: 'Disclosures every agent must include', type: 'textarea', editable: true,
           help: 'Examples: "Individual results may vary.", "Paid for by [Firm].", state-specific recording notice. Read verbatim by every agent.' },
         { key: 'tcpa_consent_acknowledgment', label: 'I confirm my lead intake forms and customer database have collected proper TCPA consent for automated calls, SMS, and email', type: 'boolean', required: true,
-          help: 'Required by FCC 2026 rules for the Lead Response and Reactivation agents. Read more at stiloaipartners.com/legal/tcpa-template' },
+          help: 'Required by FCC 2026 rules for the Outbound Lead Reply and Lost Customer Reactivation agents. Read more at stiloaipartners.com/legal/tcpa-template' },
         { key: 'owner_consent', label: 'I authorize STILO AI Partners agents to communicate with my customers and prospects on my behalf, in accordance with the inputs in this profile', type: 'boolean', required: true },
       ]},
 
@@ -362,7 +362,7 @@ var AGENTS = {
             { value: 'acuity', label: 'Acuity Scheduling' },
             { value: 'none', label: 'No calendar tool' },
           ] },
-        { key: 'email_sender_domain', label: 'Email domain you want the Reactivation and Lead Response agents to send from', type: 'text', editable: true,
+        { key: 'email_sender_domain', label: 'Email domain you want the Lost Customer Reactivation and Outbound Lead Reply agents to send from', type: 'text', editable: true,
           help: 'Example: yourbusiness.com. We will help you add DKIM/SPF records. Leave blank if you only want SMS+voice.' },
         { key: 'phone_strategy', label: 'How should agents handle phone numbers?', type: 'select', editable: true,
           help: 'Each voice/SMS agent can override. This is the default.',
@@ -380,7 +380,7 @@ var AGENTS = {
 
   echo: {
     code: 'echo',
-    name: 'AI Receptionist',
+    name: 'Receptionist',
     shortName: 'Receptionist',
     setupFeeCents: 200000,
     monthlyFeeCents: 100000,
@@ -626,8 +626,8 @@ var AGENTS = {
   },
   ignite: {
     code: 'ignite',
-    name: 'Lead Response Agent',
-    shortName: 'Lead Response',
+    name: 'Outbound Lead Reply',
+    shortName: 'Outbound Lead Reply',
     setupFeeCents: 250000,
     monthlyFeeCents: 150000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_IGNITE_SETUP',
@@ -656,7 +656,7 @@ var AGENTS = {
 
       // ── Step 1: Compliance Gate ───────────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'The FCC ruled in early 2026 that AI-generated voices fall under the same TCPA rules as live cold calls. That means before the Lead Response agent can call your leads, your lead form must collect their explicit consent to be contacted by automated calls.\n\nIf your form already has a checkbox like "I agree to be contacted by phone, email, or text" that is enough.\n\nIf it does not, you have two easy options:\n\n1. Open your form builder (your website CMS, GoHighLevel, Typeform, etc.) and add a required checkbox above your submit button with this exact wording: **"By submitting, I agree to be contacted by [Your Business Name] via automated phone calls, SMS, or email at the contact info I provided. Consent is not required to purchase."**\n2. Or copy our template at [stiloaipartners.com/legal/tcpa-template](https://stiloaipartners.com/legal/tcpa-template), paste it into your form, and screenshot it for your records.\n\nOnce that is in place, paste the exact line you used into the field below. We keep it on file as proof.',
+        tutorial: 'The FCC ruled in early 2026 that AI-generated voices fall under the same TCPA rules as live cold calls. That means before the Outbound Lead Reply agent can call your leads, your lead form must collect their explicit consent to be contacted by automated calls.\n\nIf your form already has a checkbox like "I agree to be contacted by phone, email, or text" that is enough.\n\nIf it does not, you have two easy options:\n\n1. Open your form builder (your website CMS, GoHighLevel, Typeform, etc.) and add a required checkbox above your submit button with this exact wording: **"By submitting, I agree to be contacted by [Your Business Name] via automated phone calls, SMS, or email at the contact info I provided. Consent is not required to purchase."**\n2. Or copy our template at [stiloaipartners.com/legal/tcpa-template](https://stiloaipartners.com/legal/tcpa-template), paste it into your form, and screenshot it for your records.\n\nOnce that is in place, paste the exact line you used into the field below. We keep it on file as proof.',
         fields: [
         { key: 'agent_state', label: 'Primary state of operation', type: 'select', required: true, editable: true,
           help: 'Drives state-specific recording disclosures and compliance language.',
@@ -692,25 +692,25 @@ var AGENTS = {
           help: 'Required by FCC 2026 rules. Your form must say something like "By submitting, you agree to receive automated calls/texts from us."' },
         { key: 'consent_language_excerpt', label: 'Paste the exact consent line from your form', type: 'textarea', required: true, editable: true,
           help: 'We keep this on file as proof of compliance. If you do not have one, copy our template at stiloaipartners.com/legal/tcpa-template' },
-        { key: 'understand_ai_disclosure', label: 'I understand the Lead Response agent will identify itself as automated at the start of every call (per FCC 2026 rules)', type: 'boolean', required: true },
+        { key: 'understand_ai_disclosure', label: 'I understand the Outbound Lead Reply agent will identify itself as automated at the start of every call (per FCC 2026 rules)', type: 'boolean', required: true },
         { key: 'compliance_confirmed', label: 'All four boxes above are checked truthfully', type: 'boolean', required: true,
           help: 'This is a hard gate. The agent cannot go live without this.' },
       ]},
 
       // ── Step 2: Business Identity ──────────────────────────────────
       // Most fields here are now redundant with Business Profile and pre-fill
-      // from the merged config. This step exists primarily to confirm the Lead Response agent
-      // is being deployed for the right niche (since the Lead Response agent's playbook
+      // from the merged config. This step exists primarily to confirm the Outbound Lead Reply agent
+      // is being deployed for the right niche (since the Outbound Lead Reply agent's playbook
       // selection drives every downstream behavior).
       { step: 2, fields: [
         { key: 'confirm_business_name', label: 'Confirm business name (from your profile)', type: 'text', editable: true },
-        { key: 'niche', label: 'Lead Response niche (from your profile)', type: 'select', required: true, editable: true,
-          help: 'The Lead Response agent uses a niche-specific playbook for the call script, qualification framework, and objection handlers.',
+        { key: 'niche', label: 'Outbound Lead Reply niche (from your profile)', type: 'select', required: true, editable: true,
+          help: 'The Outbound Lead Reply agent uses a niche-specific playbook for the call script, qualification framework, and objection handlers.',
           options: NICHE_OPTIONS },
         { key: 'main_offer', label: 'Your main offer in one sentence', type: 'textarea', editable: true,
-          help: 'The Lead Response agent leads with this in the first reply.' },
+          help: 'The Outbound Lead Reply agent leads with this in the first reply.' },
         { key: 'agent_count', label: 'Number of agents / reps on the team', type: 'number', editable: true,
-          help: 'Drives how many concurrent leads the Lead Response agent can transfer at peak.' },
+          help: 'Drives how many concurrent leads the Outbound Lead Reply agent can transfer at peak.' },
       ]},
 
       // ── Step 3: Niche-specific playbook ───────────────────────────
@@ -720,7 +720,7 @@ var AGENTS = {
       // qualification questions used at runtime — this step is for the few
       // niches where the questions need explicit owner choices.
       { step: 3,
-        tutorial: 'For real estate: these answers shape how the Lead Response agent qualifies leads on the first call using the LPMAMA framework (Location, Price, Motivation, Agent, Mortgage, Appointment).\n\nFor other niches: this step shows niche-specific qualification options pulled from your playbook. You confirm or override.',
+        tutorial: 'For real estate: these answers shape how the Outbound Lead Reply agent qualifies leads on the first call using the LPMAMA framework (Location, Price, Motivation, Agent, Mortgage, Appointment).\n\nFor other niches: this step shows niche-specific qualification options pulled from your playbook. You confirm or override.',
         fields: [
         // Real estate fields
         { key: 'handle_buyer_leads', label: 'We handle buyer leads', type: 'boolean', editable: true,
@@ -734,7 +734,7 @@ var AGENTS = {
         { key: 'price_range_max', label: 'Typical maximum price ($)', type: 'number', editable: true,
           showIf: { niche: 'real_estate' } },
         { key: 'pre_approval_required', label: 'Require pre-approval before showing', type: 'boolean', editable: true,
-          help: 'If yes, the Lead Response agent asks early and offers a lender referral if not pre-approved.',
+          help: 'If yes, the Outbound Lead Reply agent asks early and offers a lender referral if not pre-approved.',
           showIf: { niche: 'real_estate' } },
         { key: 'working_with_other_agent_disqualifier', label: 'If lead is already working with another agent', type: 'select', editable: true,
           showIf: { niche: 'real_estate' },
@@ -747,7 +747,7 @@ var AGENTS = {
         // Med spa fields
         { key: 'med_spa_treatments_offered', label: 'Treatments offered (comma-separated)', type: 'textarea', editable: true,
           showIf: { niche: 'med_spa' },
-          help: 'Botox, fillers, laser hair removal, CoolSculpting, etc. The Lead Response agent quotes ranges per treatment.' },
+          help: 'Botox, fillers, laser hair removal, CoolSculpting, etc. The Outbound Lead Reply agent quotes ranges per treatment.' },
         { key: 'med_spa_first_visit_required', label: 'First visit must be in-person consult', type: 'boolean', editable: true,
           showIf: { niche: 'med_spa' } },
         // Law fields
@@ -767,18 +767,18 @@ var AGENTS = {
         { key: 'service_24_7', label: 'Offer 24/7 emergency service', type: 'boolean', editable: true,
           showIf: { niche: 'plumbing_roofing' } },
         // Generic catch-all when no niche-specific fields apply
-        { key: 'qualification_notes', label: 'Anything special the Lead Response agent should ask leads in your niche?', type: 'textarea', editable: true,
+        { key: 'qualification_notes', label: 'Anything special the Outbound Lead Reply agent should ask leads in your niche?', type: 'textarea', editable: true,
           help: 'Free-form. The niche playbook pre-loads default qualification questions; add anything specific to your operation.' },
         { key: 'service_area_zips', label: 'Service area zip codes (auto-loaded from profile)', type: 'text', editable: true,
-          help: 'The Lead Response agent recognizes when a lead is outside your market.' },
+          help: 'The Outbound Lead Reply agent recognizes when a lead is outside your market.' },
         { key: 'disqualifying_zip_codes', label: 'Zip codes you do NOT serve', type: 'text', editable: true,
           showIf: { niche: 'real_estate' } },
       ]},
 
       // ── Step 4: Lead Sources & Webhook ────────────────────────────
       { step: 4, fields: [
-        { key: 'webhook_url', label: 'Your Lead Response webhook URL', type: 'webhook-url',
-          help: 'Point your CRM, ad platform, or website form to this URL. The Lead Response agent picks up the lead in under 2 minutes.' },
+        { key: 'webhook_url', label: 'Your Outbound Lead Reply webhook URL', type: 'webhook-url',
+          help: 'Point your CRM, ad platform, or website form to this URL. The Outbound Lead Reply agent picks up the lead in under 2 minutes.' },
         { key: 'lead_sources', label: 'Where will leads come from?', type: 'select', required: true, editable: true,
           help: 'Pick your primary source. You can add more later.',
           options: [
@@ -797,10 +797,10 @@ var AGENTS = {
 
       // ── Step 5: CRM Connection ─────────────────────────────────────
       { step: 5, blocking: true,
-        tutorial: 'The Lead Response agent writes call notes, qualification details, and outcomes back to your CRM after every call so your team picks up exactly where the AI left off. Pick the CRM you actually use day-to-day. We will then ask only for the credentials that CRM needs.\n\n**GoHighLevel**: Log in. Settings → Private Integrations → Create. Name it "STILO Lead Response", check the boxes for Contacts (read+write) and Notes (write). Copy the token. Your Location ID is in Settings → Business Profile, near the bottom.\n\n**Follow Up Boss**: Log in. Admin → API. Click Create API Key. Copy it.\n\n**Google Sheet** (no real CRM): Open a fresh sheet → Extensions → Apps Script. Paste our template from [stiloaipartners.com/legal/sheets-template](https://stiloaipartners.com/legal/sheets-template). Click Deploy → New deployment → Web app. Anyone, anonymous. Copy the deployment URL.\n\n**Other / not sure**: pick "Other / use a webhook" and paste any URL that accepts a JSON POST. Zapier and Make both give you these.\n\nAfter you paste credentials, click "Run test" below. The wizard will not let you advance until the CRM responds with a green check.',
+        tutorial: 'The Outbound Lead Reply agent writes call notes, qualification details, and outcomes back to your CRM after every call so your team picks up exactly where the AI left off. Pick the CRM you actually use day-to-day. We will then ask only for the credentials that CRM needs.\n\n**GoHighLevel**: Log in. Settings → Private Integrations → Create. Name it "STILO Outbound Lead Reply", check the boxes for Contacts (read+write) and Notes (write). Copy the token. Your Location ID is in Settings → Business Profile, near the bottom.\n\n**Follow Up Boss**: Log in. Admin → API. Click Create API Key. Copy it.\n\n**Google Sheet** (no real CRM): Open a fresh sheet → Extensions → Apps Script. Paste our template from [stiloaipartners.com/legal/sheets-template](https://stiloaipartners.com/legal/sheets-template). Click Deploy → New deployment → Web app. Anyone, anonymous. Copy the deployment URL.\n\n**Other / not sure**: pick "Other / use a webhook" and paste any URL that accepts a JSON POST. Zapier and Make both give you these.\n\nAfter you paste credentials, click "Run test" below. The wizard will not let you advance until the CRM responds with a green check.',
         fields: [
         { key: 'crm_choice', label: 'Which CRM do you use?', type: 'select', required: true, editable: true,
-          help: 'The Lead Response agent writes call notes, qualification, and outcomes back to your CRM after every call.',
+          help: 'The Outbound Lead Reply agent writes call notes, qualification, and outcomes back to your CRM after every call.',
           options: [
             { value: 'gohighlevel', label: 'GoHighLevel' },
             { value: 'follow_up_boss', label: 'Follow Up Boss (real estate)' },
@@ -842,7 +842,7 @@ var AGENTS = {
 
       // ── Step 6: Calendar & Booking ────────────────────────────────
       { step: 6,
-        tutorial: 'When the Lead Response agent talks to a lead and they want to book a showing, the AI books directly on your calendar. Pick whichever calendar you actually use.\n\n**Cal.com (recommended)**: Free at [cal.com](https://cal.com). Sign up, create an event type called "Showing 30min" or similar, then enter your username and the event slug below. Cal.com is the cleanest because Retell has a native integration, fewer moving parts.\n\n**Calendly**: Already using it? Just paste the public URL of the event type you want the Lead Response agent to book on (something like `calendly.com/yourname/showing`).\n\n**Google Calendar**: Click Connect Google Calendar below. We use OAuth — you sign into Google, approve, and we get a token to write events. We never see your password.\n\n**GoHighLevel calendar**: If you already use GHL for booking, paste the calendar ID (Settings → Calendars → click your calendar → the ID is at the end of the URL).\n\n**No booking, just transfer**: Pick this if you want the Lead Response agent to live-transfer the call to you when a lead wants to book. Skip the calendar test below.',
+        tutorial: 'When the Outbound Lead Reply agent talks to a lead and they want to book a showing, the AI books directly on your calendar. Pick whichever calendar you actually use.\n\n**Cal.com (recommended)**: Free at [cal.com](https://cal.com). Sign up, create an event type called "Showing 30min" or similar, then enter your username and the event slug below. Cal.com is the cleanest because Retell has a native integration, fewer moving parts.\n\n**Calendly**: Already using it? Just paste the public URL of the event type you want the Outbound Lead Reply agent to book on (something like `calendly.com/yourname/showing`).\n\n**Google Calendar**: Click Connect Google Calendar below. We use OAuth — you sign into Google, approve, and we get a token to write events. We never see your password.\n\n**GoHighLevel calendar**: If you already use GHL for booking, paste the calendar ID (Settings → Calendars → click your calendar → the ID is at the end of the URL).\n\n**No booking, just transfer**: Pick this if you want the Outbound Lead Reply agent to live-transfer the call to you when a lead wants to book. Skip the calendar test below.',
         fields: [
         { key: 'booking_method', label: 'How do leads book appointments / showings?', type: 'select', required: true, editable: true,
           options: [
@@ -872,7 +872,7 @@ var AGENTS = {
           showIf: { booking_method: 'gohighlevel_calendar' } },
         // Common
         { key: 'showings_per_week_max', label: 'Max showings/appointments per week', type: 'number', editable: true,
-          help: 'The Lead Response agent will not over-book your calendar.' },
+          help: 'The Outbound Lead Reply agent will not over-book your calendar.' },
         { key: 'buffer_minutes_between_showings', label: 'Buffer between bookings (minutes)', type: 'number', editable: true },
         { key: 'timezone', label: 'Timezone', type: 'select', required: true, editable: true,
           options: [
@@ -893,13 +893,13 @@ var AGENTS = {
       // ── Step 7: Live Transfer ──────────────────────────────────────
       { step: 7, fields: [
         { key: 'transfer_enabled', label: 'Allow live transfer to a human agent', type: 'boolean', editable: true,
-          help: 'When the lead asks to talk to someone, the Lead Response agent warm-transfers the call.' },
+          help: 'When the lead asks to talk to someone, the Outbound Lead Reply agent warm-transfers the call.' },
         { key: 'agent_cell', label: 'Primary agent cell phone (E.164: +13055551234)', type: 'tel', editable: true,
           showIf: { transfer_enabled: true } },
         { key: 'backup_cell', label: 'Backup cell phone (optional)', type: 'tel', editable: true,
           showIf: { transfer_enabled: true } },
         { key: 'transfer_hours_text', label: 'Transfer hours (free text)', type: 'text', editable: true,
-          help: 'Example: "Mon-Fri 9am-7pm, Sat 10am-3pm". The Lead Response agent only transfers within these hours.',
+          help: 'Example: "Mon-Fri 9am-7pm, Sat 10am-3pm". The Outbound Lead Reply agent only transfers within these hours.',
           showIf: { transfer_enabled: true } },
         { key: 'outside_hours_behavior', label: 'Outside transfer hours, do this instead', type: 'select', editable: true,
           showIf: { transfer_enabled: true },
@@ -916,9 +916,9 @@ var AGENTS = {
 
       // ── Step 8: Voice & Phone ──────────────────────────────────────
       { step: 8,
-        tutorial: 'Pick the voice your leads will hear and the area code your Lead Response outbound calls come from.\n\n**Voice picker**: click each voice to play a 5-second sample. There is no right answer, just pick the one that sounds most like the agent you would hire to make these calls. Adrian (warm male, professional) is the safe default. Amy (friendly female, conversational) works well for high-end residential. We can swap voices any time.\n\n**Area code**: defaults to your office phone area code. Local area codes pick up 4x more often than 800 numbers, leave this matching your market.\n\n**Spanish auto-detect**: if your leads sometimes speak Spanish, leave this on. The Lead Response agent detects the language in the first 2 seconds and switches automatically. The voice stays the same; the language changes.\n\n**Voicemail message**: The Lead Response agent leaves this message if the lead does not pick up. Keep it short and personalized — mention the lead name and the property they inquired about, plus one reason to call back. Example: "Hi, this is calling from Premier Realty about your inquiry. Give us a quick call back when you get a chance, there are a few details about that property that are not on Zillow yet."',
+        tutorial: 'Pick the voice your leads will hear and the area code your Outbound Lead Reply calls come from.\n\n**Voice picker**: click each voice to play a 5-second sample. There is no right answer, just pick the one that sounds most like the agent you would hire to make these calls. Adrian (warm male, professional) is the safe default. Amy (friendly female, conversational) works well for high-end residential. We can swap voices any time.\n\n**Area code**: defaults to your office phone area code. Local area codes pick up 4x more often than 800 numbers, leave this matching your market.\n\n**Spanish auto-detect**: if your leads sometimes speak Spanish, leave this on. The Outbound Lead Reply agent detects the language in the first 2 seconds and switches automatically. The voice stays the same; the language changes.\n\n**Voicemail message**: The Outbound Lead Reply agent leaves this message if the lead does not pick up. Keep it short and personalized — mention the lead name and the property they inquired about, plus one reason to call back. Example: "Hi, this is calling from Premier Realty about your inquiry. Give us a quick call back when you get a chance, there are a few details about that property that are not on Zillow yet."',
         fields: [
-        { key: 'voice_id', label: 'Pick a voice for the Lead Response agent', type: 'audio-preview-select', required: true, editable: true,
+        { key: 'voice_id', label: 'Pick a voice for the Outbound Lead Reply agent', type: 'audio-preview-select', required: true, editable: true,
           help: 'Click each voice to hear a sample.',
           options: [
             { value: '11labs-Adrian', label: 'Adrian — warm male, professional', preview: 'https://retell.ai/voices/adrian.mp3' },
@@ -934,7 +934,7 @@ var AGENTS = {
           ],
         },
         { key: 'language_detection', label: 'Auto-switch to Spanish if lead speaks Spanish', type: 'boolean', editable: true },
-        { key: 'area_code', label: 'Area code for your Lead Response outbound number', type: 'text', editable: true,
+        { key: 'area_code', label: 'Area code for your Outbound Lead Reply number', type: 'text', editable: true,
           help: 'Defaults to your office phone area code. Leads recognize local area codes 4x more often.' },
         { key: 'caller_id_display_name', label: 'Caller ID display name (15 chars max)', type: 'text', editable: true,
           help: 'Defaults to your business name truncated to 15 chars.' },
@@ -947,15 +947,15 @@ var AGENTS = {
           ],
         },
         { key: 'voicemail_message', label: 'Voicemail message (if lead does not pick up)', type: 'textarea', editable: true,
-          help: 'The Lead Response agent leaves this if the lead\'s phone goes to voicemail.' },
+          help: 'The Outbound Lead Reply agent leaves this if the lead\'s phone goes to voicemail.' },
       ]},
 
       // ── Step 9: Knowledge Base Supplement ─────────────────────────
       { step: 9,
-        tutorial: 'The Lead Response agent already knows your brand voice and basic FAQ from the universal onboarding. This step is where you teach it the questions specific to your inbound leads, plus the answers you want the AI to give.\n\nThink about the last 10 leads who called you. What questions did they ask in the first 60 seconds? Type each one into the list below and write the exact 1-2 sentence answer you want the Lead Response agent to give. The AI will use these word-for-word.\n\nMinimum: 5 questions and 3 objections. Aim for 8-10 of each. The more specific you are, the better the Lead Response agent handles your leads on day one.\n\nFor real estate clients, **active listings** is huge. Paste in the top 3-5 listings you want the Lead Response agent aware of: address, price, beds/baths, key features. The AI will reference these naturally if a lead mentions a specific property.\n\nFor competitor brokerages, list the names you want the Lead Response agent to acknowledge politely. If a lead says "I am working with Compass," the Lead Response agent will say something like "Compass is a great firm. The reason a lot of buyers we work with come over to us is..." rather than disparaging them.',
+        tutorial: 'The Outbound Lead Reply agent already knows your brand voice and basic FAQ from the universal onboarding. This step is where you teach it the questions specific to your inbound leads, plus the answers you want the AI to give.\n\nThink about the last 10 leads who called you. What questions did they ask in the first 60 seconds? Type each one into the list below and write the exact 1-2 sentence answer you want the Outbound Lead Reply agent to give. The AI will use these word-for-word.\n\nMinimum: 5 questions and 3 objections. Aim for 8-10 of each. The more specific you are, the better the Outbound Lead Reply agent handles your leads on day one.\n\nFor real estate clients, **active listings** is huge. Paste in the top 3-5 listings you want the Outbound Lead Reply agent aware of: address, price, beds/baths, key features. The AI will reference these naturally if a lead mentions a specific property.\n\nFor competitor brokerages, list the names you want the Outbound Lead Reply agent to acknowledge politely. If a lead says "I am working with Compass," the Outbound Lead Reply agent will say something like "Compass is a great firm. The reason a lot of buyers we work with come over to us is..." rather than disparaging them.',
         fields: [
         { key: 'common_lead_questions', label: 'Common questions leads ask + your approved answers', type: 'array-of-objects', editable: true,
-          help: 'The Lead Response agent uses these verbatim. Add at least 5.',
+          help: 'The Outbound Lead Reply agent uses these verbatim. Add at least 5.',
           schema: [
             { key: 'question', label: 'Question', type: 'text' },
             { key: 'approved_answer', label: 'Approved answer', type: 'textarea' },
@@ -973,12 +973,12 @@ var AGENTS = {
         { key: 'properties_currently_listed', label: 'Active listings or top services (free text or paste a list)', type: 'textarea', editable: true,
           help: 'Real estate: paste 3-5 active listings. Other industries: paste your top services with prices.' },
         { key: 'competitor_brokerages_to_acknowledge', label: 'Competitors to acknowledge professionally (comma-separated)', type: 'text', editable: true,
-          help: 'If a lead mentions any of these, the Lead Response agent acknowledges without disparaging.' },
+          help: 'If a lead mentions any of these, the Outbound Lead Reply agent acknowledges without disparaging.' },
       ]},
 
       // ── Step 10: Brand Voice for Voice Channel ────────────────────
       { step: 10, fields: [
-        { key: 'voice_pace', label: 'How fast should the Lead Response agent talk?', type: 'select', editable: true,
+        { key: 'voice_pace', label: 'How fast should the Outbound Lead Reply agent talk?', type: 'select', editable: true,
           options: [
             { value: 'slow', label: 'Slow and deliberate' },
             { value: 'conversational', label: 'Conversational (recommended)' },
@@ -992,17 +992,17 @@ var AGENTS = {
             { value: 'concise', label: 'Concise and direct' },
           ],
         },
-        { key: 'words_to_avoid_on_call', label: 'Words the Lead Response agent should never say on calls (comma-separated)', type: 'text', editable: true },
+        { key: 'words_to_avoid_on_call', label: 'Words the Outbound Lead Reply agent should never say on calls (comma-separated)', type: 'text', editable: true },
         { key: 'mandatory_disclosures', label: 'Mandatory disclosures (state-specific or company-required)', type: 'textarea', editable: true,
-          help: 'The Lead Response agent will read these verbatim during the call when triggered. Leave blank if none.' },
+          help: 'The Outbound Lead Reply agent will read these verbatim during the call when triggered. Leave blank if none.' },
       ]},
 
       // ── Step 11: Test Your Agent ──────────────────────────────────
       { step: 11, blocking: true,
-        tutorial: 'You will not let the Lead Response agent near a real lead until you have heard it talk. This step is your dress rehearsal.\n\n1. Enter a phone number you can answer right now (your cell is best).\n2. Click one of the scenario buttons. We send a synthetic lead through the same webhook your real leads will hit. Within 90 seconds, the Lead Response agent calls the number you entered.\n3. Pick up. Talk to the AI as if you were the lead in that scenario. Push back, ask questions, raise objections.\n4. After the call, decide: did it sound on-brand? Did it ask the right qualifying questions? Did it handle objections well?\n5. Check the box at the bottom only if you would be comfortable with this AI talking to your real leads.\n\nRecommended: run all 4 scenarios at least once before you submit.\n\n**Hot Buyer**: pre-approved, ready to tour this weekend. Tests the booking flow.\n**Cold Lead**: just browsing, no timeline. Tests the soft-pitch private listing alerts flow.\n**Seller Inquiry**: home valuation request. Tests the seller branch.\n**Voicemail**: just hang up. Tests the voicemail message and follow-up cadence.',
+        tutorial: 'You will not let the Outbound Lead Reply agent near a real lead until you have heard it talk. This step is your dress rehearsal.\n\n1. Enter a phone number you can answer right now (your cell is best).\n2. Click one of the scenario buttons. We send a synthetic lead through the same webhook your real leads will hit. Within 90 seconds, the Outbound Lead Reply agent calls the number you entered.\n3. Pick up. Talk to the AI as if you were the lead in that scenario. Push back, ask questions, raise objections.\n4. After the call, decide: did it sound on-brand? Did it ask the right qualifying questions? Did it handle objections well?\n5. Check the box at the bottom only if you would be comfortable with this AI talking to your real leads.\n\nRecommended: run all 4 scenarios at least once before you submit.\n\n**Hot Buyer**: pre-approved, ready to tour this weekend. Tests the booking flow.\n**Cold Lead**: just browsing, no timeline. Tests the soft-pitch private listing alerts flow.\n**Seller Inquiry**: home valuation request. Tests the seller branch.\n**Voicemail**: just hang up. Tests the voicemail message and follow-up cadence.',
         fields: [
         { key: 'test_phone_number', label: 'Your phone number for test calls', type: 'tel', required: true, editable: true,
-          help: 'The Lead Response agent will call this number when you click a scenario below.' },
+          help: 'The Outbound Lead Reply agent will call this number when you click a scenario below.' },
         { key: 'test_scenarios', label: 'Run a test scenario', type: 'phone-test-trigger', required: true,
           help: 'Pick at least one scenario. The wizard unlocks once you rate one thumbs up.',
           target: '/api/agents-test-call',
@@ -1023,17 +1023,17 @@ var AGENTS = {
       { step: 12, blocking: true, fields: [
         { key: 'review_summary', label: 'Final checklist', type: 'final-review', editable: false,
           help: 'Computed from previous steps.' },
-        { key: 'ready_for_review', label: 'I have reviewed all my answers and want STILO to activate the Lead Response agent', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed all my answers and want STILO to activate the Outbound Lead Reply agent', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review',
-          help: 'STILO Partners runs a final pre-flight check on every new Lead Response agent (compliance, CRM, calendar, brand voice, test call) before it talks to your real leads. We aim to have you live within 1 business day. You will receive an email the moment the Lead Response agent is active.' },
+          help: 'STILO Partners runs a final pre-flight check on every new Outbound Lead Reply agent (compliance, CRM, calendar, brand voice, test call) before it talks to your real leads. We aim to have you live within 1 business day. You will receive an email the moment the Outbound Lead Reply agent is active.' },
       ]},
     ],
   },
   revive: {
     code: 'revive',
-    name: 'Customer Reactivation',
-    shortName: 'Reactivation',
+    name: 'Lost Customer Reactivation',
+    shortName: 'Lost Customer Reactivation',
     setupFeeCents: 250000,
     monthlyFeeCents: 150000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_REVIVE_SETUP',
@@ -1054,7 +1054,7 @@ var AGENTS = {
 
       // Step 1: Upload customer database ───────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'The Reactivation agent works off a clean list of past customers. The fastest path is exporting from where they already live.\n\n**From your POS** (Square, Toast, Clover): Reports → Customers → Export CSV.\n\n**From your CRM** (GHL, Follow Up Boss, HubSpot): Contacts → All → Export.\n\n**From your booking system** (Cal.com, Acuity, Square Appointments): Customers → Export.\n\nMinimum required columns: name, email or phone, last interaction date. Lifetime value (LTV) is a major bonus, lets us prioritize VIPs first.',
+        tutorial: 'The Lost Customer Reactivation agent works off a clean list of past customers. The fastest path is exporting from where they already live.\n\n**From your POS** (Square, Toast, Clover): Reports → Customers → Export CSV.\n\n**From your CRM** (GHL, Follow Up Boss, HubSpot): Contacts → All → Export.\n\n**From your booking system** (Cal.com, Acuity, Square Appointments): Customers → Export.\n\nMinimum required columns: name, email or phone, last interaction date. Lifetime value (LTV) is a major bonus, lets us prioritize VIPs first.',
         fields: [
         { key: 'source_choice', label: 'Where is your customer data coming from?', type: 'select', required: true, editable: true,
           options: [
@@ -1078,7 +1078,7 @@ var AGENTS = {
 
       // Step 2: Map columns ────────────────────────────────────────────
       { step: 2,
-        tutorial: 'Tell the Reactivation agent which column in your CSV holds which piece of data. Type the EXACT header from your file (case-sensitive). If your CSV says "First Name", type "First Name", not "first_name".',
+        tutorial: 'Tell the Lost Customer Reactivation agent which column in your CSV holds which piece of data. Type the EXACT header from your file (case-sensitive). If your CSV says "First Name", type "First Name", not "first_name".',
         fields: [
         { key: 'col_first_name', label: 'Column for first name', type: 'text', required: true, editable: true },
         { key: 'col_last_name', label: 'Column for last name', type: 'text', editable: true },
@@ -1087,10 +1087,10 @@ var AGENTS = {
           help: 'Required if you want SMS reactivation.' },
         { key: 'col_last_interaction_date', label: 'Column for last visit / purchase date', type: 'text', required: true, editable: true },
         { key: 'col_ltv', label: 'Column for lifetime value (LTV)', type: 'text', editable: true,
-          help: 'Lets the Reactivation agent prioritize VIPs. Skip if you don\'t track this.' },
+          help: 'Lets the Lost Customer Reactivation agent prioritize VIPs. Skip if you don\'t track this.' },
         { key: 'col_tags', label: 'Column for tags / segments / treatment type', type: 'text', editable: true },
         { key: 'col_consent_source', label: 'Column for consent record (TCPA)', type: 'text', editable: true,
-          help: 'If your data has an "opted-in" or "consent_date" column, point to it. Otherwise leave blank — the Reactivation agent will treat unknowns conservatively.' },
+          help: 'If your data has an "opted-in" or "consent_date" column, point to it. Otherwise leave blank — the Lost Customer Reactivation agent will treat unknowns conservatively.' },
         { key: 'preview_count', label: 'How many records does the file contain?', type: 'number', editable: true },
       ]},
 
@@ -1120,7 +1120,7 @@ var AGENTS = {
 
       // Step 4: Email sender domain ────────────────────────────────────
       { step: 4, blocking: true,
-        tutorial: 'The Reactivation agent sends emails from YOUR domain so they don\'t look like spam. We use Resend, which means you need to add two DNS records: SPF and DKIM. Most domain registrars (GoDaddy, Namecheap, Cloudflare) let you add these in 60 seconds.\n\n1. Click "Generate DNS records" below. We\'ll show you the exact records to copy.\n2. Log into your domain registrar.\n3. Add the SPF record (TXT type) and DKIM record (TXT type, prefix `resend._domainkey`).\n4. Save. DNS propagation takes 5 minutes to 48 hours, usually under 30 minutes.\n5. Click "Verify" below. If both records are detected, you\'re live.\n\nDNS still propagating? You can finish other steps and come back here. The wizard will let you submit once verification passes.',
+        tutorial: 'The Lost Customer Reactivation agent sends emails from YOUR domain so they don\'t look like spam. We use Resend, which means you need to add two DNS records: SPF and DKIM. Most domain registrars (GoDaddy, Namecheap, Cloudflare) let you add these in 60 seconds.\n\n1. Click "Generate DNS records" below. We\'ll show you the exact records to copy.\n2. Log into your domain registrar.\n3. Add the SPF record (TXT type) and DKIM record (TXT type, prefix `resend._domainkey`).\n4. Save. DNS propagation takes 5 minutes to 48 hours, usually under 30 minutes.\n5. Click "Verify" below. If both records are detected, you\'re live.\n\nDNS still propagating? You can finish other steps and come back here. The wizard will let you submit once verification passes.',
         fields: [
         { key: 'sender_domain', label: 'Domain you want to send from', type: 'text', required: true, editable: true,
           help: 'Example: yourbusiness.com (NO https:// prefix).' },
@@ -1159,7 +1159,7 @@ var AGENTS = {
 
       // Step 6: Compliance & consent ───────────────────────────────────
       { step: 6, blocking: true,
-        tutorial: 'TCPA + CAN-SPAM make non-consented marketing illegal. This step locks down your compliance posture.\n\nFor each record in your CSV, we tag whether you have:\n- Express written consent (best, opt-in checkbox at signup)\n- Implied consent (existing business relationship)\n- No consent (must NOT receive marketing SMS; can receive transactional only)\n\nIf you don\'t have consent records, the Reactivation agent defaults to email-only for those records and asks for SMS opt-in BEFORE sending any SMS.',
+        tutorial: 'TCPA + CAN-SPAM make non-consented marketing illegal. This step locks down your compliance posture.\n\nFor each record in your CSV, we tag whether you have:\n- Express written consent (best, opt-in checkbox at signup)\n- Implied consent (existing business relationship)\n- No consent (must NOT receive marketing SMS; can receive transactional only)\n\nIf you don\'t have consent records, the Lost Customer Reactivation agent defaults to email-only for those records and asks for SMS opt-in BEFORE sending any SMS.',
         fields: [
         { key: 'consent_status_default', label: 'For records without an explicit consent column', type: 'select', required: true, editable: true,
           options: [
@@ -1196,7 +1196,7 @@ var AGENTS = {
 
       // Step 8: Test send & review ─────────────────────────────────────
       { step: 8, blocking: true,
-        tutorial: 'Before the Reactivation agent goes live to your real list, send yourself a copy of every segment\'s message. Confirm the offer text, sender, links, and unsubscribe footer all look right.',
+        tutorial: 'Before the Lost Customer Reactivation agent goes live to your real list, send yourself a copy of every segment\'s message. Confirm the offer text, sender, links, and unsubscribe footer all look right.',
         fields: [
         { key: 'test_email', label: 'Test email address (yours)', type: 'email', required: true, editable: true },
         { key: 'test_phone', label: 'Test phone (yours, E.164)', type: 'tel', editable: true,
@@ -1208,7 +1208,7 @@ var AGENTS = {
             { key: 'tcpa_acknowledgment', label: 'TCPA consent confirmed' },
             { key: 'test_send_completed', label: 'Test send passed' },
           ] },
-        { key: 'ready_for_review', label: 'I have reviewed everything and want STILO to activate the Reactivation agent', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed everything and want STILO to activate the Lost Customer Reactivation agent', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
@@ -1217,8 +1217,8 @@ var AGENTS = {
   },
   scout: {
     code: 'scout',
-    name: 'Lead Generator',
-    shortName: 'Lead Generator',
+    name: 'B2B Lead Generator',
+    shortName: 'B2B Lead Generator',
     setupFeeCents: 300000,
     monthlyFeeCents: 200000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_SCOUT_SETUP',
@@ -1237,7 +1237,7 @@ var AGENTS = {
 
       // Step 1: Ideal customer profile ─────────────────────────────────
       { step: 1,
-        tutorial: 'Defaults are pre-loaded from your niche playbook. Edit them to match exactly who you want the Lead Generator to scrape.\n\nThe Lead Generator scrapes Google Maps + finds owner emails. The narrower the ICP, the higher the conversion. "All restaurants in Florida" returns garbage. "Independent Italian restaurants in Miami-Dade with 4.5+ star ratings, 100+ reviews, no chain affiliation" returns gold.',
+        tutorial: 'Defaults are pre-loaded from your niche playbook. Edit them to match exactly who you want the B2B Lead Generator to scrape.\n\nThe B2B Lead Generator scrapes Google Maps + finds owner emails. The narrower the ICP, the higher the conversion. "All restaurants in Florida" returns garbage. "Independent Italian restaurants in Miami-Dade with 4.5+ star ratings, 100+ reviews, no chain affiliation" returns gold.',
         fields: [
         { key: 'icp_industry_terms', label: 'Search terms for what you sell to (comma-separated)', type: 'textarea', required: true, editable: true,
           help: 'Example for med spa lead-gen: "med spa, aesthetics clinic, dermatology, plastic surgery". 6-9 variations is the sweet spot.' },
@@ -1274,7 +1274,7 @@ var AGENTS = {
 
       // Step 3: Output destination ─────────────────────────────────────
       { step: 3, blocking: true,
-        tutorial: 'Where do enriched leads go? Three options, can combine.\n\n1. **CSV emailed weekly**: simple, no integration. You get a Friday email with the week\'s leads.\n2. **Push to your CRM**: leads land directly in GoHighLevel / Follow Up Boss / HubSpot / etc. as new contacts with tags.\n3. **Push to the Lead Response agent**: if you also bought the Lead Response agent, the Lead Generator can hand off leads as "synthetic inbound" so the Lead Response agent calls them within 2 minutes. This is the highest-conversion path but requires both agents.',
+        tutorial: 'Where do enriched leads go? Three options, can combine.\n\n1. **CSV emailed weekly**: simple, no integration. You get a Friday email with the week\'s leads.\n2. **Push to your CRM**: leads land directly in GoHighLevel / Follow Up Boss / HubSpot / etc. as new contacts with tags.\n3. **Push to the Outbound Lead Reply agent**: if you also bought the Outbound Lead Reply agent, the B2B Lead Generator can hand off leads as "synthetic inbound" so the Outbound Lead Reply agent calls them within 2 minutes. This is the highest-conversion path but requires both agents.',
         fields: [
         { key: 'destination_csv_email', label: 'Email me a weekly CSV', type: 'boolean', editable: true },
         { key: 'csv_email_recipient', label: 'CSV email recipient', type: 'email', editable: true,
@@ -1299,8 +1299,8 @@ var AGENTS = {
           showIf: { crm_push_choice: 'webhook' } },
         { key: 'crm_push_tags', label: 'Tags to apply on push', type: 'text', editable: true,
           help: 'Comma-separated. Default: "scout, prospecting, {niche}".' },
-        { key: 'destination_ignite_handoff', label: 'Hand off to the Lead Response agent for outbound calls', type: 'boolean', editable: true,
-          help: 'Requires an active Lead Response agent. Highest-conversion path.' },
+        { key: 'destination_ignite_handoff', label: 'Hand off to the Outbound Lead Reply agent for outbound calls', type: 'boolean', editable: true,
+          help: 'Requires an active Outbound Lead Reply agent. Highest-conversion path.' },
         { key: 'crm_push_test', label: 'Test CRM connection', type: 'connection-test',
           target: '/api/integration-test',
           showIf: { destination_crm_push: true } },
@@ -1308,10 +1308,10 @@ var AGENTS = {
 
       // Step 4: Volume & cadence ───────────────────────────────────────
       { step: 4,
-        tutorial: 'The Lead Generator scrapes 24/7 and self-paces against your weekly target. The Cloud Run worker runs at off-peak hours so it doesn\'t hit Google rate-limits.',
+        tutorial: 'The B2B Lead Generator scrapes 24/7 and self-paces against your weekly target. The Cloud Run worker runs at off-peak hours so it doesn\'t hit Google rate-limits.',
         fields: [
         { key: 'leads_per_week_target', label: 'Target new leads per week', type: 'number', required: true, editable: true,
-          help: 'Default: 100. The Lead Generator will pause if it hits this number; resumes Monday.' },
+          help: 'Default: 100. The B2B Lead Generator will pause if it hits this number; resumes Monday.' },
         { key: 'max_total_leads', label: 'Hard ceiling on total leads ever', type: 'number', editable: true,
           help: 'Optional. Defaults to unlimited. Set if you want to cap on-disk lead count.' },
         { key: 'paid_sources_budget_usd', label: 'Monthly budget for paid enrichment ($USD)', type: 'number', editable: true,
@@ -1322,9 +1322,9 @@ var AGENTS = {
 
       // Step 5: Owner-email rule ───────────────────────────────────────
       { step: 5, blocking: true,
-        tutorial: 'The Lead Generator only marks an owner email as "confirmed" when both are true:\n\n1. A NAME is found near "owner", "founder", "CEO", "president", or "principal" on the business website or a search result.\n2. An EMAIL whose prefix matches that name (john.smith@..., jsmith@..., john@... all match "John Smith"; info@, contact@, hello@ never match anyone).\n\nIf one without the other → not confirmed. Cold outreach to the wrong person burns the domain.\n\nThis rule cannot be relaxed. Confirm you understand it.',
+        tutorial: 'The B2B Lead Generator only marks an owner email as "confirmed" when both are true:\n\n1. A NAME is found near "owner", "founder", "CEO", "president", or "principal" on the business website or a search result.\n2. An EMAIL whose prefix matches that name (john.smith@..., jsmith@..., john@... all match "John Smith"; info@, contact@, hello@ never match anyone).\n\nIf one without the other → not confirmed. Cold outreach to the wrong person burns the domain.\n\nThis rule cannot be relaxed. Confirm you understand it.',
         fields: [
-        { key: 'owner_email_rule_acknowledged', label: 'I understand the Lead Generator will not mark an email as confirmed unless name + email match. info@/contact@/hello@ are never confirmed.', type: 'boolean', required: true },
+        { key: 'owner_email_rule_acknowledged', label: 'I understand the B2B Lead Generator will not mark an email as confirmed unless name + email match. info@/contact@/hello@ are never confirmed.', type: 'boolean', required: true },
         { key: 'unconfirmed_email_handling', label: 'For leads with no confirmed owner email', type: 'select', editable: true,
           options: [
             { value: 'exclude', label: 'Exclude from output (only confirmed-owner leads in CSV/CRM)' },
@@ -1335,16 +1335,16 @@ var AGENTS = {
 
       // Step 6: Test scrape & review ───────────────────────────────────
       { step: 6, blocking: true,
-        tutorial: 'Before the Lead Generator runs at scale, fire a test scrape: 1 niche, 10 leads. Confirms the ICP filter works as you intended and the email-finder hits.',
+        tutorial: 'Before the B2B Lead Generator runs at scale, fire a test scrape: 1 niche, 10 leads. Confirms the ICP filter works as you intended and the email-finder hits.',
         fields: [
         { key: 'test_scrape_niche', label: 'Test niche (one term from your ICP)', type: 'text', required: true, editable: true },
         { key: 'test_scrape_city', label: 'Test city', type: 'text', required: true, editable: true,
           help: 'Default: "Miami FL".' },
         { key: 'test_scrape_button', label: 'Run test scrape (10 leads)', type: 'connection-test',
           target: '/api/integration-test',
-          help: 'Hits the Lead Generator\'s Cloud Run service with your config.' },
+          help: 'Hits the B2B Lead Generator\'s Cloud Run service with your config.' },
         { key: 'test_scrape_passed', label: 'Test results look right (real businesses, accurate filter)', type: 'boolean', required: true },
-        { key: 'ready_for_review', label: 'I have reviewed and want STILO to activate the Lead Generator', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I have reviewed and want STILO to activate the B2B Lead Generator', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
@@ -1353,9 +1353,9 @@ var AGENTS = {
   },
   forge: {
     code: 'forge',
-    name: 'AI Website',
+    name: 'Website',
     shortName: 'Website',
-    setupFeeCents: 125000,
+    setupFeeCents: 200000,
     monthlyFeeCents: 20000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_FORGE_SETUP',
     stripeMonthlyPriceEnv: 'STRIPE_PRICE_FORGE_MONTHLY',
@@ -1460,7 +1460,7 @@ var AGENTS = {
 
       // Step 5: Booking integration ────────────────────────────────────
       { step: 5,
-        tutorial: 'When a visitor books on the website, the appointment lands in your calendar — same calendar the Receptionist and Lead Response agents write to. The form also posts to your CRM with a tag.',
+        tutorial: 'When a visitor books on the website, the appointment lands in your calendar — same calendar the Receptionist and Outbound Lead Reply agents write to. The form also posts to your CRM with a tag.',
         fields: [
         { key: 'booking_method', label: 'Booking method (defaults to your Business Profile calendar)', type: 'select', editable: true,
           options: [
@@ -1506,7 +1506,7 @@ var AGENTS = {
   },
   signal: {
     code: 'signal',
-    name: 'AI SEO (GEO)',
+    name: 'AI SEO',
     shortName: 'AI SEO',
     setupFeeCents: 100000,
     monthlyFeeCents: 0,
@@ -1624,8 +1624,8 @@ var AGENTS = {
   },
   oracle: {
     code: 'oracle',
-    name: 'Growth Intelligence',
-    shortName: 'Growth Intelligence',
+    name: 'Ontology',
+    shortName: 'Ontology',
     setupFeeCents: 300000,
     monthlyFeeCents: 200000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_ORACLE_SETUP',
@@ -1644,7 +1644,7 @@ var AGENTS = {
 
       // Step 1: Data sources ───────────────────────────────────────────
       { step: 1, blocking: true,
-        tutorial: 'Growth Intelligence works on real numbers. Connect the systems that hold your data, and it pulls weekly to build dashboards and reports.\n\nMost connections are OAuth (no password sharing). The rest use API keys.\n\nIf you skip a source, Growth Intelligence works around it — but the more sources, the better the analysis.',
+        tutorial: 'Ontology works on real numbers. Connect the systems that hold your data, and it pulls weekly to build dashboards and reports.\n\nMost connections are OAuth (no password sharing). The rest use API keys.\n\nIf you skip a source, Ontology works around it — but the more sources, the better the analysis.',
         fields: [
         { key: 'connect_quickbooks', label: 'Connect QuickBooks / Xero', type: 'oauth-button',
           target: '/api/oauth?provider=quickbooks&action=start',
@@ -1672,12 +1672,12 @@ var AGENTS = {
         { key: 'pos_credentials.api_key', label: 'POS API key', type: 'password', editable: true,
           showIf_not: { connect_pos: 'none' } },
         { key: 'data_sources_minimum_check', label: 'I have connected at least 2 data sources', type: 'boolean', required: true,
-          help: 'Growth Intelligence needs at least 2 sources for cross-source analysis. Required.' },
+          help: 'Ontology needs at least 2 sources for cross-source analysis. Required.' },
       ]},
 
       // Step 2: KPIs & targets ─────────────────────────────────────────
       { step: 2,
-        tutorial: 'Niche-specific KPI defaults are pre-loaded. Edit targets to match your goals. Growth Intelligence tracks your performance against these targets every week and flags gaps in the report.',
+        tutorial: 'Niche-specific KPI defaults are pre-loaded. Edit targets to match your goals. Ontology tracks your performance against these targets every week and flags gaps in the report.',
         fields: [
         { key: 'kpis', label: 'KPIs to track (pre-loaded from niche)', type: 'array-of-objects', required: true, editable: true,
           help: 'Pre-filled from your niche playbook. Edit targets to match your goals.',
@@ -1714,22 +1714,22 @@ var AGENTS = {
         { key: 'report_recipients', label: 'Recipients (comma-separated emails)', type: 'text', required: true, editable: true,
           help: 'Defaults to owner email. Add your accountant, partners, or coach.' },
         { key: 'report_alert_thresholds', label: 'Alert me when a P1 KPI is more than X% off target', type: 'number', editable: true,
-          help: 'Default: 15%. Growth Intelligence sends an immediate email if any P1 metric breaches this threshold.' },
+          help: 'Default: 15%. Ontology sends an immediate email if any P1 metric breaches this threshold.' },
       ]},
 
       // Step 4: Competitive set ────────────────────────────────────────
       { step: 4,
-        tutorial: 'Growth Intelligence benchmarks your numbers against typical performance for your niche AND your specific competitors. If you have the Lead Generator, we pull competitor data automatically.',
+        tutorial: 'Ontology benchmarks your numbers against typical performance for your niche AND your specific competitors. If you have the B2B Lead Generator, we pull competitor data automatically.',
         fields: [
         { key: 'competitors', label: 'Competitors to benchmark against', type: 'textarea', editable: true,
-          help: 'One per line: name + city. Auto-suggested from the Lead Generator if you have it.' },
+          help: 'One per line: name + city. Auto-suggested from the B2B Lead Generator if you have it.' },
         { key: 'use_niche_benchmarks', label: 'Compare me against niche benchmarks (peer averages)', type: 'boolean', editable: true,
-          help: 'Growth Intelligence has aggregate data on typical performance for each niche. Recommended ON.' },
+          help: 'Ontology has aggregate data on typical performance for each niche. Recommended ON.' },
       ]},
 
       // Step 5: Strategic context ──────────────────────────────────────
       { step: 5,
-        tutorial: 'The single most important field in this whole wizard. Growth Intelligence writes its monthly executive review around answering this question. Be specific.',
+        tutorial: 'The single most important field in this whole wizard. Ontology writes its monthly executive review around answering this question. Be specific.',
         fields: [
         { key: 'biggest_strategic_question', label: 'The one strategic question you want answered every month', type: 'textarea', required: true, editable: true,
           help: 'Examples: "Why is our show rate dropping?", "Are we charging enough?", "Which marketing channel actually works?", "Should we open a second location?"' },
@@ -1742,7 +1742,7 @@ var AGENTS = {
             { value: 'expanding', label: 'Expanding (new locations / services)' },
           ] },
         { key: 'recent_strategic_changes', label: 'Strategic changes in the last 6 months', type: 'textarea', editable: true,
-          help: 'New service line, price increase, hire, location, marketing pivot. Helps Growth Intelligence attribute changes correctly.' },
+          help: 'New service line, price increase, hire, location, marketing pivot. Helps Ontology attribute changes correctly.' },
       ]},
 
       // Step 6: Baseline & review ──────────────────────────────────────
@@ -1752,7 +1752,7 @@ var AGENTS = {
         { key: 'baseline_preview_received', label: 'I have received and reviewed the baseline analysis preview', type: 'boolean', editable: true },
         { key: 'baseline_accurate', label: 'The baseline numbers match my own books', type: 'boolean', editable: true,
           help: 'If no, STILO will reconnect data sources or correct mappings before going live.' },
-        { key: 'ready_for_review', label: 'I am ready for STILO to activate Growth Intelligence', type: 'boolean', required: true },
+        { key: 'ready_for_review', label: 'I am ready for STILO to activate Ontology', type: 'boolean', required: true },
         { key: 'submit_for_review_button', label: 'Submit for STILO review', type: 'review-submit-button',
           target: '/api/agents-submit-for-review' },
       ]},
@@ -1768,9 +1768,9 @@ var AGENTS = {
     // is just "AI Sales Agent". Internal code stays 'pitch' so client_agents
     // rows, Stripe env var names, and LEGACY_ID_MAP entries keep working.
     name: 'AI Sales Agent',
-    shortName: 'Sales Agent',
+    shortName: 'AI Sales Agent',
     setupFeeCents: 250000,
-    monthlyFeeCents: 200000,
+    monthlyFeeCents: 150000,
     stripeSetupPriceEnv: 'STRIPE_PRICE_PITCH_SETUP',
     stripeMonthlyPriceEnv: 'STRIPE_PRICE_PITCH_MONTHLY',
     purchaseMode: 'self_serve',
@@ -1830,7 +1830,7 @@ var AGENTS = {
             { value: 'zoom_cloud', label: 'Zoom Cloud Recording' },
             { value: 'openphone', label: 'OpenPhone' },
             { value: 'aircall', label: 'Aircall' },
-            { value: 'retell_calls', label: 'STILO Receptionist / Lead Response call recordings' },
+            { value: 'retell_calls', label: 'STILO Receptionist / Outbound Lead Reply call recordings' },
             { value: 'manual_upload', label: 'I will upload transcripts manually' },
             { value: 'none_yet', label: 'No call recordings today (set up later)' },
           ] },

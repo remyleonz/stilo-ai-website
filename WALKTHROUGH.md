@@ -74,11 +74,11 @@ This is the longest part. You're going to create 7 "products" (one per agent you
 1. In the Stripe dashboard (still in Test mode), click **Product catalog** in the left sidebar. If you don't see it, click **More** first, then **Product catalog**.
 2. Click the blue **+ Create product** button (top right).
 
-### Create product 1: AI Receptionist
+### Create product 1: Receptionist
 
 A new form appears. Fill it in like this:
 
-- **Name**: `AI Receptionist`
+- **Name**: `Receptionist`
 - **Description**: `24/7 voice agent that answers, books, and captures every call.`
 - **Image**: skip
 
@@ -111,17 +111,17 @@ Use this table. For each row, create a product, add 2 prices (one-time setup + r
 
 | Product name                | Setup (one-time) | Monthly (recurring) |
 |-----------------------------|-----------------:|--------------------:|
-| Lead Response Agent         |         2000.00  |             650.00  |
-| Customer Reactivation       |         2500.00  |             800.00  |
-| Lead Generator              |         2500.00  |            1000.00  |
-| AI Website                  |         1250.00  |             200.00  |
-| Growth Intelligence         |         3000.00  |            1000.00  |
+| Outbound Lead Reply         |         2000.00  |             650.00  |
+| Lost Customer Reactivation  |         2500.00  |             800.00  |
+| B2B Lead Generator          |         2500.00  |            1000.00  |
+| Website                     |         2000.00  |             200.00  |
+| Ontology                    |         3000.00  |            1000.00  |
 
 ### Special case: AI SEO
 
 AI SEO is a one-time purchase only, no monthly. Create it with ONE price:
 
-- **Name**: `AI SEO (GEO)`
+- **Name**: `AI SEO`
 - Price 1: **One-time**, `1000.00` USD
 - (No second price)
 
@@ -291,7 +291,7 @@ Now that your site is live:
    - Phone: any
    - Business: Planet Fitness Miami
 4. Click through the 10 quiz questions, picking any answers. Choose the highest-revenue option on the revenue question to trigger the "Partner" tier (all 7 agents pre-selected).
-5. On the results screen, confirm the agent cards show (Receptionist, Lead Response, Reactivation, Lead Generator, Website, AI SEO, Growth Intelligence). Custom Automations should NOT be checked.
+5. On the results screen, confirm the agent cards show (Receptionist, Outbound Lead Reply, Lost Customer Reactivation, B2B Lead Generator, Website, AI SEO, Ontology). Custom Automations should NOT be checked.
 6. Click **Proceed to Checkout**.
 7. Stripe's checkout page loads. Pay with:
    - Card number: `4242 4242 4242 4242`

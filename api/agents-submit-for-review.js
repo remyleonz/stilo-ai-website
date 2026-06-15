@@ -128,7 +128,7 @@ module.exports = async function handler(req, res) {
       ok: true,
       status: 'pending_admin_review',
       business_name: agent.clients?.business_name || null,
-      message: 'Submitted. STILO Partners will review your setup and email you when your Lead Response Agent is live.',
+      message: 'Submitted. STILO Partners will review your setup and email you when your Outbound Lead Reply is live.',
     });
 
   } catch (e) {

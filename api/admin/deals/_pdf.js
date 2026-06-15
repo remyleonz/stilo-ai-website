@@ -16,15 +16,15 @@ const GREY = rgb(0.42, 0.42, 0.45);
 const LIGHT = rgb(0.85, 0.85, 0.88);
 
 const AGENT_DESCRIPTIONS = {
-    echo:    { name: 'AI Receptionist',        desc: '24/7 inbound call answering, booking, and lead capture.' },
-    ignite:  { name: 'Lead Response Agent',    desc: 'Instant text and email reply to every form fill, ad lead, or missed call.' },
-    revive:  { name: 'Customer Reactivation',  desc: 'Wins back dormant customers via personalized outreach.' },
-    scout:   { name: 'Lead Generator',         desc: 'Google Maps scraping, scoring, and cold outreach drafting.' },
-    forge:   { name: 'AI Website',             desc: 'High-converting modern site with built-in chat and booking.' },
-    signal:  { name: 'AI SEO (GEO)',           desc: 'Local visibility, schema, and AI-search optimization.' },
-    oracle:  { name: 'Growth Intelligence',    desc: 'Weekly KPI brief with opportunity flagging.' },
-    pitch:   { name: 'AI Sales Agent',         desc: 'Listens to call transcripts, ships scorecards and script rewrites.' },
-    flux:    { name: 'Custom Automations',     desc: 'Workflow and integration buildout to your spec.' }
+    echo:    { name: 'Receptionist',                  desc: '24/7 inbound call answering, booking, and lead capture.' },
+    ignite:  { name: 'Outbound Lead Reply',           desc: 'Instant text and email reply to every form fill, ad lead, or missed call.' },
+    revive:  { name: 'Lost Customer Reactivation',    desc: 'Wins back dormant customers via personalized outreach.' },
+    scout:   { name: 'B2B Lead Generator',            desc: 'Google Maps scraping, scoring, and cold outreach drafting.' },
+    forge:   { name: 'Website',                       desc: 'High-converting modern site with built-in chat and booking.' },
+    signal:  { name: 'AI SEO',                        desc: 'Local visibility, schema, and AI-search optimization.' },
+    oracle:  { name: 'Ontology',                      desc: 'Weekly KPI brief with opportunity flagging.' },
+    pitch:   { name: 'AI Sales Agent',                desc: 'Listens to call transcripts, ships scorecards and script rewrites.' },
+    flux:    { name: 'Custom Automations',            desc: 'Workflow and integration buildout to your spec.' }
 };
 
 function formatMoney(cents) {

@@ -51,7 +51,7 @@ function sanitizeCopy(text) {
 // `subjectTag` (a short value phrase the value-led subject line interpolates).
 const PLAYBOOKS = {
     receptionist: {
-        agent: 'AI Receptionist',
+        agent: 'Receptionist',
         pain: "Most calls that come in after you close, or while your team is with a customer, never get answered. For local businesses that's roughly 62% of calls going to voicemail, and a lot of those callers just dial the next place on the list.",
         painShort: "Right now a chunk of your calls after hours or during busy stretches go unanswered, and those callers just dial the next place on the list.",
         oneLiner: "a 24/7 voice agent that answers every call, books appointments, and captures the lead, in English and Spanish, so nothing slips after hours.",
@@ -72,14 +72,14 @@ const PLAYBOOKS = {
         subjectTag: "winning back past customers"
     },
     lead_gen: {
-        agent: 'Lead Generator agent',
+        agent: 'B2B Lead Generator',
         pain: "Finding new customers by hand is slow and hit or miss, and most cold outreach gets ignored because it isn't personalized.",
         painShort: "Finding new customers by hand is slow, and generic cold outreach mostly gets ignored.",
         oneLiner: "an agent that finds businesses matching your ideal customer, researches each one, and sends personalized outreach, so your pipeline keeps filling itself.",
         subjectTag: "filling your pipeline"
     },
     website: {
-        agent: 'Website Builder agent',
+        agent: 'Website',
         pain: "Your website isn't set up to turn visitors into booked appointments. There's no clear book-an-appointment button, so people who land on it ready to schedule end up leaving instead of booking, and you never even know they were there.",
         painShort: "Your site has no clear book-an-appointment button, so visitors who are ready to schedule leave instead of booking.",
         oneLiner: "a fast, modern site built to convert, with an obvious book-now button, click-to-call, and the trust signals that turn visitors into booked customers.",
@@ -93,7 +93,7 @@ const PLAYBOOKS = {
         subjectTag: "showing up in AI search"
     },
     growth: {
-        agent: 'Growth Intelligence agent',
+        agent: 'Ontology',
         pain: "You've got real data, your POS numbers, reviews, ad spend, booking patterns, but no one connecting it into a plan. So calls get made on gut feel, and the things quietly costing you money can go unnoticed for months.",
         painShort: "You've got POS, review, and ad data, but no one connecting it into a plan, so money leaks where no one's looking.",
         oneLiner: "a strategy agent that maps your data and sends a clear weekly read on what's working, what to fix, and what to test, like an analyst on staff for a fraction of the cost.",
