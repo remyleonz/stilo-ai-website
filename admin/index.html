@@ -7095,8 +7095,25 @@
                     + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
                       + (d.meeting_meet_link ? '<a href="' + escapeAdminHtml(d.meeting_meet_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;">Join Google Meet</a>' : '')
                       + (d.meeting_event_link ? '<a href="' + escapeAdminHtml(d.meeting_event_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);">Open in Calendar</a>' : '')
+                      + '<button type="button" onclick="startReschedule(' + (d.id != null ? d.id : 'null') + ')" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);cursor:pointer;">Reschedule</button>'
                     + '</div>'
                     + ((!d.meeting_meet_link && !d.meeting_event_link) ? '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">The Meet link appears once the calendar sync runs.</div>' : '')
+                    // Log what happened in the meeting (the meeting analog of the
+                    // call-log chips). Writes a lead_meetings record; closed-won/lost
+                    // also move the lifecycle stage.
+                    + '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(22,163,74,0.35);">'
+                      + '<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#16a34a;margin-bottom:8px;">Log what happened</div>'
+                      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">'
+                        + meetingOutcomeChip('interested', 'Interested')
+                        + meetingOutcomeChip('needs_time', 'Needs time')
+                        + meetingOutcomeChip('no_show', 'No-show')
+                        + meetingOutcomeChip('closed_won', 'Closed won')
+                        + meetingOutcomeChip('closed_lost', 'Closed lost')
+                      + '</div>'
+                      + '<textarea id="meetingOutcomeNotes" rows="2" placeholder="What happened, next steps, objections..." style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;font-family:inherit;margin-bottom:8px;"></textarea>'
+                      + '<button type="button" id="meetingOutcomeLogBtn" disabled onclick="logMeetingOutcome(' + (d.id != null ? d.id : 'null') + ')" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.5;">Log meeting outcome</button>'
+                      + '<span id="meetingOutcomeMsg" style="font-size:11px;margin-left:10px;"></span>'
+                    + '</div>'
                   + '</div>';
             }
 
@@ -7168,15 +7185,11 @@
                 + (mode === 'emailable'
                     ? ''
                     : '<div id="prospectBookingPicker" style="display:none;margin-bottom:12px;padding:12px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.18);border-radius:8px;">'
-                      + '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;font-weight:700;">Book the meeting below, then mark it</div>'
-                      + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">Pick a time with the prospect and enter THEIR name and email so Google sends them the invite and Meet link. Then click "Mark as booked" so it lands on the dashboard.</div>'
-                      + '<iframe src="' + BOOKING_EMBED_URL + '" style="border:0;width:100%;height:520px;border-radius:8px;background:#fff;" frameborder="0"></iframe>'
-                      + '<div style="margin-top:6px;"><a href="' + BOOKING_EMBED_URL + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--blue);">Open the booking page in a new tab instead</a></div>'
-                      + '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-medium);">'
-                        + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Meeting date &amp; time</label>'
-                        + '<input id="prospectBookWhen" type="datetime-local" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;">'
-                        + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">If the prospect already booked themselves, enter the time here so it shows on the Booked tab. Otherwise leave blank and the calendar sync fills it in.</div>'
-                      + '</div>'
+                      + '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;font-weight:700;">Pick a time on the STILO calendar</div>'
+                      + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">These are real open slots on Remy\'s calendar. Click one and Book, we create the Google Meet event, email the prospect the invite, and it lands on the Booked tab automatically. No separate Google page.</div>'
+                      + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (gets the invite)</label>'
+                      + '<input id="prospectBookEmail" type="email" value="' + escapeAdminHtml(d.owner_email || d.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;margin-bottom:10px;">'
+                      + '<div id="prospectBookingSlots"></div>'
                       + '</div>')
                 + (mode === 'emailable'
                     ? ''
@@ -7365,6 +7378,61 @@
             var match = PROSPECT_OUTCOMES.find(function (o) { return o.value === value; });
             if (match && match.dialOnly) submitCallLog();
         }
+        // ─── Meeting outcome logging (the booked-meeting green card) ───────────
+        var meetingOutcomeSel = null;
+        function meetingOutcomeChip(value, label) {
+            return '<button type="button" id="moc_' + value + '" data-active="0" onclick="selectMeetingOutcome(\'' + value + '\')" '
+                + 'style="padding:7px 6px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:var(--text-primary);font-size:11px;font-weight:600;cursor:pointer;transition:all 100ms;">'
+                + label + '</button>';
+        }
+        function selectMeetingOutcome(value) {
+            meetingOutcomeSel = value;
+            ['interested', 'needs_time', 'no_show', 'closed_won', 'closed_lost'].forEach(function (v) {
+                var el = document.getElementById('moc_' + v);
+                if (!el) return;
+                var on = v === value;
+                el.setAttribute('data-active', on ? '1' : '0');
+                el.style.background = on ? '#16a34a' : 'var(--bg-input)';
+                el.style.color = on ? '#fff' : 'var(--text-primary)';
+                el.style.borderColor = on ? '#16a34a' : 'var(--border-medium)';
+            });
+            var btn = document.getElementById('meetingOutcomeLogBtn');
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        }
+        async function logMeetingOutcome(leadId) {
+            if (!meetingOutcomeSel) return;
+            var msg = document.getElementById('meetingOutcomeMsg');
+            var notesEl = document.getElementById('meetingOutcomeNotes');
+            var btn = document.getElementById('meetingOutcomeLogBtn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+            if (msg) { msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving…'; }
+            try {
+                var resp = await prospectFetchJSON('/api/prospects/meeting-outcome', {
+                    method: 'POST',
+                    body: JSON.stringify({ lead_id: leadId, outcome: meetingOutcomeSel, notes: (notesEl && notesEl.value) || '' })
+                });
+                if (msg) { msg.style.color = 'var(--green,#10b981)'; msg.textContent = 'Logged' + (resp && resp.stage ? ' and moved to ' + resp.stage : '') + '.'; }
+                meetingOutcomeSel = null;
+                setTimeout(function () { openProspectDrawer(leadId, 'callable'); }, 900);
+            } catch (e) {
+                if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Failed: ' + (e.message || 'unknown'); }
+            }
+        }
+        // Reschedule reuses the booking flow: reveal the native slot picker and
+        // load slots. Picking a new time + Book rewrites the meeting via book-meeting.
+        function startReschedule(leadId) {
+            if (typeof selectProspectOutcome === 'function') selectProspectOutcome('booked_meeting');
+            var sel = document.getElementById('prospectOutcome');
+            if (sel) sel.value = 'booked_meeting';
+            onOutcomeChange();
+            loadBookingSlots();
+            var picker = document.getElementById('prospectBookingPicker');
+            if (picker) picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var msg = document.getElementById('prospectFormMsg');
+            if (msg) { msg.style.color = 'var(--blue)'; msg.textContent = 'Pick a new time below to reschedule. The prospect gets an updated invite.'; }
+        }
+
         function onOutcomeChange() {
             var sel = document.getElementById('prospectOutcome');
             var row = document.getElementById('prospectFollowupRow');
@@ -7379,7 +7447,7 @@
             }
             // booked_meeting → show the embedded Google booking page.
             if (sel.value === 'booked_meeting') {
-                if (pickerHost) { pickerHost.style.display = 'block'; }
+                if (pickerHost) { pickerHost.style.display = 'block'; loadBookingSlots(); }
             } else {
                 if (pickerHost) pickerHost.style.display = 'none';
             }
@@ -7392,7 +7460,7 @@
                     submitBtn.style.display = 'none';
                 } else {
                     submitBtn.style.display = 'block';
-                    submitBtn.textContent = sel.value === 'booked_meeting' ? 'Mark as booked'
+                    submitBtn.textContent = sel.value === 'booked_meeting' ? 'Book + send invite'
                         : (match && match.followUp ? 'Schedule the callback' : 'Log this outcome');
                 }
             }
@@ -7733,29 +7801,40 @@
                 return;
             }
 
-            // Booked meeting → the rep already booked it on the embedded Google
-            // page (Google created the event + sent the invite/Meet link). We
-            // just record the outcome so it lands on the Booked tab. No Calendar
-            // API, so this never depends on the OAuth token.
+            // Booked meeting → create the event on Remy's calendar via book-meeting
+            // (Meet link + invite email + lands on the Booked tab + attributes to
+            // whoever is signed in), all in one click. Picking a new slot on an
+            // already-booked lead reschedules it (book-meeting rewrites the time).
             if (outcome === 'booked_meeting') {
-                msgEl.style.color = 'var(--text-muted)';
-                msgEl.textContent = 'Marking as booked…';
-                try {
-                    var whenEl = document.getElementById('prospectBookWhen');
-                    var whenIso = (whenEl && whenEl.value) ? new Date(whenEl.value).toISOString() : null;
-                    await prospectFetchJSON('/api/prospects/mark-booked', {
-                        method: 'POST',
-                        body: JSON.stringify({ lead_id: leadId, when_iso: whenIso, notes: notes })
-                    });
-                    // Best-effort: pull the real time + Meet link from the calendar
-                    // if the sync is connected. The booking is already recorded.
-                    try { await prospectFetchJSON('/api/prospects/sync-bookings?force=1', { method: 'POST' }); } catch (_) {}
-                    msgEl.style.color = 'var(--green,#10b981)';
-                    msgEl.textContent = 'Booked. It will show on the Booked tab.';
-                    setTimeout(function () { advanceToNextProspect(leadId); }, 1500);
-                } catch (e) {
+                if (!bookingState.selectedIso) {
                     msgEl.style.color = 'var(--red)';
-                    msgEl.textContent = 'Could not record it: ' + (e.message || 'unknown');
+                    msgEl.textContent = 'Pick a time slot above first.';
+                    return;
+                }
+                msgEl.style.color = 'var(--text-muted)';
+                msgEl.textContent = 'Booking and sending the invite…';
+                try {
+                    var emailEl = document.getElementById('prospectBookEmail');
+                    var bookBody = { lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 };
+                    if (emailEl && emailEl.value.trim()) bookBody.email = emailEl.value.trim();
+                    await prospectFetchJSON('/api/prospects/book-meeting', {
+                        method: 'POST', body: JSON.stringify(bookBody)
+                    });
+                    msgEl.style.color = 'var(--green,#10b981)';
+                    msgEl.textContent = 'Booked. Invite and Meet link sent. It is on the Booked tab.';
+                    bookingState.selectedIso = null;
+                    setTimeout(function () { openProspectDrawer(leadId, 'callable'); }, 1300);
+                } catch (e) {
+                    if (e.status === 409 && e.body && e.body.reauth_url) {
+                        msgEl.style.color = 'var(--yellow,#eab308)';
+                        msgEl.innerHTML = 'The booking calendar needs reconnecting. <a href="#" onclick="openCalendarReauth(\'' + e.body.reauth_url + '\');return false;" style="color:var(--blue);font-weight:700;">Reconnect Google Calendar</a>';
+                    } else if (e.status === 503) {
+                        msgEl.style.color = 'var(--yellow,#eab308)';
+                        msgEl.textContent = 'Google Calendar is not connected yet.';
+                    } else {
+                        msgEl.style.color = 'var(--red)';
+                        msgEl.textContent = 'Could not book: ' + (e.message || 'unknown');
+                    }
                 }
                 return;
             }
