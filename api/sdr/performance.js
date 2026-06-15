@@ -66,12 +66,21 @@ async function countCalls(sb, email, sinceISO) {
     return count || 0;
 }
 
-async function countMeetingsBooked(sb, email, sinceISO) {
-    let q = sb.from('lead_calls')
+// Count DISTINCT booked meetings, not call-log rows. The old version counted
+// prospecting.lead_calls rows with outcome='booked_meeting', so every re-dial or
+// re-book that got logged as "booked_meeting" inflated the number (one lead
+// showed up 6 times), and it credited whoever LOGGED the call rather than the
+// meeting owner. Source of truth is one row per lead in prospecting.leads:
+// meeting_scheduled_at (the meeting exists) + meeting_booked_by_sdr (who owns it).
+// Bucketed by the meeting DATE, with an upper bound, so a meeting scheduled for
+// next week doesn't leak into "this week".
+async function countMeetingsBooked(sb, email, sinceISO, untilISO) {
+    let q = sb.from('leads')
         .select('id', { count: 'exact', head: true })
-        .eq('outcome', 'booked_meeting');
-    if (email) q = q.eq('logged_by', email);
-    if (sinceISO) q = q.gte('called_at', sinceISO);
+        .not('meeting_scheduled_at', 'is', null);
+    if (email) q = q.eq('meeting_booked_by_sdr', email);
+    if (sinceISO) q = q.gte('meeting_scheduled_at', sinceISO);
+    if (untilISO) q = q.lt('meeting_scheduled_at', untilISO);
     const { count } = await q;
     return count || 0;
 }
@@ -99,8 +108,14 @@ module.exports = async function handler(req, res) {
     const todayISO = startOfTodayET();
     const weekISO = startOfWeekISO();
     const monthISO = startOfMonthISO();
+    // Upper bounds for the meeting-date buckets (meetings are future-dated, so a
+    // gte-only filter would count next week's meeting as "this week").
+    const todayEndISO = new Date(new Date(todayISO).getTime() + 86400000).toISOString();
+    const weekEndISO = new Date(new Date(weekISO).getTime() + 7 * 86400000).toISOString();
+    const md = new Date(monthISO);
+    const monthEndISO = new Date(Date.UTC(md.getUTCFullYear(), md.getUTCMonth() + 1, 1, 4, 0, 0)).toISOString();
 
-    const psb = prospectingClient(); // lead_calls is in the prospecting schema
+    const psb = prospectingClient(); // lead_calls + leads live in the prospecting schema
     const [
         dialsToday, dialsWeek, dialsMonth, dialsAll,
         meetingsToday, meetingsWeek, meetingsMonth, meetingsAll,
@@ -110,10 +125,10 @@ module.exports = async function handler(req, res) {
         countCalls(psb, filterEmail, weekISO),
         countCalls(psb, filterEmail, monthISO),
         countCalls(psb, filterEmail, null),
-        countMeetingsBooked(psb, filterEmail, todayISO),
-        countMeetingsBooked(psb, filterEmail, weekISO),
-        countMeetingsBooked(psb, filterEmail, monthISO),
-        countMeetingsBooked(psb, filterEmail, null),
+        countMeetingsBooked(psb, filterEmail, todayISO, todayEndISO),
+        countMeetingsBooked(psb, filterEmail, weekISO, weekEndISO),
+        countMeetingsBooked(psb, filterEmail, monthISO, monthEndISO),
+        countMeetingsBooked(psb, filterEmail, null, null),
         uniqueLeadsContacted(psb, filterEmail, todayISO),
         uniqueLeadsContacted(psb, filterEmail, null)
     ]);
