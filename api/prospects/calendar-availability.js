@@ -17,8 +17,9 @@ const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_U
 const { createClient } = require('@supabase/supabase-js');
 
 // Mon–Fri, 10:00am–7:00pm ET. Slot start times sit on a 30-minute grid. Every
-// booked meeting also blocks any slot within BUFFER_MIN minutes of it on both
-// sides, so there is always at least an hour of breathing room between meetings.
+// booked meeting blocks any slot within BUFFER_MIN minutes of its start time, so
+// the calendar frees exactly one hour after a meeting: a 10:00 meeting opens 11:00,
+// and back-to-back 10:00 + 11:00 meetings open 12:00.
 const SLOT_MIN = 30;
 const BUFFER_MIN = 60;      // required free gap between a slot and any meeting
 const BIZ_START_HOUR = 10;  // 10am ET
@@ -101,8 +102,10 @@ module.exports = async function handler(req, res) {
             });
         } catch (_) { /* DB busy is a safety net; never block availability on it */ }
 
-        // A slot is free only if it is at least BUFFER_MIN minutes clear of every
-        // busy block on both sides (an hour of breathing room around each meeting).
+        // A slot is free unless it overlaps a meeting, or starts within one hour
+        // of a meeting's start time. So the calendar opens exactly one hour after
+        // a meeting starts (10:00 meeting -> 11:00 free), and consecutive meetings
+        // push the next opening out an hour each (10:00 + 11:00 -> 12:00 free).
         const BUFFER_MS = BUFFER_MIN * 60000;
         const free = candidateSlots.filter(function (s) {
             const sStart = new Date(s.start).getTime();
@@ -110,7 +113,7 @@ module.exports = async function handler(req, res) {
             return !busy.some(function (b) {
                 const bStart = new Date(b.start).getTime();
                 const bEnd = new Date(b.end).getTime();
-                return sStart < bEnd + BUFFER_MS && sEnd > bStart - BUFFER_MS;
+                return (sStart < bEnd && sEnd > bStart) || Math.abs(sStart - bStart) < BUFFER_MS;
             });
         });
 
