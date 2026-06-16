@@ -14,11 +14,13 @@
  */
 const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
 const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL } = require('./_google_calendar');
+const { createClient } = require('@supabase/supabase-js');
 
-// Matches Remy's Google booking page ("STILO AI PARTNERS MEETING"):
-// Mon–Fri, 10:00am–7:00pm ET, 15-minute appointments. Weekends are skipped
-// in generateBusinessSlots (Sun/Sat unavailable on the booking page too).
-const SLOT_MIN = 15;
+// Mon–Fri, 10:00am–7:00pm ET. Slot start times sit on a 30-minute grid. Every
+// booked meeting also blocks any slot within BUFFER_MIN minutes of it on both
+// sides, so there is always at least an hour of breathing room between meetings.
+const SLOT_MIN = 30;
+const BUFFER_MIN = 60;      // required free gap between a slot and any meeting
 const BIZ_START_HOUR = 10;  // 10am ET
 const BIZ_END_HOUR = 19;    // 7pm ET
 const TZ_OFFSET_HOURS = 4;  // ET = UTC-4 (DST); -5 in winter; close enough for slot generation
@@ -77,15 +79,38 @@ module.exports = async function handler(req, res) {
         });
         if (!fb.ok) throw new Error('freebusy_failed: ' + (await fb.text()).slice(0, 200));
         const fbData = await fb.json();
-        const busy = (fbData.calendars && fbData.calendars.primary && fbData.calendars.primary.busy) || [];
+        const busy = ((fbData.calendars && fbData.calendars.primary && fbData.calendars.primary.busy) || []).slice();
 
+        // Also treat meetings booked in our own DB as busy. Dashboard bookings
+        // create real Calendar events (so freeBusy already has them), but meetings
+        // set manually (reschedules, fixes, anything booked while the calendar was
+        // disconnected) may not be on Google. Pulling them in guarantees the buffer
+        // applies to every booked meeting, not just the ones Google knows about.
+        try {
+            const psb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+                auth: { persistSession: false }, db: { schema: 'prospecting' }
+            });
+            const { data: dbMeetings } = await psb.from('leads')
+                .select('meeting_scheduled_at, meeting_duration_min')
+                .not('meeting_scheduled_at', 'is', null)
+                .gte('meeting_scheduled_at', candidateSlots[0].start)
+                .lte('meeting_scheduled_at', candidateSlots[candidateSlots.length - 1].end);
+            (dbMeetings || []).forEach(function (m) {
+                const ms = new Date(m.meeting_scheduled_at).getTime();
+                busy.push({ start: new Date(ms).toISOString(), end: new Date(ms + (Number(m.meeting_duration_min) || 15) * 60000).toISOString() });
+            });
+        } catch (_) { /* DB busy is a safety net; never block availability on it */ }
+
+        // A slot is free only if it is at least BUFFER_MIN minutes clear of every
+        // busy block on both sides (an hour of breathing room around each meeting).
+        const BUFFER_MS = BUFFER_MIN * 60000;
         const free = candidateSlots.filter(function (s) {
             const sStart = new Date(s.start).getTime();
             const sEnd = new Date(s.end).getTime();
             return !busy.some(function (b) {
                 const bStart = new Date(b.start).getTime();
                 const bEnd = new Date(b.end).getTime();
-                return sStart < bEnd && sEnd > bStart; // overlap
+                return sStart < bEnd + BUFFER_MS && sEnd > bStart - BUFFER_MS;
             });
         });
 
