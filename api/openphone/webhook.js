@@ -342,7 +342,8 @@ module.exports = async function handler(req, res) {
     // them out of round-robin lead assignment and the commission leaderboard.
     const OWNER_LINE_TO_EMAIL = {
         '+17868376639': 'remyleon@stiloaipartners.com',  // (786) 837-6639 — Remy Leon
-        '+17865742922': 'davidcoira@stiloaipartners.com' // (786) 574-2922 — David Coira
+        '+17865742922': 'davidcoira@stiloaipartners.com', // (786) 574-2922 — David Coira
+        '+17547075311': 'davidcoira@stiloaipartners.com'  // (754) 707-5311 — David Coira (new Quo line)
     };
     const metadataLoggedBy = (call.metadata && call.metadata.logged_by) || null;
     if (metadataLoggedBy) {
