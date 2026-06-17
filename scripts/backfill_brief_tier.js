@@ -25,7 +25,12 @@ try {
 } catch (e) { /* env may already be set */ }
 
 const BUCKET = 'cold-call-briefs';
-const FOLDERS = ['rep-a', 'rep-b', 'rep-c'];
+// rep-a/b/c are the SDR folders; dc/rl are David's owner-loan brief folders
+// (David Coira / Remy Leon, added 2026-06-08). Owner folders are listed LAST so
+// that when a lead is briefed in both a rep folder and an owner folder, the
+// owner's tier wins (matching backfill_script_flag.js's owner-last assignment).
+// Without dc/rl here, every owner-assigned scripted lead showed up untiered.
+const FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'dc', 'rl'];
 
 function slugify(input) {
     if (!input) return '';
@@ -69,10 +74,20 @@ async function mapLimit(items, limit, fn) {
     console.log('parsed tiers for ' + Object.keys(slugTier).length + ' briefs');
 
     // 2. Match scripted leads to a brief slug and stamp brief_tier.
-    const { data: leads, error: leadErr } = await sb.from('leads')
-        .select('id, name, brief_tier').eq('has_cold_call_script', true).limit(5000);
-    if (leadErr) { console.error('leads', leadErr.message); process.exit(1); }
-    console.log('scripted leads: ' + (leads || []).length);
+    //    PostgREST caps a single response at ~1000 rows regardless of .limit(),
+    //    which previously left every scripted lead past the 1000th untiered.
+    //    Page through with .range() so all callable leads get stamped.
+    const leads = [];
+    for (let from = 0; ; from += 1000) {
+        const { data, error: leadErr } = await sb.from('leads')
+            .select('id, name, brief_tier').eq('has_cold_call_script', true)
+            .order('id', { ascending: true }).range(from, from + 999);
+        if (leadErr) { console.error('leads', leadErr.message); process.exit(1); }
+        if (!data || !data.length) break;
+        leads.push(...data);
+        if (data.length < 1000) break;
+    }
+    console.log('scripted leads: ' + leads.length);
 
     let matched = 0, updated = 0, unmatched = 0;
     const updates = [];

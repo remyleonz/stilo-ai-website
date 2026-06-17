@@ -1102,7 +1102,12 @@
         // sdr_id=<id> so the SDR-scoped APIs (already admin-aware via
         // api/sdr/_shared.js resolveScope) return that SDR's data.
         var CURRENT = { session: null, sdr: null, impersonateSdrId: null, isImpersonating: false };
-        var STATE = { leadsSubtab: 'callable', historyRange: 'week', tierFilter: '' };
+        // lastTouchDir: null = default (tier/score) order, 'desc' = newest
+        // last-touch first, 'asc' = oldest first. Persisted so the rep's sort
+        // survives logging a call + advancing to the next lead. currentRows holds
+        // the rows behind the standard lead table so advance can step through
+        // them in the exact order the rep is looking at.
+        var STATE = { leadsSubtab: 'callable', historyRange: 'week', tierFilter: '', lastTouchDir: null, currentRows: [] };
 
         /* ===== AUTH ===== */
         (async function init() {
@@ -1609,10 +1614,16 @@
         // Standard lead table (Business / Owner / Phone / Niche / Tier / Last
         // touch). Shared by the subtab lists and the search results.
         function standardLeadTableHtml(rows) {
+            // Remember the rows behind this table so the "Last touch" sort and
+            // the rapid-fire advance both step through the same set.
+            STATE.currentRows = rows || [];
+            // Render in the rep's persisted last-touch order (no-op when unset).
+            const display = applyLastTouchSortSdr(STATE.currentRows);
+            const sortArrow = STATE.lastTouchDir === 'desc' ? ' ↓' : STATE.lastTouchDir === 'asc' ? ' ↑' : '';
             let html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th>'
-                + '<th onclick="sortLeadsByLastTouch(this)" style="cursor:pointer;user-select:none;white-space:nowrap;" title="Sort by last touched">Last touch<span class="sort-arrow"></span></th>'
+                + '<th onclick="sortLeadsByLastTouch(this)" style="cursor:pointer;user-select:none;white-space:nowrap;" title="Sort by last touched">Last touch<span class="sort-arrow">' + sortArrow + '</span></th>'
                 + '</tr></thead><tbody>';
-            rows.slice(0, 200).forEach(function (r) {
+            display.slice(0, 200).forEach(function (r) {
                 const tier = String(r.prospect_tier || '').toLowerCase();
                 const lastRaw = r.last_called_at || r.meeting_scheduled_at || null;
                 const ms = tsToMs(lastRaw);
@@ -1646,22 +1657,29 @@
             if (ms == null) return '—';
             return new Date(ms).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
         }
-        // Click the "Last touch" header to sort the rendered rows by timestamp.
-        // First click → newest first (what reps want), second → oldest first.
-        function sortLeadsByLastTouch(th) {
-            const table = th.closest('table'); if (!table || !table.tBodies[0]) return;
-            const tbody = table.tBodies[0];
-            const dir = th.getAttribute('data-dir') === 'desc' ? 'asc' : 'desc';
-            th.setAttribute('data-dir', dir);
-            const arrow = th.querySelector('.sort-arrow');
-            if (arrow) arrow.textContent = dir === 'desc' ? ' ↓' : ' ↑';
-            const trs = Array.prototype.slice.call(tbody.rows);
-            trs.sort(function (a, b) {
-                let av = parseFloat(a.getAttribute('data-lastts')); if (isNaN(av)) av = -Infinity;
-                let bv = parseFloat(b.getAttribute('data-lastts')); if (isNaN(bv)) bv = -Infinity;
+        // Last-touch ordering is a PERSISTED preference, not a one-off DOM
+        // shuffle. The old version reordered <tr> nodes in place, so the next
+        // re-render (logging a call) wiped it and the rep had to re-click every
+        // time. Now we store the direction and re-render the data sorted, so the
+        // order sticks and the rapid-fire advance steps through the same order.
+        function lastTouchMsSdr(r) {
+            const v = tsToMs(r.last_called_at || r.meeting_scheduled_at);
+            return v == null ? -Infinity : v;
+        }
+        function applyLastTouchSortSdr(rows) {
+            if (!STATE.lastTouchDir || !rows || !rows.length) return rows || [];
+            const dir = STATE.lastTouchDir;
+            return rows.slice().sort(function (a, b) {
+                const av = lastTouchMsSdr(a), bv = lastTouchMsSdr(b);
                 return dir === 'desc' ? bv - av : av - bv;
             });
-            trs.forEach(function (r) { tbody.appendChild(r); });
+        }
+        // Click the "Last touch" header to sort. First click → newest first
+        // (what reps want), second → oldest first.
+        function sortLeadsByLastTouch(th) {
+            STATE.lastTouchDir = STATE.lastTouchDir === 'desc' ? 'asc' : 'desc';
+            const wrap = document.getElementById('leadsTableWrap');
+            if (wrap && STATE.currentRows) wrap.innerHTML = standardLeadTableHtml(STATE.currentRows);
         }
 
         // Lead search bar: queries business name, owner name, or phone across
@@ -2337,10 +2355,51 @@
                 const endpoint = outcome === 'called' ? '/api/prospects/log-dial' : '/api/prospects/log-call';
                 const body = Object.assign({ id: leadId, lead_id: leadId, outcome: outcome, notes: note }, extra || {});
                 await fetchJSON(endpoint, { method: 'POST', body: JSON.stringify(body) });
-                closeLeadDrawer();
-                loadLeads();
-                loadOverview();
+                // Rapid-fire mode on the Cold Call queue: keep the rep's sort
+                // order and auto-open the NEXT lead in the order they're looking
+                // at, instead of a full reload that resets the sort and scroll
+                // position (the bug reps hit: the sort "deactivated" after every
+                // call). A bare logged dial ('called') keeps the lead in the list;
+                // a real outcome removes it. Other subtabs fall back to a reload.
+                if (STATE.leadsSubtab === 'callable' && !STATE.searchActive && Array.isArray(STATE.currentRows) && STATE.currentRows.length) {
+                    advanceSdrToNext(leadId, outcome !== 'called');
+                    loadLeadsStats();
+                    loadOverview();
+                } else {
+                    closeLeadDrawer();
+                    loadLeads();
+                    loadOverview();
+                }
             } catch (e) { outcomeMsg('Log failed: ' + (e.message || 'unknown'), 'var(--red)'); }
+        }
+
+        // Step to the next lead in the rep's DISPLAYED order. removeRow=true drops
+        // the handled lead from the queue first (a real outcome moved it out of
+        // cold-call); removeRow=false keeps it (a bare logged dial). Re-renders
+        // the table so the sort + the now-shorter queue stay correct, then opens
+        // the next lead's panel. End of the queue → just close the drawer.
+        function advanceSdrToNext(leadId, removeRow) {
+            // Flush any unsaved drawer notes for the lead we're leaving.
+            try { if (_notesDirty && _notesLeadId) saveNotesNow(_notesLeadId); } catch (e) {}
+            const rows = STATE.currentRows || [];
+            // Capture the next lead BEFORE mutating — when no sort is active
+            // applyLastTouchSortSdr returns the same array reference, so reading
+            // display[idx+1] after a splice would skip a lead.
+            const display = applyLastTouchSortSdr(rows);
+            const dispIdx = display.findIndex(function (r) { return String(r.id) === String(leadId); });
+            const nextLead = dispIdx >= 0 ? display[dispIdx + 1] : null;
+            const nextId = (nextLead && nextLead.id != null) ? nextLead.id : null;
+            if (removeRow) {
+                const di = rows.findIndex(function (r) { return String(r.id) === String(leadId); });
+                if (di >= 0) rows.splice(di, 1);
+            }
+            const wrap = document.getElementById('leadsTableWrap');
+            if (wrap) wrap.innerHTML = rows.length ? standardLeadTableHtml(rows) : '<div class="empty-state">No leads in this view yet.</div>';
+            if (nextId != null) {
+                setTimeout(function () { openLeadDrawer(nextId); }, 180);
+            } else {
+                closeLeadDrawer();
+            }
         }
 
         // ── Call in Quo (opens the Quo app pre-filled; web fallback) ──

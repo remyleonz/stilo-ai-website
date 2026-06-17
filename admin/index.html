@@ -4690,6 +4690,11 @@
             // overwrites this with the signed-in user before any fetch fires.
             filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '', historyRange: 'all' },
             rows: [],
+            // null = default (tier/score) order; 'desc' = newest last-touch first;
+            // 'asc' = oldest first. Persisted so the rep's "Last touch" sort
+            // survives every re-render (logging a call, advancing, cache refresh)
+            // instead of evaporating the moment the table redraws.
+            lastTouchDir: null,
             currentLeadId: null,
             deadPage: 1,
             searchDebounce: null,
@@ -5438,26 +5443,43 @@
         }
         // Click a "Last …" header to sort the rendered rows by timestamp.
         // First click → newest first, second → oldest first.
-        function sortProspectByLastTouch(th) {
-            var table = th.closest('table'); if (!table || !table.tBodies[0]) return;
-            var tbody = table.tBodies[0];
-            var dir = th.getAttribute('data-dir') === 'desc' ? 'asc' : 'desc';
-            th.setAttribute('data-dir', dir);
-            var arrow = th.querySelector('.sort-arrow');
-            if (arrow) arrow.textContent = dir === 'desc' ? ' ↓' : ' ↑';
-            var trs = Array.prototype.slice.call(tbody.rows);
-            trs.sort(function (a, b) {
-                var av = parseFloat(a.getAttribute('data-lastts')); if (isNaN(av)) av = -Infinity;
-                var bv = parseFloat(b.getAttribute('data-lastts')); if (isNaN(bv)) bv = -Infinity;
+        // Last-touch ordering is a PERSISTED preference, not a one-off DOM
+        // shuffle. The old version reordered <tr> nodes in place, so the data
+        // array (prospectState.rows) stayed in tier/score order — which meant
+        // (a) the next re-render wiped the sort, and (b) advanceToNextProspect
+        // opened the next lead in DATA order, not the order the rep was looking
+        // at. Now we sort the data and re-render, so display and advance always
+        // agree. Matches each row's data-lastts: last_called_at, then the
+        // contacted/emailed fallbacks used for the non-callable tabs.
+        function lastTouchMs(r) {
+            var v = tsToMsP(r.last_called_at || r.last_contacted_at || r.last_emailed_at);
+            return v == null ? -Infinity : v;
+        }
+        function applyLastTouchSort(rows) {
+            if (!prospectState.lastTouchDir || !rows || !rows.length) return rows;
+            var dir = prospectState.lastTouchDir;
+            return rows.slice().sort(function (a, b) {
+                var av = lastTouchMs(a), bv = lastTouchMs(b);
                 return dir === 'desc' ? bv - av : av - bv;
             });
-            trs.forEach(function (r) { tbody.appendChild(r); });
+        }
+        function activeProspectHostId() {
+            return prospectState.tab === 'emailable' ? 'prospectTableEmailable' : 'prospectTableCallable';
+        }
+        function sortProspectByLastTouch(th) {
+            prospectState.lastTouchDir = prospectState.lastTouchDir === 'desc' ? 'asc' : 'desc';
+            var host = document.getElementById(activeProspectHostId());
+            if (host) host.innerHTML = renderProspectTable(prospectState.rows, prospectState.tab);
         }
 
         function renderProspectTable(rows, mode) {
             if (!rows || !rows.length) {
                 return '<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px;">No prospects in this view.</div>';
             }
+            // Display in the rep's persisted last-touch order (no-op when unset),
+            // so the sort sticks across every redraw and matches advance order.
+            rows = applyLastTouchSort(rows);
+            var sortArrow = prospectState.lastTouchDir === 'desc' ? ' ↓' : prospectState.lastTouchDir === 'asc' ? ' ↑' : '';
             var th = 'text-align:left;padding:10px 14px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);background:rgba(37,99,235,0.04);white-space:nowrap;';
             var thNarrow = th + 'width:1px;';
             // my-history and my-history-all reuse the calls-today row template
@@ -5478,6 +5500,8 @@
             } else {
                 head = '<tr><th style="' + thNarrow + '">Tier</th><th style="' + th + '">Business</th><th style="' + thNarrow + '">Owner</th><th style="' + thNarrow + '">Phone</th><th style="' + thNarrow + '">Niche</th><th style="' + thNarrow + '">Stage</th><th style="' + thNarrow + 'cursor:pointer;user-select:none;" onclick="sortProspectByLastTouch(this)" title="Sort by last called">Last called<span class="sort-arrow"></span></th></tr>';
             }
+            // Show the active sort direction on whichever header is sortable.
+            if (sortArrow) head = head.replace(/<span class="sort-arrow"><\/span>/g, '<span class="sort-arrow">' + sortArrow + '</span>');
             var body = rows.map(function(r) {
                 var id = r.id != null ? r.id : r.lead_id;
                 var business = r.business_name || r.business || r.name || '—';
@@ -7781,17 +7805,17 @@
                         body: JSON.stringify({ lead_id: leadId, notes: notes || null })
                     });
                     markRowDialedNow(leadId, dialResp && dialResp.call_attempts);
-                    // dialOnly: lead stays in the list, dimmed at bottom.
-                    // Do NOT splice it out (advanceToNextProspect would remove it).
+                    // dialOnly: the lead STAYS in the list (dimmed), so we don't
+                    // remove it — but we still advance to the NEXT lead in the
+                    // rep's displayed (last-touch) order for rapid-fire dialing.
                     closeProspectDrawer();
                     prospectState.cache.callable = null;
                     loadProspectStats();
-                    var nextRows = prospectState.rows || [];
-                    var nextLead = nextRows.find(function(r) {
-                        return String(r.id != null ? r.id : r.lead_id) !== String(leadId);
-                    });
-                    if (nextLead) {
-                        var nid = nextLead.id != null ? nextLead.id : nextLead.lead_id;
+                    var dispDial = applyLastTouchSort(prospectState.rows || []);
+                    var di = dispDial.findIndex(function(r){ return String(r.id != null ? r.id : r.lead_id) === String(leadId); });
+                    var nextDial = di >= 0 ? dispDial[di + 1] : null;
+                    if (nextDial) {
+                        var nid = nextDial.id != null ? nextDial.id : nextDial.lead_id;
                         setTimeout(function(){ openProspectDrawer(nid, 'callable'); }, 200);
                     }
                 } catch (e) {
@@ -7901,12 +7925,21 @@
 
         function advanceToNextProspect(currentId) {
             var rows = prospectState.rows || [];
-            var idx = rows.findIndex(function(r){ var rid = r.id != null ? r.id : r.lead_id; return String(rid) === String(currentId); });
-            // Optimistically drop the row.
-            if (idx >= 0) rows.splice(idx, 1);
-            // Re-render the visible table so the row disappears.
-            var hostId = prospectState.tab === 'emailable' ? 'prospectTableEmailable' : 'prospectTableCallable';
-            document.getElementById(hostId).innerHTML = renderProspectTable(rows, prospectState.tab);
+            // The next lead must come from the order the rep is LOOKING AT (their
+            // last-touch sort), not the raw fetch order. Capture it BEFORE the
+            // splice — when no sort is active applyLastTouchSort returns the same
+            // array reference, so reading display[idx+1] after the splice would
+            // skip a lead.
+            var display = applyLastTouchSort(rows);
+            var dispIdx = display.findIndex(function(r){ var rid = r.id != null ? r.id : r.lead_id; return String(rid) === String(currentId); });
+            var nextLead = dispIdx >= 0 ? display[dispIdx + 1] : null;
+            var nextId = nextLead ? (nextLead.id != null ? nextLead.id : nextLead.lead_id) : null;
+            // Optimistically drop the handled lead from the data set.
+            var dataIdx = rows.findIndex(function(r){ var rid = r.id != null ? r.id : r.lead_id; return String(rid) === String(currentId); });
+            if (dataIdx >= 0) rows.splice(dataIdx, 1);
+            // Re-render the visible table (renderProspectTable re-applies the sort).
+            var hostEl = document.getElementById(activeProspectHostId());
+            if (hostEl) hostEl.innerHTML = renderProspectTable(rows, prospectState.tab);
             closeProspectDrawer();
             // The lead just moved lifecycle stages. Bust every per-tab cache
             // so the next switch fetches fresh, and refresh the queue
@@ -7916,11 +7949,10 @@
             prospectState.cache.callbacks = null;
             prospectState.cache.booked = null;
             loadProspectStats();
-            // Auto-open next row for rapid-fire mode.
-            var next = rows[idx] || rows[0];
-            if (next) {
-                var nid = next.id != null ? next.id : next.lead_id;
-                setTimeout(function(){ openProspectDrawer(nid, prospectState.tab); }, 200);
+            // Auto-open the next lead in DISPLAYED order for rapid-fire mode.
+            // End of the queue → leave the drawer closed.
+            if (nextId != null) {
+                setTimeout(function(){ openProspectDrawer(nextId, prospectState.tab); }, 200);
             }
         }
 

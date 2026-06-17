@@ -162,10 +162,21 @@ async function main() {
         }
         all.filter(x => !x.scripted).forEach(x => awaitingRows.push({ lead_id: x.id, assigned_to: email, business_name: x.name }));
     }
+    // awaiting_script has a PRIMARY KEY on lead_id, so a lead briefed in two
+    // folders (or awaiting in a rep folder but scripted in an owner folder) can't
+    // be inserted twice. Dedupe by lead_id — and never list a lead as awaiting if
+    // it actually has a script under ANY folder. Owner folders are appended last,
+    // so the Map keeps the owner's assignment on collision.
+    const scriptedEverywhere = new Set();
+    for (const folder of Object.keys(updates)) updates[folder].filter(x => x.scripted).forEach(x => scriptedEverywhere.add(x.id));
+    const awaitingById = new Map();
+    for (const row of awaitingRows) { if (!scriptedEverywhere.has(row.lead_id)) awaitingById.set(row.lead_id, row); }
+    const awaitingDeduped = [...awaitingById.values()];
     // Refresh the awaiting-script snapshot.
     await leads.from('awaiting_script').delete().gte('lead_id', 0);
-    for (let i = 0; i < awaitingRows.length; i += 200) {
-        const { error } = await leads.from('awaiting_script').insert(awaitingRows.slice(i, i + 200));
+    for (let i = 0; i < awaitingDeduped.length; i += 200) {
+        const { error } = await leads.from('awaiting_script')
+            .upsert(awaitingDeduped.slice(i, i + 200), { onConflict: 'lead_id', ignoreDuplicates: true });
         if (error) console.error('awaiting insert err', error.message);
     }
 
