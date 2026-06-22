@@ -1867,6 +1867,7 @@
                     <div id="teamRangeFilter" style="display:inline-flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(37,99,235,0.18);border-radius:10px;padding:3px;">
                       <button type="button" data-range="today" onclick="setTeamRange('today')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Today</button>
                       <button type="button" data-range="week" onclick="setTeamRange('week')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">This week</button>
+                      <button type="button" data-range="month" onclick="setTeamRange('month')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">This month</button>
                       <button type="button" data-range="last_week" onclick="setTeamRange('last_week')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Last week</button>
                       <button type="button" data-range="last_month" onclick="setTeamRange('last_month')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Last month</button>
                     </div>
@@ -4223,7 +4224,7 @@
         // locally when the range changes (no refetch).
         var teamRange = 'today';
         var teamData = [];
-        var TEAM_RANGE_LABEL = { today: 'Today', week: 'This week', last_week: 'Last week', last_month: 'Last month' };
+        var TEAM_RANGE_LABEL = { today: 'Today', week: 'This week', month: 'This month', last_week: 'Last week', last_month: 'Last month' };
 
         function setTeamRange(range) {
             teamRange = range;
