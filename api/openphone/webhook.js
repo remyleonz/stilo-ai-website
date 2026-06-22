@@ -33,6 +33,30 @@ function deriveOutcome(callPayload) {
     return 'answered';
 }
 
+// Voicemail greeting patterns (EN + ES). A transcript that OPENS with one of
+// these means a machine picked up, not a person, even when the call "completed"
+// with a 20-40s duration because the rep left a message. This is the fallback
+// for when the provider doesn't flag voicemail itself. Checked against the start
+// of the transcript only, so a caller saying "leave me a message" mid-convo
+// doesn't trip it.
+const VM_PATTERNS = [
+    /you'?ve reached/i,
+    /please leave (a|your)( detailed)? message/i,
+    /leave (a|your) (message|name and number) (after|at)/i,
+    /(unable|can'?t|cannot|not able) to (take|answer) your call/i,
+    /the person you (are|'?re) trying to reach/i,
+    /(mailbox|voice ?mail)( box)? is full/i,
+    /not available to take your call/i,
+    /at the (tone|beep)/i,
+    /record your message/i,
+    /buz[oó]n de voz|deje (su|un) mensaje|no (est[aá]|se encuentra) disponible|despu[eé]s (del|de la) (tono|se[nñ]al)/i
+];
+function looksLikeVoicemail(text) {
+    if (!text || typeof text !== 'string') return false;
+    const head = text.slice(0, 400);
+    return VM_PATTERNS.some(function (re) { return re.test(head); });
+}
+
 // Quo doesn't ship a `duration` field on the call.completed event — only
 // `answeredAt` + `completedAt` (and `createdAt` for the ring window). Derive
 // talk-time in seconds. For unanswered calls return 0 so the agent can
@@ -537,6 +561,17 @@ module.exports = async function handler(req, res) {
                     return (t.identifier || t.userId || '?') + ': ' + (t.content || '');
                 }).join('\n');
             }
+        }
+
+        // Voicemail fallback: if the transcript/summary opens with a voicemail
+        // greeting, a machine answered, not a person. Reclassify so voicemails
+        // never count as connects. Only overrides an auto outcome, never a manual
+        // human outcome (booked, not interested, callback, etc.).
+        const vmText = baseFields.transcript || baseFields.transcript_summary || '';
+        if (vmText && looksLikeVoicemail(vmText)) {
+            const curOutcome = baseFields.outcome || (existingRow && existingRow.outcome) || null;
+            const autoOutcomes = ['answered', 'voicemail', 'no_answer', 'missed_inbound'];
+            if (!curOutcome || autoOutcomes.indexOf(curOutcome) !== -1) baseFields.outcome = 'voicemail';
         }
 
         // Reverse-merge path: if the SDR logged this call manually faster
