@@ -58,10 +58,11 @@ function startOfMonthISO() {
     return new Date(firstOfMonth + 'T00:00:00-04:00').toISOString();
 }
 
-async function countCalls(sb, email, sinceISO) {
+async function countCalls(sb, email, sinceISO, untilISO) {
     let q = sb.from('lead_calls').select('id', { count: 'exact', head: true });
     if (email) q = q.eq('logged_by', email);
     if (sinceISO) q = q.gte('called_at', sinceISO);
+    if (untilISO) q = q.lt('called_at', untilISO);
     const { count } = await q;
     return count || 0;
 }
@@ -114,21 +115,30 @@ module.exports = async function handler(req, res) {
     const weekEndISO = new Date(new Date(weekISO).getTime() + 7 * 86400000).toISOString();
     const md = new Date(monthISO);
     const monthEndISO = new Date(Date.UTC(md.getUTCFullYear(), md.getUTCMonth() + 1, 1, 4, 0, 0)).toISOString();
+    // Last week = the prior Mon-Sun calendar week. Last month = the prior calendar month.
+    const lastWeekISO = new Date(new Date(weekISO).getTime() - 7 * 86400000).toISOString();
+    const lastWeekEndISO = weekISO; // start of this week is the end of last week
+    const lastMonthISO = new Date(Date.UTC(md.getUTCFullYear(), md.getUTCMonth() - 1, 1, 4, 0, 0)).toISOString();
+    const lastMonthEndISO = monthISO; // start of this month is the end of last month
 
     const psb = prospectingClient(); // lead_calls + leads live in the prospecting schema
     const [
-        dialsToday, dialsWeek, dialsMonth, dialsAll,
-        meetingsToday, meetingsWeek, meetingsMonth, meetingsAll,
+        dialsToday, dialsWeek, dialsMonth, dialsAll, dialsLastWeek, dialsLastMonth,
+        meetingsToday, meetingsWeek, meetingsMonth, meetingsAll, meetingsLastWeek, meetingsLastMonth,
         uniqueToday, uniqueAll
     ] = await Promise.all([
         countCalls(psb, filterEmail, todayISO),
         countCalls(psb, filterEmail, weekISO),
         countCalls(psb, filterEmail, monthISO),
         countCalls(psb, filterEmail, null),
+        countCalls(psb, filterEmail, lastWeekISO, lastWeekEndISO),
+        countCalls(psb, filterEmail, lastMonthISO, lastMonthEndISO),
         countMeetingsBooked(psb, filterEmail, todayISO, todayEndISO),
         countMeetingsBooked(psb, filterEmail, weekISO, weekEndISO),
         countMeetingsBooked(psb, filterEmail, monthISO, monthEndISO),
         countMeetingsBooked(psb, filterEmail, null, null),
+        countMeetingsBooked(psb, filterEmail, lastWeekISO, lastWeekEndISO),
+        countMeetingsBooked(psb, filterEmail, lastMonthISO, lastMonthEndISO),
         uniqueLeadsContacted(psb, filterEmail, todayISO),
         uniqueLeadsContacted(psb, filterEmail, null)
     ]);
@@ -154,13 +164,17 @@ module.exports = async function handler(req, res) {
             today: dialsToday,
             week: dialsWeek,
             month: dialsMonth,
-            all: dialsAll
+            all: dialsAll,
+            last_week: dialsLastWeek,
+            last_month: dialsLastMonth
         },
         meetings_booked: {
             today: meetingsToday,
             week: meetingsWeek,
             month: meetingsMonth,
-            all: meetingsAll
+            all: meetingsAll,
+            last_week: meetingsLastWeek,
+            last_month: meetingsLastMonth
         },
         unique_leads: {
             today: uniqueToday,
