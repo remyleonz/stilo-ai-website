@@ -74,6 +74,45 @@ async function sendConfirmationEmail(opts) {
     return { status: r.status, id: json.id, error: r.ok ? null : (json.message || 'send_failed') };
 }
 
+// Internal heads-up to the STILO inbox on every booking. Google never emails the
+// organizer their own event, so without this the team never gets a confirmation.
+// Sends to STILO_NOTIFY_EMAIL (falls back to the sender address).
+async function sendInternalNotification(opts) {
+    if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
+    const toEmail = process.env.STILO_NOTIFY_EMAIL || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    const fromName = process.env.STILO_SENDER_NAME || 'STILO AI Partners';
+    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
+    const whenStr = new Intl.DateTimeFormat('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+        timeZoneName: 'short', timeZone: 'America/New_York'
+    }).format(new Date(opts.whenIso));
+    const html = [
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111;font-size:15px;line-height:1.55;">',
+        '<p><strong>New meeting booked.</strong></p>',
+        '<ul style="padding-left:20px;margin:8px 0 16px;">',
+        '<li>Business: <strong>' + escapeHtml(opts.businessName || '') + '</strong></li>',
+        '<li>When: <strong>' + escapeHtml(whenStr) + '</strong></li>',
+        '<li>Booked by: ' + escapeHtml(opts.bookedBy || 'STILO') + '</li>',
+        '<li>Contact: ' + escapeHtml(opts.contact || 'n/a') + (opts.phone ? ' &middot; ' + escapeHtml(opts.phone) : '') + (opts.email ? ' &middot; ' + escapeHtml(opts.email) : '') + '</li>',
+        opts.meetLink ? '<li>Google Meet: <a href="' + escapeHtml(opts.meetLink) + '" style="color:#2563EB;">' + escapeHtml(opts.meetLink) + '</a></li>' : '',
+        '</ul>',
+        '<p style="color:#374151;font-size:13px;">It is on your calendar and the prospect has the invite.</p>',
+        '</div>'
+    ].join('');
+    const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            from: fromName + ' <' + fromEmail + '>',
+            to: [toEmail],
+            subject: 'New meeting booked: ' + (opts.businessName || 'STILO') + ' (' + whenStr + ')',
+            html: html
+        })
+    });
+    const json = await r.json().catch(function () { return {}; });
+    return { status: r.status, id: json.id, error: r.ok ? null : (json.message || 'send_failed') };
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
     const gate = await assertAdminOrSdr(req, res);
@@ -174,6 +213,15 @@ module.exports = async function handler(req, res) {
                 whenIso: startIso, meetLink: meetLink || ''
             });
         } catch (e) { emailResult = { error: String(e.message || e) }; }
+
+        // Internal heads-up so the STILO team gets an email on every booking too
+        // (Google only emails the guest, never the organizer). Best-effort.
+        try {
+            await sendInternalNotification({
+                businessName: businessName, whenIso: startIso, meetLink: meetLink || '',
+                bookedBy: gate.email || null, contact: ownerName, email: ownerEmail, phone: ownerPhone
+            });
+        } catch (e) { /* never block the booking on the internal notification */ }
 
         // Persist Calendar/Meet metadata AND flip the lead lifecycle to
         // booked_meeting in one Supabase write. This is the source of truth
