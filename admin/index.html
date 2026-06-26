@@ -7256,6 +7256,10 @@
                       + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (gets the invite)</label>'
                       + '<input id="prospectBookEmail" type="email" value="' + escapeAdminHtml(d.owner_email || d.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;margin-bottom:10px;">'
                       + '<div id="prospectBookingSlots"></div>'
+                      + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
+                        + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
+                        + '<input id="prospectBookManual" type="datetime-local" onchange="setManualBookSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;">'
+                      + '</div>'
                       + '</div>')
                 + (mode === 'emailable'
                     ? ''
@@ -7543,6 +7547,22 @@
         // Two-step UI: day cards first, then time slots for the selected day.
         // Old all-days-x-all-hours grid was too cluttered.
         var bookingState = { slots: [], selectedIso: null, expandedDay: null, configured: null };
+
+        // Manual far-future date: the slot picker only fetches the next 7 days,
+        // so this lets the operator book a meeting at any date/time (book-meeting
+        // accepts any when_iso). The datetime-local value is the operator's local
+        // time, which for the Miami team is ET.
+        function setManualBookSlot(val) {
+            if (!val) return;
+            var iso = new Date(val).toISOString();
+            bookingState.selectedIso = iso;
+            if (typeof renderBookingSlots === 'function') renderBookingSlots();
+            var msg = document.getElementById('prospectFormMsg');
+            if (msg) {
+                msg.style.color = 'var(--blue)';
+                msg.textContent = 'Manual time: ' + new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET. Click Book + send invite.';
+            }
+        }
 
         async function loadBookingSlots() {
             var host = document.getElementById('prospectBookingSlots');

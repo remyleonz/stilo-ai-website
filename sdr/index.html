@@ -2321,6 +2321,10 @@
                 + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (gets the invite)</label>'
                 + '<input id="sdrBookingEmail" type="email" oninput="updateBookBtn()" value="' + escapeHtml(r.owner_email || r.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;margin-bottom:12px;">'
                 + '<div id="sdrBookingSlots"></div>'
+                + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
+                  + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
+                  + '<input id="sdrBookManual" type="datetime-local" onchange="setManualBookSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">'
+                + '</div>'
                 + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
                 + '<button id="sdrBookBtn" disabled onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'
                 + '</div>';
@@ -2540,6 +2544,22 @@
             if (host) host.style.display = 'block';
             if (host) host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             loadBookingSlots();
+        }
+
+        // Manual far-future date: the slot picker only loads the next 7 days, so
+        // this lets a rep book any date/time (book-meeting accepts any when_iso).
+        // The datetime-local value is the rep's local time (ET for the Miami team).
+        function setManualBookSlot(val) {
+            if (!val) return;
+            var iso = new Date(val).toISOString();
+            if (typeof bookingState === 'undefined' || !bookingState) bookingState = { slots: [], selectedIso: null, expandedDay: null };
+            bookingState.selectedIso = iso;
+            updateBookBtn();
+            var msg = document.getElementById('sdrBookingMsg');
+            if (msg) {
+                msg.style.color = 'var(--blue)';
+                msg.textContent = new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET selected. Enter the email and tap Book.';
+            }
         }
 
         async function loadBookingSlots() {
