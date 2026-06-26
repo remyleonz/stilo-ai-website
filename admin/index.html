@@ -5150,6 +5150,9 @@
                 var act = data.activity || {};
                 var allLeads = data.all_leads_count != null ? data.all_leads_count : (data.callable_ready != null ? data.callable_ready : 0);
                 var calledToday = data.called_today_count != null ? data.called_today_count : (act.calls_today || 0);
+                // "Called today" card shows actual dials made today (matches the Team
+                // tab). calledToday (distinct leads) still feeds the uncalled math below.
+                var dialsToday = data.dials_today_count != null ? data.dials_today_count : calledToday;
                 var callbacksDue = data.callbacks_due_today_count != null ? data.callbacks_due_today_count : (act.callbacks_due_today || 0);
                 var deadPool = data.dead_pool_count != null ? data.dead_pool_count : ((data.tier_counts && data.tier_counts.dead) || 0);
 
@@ -5173,7 +5176,7 @@
                     if (el) el.textContent = Number(n || 0).toLocaleString();
                 };
                 set('workflowCountAll', allLeads);
-                set('workflowCountCalledToday', calledToday);
+                set('workflowCountCalledToday', dialsToday);
                 set('workflowCountCallbacksDue', callbacksDue);
                 set('workflowCountDeadPool', deadPool);
 

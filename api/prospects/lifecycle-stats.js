@@ -159,6 +159,18 @@ async function localStats(sdrEmail) {
             awaitingCount = count || 0;
         } catch (_) { awaitingCount = 0; }
 
+        // True dials today: lead_calls rows logged by this rep (scoped when
+        // sdrEmail is set). The Leads tab "Called today" card uses this so it
+        // matches the Team tab's dial count, instead of the distinct-leads-by-
+        // assignment count (called_today_count) which reads lower.
+        let dialsToday = 0;
+        try {
+            let dq = sb.from('lead_calls').select('id', { count: 'exact', head: true }).gte('called_at', startOfDay.toISOString());
+            if (sdrEmail) dq = dq.eq('logged_by', sdrEmail);
+            const { count } = await dq;
+            dialsToday = count || 0;
+        } catch (_) { dialsToday = 0; }
+
         return {
             tier_counts: {
                 hot:  scopedHot.count  || 0,
@@ -174,6 +186,7 @@ async function localStats(sdrEmail) {
             },
             all_leads_count:            scopedAll.count || 0,
             called_today_count:         scopedCt.count || 0,
+            dials_today_count:          dialsToday,
             callbacks_due_today_count:  scopedCd.count || 0,
             dead_pool_count:            scopedDeadOut.count || 0,
             awaiting_script_count:      awaitingCount,
