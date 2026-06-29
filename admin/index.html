@@ -1711,7 +1711,7 @@
 
                 <!-- Filter bar: search · tier · niche. SDR moved to top-right selector. -->
                 <div id="prospectFilterBar" style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
-                    <input id="prospectSearch" type="search" placeholder="Search business or owner..." oninput="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;width:240px;">
+                    <input id="prospectSearch" type="search" placeholder="Search business, owner, or phone…" oninput="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;width:240px;">
                     <select id="prospectTierFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">
                         <option value="">All tiers</option>
                         <option value="hot">Hot</option>
@@ -5367,6 +5367,35 @@
         // fresh data in the background. Big perf win on tab switches: the
         // user sees the list instantly instead of a spinner. `cacheKey`
         // matches the tab name; pass `force: true` to skip the cache.
+        // Whole-book search. The tab loaders only fetch one queue (callable,
+        // emailable, …) and the booked/dead leads aren't in any of them, so a
+        // client-side filter of the loaded page can't find them (the
+        // "no prospect in view" bug). When the search box has text we hit the
+        // server-side /api/prospects/search (name OR owner_name OR phone across
+        // ALL of this rep's leads, any stage) and render those results.
+        async function loadProspectSearch() {
+            var f = prospectState.filters;
+            var tab = prospectState.tab || 'callable';
+            var hostId = 'prospectTable' + tab.charAt(0).toUpperCase() + tab.slice(1);
+            var host = document.getElementById(hostId) || document.getElementById('prospectTableCallable');
+            if (!host) return;
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Searching all leads…</div>';
+            try {
+                var qs = '?q=' + encodeURIComponent(f.q);
+                if (f.sdr && f.sdr !== 'unassigned') qs += '&assigned_to=' + encodeURIComponent(f.sdr);
+                var data = await prospectFetchJSON('/api/prospects/search' + qs);
+                var rows = data.results || data.leads || [];
+                prospectState.rows = rows;
+                host.innerHTML = rows.length
+                    ? renderProspectTable(rows, tab)
+                    : '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No leads match "' + escapeAdminHtml(f.q) + '" by name, owner, or phone.</div>';
+                populateNicheFilter();
+            } catch (e) {
+                console.error('[prospects/search]', e);
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Search failed: ' + escapeAdminHtml(e.message) + (e.status === 401 ? ' — sign in as an admin.' : '') + '</div>';
+            }
+        }
+
         async function loadProspectCallable(opts) {
             opts = opts || {};
             var host = document.getElementById('prospectTableCallable');
@@ -6538,6 +6567,10 @@
             f.hasEmail = false;
             clearTimeout(prospectState.searchDebounce);
             prospectState.searchDebounce = setTimeout(function(){
+                // A query (>=2 chars) searches the WHOLE book server-side, across
+                // every stage, so booked/dead leads are findable too. Clearing it
+                // restores the current queue.
+                if (f.q && f.q.length >= 2) { loadProspectSearch(); return; }
                 if (prospectState.tab === 'callable') loadProspectCallable();
                 else if (prospectState.tab === 'emailable') loadProspectEmailable();
             }, 200);
