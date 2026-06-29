@@ -148,6 +148,21 @@ module.exports = async function handler(req, res) {
             || ((e.conferenceData && e.conferenceData.entryPoints || []).find(function (p) { return p.entryPointType === 'video'; }) || {}).uri
             || null;
 
+        // Our booking events are titled either "STILO AI PARTNERS MEETING (Full
+        // Name)" or "STILO AI Partners discovery · BUSINESS NAME". When a
+        // prospect books with a personal email we don't have on file (e.g. a
+        // gmail instead of their business address), the email match below fails
+        // and many leads have a null owner_name, so we'd lose the attribution.
+        // Pull the name straight off the event title as an extra match key.
+        const summaryName = (function () {
+            const s = String(e.summary || '');
+            const paren = s.match(/\(([^)]{2,})\)\s*$/);          // "... (Orlando Arroyo)"
+            if (paren) return paren[1].trim();
+            const dot = s.split('·').pop();                        // "... · JOHNNY MORAES DDS"
+            if (dot && dot.trim() !== s.trim()) return dot.trim();
+            return '';
+        })();
+
         const SEL = 'id, name, owner_name, assigned_to, meeting_event_id, last_called_outcome, call_attempts';
         for (const guest of guests) {
             const email = guest.email;
@@ -159,14 +174,21 @@ module.exports = async function handler(req, res) {
                 lead = data && data[0];
             } catch (_) { lead = null; }
             // Fallback: the prospect booked with a different email than we have.
-            // Match the booker's name to a lead's owner_name, but ONLY when it's
-            // unambiguous (exactly one match) so we never attach to the wrong lead.
-            if (!lead && guest.name && guest.name.length > 2) {
-                try {
-                    const { data } = await sb.from('leads').select(SEL)
-                        .ilike('owner_name', '%' + guest.name + '%').limit(2);
-                    if (data && data.length === 1) lead = data[0];
-                } catch (_) { /* keep unmatched */ }
+            // Match a name to a lead's owner_name, but ONLY when it's unambiguous
+            // (exactly one match) so we never attach to the wrong lead. We try
+            // the attendee's display name first, then the name parsed off the
+            // event title, since the booker often has no display name at all.
+            if (!lead) {
+                const nameKeys = [guest.name, summaryName]
+                    .map(function (n) { return (n || '').trim(); })
+                    .filter(function (n) { return n.length > 2; });
+                for (const key of nameKeys) {
+                    try {
+                        const { data } = await sb.from('leads').select(SEL)
+                            .ilike('owner_name', '%' + key + '%').limit(2);
+                        if (data && data.length === 1) { lead = data[0]; break; }
+                    } catch (_) { /* keep trying / unmatched */ }
+                }
             }
             if (!lead) { unmatched.push(guest.name ? (guest.email + ' (' + guest.name + ')') : guest.email); continue; }
             if (lead.meeting_event_id === e.id) continue; // already processed (incl. SDR-booked)

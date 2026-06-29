@@ -110,6 +110,23 @@ async function main() {
     const manifest = await loadManifest();
     console.log('Manifest sales scripts:', manifest.count);
 
+    // 1c. STILO-generated scripts (cold-call-scripts-generated bucket, keyed by
+    //     slug). These are interim scripts we wrote from David's Sage brief when
+    //     he briefed a lead but hadn't shipped the GCS script yet. They count as
+    //     "scripted" so re-running this never drops a lead we hand-scripted. The
+    //     moment David's official GCS script lands, the manifest wins anyway.
+    const generatedSlugs = new Set();
+    try {
+        let goff = 0;
+        for (;;) {
+            const { data, error } = await sb.storage.from('cold-call-scripts-generated').list('', { limit: 1000, offset: goff });
+            if (error || !data || !data.length) break;
+            data.forEach(o => { if (o.name.endsWith('.md')) generatedSlugs.add(o.name.replace(/\.md$/, '').toLowerCase()); });
+            if (data.length < 1000) break; goff += 1000;
+        }
+    } catch (_) { /* bucket may not exist yet; ignore */ }
+    console.log('STILO-generated scripts:', generatedSlugs.size);
+
     // 2. Walk the brief folders, match to leads, note whether a SCRIPT exists.
     const report = {};
     const updates = {};
@@ -129,7 +146,7 @@ async function main() {
                 const lead = bySlug[slug];
                 if (!lead) { unmatched.push(folder + '/' + o.name); continue; }
                 report[folder].matched++;
-                const scripted = manifest.has(lead.name);
+                const scripted = manifest.has(lead.name) || generatedSlugs.has(slugify(lead.name));
                 if (scripted) report[folder].scripted++; else report[folder].awaiting++;
                 updates[folder].push({ id: lead.id, name: lead.name, scripted: scripted });
             }

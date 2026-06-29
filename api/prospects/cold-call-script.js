@@ -209,6 +209,22 @@ async function loadManifest(token) {
     return _manifest;
 }
 
+// STILO-generated scripts. When David has briefed a lead but not yet shipped a
+// GCS script, we generate one from his Sage brief and store it in the Supabase
+// Storage bucket below as `<slug>.md`. This is the LAST fallback (GCS always
+// wins) and is keyed by the same slug, so David's official script supersedes it
+// the moment it lands. NOT the cold-call-briefs bucket — that's raw research.
+const GENERATED_BUCKET = 'cold-call-scripts-generated';
+async function readGeneratedScript(slug) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return null;
+    try {
+        const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+        const { data, error } = await sb.storage.from(GENERATED_BUCKET).download(slug + '.md');
+        if (error || !data) return null;
+        return await data.text();
+    } catch (_) { return null; }
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
     const gate = await assertAdminOrSdr(req, res);
@@ -226,13 +242,14 @@ module.exports = async function handler(req, res) {
     let token = null;
     try { token = await getAccessToken(); }
     catch (e) {
-        if (e.code === 'NO_SA') return res.status(404).json({ error: 'script_not_found', slug: slug });
-        return res.status(502).json({ error: 'gcs_auth_failed', detail: String(e.message || e) });
+        // No GCS service account, or an auth blip: don't 404 yet. Fall through
+        // to the STILO-generated Supabase fallback at the bottom.
+        if (e.code !== 'NO_SA') console.warn('[cold-call-script] gcs auth failed, will try generated fallback:', e.message);
     }
 
     // 1) PRIMARY: the manifest maps business_name → exact script filename, so we
     //    can never grab the wrong file.
-    try {
+    if (token) try {
         const man = await loadManifest(token);
         const entry = (q.business_name && man.byName[String(q.business_name).trim().toLowerCase()])
             || man.bySlug[slug];
@@ -253,7 +270,7 @@ module.exports = async function handler(req, res) {
 
     // 2) SECONDARY: prefix-list for <slug>...-script-<date>.md (a lead not yet in
     //    the manifest). Still GCS scripts only — no brief fallback, ever.
-    try {
+    if (token) try {
         const item = await findScriptByListing(token, slug);
         if (item) {
             const content = await readObject(token, item.name);
@@ -271,6 +288,24 @@ module.exports = async function handler(req, res) {
         console.error('[cold-call-script] listing failed:', e.message);
     }
 
+    // 3) FALLBACK: a STILO-generated script (from David's Sage brief) in Supabase
+    //    Storage. Used until David's official GCS script for this lead lands.
+    try {
+        const gen = await readGeneratedScript(slug);
+        if (gen) {
+            res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
+            return res.status(200).json({
+                slug: slug,
+                filename: GENERATED_BUCKET + '/' + slug + '.md',
+                generated_at: null,
+                content_md: gen,
+                source: 'stilo-generated'
+            });
+        }
+    } catch (e) {
+        console.error('[cold-call-script] generated fallback failed:', e.message);
+    }
+
     return res.status(404).json({ error: 'script_not_found', slug: slug });
 };
 
@@ -284,3 +319,5 @@ module.exports.getAccessToken = getAccessToken;
 module.exports.findScriptByListing = findScriptByListing;
 module.exports.readObject = readObject;
 module.exports.BUCKET = BUCKET;
+module.exports.readGeneratedScript = readGeneratedScript;
+module.exports.GENERATED_BUCKET = GENERATED_BUCKET;
