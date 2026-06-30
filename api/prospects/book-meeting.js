@@ -187,7 +187,11 @@ module.exports = async function handler(req, res) {
             description: contactLines.join('\n'),
             start: { dateTime: startIso, timeZone: 'America/New_York' },
             end: { dateTime: endIso, timeZone: 'America/New_York' },
-            attendees: ownerEmail ? [{ email: ownerEmail, displayName: ownerName || businessName }] : [],
+            // David Coira (cofounder) rides every booked meeting so it lands on
+            // his calendar and he can join, without sharing the whole calendar.
+            // Pre-accepted so it shows confirmed on his side, not "needs response".
+            attendees: [{ email: 'davidcoira@stiloaipartners.com', displayName: 'David Coira (STILO)', responseStatus: 'accepted' }]
+                .concat(ownerEmail ? [{ email: ownerEmail, displayName: ownerName || businessName }] : []),
             conferenceData: { createRequest: { requestId: 'stilo-' + leadId + '-' + Date.now(), conferenceSolutionKey: { type: 'hangoutsMeet' } } },
             reminders: { useDefault: true }
         };

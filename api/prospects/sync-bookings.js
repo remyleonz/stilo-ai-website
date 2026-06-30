@@ -259,6 +259,18 @@ module.exports = async function handler(req, res) {
                 try {
                     await notifyNewBooking({ business: lead.name, owner: lead.owner_name, booker_email: email, booker_name: guest.name, when: start, meet: meetLink, lead_id: lead.id });
                 } catch (_) { /* notification is best-effort */ }
+                // Put David Coira on the meeting too (email-booked events are
+                // created by Google, not us, so we add him here). sendUpdates=none
+                // so the prospect isn't re-notified. Best-effort.
+                try {
+                    const att = (e.attendees || []).slice();
+                    if (!att.some(function (a) { return (a.email || '').toLowerCase() === 'davidcoira@stiloaipartners.com'; })) {
+                        att.push({ email: 'davidcoira@stiloaipartners.com', responseStatus: 'accepted' });
+                        await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(e.id) + '?sendUpdates=none', {
+                            method: 'PATCH', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ attendees: att })
+                        });
+                    }
+                } catch (_) { /* best-effort */ }
             } catch (err) {
                 console.error('[sync-bookings] update failed', lead.id, err && err.message);
             }
