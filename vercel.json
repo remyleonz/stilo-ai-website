@@ -27,6 +27,10 @@
     {
       "path": "/api/prospects/sync-bookings",
       "schedule": "*/30 11-23 * * *"
+    },
+    {
+      "path": "/api/prospects/sync-meetings",
+      "schedule": "20 11-23 * * *"
     }
   ],
   "headers": []

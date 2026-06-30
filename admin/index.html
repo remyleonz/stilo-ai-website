@@ -1907,6 +1907,16 @@
                     </div>
                 </section>
 
+                <section class="stilo-section" id="dataHealthSection">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">DATA HEALTH</h3>
+                        <span class="stilo-section-count" id="dataHealthCount"></span>
+                    </div>
+                    <div id="dataHealthPanel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:8px;">
+                        <div class="stilo-empty">Loading data health…</div>
+                    </div>
+                </section>
+
                 <!-- SDR detail drawer (admin view of an SDR's snapshot) -->
                 <div id="sdrDetailDrawer" style="position:fixed;top:0;right:-820px;width:820px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 36px;">
                     <button onclick="closeSdrDetailDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;">&times;</button>
@@ -4303,10 +4313,50 @@
             document.getElementById('teamTotalCommissionOwed').textContent = formatMoneyCents(totalOwed);
         }
 
+        // Data Health panel — surfaces sales-tracking gaps (meetings with no
+        // calendar event / no outcome logged / no transcript / no owner name, and
+        // bookings credited to a rep other than the lead owner). Read-only.
+        async function loadDataHealth() {
+            var panel = document.getElementById('dataHealthPanel');
+            var countEl = document.getElementById('dataHealthCount');
+            if (!panel) return;
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var headers = { 'Authorization': 'Bearer ' + (session && session.access_token || '') };
+                var data = await fetch('/api/admin/data-health', { headers }).then(function (r) { return r.json(); });
+                if (!data || !data.counts) { panel.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;">Could not load data health.</div>'; return; }
+                var c = data.counts, iss = data.issues || {};
+                var rows = [
+                    ['Meetings with no calendar event', 'no_calendar_event'],
+                    ['Booked leads with no owner name', 'no_owner_name'],
+                    ['Booking credited to a rep other than the owner', 'attribution_mismatch'],
+                    ['Past meetings with no outcome logged', 'past_no_outcome'],
+                    ['Past meetings with no transcript', 'past_no_transcript']
+                ];
+                var totalIssues = rows.reduce(function (a, r) { return a + (c[r[1]] || 0); }, 0);
+                if (countEl) countEl.textContent = totalIssues === 0 ? 'all clear' : (totalIssues + ' to fix');
+                var html = '<div style="padding:4px 6px;font-size:11px;color:var(--text-muted);">' + (c.total_booked || 0) + ' booked meetings checked</div>';
+                rows.forEach(function (r) {
+                    var n = c[r[1]] || 0;
+                    var list = (iss[r[1]] || []).map(function (x) { return escapeAdminHtml(x.name || ('lead ' + x.id)); }).join(', ');
+                    var color = n === 0 ? 'var(--green,#10b981)' : 'var(--yellow,#eab308)';
+                    html += '<div style="padding:9px 8px;border-top:1px solid var(--border-subtle);font-size:12px;">'
+                        + '<span style="display:inline-block;min-width:26px;font-weight:800;color:' + color + ';">' + n + '</span>'
+                        + escapeAdminHtml(r[0])
+                        + (n ? ('<div style="font-size:11px;color:var(--text-muted);margin:2px 0 0 26px;">' + list + '</div>') : '')
+                        + '</div>';
+                });
+                panel.innerHTML = html;
+            } catch (e) {
+                panel.innerHTML = '<div style="padding:14px;color:var(--red);font-size:12px;">Data health failed: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+
         async function loadTeamPage() {
             var grid = document.getElementById('teamGrid');
             if (!grid) return;
             grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);padding:18px;font-size:13px;">Loading SDRs…</div>';
+            loadDataHealth();
             try {
                 var { data: { session } } = await sb.auth.getSession();
                 var headers = { 'Authorization': 'Bearer ' + (session && session.access_token || '') };
