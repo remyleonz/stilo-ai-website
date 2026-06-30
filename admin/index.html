@@ -7579,12 +7579,22 @@
         // ─── Booking slot picker (Google Calendar free/busy) ───────────────────
         // Two-step UI: day cards first, then time slots for the selected day.
         // Old all-days-x-all-hours grid was too cluttered.
-        var bookingState = { slots: [], selectedIso: null, expandedDay: null, configured: null };
+        var bookingState = { slots: [], selectedIso: null, expandedDay: null, configured: null, weekOffset: 0 };
 
-        // Manual far-future date: the slot picker only fetches the next 7 days,
-        // so this lets the operator book a meeting at any date/time (book-meeting
-        // accepts any when_iso). The datetime-local value is the operator's local
-        // time, which for the Miami team is ET.
+        // Page the slot picker forward/back a week at a time (from= offset on the
+        // availability endpoint), so meetings can be booked further out than the
+        // next 7 days. Prev is clamped at the current week.
+        function bookingWeek(delta) {
+            var wo = ((bookingState && bookingState.weekOffset) || 0) + delta;
+            if (wo < 0) wo = 0;
+            if (wo > 8) wo = 8;
+            bookingState.weekOffset = wo;
+            loadBookingSlots();
+        }
+
+        // Manual far-future date: lets the operator type any date/time directly
+        // (book-meeting accepts any when_iso). The datetime-local value is the
+        // operator's local time, which for the Miami team is ET.
         function setManualBookSlot(val) {
             if (!val) return;
             var iso = new Date(val).toISOString();
@@ -7602,7 +7612,7 @@
             if (!host) return;
             host.innerHTML = '<div style="padding:18px;color:var(--text-muted);font-size:12px;">Loading available slots…</div>';
             try {
-                var data = await prospectFetchJSON('/api/prospects/calendar-availability?days=7');
+                var data = await prospectFetchJSON('/api/prospects/calendar-availability?days=7&from=' + ((bookingState.weekOffset || 0) * 7));
                 if (data.needs_reauth) { renderCalendarReauth(host, data.reauth_url); return; }
                 bookingState.configured = data.configured !== false;
                 bookingState.slots = data.slots || [];
@@ -7656,8 +7666,16 @@
         function renderBookingSlots() {
             var host = document.getElementById('prospectBookingSlots');
             if (!host) return;
+            var wo = bookingState.weekOffset || 0;
+            var navLabel = wo === 0 ? 'This week' : ('+' + wo + ' week' + (wo > 1 ? 's' : '') + ' ahead');
+            var prevDis = wo <= 0;
+            var nav = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">'
+                + '<button type="button" onclick="bookingWeek(-1)"' + (prevDis ? ' disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:' + (prevDis ? 'var(--text-muted)' : 'var(--text-primary)') + ';font-size:12px;font-weight:700;cursor:' + (prevDis ? 'not-allowed' : 'pointer') + ';">&lsaquo; Prev</button>'
+                + '<span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">' + navLabel + '</span>'
+                + '<button type="button" onclick="bookingWeek(1)" style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:12px;font-weight:700;cursor:pointer;">Next &rsaquo;</button>'
+                + '</div>';
             if (!bookingState.slots.length) {
-                host.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;">No open slots in the next 7 business days.</div>';
+                host.innerHTML = nav + '<div style="padding:14px;color:var(--text-muted);font-size:12px;">No open slots this week. Use &lsaquo; Prev / Next &rsaquo; to change weeks, or the manual date field.</div>';
                 return;
             }
 
@@ -7684,7 +7702,7 @@
                     + '</button>';
             }).join('');
 
-            var html = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + dayCards + '</div>';
+            var html = nav + '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + dayCards + '</div>';
 
             // Time grid for the expanded day.
             if (bookingState.expandedDay && byDay[bookingState.expandedDay]) {

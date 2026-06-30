@@ -2533,7 +2533,7 @@
            two-step day/time picker fed by /api/prospects/calendar-availability
            → confirm → /api/prospects/book-meeting creates the event, emails
            the prospect, and flips the lead to booked. */
-        var bookingState = { slots: [], selectedIso: null, expandedDay: null };
+        var bookingState = { slots: [], selectedIso: null, expandedDay: null, weekOffset: 0 };
         // Google Appointment Scheduling page ("STILO AI PARTNERS MEETING").
         // Booking runs entirely on Google's side — no OAuth token, never expires.
         var BOOKING_EMBED_URL = 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ2oPH2fzwUuTsyXrj1shb8S3vUJYwLsip7IWCAk495hglVFeAiuixMPYPYF6DgUVnQQlVICaV1B?gv=true';
@@ -2546,8 +2546,18 @@
             loadBookingSlots();
         }
 
-        // Manual far-future date: the slot picker only loads the next 7 days, so
-        // this lets a rep book any date/time (book-meeting accepts any when_iso).
+        // Page the slot picker forward/back a week at a time (from= offset on the
+        // availability endpoint). Prev is clamped at the current week.
+        function bookingWeek(delta) {
+            var wo = ((bookingState && bookingState.weekOffset) || 0) + delta;
+            if (wo < 0) wo = 0;
+            if (wo > 8) wo = 8;
+            bookingState.weekOffset = wo;
+            loadBookingSlots();
+        }
+
+        // Manual far-future date: lets a rep type any date/time directly
+        // (book-meeting accepts any when_iso).
         // The datetime-local value is the rep's local time (ET for the Miami team).
         function setManualBookSlot(val) {
             if (!val) return;
@@ -2566,10 +2576,11 @@
             var host = document.getElementById('sdrBookingSlots');
             if (!host) return;
             host.innerHTML = '<div style="padding:14px;color:var(--text-tertiary);font-size:12px;">Loading available times…</div>';
-            bookingState = { slots: [], selectedIso: null, expandedDay: null };
+            var _wo = (bookingState && bookingState.weekOffset) || 0;
+            bookingState = { slots: [], selectedIso: null, expandedDay: null, weekOffset: _wo };
             setBookBtnEnabled(false);
             try {
-                var data = await fetchJSON('/api/prospects/calendar-availability?days=7');
+                var data = await fetchJSON('/api/prospects/calendar-availability?days=7&from=' + (_wo * 7));
                 if (data.needs_reauth) {
                     host.innerHTML = '<div style="padding:14px;background:rgba(234,179,8,0.12);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:12px;line-height:1.5;">The booking calendar connection expired. Ping Remy to reconnect it, then your slots will show. In the meantime, use "Interested, follow up" to set a callback.</div>';
                     return;
@@ -2595,8 +2606,16 @@
         function renderBookingSlots() {
             var host = document.getElementById('sdrBookingSlots');
             if (!host) return;
+            var wo = bookingState.weekOffset || 0;
+            var navLabel = wo === 0 ? 'This week' : ('+' + wo + ' week' + (wo > 1 ? 's' : '') + ' ahead');
+            var prevDis = wo <= 0;
+            var nav = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">'
+                + '<button type="button" onclick="bookingWeek(-1)"' + (prevDis ? ' disabled' : '') + ' style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:' + (prevDis ? 'var(--text-tertiary)' : 'var(--text-primary)') + ';font-size:12px;font-weight:700;cursor:' + (prevDis ? 'not-allowed' : 'pointer') + ';">&lsaquo; Prev</button>'
+                + '<span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">' + navLabel + '</span>'
+                + '<button type="button" onclick="bookingWeek(1)" style="padding:6px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:12px;font-weight:700;cursor:pointer;">Next &rsaquo;</button>'
+                + '</div>';
             if (!bookingState.slots.length) {
-                host.innerHTML = '<div style="padding:14px;color:var(--text-tertiary);font-size:12px;">No open slots in the next 7 business days.</div>';
+                host.innerHTML = nav + '<div style="padding:14px;color:var(--text-tertiary);font-size:12px;">No open slots this week. Use &lsaquo; Prev / Next &rsaquo; to change weeks, or the manual date field below.</div>';
                 return;
             }
             var byDay = {}, dayOrder = [];
@@ -2613,7 +2632,7 @@
                 return '<button type="button" onclick="selectBookingDay(\'' + day + '\')" style="flex:1;min-width:104px;padding:9px 8px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;color:' + color + ';font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3;">'
                     + '<div>' + escapeHtml(day) + '</div><div style="font-size:10px;font-weight:500;opacity:0.75;margin-top:2px;">' + byDay[day].length + ' slots</div></button>';
             }).join('');
-            var html = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + dayCards + '</div>';
+            var html = nav + '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + dayCards + '</div>';
             if (bookingState.expandedDay && byDay[bookingState.expandedDay]) {
                 var timeButtons = byDay[bookingState.expandedDay].map(function (s) {
                     var time = new Date(s.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });

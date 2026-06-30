@@ -26,10 +26,11 @@ const BIZ_START_HOUR = 10;  // 10am ET
 const BIZ_END_HOUR = 19;    // 7pm ET
 const TZ_OFFSET_HOURS = 4;  // ET = UTC-4 (DST); -5 in winter; close enough for slot generation
 
-function generateBusinessSlots(days) {
+function generateBusinessSlots(days, fromOffset) {
     const slots = [];
     const now = new Date();
-    for (let d = 0; d <= days; d++) {
+    const start = Math.max(0, fromOffset || 0);
+    for (let d = start; d <= start + days; d++) {
         const day = new Date(now.getTime() + d * 86400000);
         const dow = day.getUTCDay();
         if (dow === 0 || dow === 6) continue; // skip weekends
@@ -51,6 +52,10 @@ module.exports = async function handler(req, res) {
     if (!gate.ok) return;
 
     const days = Math.min(Math.max(parseInt((req.query && req.query.days) || '7', 10), 1), 14);
+    // `from` = how many days ahead the window starts, so the picker can page
+    // forward week by week (from=7, 14, …) instead of being stuck on the next 7
+    // days. Capped at 56 (8 weeks out).
+    const from = Math.min(Math.max(parseInt((req.query && req.query.from) || '0', 10), 0), 56);
 
     const refreshToken = await getCalendarRefreshToken();
     if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET || !refreshToken) {
@@ -59,14 +64,14 @@ module.exports = async function handler(req, res) {
             detail: 'The STILO booking calendar is not connected. Open /api/oauth?provider=google-calendar&action=start signed in as remyleon@stiloaipartners.com to link it.',
             // Return the slot grid anyway so the frontend can render a "configure"
             // hint with realistic time labels.
-            slots: generateBusinessSlots(days),
+            slots: generateBusinessSlots(days, from),
             configured: false
         });
     }
 
     try {
         const accessToken = await accessTokenFromRefresh(refreshToken);
-        const candidateSlots = generateBusinessSlots(days);
+        const candidateSlots = generateBusinessSlots(days, from);
         if (!candidateSlots.length) return res.status(200).json({ slots: [], configured: true });
 
         const fb = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {

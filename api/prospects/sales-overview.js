@@ -34,7 +34,10 @@ module.exports = async function handler(req, res) {
     // Headline counts (head:true → count only, no rows).
     const emails_sent = await count(prospect.from('lead_messages').select('id', { count: 'exact', head: true }).eq('channel', 'email'));
     const cold_calls = await count(prospect.from('lead_calls').select('id', { count: 'exact', head: true }));
-    const booked = await count(prospect.from('leads').select('id', { count: 'exact', head: true }).eq('last_called_outcome', 'booked_meeting'));
+    // "Booked" = the lead has a scheduled meeting. Keyed on meeting_scheduled_at,
+    // NOT last_called_outcome — a later call (reminder, callback) overwrites the
+    // outcome and would silently drop a still-booked meeting from the count.
+    const booked = await count(prospect.from('leads').select('id', { count: 'exact', head: true }).not('meeting_scheduled_at', 'is', null));
 
     // Deals by stage (full rows for the expand panels).
     const { data: deals } = await pub.from('deals')
@@ -49,7 +52,7 @@ module.exports = async function handler(req, res) {
     // Booked meetings (with time + Meet link) for that card's panel.
     const { data: bookedLeads } = await prospect.from('leads')
         .select('id, name, owner_name, meeting_scheduled_at, meeting_meet_link, meeting_booked_by_sdr')
-        .eq('last_called_outcome', 'booked_meeting')
+        .not('meeting_scheduled_at', 'is', null)
         .order('meeting_scheduled_at', { ascending: true, nullsFirst: false })
         .limit(100);
 
@@ -70,7 +73,7 @@ module.exports = async function handler(req, res) {
         (msgs || []).forEach(function (m) { bump(m.sent_by, 'emails'); });
     } catch (_) {}
     try {
-        const { data: bk } = await prospect.from('leads').select('meeting_booked_by_sdr').eq('last_called_outcome', 'booked_meeting').not('meeting_booked_by_sdr', 'is', null).limit(2000);
+        const { data: bk } = await prospect.from('leads').select('meeting_booked_by_sdr').not('meeting_scheduled_at', 'is', null).not('meeting_booked_by_sdr', 'is', null).limit(2000);
         (bk || []).forEach(function (l) { bump(l.meeting_booked_by_sdr, 'booked'); });
     } catch (_) {}
     const leaderboard = Object.values(board).sort(function (a, b) { return (b.dials + b.emails * 5 + b.booked * 20) - (a.dials + a.emails * 5 + a.booked * 20); });

@@ -35,8 +35,8 @@ module.exports = async function handler(req, res) {
         });
         const resp = await sb.from('leads')
             .select(SELECT_COLS)
-            .eq('last_called_outcome', 'booked_meeting')
-            .order('last_called_at', { ascending: false, nullsFirst: false })
+            .not('meeting_scheduled_at', 'is', null)
+            .order('meeting_scheduled_at', { ascending: true, nullsFirst: false })
             .limit(limit);
         if (resp.error) throw resp.error;
         return res.status(200).json({ results: resp.data || [] });
