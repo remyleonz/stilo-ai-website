@@ -26,7 +26,7 @@
   "crons": [
     {
       "path": "/api/prospects/sync-bookings",
-      "schedule": "*/30 11-23 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/prospects/sync-meetings",

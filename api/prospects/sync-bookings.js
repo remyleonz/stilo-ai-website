@@ -78,6 +78,32 @@ async function notifyNewBooking(b) {
     });
 }
 
+// Email Remy when a booking can't be auto-attached to a lead, so it is never
+// silently lost. He gets the booker email + time and attaches it by hand.
+async function notifyUnmatched(list) {
+    if (!process.env.RESEND_API_KEY || !list || !list.length) return;
+    const to = process.env.STILO_REPLY_TO || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    const from = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    const esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    const items = list.map(function (u) {
+        const whenStr = u.when ? new Date(u.when).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'time TBD';
+        return '<li style="margin:0 0 10px;"><strong>' + esc(u.summary || 'Meeting') + '</strong><br>Booked by: ' + esc(u.email) + (u.name ? ' (' + esc(u.name) + ')' : '') + '<br>When: ' + esc(whenStr) + (u.link ? '<br><a href="' + esc(u.link) + '">Open the calendar event</a>' : '') + '</li>';
+    }).join('');
+    const html = [
+        '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111;font-size:15px;line-height:1.55;">',
+        '<p style="font-size:18px;font-weight:700;margin:0 0 6px;">Booking we could not auto-attach</p>',
+        '<p style="margin:0 0 12px;color:#475569;">These meetings are on the calendar but the booker\'s email did not match a lead, so they need to be attached by hand. Open the lead in the dashboard and mark it booked.</p>',
+        '<ul style="padding-left:18px;margin:0 0 12px;">' + items + '</ul>',
+        '<p style="margin:12px 0 0;"><a href="https://stiloaipartners.com/admin/" style="color:#2563EB;">Open the admin dashboard</a></p>',
+        '</div>'
+    ].join('');
+    await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: '"STILO Bookings" <' + from + '>', to: [to], subject: 'Action needed: ' + list.length + ' booking' + (list.length > 1 ? 's' : '') + ' to attach', html: html })
+    });
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET' && req.method !== 'POST') return methodNotAllowed(res, 'GET, POST');
 
@@ -190,7 +216,27 @@ module.exports = async function handler(req, res) {
                     } catch (_) { /* keep trying / unmatched */ }
                 }
             }
-            if (!lead) { unmatched.push(guest.name ? (guest.email + ' (' + guest.name + ')') : guest.email); continue; }
+            // Third fallback: match the name on the event title against the
+            // lead's BUSINESS NAME (events titled "... · BUSINESS NAME"), unique
+            // only. Catches bookings where the prospect used an unrelated email
+            // and we have no owner_name but the title carries the business.
+            if (!lead) {
+                const nameKeys = [summaryName, guest.name]
+                    .map(function (n) { return (n || '').trim(); })
+                    .filter(function (n) { return n.length > 3; });
+                for (const key of nameKeys) {
+                    try {
+                        const { data } = await sb.from('leads').select(SEL)
+                            .ilike('name', '%' + key + '%').limit(2);
+                        if (data && data.length === 1) { lead = data[0]; break; }
+                    } catch (_) { /* keep trying / unmatched */ }
+                }
+            }
+            if (!lead) {
+                const whenET = start ? new Date(start).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'time TBD';
+                unmatched.push({ label: guest.email + (guest.name ? ' (' + guest.name + ')' : '') + ' | ' + whenET, email: guest.email, name: guest.name || '', when: start, summary: e.summary || '', link: e.htmlLink || '' });
+                continue;
+            }
             if (lead.meeting_event_id === e.id) continue; // already processed (incl. SDR-booked)
 
             const sdr = await resolveSdr(sb, lead.id, lead.assigned_to);
@@ -219,6 +265,23 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // Any booking we could NOT auto-attach: alert Remy so it's never silently
+    // lost (the recurring "it didn't show up on my dashboard" problem). He gets
+    // the booker email + time and attaches it from the lead. De-duped against a
+    // recent-alert marker so the every-few-minutes cron never spams the same one.
+    if (unmatched.length) {
+        try {
+            const { data: seen } = await kv.from('app_kv').select('value').eq('key', 'unmatched_booking_alerted').maybeSingle();
+            const already = (seen && seen.value && seen.value.keys) || [];
+            const fresh = unmatched.filter(function (u) { return already.indexOf(u.email + '|' + u.when) === -1; });
+            if (fresh.length) {
+                await notifyUnmatched(fresh);
+                const keys = already.concat(fresh.map(function (u) { return u.email + '|' + u.when; })).slice(-200);
+                await kv.from('app_kv').upsert({ key: 'unmatched_booking_alerted', value: { keys: keys }, updated_at: new Date().toISOString() });
+            }
+        } catch (_) { /* alert is best-effort, never block the sync */ }
+    }
+
     // Stamp the throttle clock so the next Booked-tab open within 90s is a no-op.
     try { await kv.from('app_kv').upsert({ key: 'last_booking_sync', value: { by: cronOk ? 'cron' : (gate.email || 'admin') }, updated_at: new Date().toISOString() }); } catch (_) {}
 
@@ -230,6 +293,6 @@ module.exports = async function handler(req, res) {
         scanned_events: events.length,
         booked_count: booked.length,
         booked: privileged ? booked : undefined,
-        unmatched_emails: privileged ? Array.from(new Set(unmatched)) : undefined
+        unmatched_emails: privileged ? unmatched.map(function (u) { return u.label; }) : undefined
     });
 };
