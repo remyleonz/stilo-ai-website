@@ -56,6 +56,7 @@ module.exports = async function handler(req, res) {
         last_called_outcome: 'booked_meeting',
         last_called_at: new Date().toISOString(),
         meeting_booked_by_sdr: gate.email || null,
+        meeting_booked_at: new Date().toISOString(),
         call_attempts: (Number(lead.call_attempts) || 0) + 1,
         call_notes: notes || ('Booked ' + whenLabel),
         updated_at: new Date().toISOString()

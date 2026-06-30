@@ -80,8 +80,14 @@ async function countMeetingsBooked(sb, email, sinceISO, untilISO) {
         .select('id', { count: 'exact', head: true })
         .not('meeting_scheduled_at', 'is', null);
     if (email) q = q.eq('meeting_booked_by_sdr', email);
-    if (sinceISO) q = q.gte('meeting_scheduled_at', sinceISO);
-    if (untilISO) q = q.lt('meeting_scheduled_at', untilISO);
+    // Bucket by WHEN THE REP BOOKED IT (meeting_booked_at), not by the meeting
+    // date. The old version filtered on meeting_scheduled_at, so a rep's card
+    // counted meetings HAPPENING in the period, not meetings they BOOKED in it —
+    // e.g. Luke showed 2 (two meetings scheduled for today) while Ale showed 0
+    // despite booking 2 meetings today (both future-dated). meeting_booked_at is
+    // stamped at booking time by book-meeting / sync-bookings / mark-booked.
+    if (sinceISO) q = q.gte('meeting_booked_at', sinceISO);
+    if (untilISO) q = q.lt('meeting_booked_at', untilISO);
     const { count } = await q;
     return count || 0;
 }

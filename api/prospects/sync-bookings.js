@@ -204,6 +204,7 @@ module.exports = async function handler(req, res) {
                     meeting_scheduled_at: start,
                     meeting_duration_min: 15,
                     meeting_booked_by_sdr: sdr,
+                    meeting_booked_at: new Date().toISOString(), // first time we see this booking = when it was booked
                     updated_at: new Date().toISOString()
                 }).eq('id', lead.id);
                 booked.push({ lead_id: lead.id, business: lead.name, email: email, sdr: sdr, when: start });

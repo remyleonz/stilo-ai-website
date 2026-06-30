@@ -238,6 +238,7 @@ module.exports = async function handler(req, res) {
                 meeting_scheduled_at:  startIso,
                 meeting_duration_min:  durationMin,
                 meeting_booked_by_sdr: gate.email || null,
+                meeting_booked_at:     new Date().toISOString(), // when the rep booked it (drives Team-tab productivity, not the meeting date)
                 last_called_outcome:   'booked_meeting',
                 last_called_at:        new Date().toISOString(),
                 call_attempts:         (Number(lead.call_attempts) || 0) + 1,
