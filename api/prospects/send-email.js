@@ -14,6 +14,19 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const kit = require('./_email_kit');
+const crypto = require('crypto');
+
+// One-click List-Unsubscribe. Gmail/Yahoo require this header on bulk mail or
+// they route it to spam. Mints the same signed token /api/unsubscribe verifies:
+// base64url(JSON{c,e,ts}) + '.' + base64url(HMAC-SHA256(payload, secret)).
+function b64url(s) { return Buffer.from(s).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function unsubToken(email) {
+    const secret = process.env.UNSUBSCRIBE_SIGNING_SECRET;
+    if (!secret) return null;
+    const payload = b64url(JSON.stringify({ c: 'prospecting', e: String(email).toLowerCase(), ts: Date.now() }));
+    const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return payload + '.' + sig;
+}
 
 function leadsClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -46,6 +59,15 @@ module.exports = async function handler(req, res) {
         .eq('id', id).maybeSingle();
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
 
+    // Honor unsubscribes: the one-click header writes to public.lcr_suppressions.
+    // Never email an opted-out address (CAN-SPAM + deliverability). Fail open if
+    // the check itself errors so a transient DB blip doesn't block every send.
+    try {
+        const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+        const { data: sup } = await pub.from('lcr_suppressions').select('email').ilike('email', to).limit(1);
+        if (sup && sup.length) return res.status(409).json({ error: 'recipient_unsubscribed', detail: to + ' opted out and will not be emailed.' });
+    } catch (_) { /* fail open */ }
+
     const sender = await kit.getSenderIdentity(gate.email);
     const html = kit.buildEmailHtml({ bodyText: message, sender: sender });
 
@@ -67,7 +89,16 @@ module.exports = async function handler(req, res) {
                 // not the rep's personal email. So all replies land in one place.
                 reply_to: process.env.STILO_REPLY_TO || fromEmail,
                 subject: subject,
-                html: html
+                html: html,
+                // Gmail/Yahoo deliverability: one-click unsubscribe.
+                headers: (function () {
+                    const t = unsubToken(to);
+                    if (!t) return undefined;
+                    return {
+                        'List-Unsubscribe': '<https://stiloaipartners.com/api/unsubscribe?t=' + t + '>, <mailto:' + (process.env.STILO_REPLY_TO || fromEmail) + '?subject=unsubscribe>',
+                        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+                    };
+                })()
             })
         });
         const j = await r.json().catch(function () { return {}; });
