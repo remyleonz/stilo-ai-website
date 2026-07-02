@@ -6266,8 +6266,12 @@
             if (allSdrs) {
                 params.push('all=1');
             } else {
-                var emailOverride = SDR_KEY_TO_EMAIL[sdrKey];
-                if (emailOverride) params.push('email=' + encodeURIComponent(emailOverride));
+                // Pass the SDR key and let the backend resolve it to an email
+                // via the LIVE roster (resolveAssignedTo). The static
+                // SDR_KEY_TO_EMAIL map only had remy/david, so selecting Jack,
+                // Luke, or Alejandro sent no scope and my-history fell back to
+                // the logged-in admin's own calls (why Jack's history showed Remy).
+                params.push('assigned_to=' + encodeURIComponent(sdrKey));
             }
             var sinceIso = historyRangeSinceIso();
             if (sinceIso) params.push('since=' + encodeURIComponent(sinceIso));
