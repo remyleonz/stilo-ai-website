@@ -90,31 +90,37 @@ function detectLanguage(transcript) {
     return 'en';
 }
 
-async function findOrStubLead(sb, phone) {
-    if (!phone) return null;
+// Match a phone number to an existing lead (owner_phone or business phone), in
+// both E.164 and David's (XXX) XXX-XXXX format. No stub.
+async function matchLeadByPhone(sb, phone) {
     const norm = normalizePhone(phone);
     if (!norm) return null;
-    // David's pipeline stores phones as (XXX) XXX-XXXX; also query E.164.
-    // JSON.stringify produces the double-quoted form PostgREST needs for values
-    // containing special chars like parentheses and spaces.
     const digits10 = norm.startsWith('+1') ? norm.slice(2) : null;
     const fmt = digits10 && digits10.length === 10
         ? '(' + digits10.slice(0, 3) + ') ' + digits10.slice(3, 6) + '-' + digits10.slice(6)
         : null;
+    // JSON.stringify → the double-quoted form PostgREST needs for values with
+    // parentheses/spaces.
     const fmtCond = fmt
         ? ',owner_phone.eq.' + JSON.stringify(fmt) + ',phone.eq.' + JSON.stringify(fmt)
         : '';
-    // limit(1) (not maybeSingle) on purpose: some numbers appear on 2+ duplicate
-    // lead rows, and maybeSingle throws on >1 match — which used to orphan the
-    // call (lead_id=null) instead of attributing it. Take the first match.
-    const { data: existingRows } = await sb
+    // limit(1) (not maybeSingle): a number can appear on 2+ duplicate rows and
+    // maybeSingle throws on >1, which used to orphan the call. Take the first.
+    const { data } = await sb
         .from('leads')
         .select('id')
         .or('owner_phone.eq.' + norm + ',phone.eq.' + norm + fmtCond)
         .order('id', { ascending: true })
         .limit(1);
-    if (existingRows && existingRows[0] && existingRows[0].id) return existingRows[0].id;
-    // Stub a minimal lead row so inbound missed calls don't get dropped.
+    return (data && data[0] && data[0].id) || null;
+}
+
+async function findOrStubLead(sb, phone) {
+    const norm = normalizePhone(phone);
+    if (!norm) return null;
+    const matched = await matchLeadByPhone(sb, norm);
+    if (matched) return matched;
+    // Stub a minimal lead so a call from an unknown number isn't dropped.
     const { data: created, error } = await sb
         .from('leads')
         .insert({
@@ -132,6 +138,57 @@ async function findOrStubLead(sb, phone) {
         return null;
     }
     return created.id;
+}
+
+// Most-recent REAL lead this line was on in the last hour. Recovers a callback
+// from a number we don't have on file: the prospect is almost always calling
+// back the line that just dialed them. Skips our own "Unknown caller" stubs so a
+// callback never chains onto another junk lead.
+async function recentRealLeadForLine(sb, ourLine) {
+    if (!ourLine) return null;
+    const sinceISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    try {
+        const { data: rows } = await sb
+            .from('lead_calls')
+            .select('lead_id, called_at')
+            .or('from_number.eq.' + ourLine + ',to_number.eq.' + ourLine)
+            .not('lead_id', 'is', null)
+            .gte('called_at', sinceISO)
+            .order('called_at', { ascending: false })
+            .limit(20);
+        const ids = Array.from(new Set((rows || []).map(function (r) { return r.lead_id; })));
+        if (!ids.length) return null;
+        const { data: leads } = await sb.from('leads').select('id, name').in('id', ids);
+        const nameById = new Map((leads || []).map(function (l) { return [l.id, l.name]; }));
+        for (const r of (rows || [])) {
+            const nm = nameById.get(r.lead_id) || '';
+            if (nm && !/^Unknown caller/i.test(nm)) return r.lead_id;
+        }
+    } catch (e) {
+        console.warn('[openphone/webhook] callback recovery failed', e.message || e);
+    }
+    return null;
+}
+
+// Resolve a call to a lead, robust to direction mislabeling. The counterparty is
+// the number that ISN'T one of OUR lines. Order: (1) phone-match the real
+// counterparty, (2) callback recovery on our line, (3) stub with the PROSPECT
+// number — never our own line, which used to create the "Unknown caller
+// (+our-line)" bucket that swallowed every real callback.
+async function resolveCounterpartyLead(sb, ourLines, counterparty, fromN, toN) {
+    let counter = counterparty ? normalizePhone(counterparty) : null;
+    if (!counter || ourLines.has(counter)) {
+        counter = [fromN, toN].find(function (n) { return n && !ourLines.has(n); }) || counter;
+    }
+    const ourLine = [fromN, toN].find(function (n) { return n && ourLines.has(n); }) || null;
+    if (counter && !ourLines.has(counter)) {
+        const id = await matchLeadByPhone(sb, counter);
+        if (id) return id;
+    }
+    const recovered = await recentRealLeadForLine(sb, ourLine);
+    if (recovered) return recovered;
+    if (counter && !ourLines.has(counter)) return await findOrStubLead(sb, counter);
+    return null;
 }
 
 async function upsertCall(sb, fields) {
@@ -389,6 +446,14 @@ module.exports = async function handler(req, res) {
         //  2. contact.externalId tag "stilo_lead_<id>" (set by the autosync trigger when pushing
         //     HOT leads to Quo as contacts — reliable across Mac/iPhone/web clients)
         //  3. phone-number match against owner_phone or business phone
+        // OUR OpenPhone line numbers (owner + SDR lines). Used to find the real
+        // counterparty and recover callbacks (see resolveCounterpartyLead).
+        const ourLines = new Set(Object.keys(OWNER_LINE_TO_EMAIL).map(normalizePhone).filter(Boolean));
+        try {
+            const pubLines = publicClient();
+            const { data: _lns } = await pubLines.from('sdr_users').select('openphone_number').eq('active', true).not('openphone_number', 'is', null);
+            (_lns || []).forEach(function (r) { const n = normalizePhone(r.openphone_number); if (n) ourLines.add(n); });
+        } catch (_) { /* owner lines alone still help */ }
         const metaLeadId = (call.metadata && (call.metadata.lead_id || call.metadata.leadId
             || call.metadata.prospect_id || call.metadata.prospectId)) || null;
         if (metaLeadId) {
@@ -400,8 +465,8 @@ module.exports = async function handler(req, res) {
             const m = String(externalId).match(/^stilo_(?:lead|prospect)_(\d+)$/);
             if (m) leadId = Number(m[1]) || null;
         }
-        if (!leadId && counterparty) {
-            leadId = await findOrStubLead(sb, counterparty);
+        if (!leadId) {
+            leadId = await resolveCounterpartyLead(sb, ourLines, counterparty, baseFields.from_number, baseFields.to_number);
         }
         // Last-resort: Quo summary events don't ship from/to numbers, so when
         // a summary lands first (or is the only event we get) we previously
@@ -422,8 +487,8 @@ module.exports = async function handler(req, res) {
                     // would stay NULL on rows that only ever fire summary.
                     const apiDur = deriveDurationSeconds(fc);
                     if (apiDur != null) baseFields.duration_seconds = apiDur;
-                    if (fcCounterparty) {
-                        leadId = await findOrStubLead(sb, fcCounterparty);
+                    if (fcCounterparty || baseFields.from_number || baseFields.to_number) {
+                        leadId = await resolveCounterpartyLead(sb, ourLines, fcCounterparty, baseFields.from_number, baseFields.to_number);
                     }
                     if (leadId) {
                         console.log('[openphone/webhook] recovered orphan lead via Quo API lookup', { call_id: openphoneCallId, lead_id: leadId, duration: apiDur });
