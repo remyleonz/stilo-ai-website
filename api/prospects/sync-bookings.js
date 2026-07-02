@@ -238,6 +238,16 @@ module.exports = async function handler(req, res) {
                 continue;
             }
             if (lead.meeting_event_id === e.id) continue; // already processed (incl. SDR-booked)
+            // GLOBAL idempotency: if this calendar event is already stamped on a
+            // DIFFERENT lead (book-meeting attached it, or a prior run), do NOT
+            // attach it to a second lead. One event = one meeting = one lead.
+            // This is what double-counted Jack's card: a business-name fallback
+            // claimed a second CPA lead for an event already booked on the first.
+            try {
+                const { data: claimed } = await sb.from('leads').select('id')
+                    .eq('meeting_event_id', e.id).neq('id', lead.id).limit(1);
+                if (claimed && claimed.length) continue;
+            } catch (_) { /* if the check fails, fall through and stamp */ }
 
             const sdr = await resolveSdr(sb, lead.id, lead.assigned_to);
             try {

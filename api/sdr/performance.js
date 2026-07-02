@@ -77,7 +77,7 @@ async function countCalls(sb, email, sinceISO, untilISO) {
 // next week doesn't leak into "this week".
 async function countMeetingsBooked(sb, email, sinceISO, untilISO) {
     let q = sb.from('leads')
-        .select('id', { count: 'exact', head: true })
+        .select('id, meeting_event_id')
         .not('meeting_scheduled_at', 'is', null);
     if (email) q = q.eq('meeting_booked_by_sdr', email);
     // Bucket by WHEN THE REP BOOKED IT (meeting_booked_at), not by the meeting
@@ -88,8 +88,14 @@ async function countMeetingsBooked(sb, email, sinceISO, untilISO) {
     // stamped at booking time by book-meeting / sync-bookings / mark-booked.
     if (sinceISO) q = q.gte('meeting_booked_at', sinceISO);
     if (untilISO) q = q.lt('meeting_booked_at', untilISO);
-    const { count } = await q;
-    return count || 0;
+    const { data } = await q.limit(5000);
+    // Dedup by the CALENDAR EVENT. One Google event can end up stamped on two
+    // leads (e.g. the sync's title-vs-business-name fallback matching a second
+    // lead), which double-counted a single meeting on the rep's card. Count one
+    // per distinct event; leads with no event id dedup by their own id.
+    const seen = new Set();
+    (data || []).forEach(function (r) { seen.add(r.meeting_event_id || ('lead:' + r.id)); });
+    return seen.size;
 }
 
 async function uniqueLeadsContacted(sb, email, sinceISO) {

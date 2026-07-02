@@ -34,10 +34,33 @@ module.exports = async function handler(req, res) {
     // Headline counts (head:true → count only, no rows).
     const emails_sent = await count(prospect.from('lead_messages').select('id', { count: 'exact', head: true }).eq('channel', 'email'));
     const cold_calls = await count(prospect.from('lead_calls').select('id', { count: 'exact', head: true }));
-    // "Booked" = the lead has a scheduled meeting. Keyed on meeting_scheduled_at,
-    // NOT last_called_outcome — a later call (reminder, callback) overwrites the
-    // outcome and would silently drop a still-booked meeting from the count.
-    const booked = await count(prospect.from('leads').select('id', { count: 'exact', head: true }).not('meeting_scheduled_at', 'is', null));
+    // Rep roster for display names + sdr_id->email (deals attribute by sdr_id).
+    const { data: roster } = await pub.from('sdr_users').select('id, email, display_name');
+    const nameByEmail = {}, emailById = {};
+    (roster || []).forEach(function (r) {
+        if (r.email) nameByEmail[String(r.email).toLowerCase()] = r.display_name || r.email;
+        if (r.id) emailById[r.id] = String(r.email || '').toLowerCase();
+    });
+
+    // "Booked" = a lead with a scheduled meeting, fetched once and DEDUPED by
+    // calendar event. One Google event can wrongly land on two leads (e.g. the
+    // sync's title-vs-business-name fallback), which double-counted a single
+    // meeting. Keyed on meeting_scheduled_at (not last_called_outcome, which a
+    // later reminder/callback overwrites). Drives the card, panel, leaderboard.
+    const { data: bookedRaw } = await prospect.from('leads')
+        .select('id, name, owner_name, meeting_event_id, meeting_scheduled_at, meeting_meet_link, meeting_booked_by_sdr')
+        .not('meeting_scheduled_at', 'is', null)
+        .order('meeting_scheduled_at', { ascending: true, nullsFirst: false })
+        .limit(500);
+    const bookedByEvent = new Map();
+    (bookedRaw || []).forEach(function (l) {
+        const key = l.meeting_event_id || ('lead:' + l.id);
+        if (!bookedByEvent.has(key)) bookedByEvent.set(key, l);
+    });
+    const bookedLeads = Array.from(bookedByEvent.values()).map(function (l) {
+        return Object.assign({}, l, { booked_by_name: nameByEmail[String(l.meeting_booked_by_sdr || '').toLowerCase()] || l.meeting_booked_by_sdr || null });
+    });
+    const booked = bookedLeads.length;
 
     // Deals by stage (full rows for the expand panels).
     const { data: deals } = await pub.from('deals')
@@ -49,19 +72,12 @@ module.exports = async function handler(req, res) {
     const churned = byStage('CHURNED');
     const mrr_cents = active.reduce(function (s, d) { return s + (Number(d.monthly_retainer_cents) || 0); }, 0);
 
-    // Booked meetings (with time + Meet link) for that card's panel.
-    const { data: bookedLeads } = await prospect.from('leads')
-        .select('id, name, owner_name, meeting_scheduled_at, meeting_meet_link, meeting_booked_by_sdr')
-        .not('meeting_scheduled_at', 'is', null)
-        .order('meeting_scheduled_at', { ascending: true, nullsFirst: false })
-        .limit(100);
-
-    // Per-SDR leaderboard, keyed by rep email. Dials + emails + booked.
+    // Per-SDR leaderboard, keyed by rep email. Dials + emails + booked + closed.
     const board = {};
     const bump = function (email, k, n) {
         if (!email) return;
         const e = String(email).toLowerCase();
-        if (!board[e]) board[e] = { sdr: e, dials: 0, emails: 0, booked: 0 };
+        if (!board[e]) board[e] = { sdr: e, name: nameByEmail[e] || e, dials: 0, emails: 0, booked: 0, closed: 0 };
         board[e][k] += (n || 1);
     };
     try {
@@ -72,10 +88,18 @@ module.exports = async function handler(req, res) {
         const { data: msgs } = await prospect.from('lead_messages').select('sent_by').eq('channel', 'email').not('sent_by', 'is', null).limit(5000);
         (msgs || []).forEach(function (m) { bump(m.sent_by, 'emails'); });
     } catch (_) {}
-    try {
-        const { data: bk } = await prospect.from('leads').select('meeting_booked_by_sdr').not('meeting_scheduled_at', 'is', null).not('meeting_booked_by_sdr', 'is', null).limit(2000);
-        (bk || []).forEach(function (l) { bump(l.meeting_booked_by_sdr, 'booked'); });
-    } catch (_) {}
+    // Booked per rep = distinct events (bookedLeads is already event-deduped).
+    bookedLeads.forEach(function (l) { bump(l.meeting_booked_by_sdr, 'booked'); });
+    // Closed per rep = paid deals (ONBOARDING/LIVE) attributed by sdr_id.
+    (deals || []).forEach(function (d) {
+        if (d.stage !== 'ONBOARDING' && d.stage !== 'LIVE') return;
+        const em = emailById[d.sdr_id];
+        if (em) bump(em, 'closed');
+    });
+    // Close rate per rep = closed / booked.
+    Object.values(board).forEach(function (r) {
+        r.close_pct = r.booked > 0 ? Math.round((r.closed / r.booked) * 1000) / 10 : 0;
+    });
     const leaderboard = Object.values(board).sort(function (a, b) { return (b.dials + b.emails * 5 + b.booked * 20) - (a.dials + a.emails * 5 + a.booked * 20); });
 
     return res.status(200).json({
