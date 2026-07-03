@@ -58,8 +58,14 @@ function startOfMonthISO() {
     return new Date(firstOfMonth + 'T00:00:00-04:00').toISOString();
 }
 
+// A "dial" is an OUTBOUND call the rep placed from their phone. lead_calls
+// carries three direction values from two sources: 'outbound' (webhook + manual
+// log-call) and 'outgoing' (Quo REST) are both dials; 'incoming' is a prospect
+// calling US and must NOT count as a dial. Counting all three inflated the number
+// (Ale showed 180 vs the real 160 outbound) — the dial count is outbound only.
 async function countCalls(sb, email, sinceISO, untilISO) {
-    let q = sb.from('lead_calls').select('id', { count: 'exact', head: true });
+    let q = sb.from('lead_calls').select('id', { count: 'exact', head: true })
+        .in('direction', ['outbound', 'outgoing']);
     if (email) q = q.eq('logged_by', email);
     if (sinceISO) q = q.gte('called_at', sinceISO);
     if (untilISO) q = q.lt('called_at', untilISO);

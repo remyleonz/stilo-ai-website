@@ -48,6 +48,7 @@ module.exports = async function handler(req, res) {
     const { error: insErr } = await sb.from('lead_meetings').insert({
         lead_id: leadId,
         source: 'manual',
+        outcome: outcome, // structured, drives meeting KPIs (close rate / no-show / reschedule)
         title: 'Meeting outcome: ' + def.label,
         occurred_at: new Date().toISOString(),
         summary: 'Meeting outcome: ' + def.label + (notes ? '\n\n' + notes : ''),
