@@ -18,7 +18,9 @@
  *   dials_per_mtg   = dials / meetings_booked (lower is more efficient).
  *   meeting close % = closed_won / meetings that reached a terminal-ish outcome.
  */
-const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
+// assertAdminOrSdr lives in the prospects shared module (api/sdr/_shared only
+// exports authSdr) — importing it from ./_shared made this endpoint 500.
+const { assertAdminOrSdr, methodNotAllowed } = require('../prospects/_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 function pc() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } }); }
