@@ -62,6 +62,46 @@ module.exports = async function handler(req, res) {
     });
     const booked = bookedLeads.length;
 
+    // Enrich each booked meeting with its outcome + transcript presence +
+    // reschedule count (from prospecting.lead_meetings), so the drill-down shows
+    // how every meeting went, not just that it exists.
+    try {
+        const bIds = bookedLeads.map(function (l) { return l.id; });
+        if (bIds.length) {
+            const { data: lm } = await prospect.from('lead_meetings')
+                .select('lead_id, outcome, transcript, occurred_at')
+                .in('lead_id', bIds)
+                .order('occurred_at', { ascending: false });
+            const outByLead = {}, transByLead = {}, reschedByLead = {};
+            (lm || []).forEach(function (m) {
+                if (m.outcome && !outByLead[m.lead_id]) outByLead[m.lead_id] = m.outcome; // latest wins
+                if (m.transcript && String(m.transcript).length > 40) transByLead[m.lead_id] = true;
+                if (m.outcome === 'rescheduled') reschedByLead[m.lead_id] = (reschedByLead[m.lead_id] || 0) + 1;
+            });
+            const nowMs = Date.now();
+            bookedLeads.forEach(function (l) {
+                l.outcome = outByLead[l.id] || null;
+                l.has_transcript = !!transByLead[l.id];
+                l.reschedule_count = reschedByLead[l.id] || 0;
+                l.status = l.outcome === 'closed_won' ? 'won'
+                    : l.outcome === 'closed_lost' ? 'lost'
+                    : l.outcome === 'no_show' ? 'no_show'
+                    : (l.meeting_scheduled_at && new Date(l.meeting_scheduled_at).getTime() > nowMs ? 'upcoming' : 'past');
+            });
+        }
+    } catch (_) { /* enrichment best-effort */ }
+    // Summary for the drill-down header (close rate on held meetings).
+    const bs = { total: bookedLeads.length, upcoming: 0, held: 0, won: 0, lost: 0, no_show: 0, rescheduled: 0 };
+    bookedLeads.forEach(function (l) {
+        if (l.status === 'upcoming') bs.upcoming++;
+        if (l.outcome === 'closed_won') bs.won++;
+        if (l.outcome === 'closed_lost') bs.lost++;
+        if (l.outcome === 'no_show') bs.no_show++;
+        if (l.reschedule_count) bs.rescheduled += l.reschedule_count;
+    });
+    bs.held = bs.won + bs.lost + bs.no_show;
+    bs.close_rate_pct = bs.held > 0 ? Math.round((bs.won / bs.held) * 1000) / 10 : 0;
+
     // Deals by stage (full rows for the expand panels).
     const { data: deals } = await pub.from('deals')
         .select('id, business_name, contact_name, sdr_id, stage, agent_codes, upfront_fee_cents, monthly_retainer_cents, paid_at, churned_at, churn_reason, created_at')
@@ -114,6 +154,7 @@ module.exports = async function handler(req, res) {
         mrr_cents: mrr_cents,
         deals: { onboarding: onboarding, active: active, churned: churned },
         booked_leads: bookedLeads || [],
+        booked_summary: bs,
         leaderboard: leaderboard
     });
 };

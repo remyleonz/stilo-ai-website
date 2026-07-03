@@ -8561,8 +8561,16 @@
                 p.innerHTML = salesPanelWrap(labels[k], list.length ? list.map(function (d) { return salesDealRow(d, k); }).join('') : '<div style="color:var(--text-muted);font-size:13px;">None yet.</div>');
             } else if (k === 'booked') {
                 var bl = SALES.booked_leads || [];
+                var bs = SALES.booked_summary || {};
+                var chip = function (n, lbl, color) { return '<span style="white-space:nowrap;"><b style="color:' + (color || 'var(--text-primary)') + ';">' + (n || 0) + '</b> <span style="color:var(--text-secondary);">' + lbl + '</span></span>'; };
+                var summary = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:2px 0 14px;font-size:12px;">'
+                    + chip(bs.total, 'total') + chip(bs.upcoming, 'upcoming', '#5A7BE8') + chip(bs.held, 'held')
+                    + chip(bs.won, 'won', '#10b981') + chip(bs.lost, 'lost', '#ef4444') + chip(bs.no_show, 'no-show', '#eab308')
+                    + chip(bs.rescheduled, 'reschedules')
+                    + '<span style="white-space:nowrap;margin-left:auto;"><b style="color:var(--text-primary);font-size:14px;">' + (bs.close_rate_pct || 0) + '%</b> <span style="color:var(--text-secondary);">meeting close rate</span></span>'
+                    + '</div>';
                 var rows = bl.length ? bl.map(salesBookedRow).join('') : '<div style="color:var(--text-muted);font-size:13px;">No booked meetings yet.</div>';
-                p.innerHTML = salesPanelWrap('Booked meetings', rows
+                p.innerHTML = salesPanelWrap('Booked meetings', summary + rows
                     + '<div style="margin-top:12px;"><button onclick="switchPage(\'prospecting\');setTimeout(function(){switchProspectTab(\'callable\');},200);" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;">Book a cold-call lead →</button></div>');
             } else if (k === 'cold_calls' || k === 'emails_sent') {
                 var metric = k === 'cold_calls' ? 'dials' : 'emails';
@@ -8589,12 +8597,36 @@
         function salesMoveBtn(id, stage, label, color) {
             return '<button onclick="moveDealStage(\'' + id + '\',\'' + stage + '\')" style="background:none;border:1px solid ' + color + ';color:' + color + ';border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;">' + label + '</button>';
         }
+        var MTG_OUTCOME_META = {
+            won:      { label: 'Closed won',       color: '#10b981', bg: 'rgba(16,185,129,0.14)' },
+            lost:     { label: 'Closed lost',      color: '#ef4444', bg: 'rgba(239,68,68,0.14)' },
+            no_show:  { label: 'No-show',          color: '#eab308', bg: 'rgba(234,179,8,0.14)' },
+            upcoming: { label: 'Upcoming',         color: '#5A7BE8', bg: 'rgba(37,99,235,0.14)' },
+            past:     { label: 'Awaiting outcome', color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.05)' }
+        };
+        function mtgOutcomeBadge(l) {
+            var m = MTG_OUTCOME_META[l.status || 'past'] || MTG_OUTCOME_META.past;
+            var label = m.label;
+            if (l.outcome === 'interested') label = 'Interested';
+            else if (l.outcome === 'needs_time') label = 'Needs time';
+            else if (l.outcome === 'rescheduled') label = 'Rescheduled';
+            return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.03em;color:' + m.color + ';background:' + m.bg + ';">' + label + '</span>';
+        }
         function salesBookedRow(l) {
             var when = l.meeting_scheduled_at ? new Date(l.meeting_scheduled_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'time TBD';
-            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border-subtle);flex-wrap:wrap;">'
-                + '<div style="min-width:0;"><div style="font-weight:700;font-size:13px;color:var(--text-primary);cursor:pointer;" onclick="openProspectDrawer(' + (l.id || 'null') + ')">' + escapeAdminHtml(l.name || ('Lead ' + l.id)) + '</div>'
-                + '<div style="font-size:11px;color:var(--text-secondary);">' + escapeAdminHtml(when) + (l.owner_name ? ' · ' + escapeAdminHtml(l.owner_name) : '') + (l.booked_by_name ? ' · booked by ' + escapeAdminHtml(l.booked_by_name) : '') + '</div></div>'
-                + (l.meeting_meet_link ? '<a href="' + escapeAdminHtml(l.meeting_meet_link) + '" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:12px;padding:7px 13px;border-radius:7px;">Join Meet</a>' : '')
+            var meta = escapeAdminHtml(when)
+                + (l.owner_name ? ' · ' + escapeAdminHtml(l.owner_name) : '')
+                + (l.booked_by_name ? ' · booked by ' + escapeAdminHtml(l.booked_by_name) : '')
+                + (l.reschedule_count ? ' · rescheduled ' + l.reschedule_count + 'x' : '');
+            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border-subtle);flex-wrap:wrap;">'
+                + '<div style="min-width:0;flex:1;">'
+                    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:700;font-size:13px;color:var(--text-primary);cursor:pointer;" onclick="openProspectDrawer(' + (l.id || 'null') + ')">' + escapeAdminHtml(l.name || ('Lead ' + l.id)) + '</span>' + mtgOutcomeBadge(l) + (l.has_transcript ? '<span title="Transcript on file" style="font-size:10px;color:var(--text-muted);">&#128196; transcript</span>' : '') + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">' + meta + '</div>'
+                + '</div>'
+                + '<div style="display:flex;gap:6px;align-items:center;">'
+                    + '<button onclick="openProspectDrawer(' + (l.id || 'null') + ')" style="background:none;border:1px solid var(--border-medium);color:var(--text-secondary);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;">' + (l.has_transcript ? 'Transcript' : 'Open') + '</button>'
+                    + (l.meeting_meet_link ? '<a href="' + escapeAdminHtml(l.meeting_meet_link) + '" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:12px;padding:7px 13px;border-radius:7px;">Join Meet</a>' : '')
+                + '</div>'
                 + '</div>';
         }
         async function moveDealStage(dealId, stage) {
