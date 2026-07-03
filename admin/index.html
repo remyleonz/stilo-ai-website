@@ -1871,6 +1871,7 @@
                       <button type="button" data-range="month" onclick="setTeamRange('month')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">This month</button>
                       <button type="button" data-range="last_month" onclick="setTeamRange('last_month')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Last month</button>
                     </div>
+                    <button type="button" id="teamExportBtn" onclick="exportTeamForClaude()" title="Copy a full performance snapshot to paste into Claude for analysis" style="padding:7px 14px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.35);border-radius:9px;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background 150ms;" onmouseover="this.style.background='rgba(37,99,235,0.2)'" onmouseout="this.style.background='rgba(37,99,235,0.12)'">&#8599; Export for Claude</button>
                 </div>
 
                 <!-- Agency totals: hero strip -->
@@ -1897,6 +1898,16 @@
                     </div>
                 </div>
 
+                <section class="stilo-section" id="teamKpiSection">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">COMPANY PERFORMANCE</h3>
+                        <span class="stilo-section-count" id="teamKpiRangeLabel"></span>
+                    </div>
+                    <div id="teamKpiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;">
+                        <div class="stilo-empty">Loading company KPIs…</div>
+                    </div>
+                </section>
+
                 <section class="stilo-section">
                     <div class="stilo-section-header">
                         <h3 class="stilo-section-title">SDRS</h3>
@@ -1904,6 +1915,16 @@
                     </div>
                     <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">
                         <div class="stilo-empty">Loading SDRs…</div>
+                    </div>
+                </section>
+
+                <section class="stilo-section" id="teamNicheSection">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">PERFORMANCE BY NICHE</h3>
+                        <span class="stilo-section-count" id="teamNicheCount"></span>
+                    </div>
+                    <div id="teamNichePanel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
+                        <div class="stilo-empty" style="padding:14px;">Loading niche performance…</div>
                     </div>
                 </section>
 
@@ -4245,6 +4266,7 @@
                 b.style.color = on ? '#fff' : 'var(--text-secondary)';
             });
             renderTeamGrid();
+            renderCompanyKpis();
         }
 
         function renderTeamGrid() {
@@ -4287,6 +4309,7 @@
                         + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Clients</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;">' + clientCount + '</div></div>'
                         + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Close Rate</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;">' + closeRate + '%</div></div>'
                     + '</div>'
+                    + repKpiStrip(sdr.email)
                     + ((rk === 'today')
                         ? ('<div style="height:4px;background:rgba(255,255,255,0.05);border-radius:999px;margin-bottom:12px;"><div style="height:100%;width:' + Math.min(100, pct) + '%;background:' + color + ';border-radius:999px;"></div></div>')
                         : '<div style="height:16px;"></div>')
@@ -4311,6 +4334,135 @@
             document.getElementById('teamTotalMeetingsWeek').textContent = totalMeetings;
             document.getElementById('teamTotalMrr').textContent = formatMoneyCents(totalMrr);
             document.getElementById('teamTotalCommissionOwed').textContent = formatMoneyCents(totalOwed);
+        }
+
+        /* ── Company + niche analytics (one call: /api/sdr/team-analytics) ── */
+        var teamAnalytics = null;
+        // The analytics endpoint buckets today/week/month/all. Map the tab's
+        // range (which also has last_week/last_month) onto those.
+        function teamArRange() {
+            if (teamRange === 'today' || teamRange === 'week' || teamRange === 'month') return teamRange;
+            if (teamRange === 'last_week') return 'week';
+            if (teamRange === 'last_month') return 'month';
+            return 'all';
+        }
+        function fmtDur(sec) { sec = Math.round(sec || 0); var m = Math.floor(sec / 60); var s = sec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
+        function repAnalytics(email) {
+            if (!teamAnalytics || !teamAnalytics.per_rep) return null;
+            var e = String(email || '').toLowerCase();
+            return teamAnalytics.per_rep.filter(function (r) { return String(r.email).toLowerCase() === e; })[0] || null;
+        }
+        // Small KPI row shown on each SDR card.
+        function repKpiStrip(email) {
+            var r = repAnalytics(email);
+            if (!r) return '';
+            var rk = teamArRange();
+            var cell = function (lbl, val) {
+                return '<div style="flex:1;text-align:center;"><div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + val + '</div><div style="font-size:9px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px;">' + lbl + '</div></div>';
+            };
+            return '<div style="display:flex;gap:6px;margin:10px 0 12px;padding:9px 4px;background:rgba(255,255,255,0.02);border-radius:8px;">'
+                + cell('Connect', r.connect_rate_pct + '%')
+                + cell('Avg call', fmtDur(r.avg_call_sec))
+                + cell('Dials/mtg', r.dials_per_meeting != null ? r.dials_per_meeting : '—')
+                + cell('Close', r.meeting_close_rate_pct + '%')
+                + '</div>';
+        }
+
+        function kpiTile(label, value, sub, accent) {
+            return '<div style="background:var(--bg-card);border:1px solid ' + (accent ? 'rgba(37,99,235,0.35)' : 'var(--border-subtle)') + ';border-radius:12px;padding:15px 16px;">'
+                + '<div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.07em;">' + label + '</div>'
+                + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.55rem;letter-spacing:-0.02em;color:' + (accent ? 'var(--blue)' : 'var(--text-primary)') + ';margin-top:3px;line-height:1.1;">' + value + '</div>'
+                + (sub ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + sub + '</div>' : '')
+                + '</div>';
+        }
+        function renderCompanyKpis() {
+            var grid = document.getElementById('teamKpiGrid');
+            if (!grid) return;
+            var lbl = document.getElementById('teamKpiRangeLabel');
+            if (!teamAnalytics) { grid.innerHTML = '<div class="stilo-empty">No data.</div>'; return; }
+            var c = teamAnalytics.company, rk = teamArRange();
+            var rangeLabel = ({ today: 'today', week: 'this week', month: 'this month', all: 'all time' })[rk];
+            if (lbl) lbl.textContent = rangeLabel;
+            grid.innerHTML = [
+                kpiTile('Dials · ' + rangeLabel, (c.dials[rk] || 0), 'outbound only', true),
+                kpiTile('Connect rate', c.connect_rate_pct + '%', c.connects[rk] + ' connected'),
+                kpiTile('Avg call time', fmtDur(c.avg_call_sec), c.talk_hours + 'h talk time'),
+                kpiTile('Meetings · ' + rangeLabel, (c.meetings[rk] || 0), null, true),
+                kpiTile('Dials / meeting', c.dials_per_meeting != null ? c.dials_per_meeting : '—', 'efficiency'),
+                kpiTile('Meeting close', c.meeting_close_rate_pct + '%', c.meetings_held + ' held'),
+                kpiTile('No-show rate', c.no_show_rate_pct + '%', null),
+                kpiTile('Emails · ' + rangeLabel, (c.emails[rk] || 0), null),
+                kpiTile('Clients closed', c.closed_clients, null),
+                kpiTile('MRR', formatMoneyCents(c.mrr_cents), 'live retainers')
+            ].join('');
+        }
+        function renderNicheTable() {
+            var panel = document.getElementById('teamNichePanel');
+            var cnt = document.getElementById('teamNicheCount');
+            if (!panel) return;
+            if (!teamAnalytics || !teamAnalytics.by_niche) { panel.innerHTML = '<div class="stilo-empty" style="padding:14px;">No data.</div>'; return; }
+            var rows = teamAnalytics.by_niche.filter(function (n) { return n.dials > 0 || n.meetings > 0 || n.callable_remaining > 0; });
+            if (cnt) cnt.textContent = rows.length + ' niches';
+            var th = 'text-align:left;padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);white-space:nowrap;';
+            var tdN = 'padding:10px 14px;font-size:13px;color:var(--text-primary);white-space:nowrap;';
+            var head = '<tr style="background:rgba(37,99,235,0.05);"><th style="' + th + '">Niche</th><th style="' + th + 'text-align:right;">Dials</th><th style="' + th + 'text-align:right;">Connect %</th><th style="' + th + 'text-align:right;">Leads called</th><th style="' + th + 'text-align:right;">Meetings</th><th style="' + th + 'text-align:right;">Callable left</th></tr>';
+            var body = rows.map(function (n) {
+                return '<tr style="border-top:1px solid var(--border-subtle);">'
+                    + '<td style="' + tdN + 'font-weight:600;">' + escapeAdminHtml(n.niche) + '</td>'
+                    + '<td style="' + tdN + 'text-align:right;font-family:var(--font-mono);">' + n.dials + '</td>'
+                    + '<td style="' + tdN + 'text-align:right;">' + n.connect_rate_pct + '%</td>'
+                    + '<td style="' + tdN + 'text-align:right;font-family:var(--font-mono);">' + n.leads_called + '</td>'
+                    + '<td style="' + tdN + 'text-align:right;font-weight:700;color:' + (n.meetings ? 'var(--green,#10b981)' : 'var(--text-muted)') + ';">' + n.meetings + '</td>'
+                    + '<td style="' + tdN + 'text-align:right;color:var(--text-muted);font-family:var(--font-mono);">' + n.callable_remaining + '</td>'
+                    + '</tr>';
+            }).join('');
+            panel.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:640px;">' + head + body + '</table>';
+        }
+        function exportTeamForClaude() {
+            if (!teamAnalytics) { alert('Analytics still loading — try again in a moment.'); return; }
+            var c = teamAnalytics.company;
+            var money = function (cents) { return '$' + Math.round((cents || 0) / 100).toLocaleString(); };
+            var L = [];
+            L.push('# STILO SDR team performance snapshot');
+            L.push('Generated ' + new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET. Dials are OUTBOUND only.');
+            L.push('');
+            L.push('## Company (today / week / month / all-time)');
+            L.push('- Dials: ' + c.dials.today + ' / ' + c.dials.week + ' / ' + c.dials.month + ' / ' + c.dials.all);
+            L.push('- Connect rate: ' + c.connect_rate_pct + '% | Avg call: ' + fmtDur(c.avg_call_sec) + ' | Talk time: ' + c.talk_hours + 'h');
+            L.push('- Meetings booked: ' + c.meetings.today + ' / ' + c.meetings.week + ' / ' + c.meetings.month + ' / ' + c.meetings.all + ' | Dials/meeting: ' + c.dials_per_meeting);
+            L.push('- Meetings held: ' + c.meetings_held + ' | Meeting close rate: ' + c.meeting_close_rate_pct + '% | No-show: ' + c.no_show_rate_pct + '%');
+            L.push('- Emails sent: ' + c.emails.all + ' | Clients closed: ' + c.closed_clients + ' | MRR: ' + money(c.mrr_cents));
+            L.push('');
+            L.push('## Per SDR (all-time unless noted)');
+            (teamAnalytics.per_rep || []).forEach(function (r) {
+                L.push('### ' + r.name);
+                L.push('- Dials: ' + r.dials.all + ' (today ' + r.dials.today + ', week ' + r.dials.week + ', ~' + r.avg_dials_per_day + '/active day over ' + r.active_days + ' days)');
+                L.push('- Connect rate: ' + r.connect_rate_pct + '% | Avg call: ' + fmtDur(r.avg_call_sec) + ' | Talk: ' + r.talk_min + ' min');
+                L.push('- Meetings booked: ' + r.meetings.all + ' | Dials/meeting: ' + (r.dials_per_meeting != null ? r.dials_per_meeting : 'n/a'));
+                L.push('- Meetings held: ' + r.meetings_held + ' | Close rate: ' + r.meeting_close_rate_pct + '% | No-show: ' + r.no_show_rate_pct + '%');
+                L.push('- Outcomes: won ' + r.meeting_outcomes.closed_won + ', lost ' + r.meeting_outcomes.closed_lost + ', no-show ' + r.meeting_outcomes.no_show + ', rescheduled ' + r.meeting_outcomes.rescheduled + ', interested ' + r.meeting_outcomes.interested + ', needs-time ' + r.meeting_outcomes.needs_time);
+                L.push('- Clients closed: ' + r.closed_clients + ' | MRR: ' + money(r.mrr_cents));
+                L.push('');
+            });
+            L.push('## Performance by niche');
+            (teamAnalytics.by_niche || []).forEach(function (n) {
+                L.push('- ' + n.niche + ': ' + n.dials + ' dials, ' + n.connect_rate_pct + '% connect, ' + n.leads_called + ' leads called, ' + n.meetings + ' meetings, ' + n.callable_remaining + ' callable left');
+            });
+            var text = L.join('\n');
+            var btn = document.getElementById('teamExportBtn');
+            var done = function (ok) {
+                if (!btn) return;
+                var orig = btn.innerHTML;
+                btn.innerHTML = ok ? '&#10003; Copied — paste into Claude' : '&#8599; Copy failed';
+                setTimeout(function () { btn.innerHTML = orig; }, 2600);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+            } else {
+                var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy'); done(true); } catch (_) { done(false); }
+                document.body.removeChild(ta);
+            }
         }
 
         // Data Health panel — surfaces sales-tracking gaps (meetings with no
@@ -4374,7 +4526,13 @@
                     ]);
                     return { sdr: sdr, perf: perfR, earn: earnR };
                 }));
-                setTeamRange(teamRange); // highlights the active button and renders
+                // Richer KPIs (connect rate, avg call, niche, meeting close) come
+                // from one analytics call. Fetch alongside; don't block the grid.
+                try {
+                    teamAnalytics = await fetch('/api/sdr/team-analytics', { headers }).then(r => r.json());
+                } catch (_) { teamAnalytics = null; }
+                setTeamRange(teamRange); // highlights the active button and renders grid + KPIs
+                renderNicheTable();
             } catch (e) {
                 console.error('[loadTeamPage]', e);
                 grid.innerHTML = '<div style="grid-column:1/-1;color:#ef4444;padding:18px;font-size:13px;">Failed to load team: ' + (e.message || 'unknown') + '</div>';
