@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
             email: s.email, name: s.display_name, sdr_key: s.sdr_key,
             initials: s.initials, color: s.avatar_color,
             quota: s.daily_call_quota || 50, active: s.active !== false,
-            dials: emptyRange(), connects: emptyRange(), talk_sec: emptyRange(), connected: emptyRange(),
+            dials: emptyRange(), connects: emptyRange(), conversations: emptyRange(), talk_sec: emptyRange(), connected: emptyRange(),
             dial_days: new Set(),
             meetings: emptyRange(),
             mtg_outcomes: { interested: 0, needs_time: 0, rescheduled: 0, no_show: 0, closed_won: 0, closed_lost: 0 },
@@ -109,7 +109,7 @@ module.exports = async function handler(req, res) {
         .order('called_at', { ascending: false }));
 
     const company = {
-        dials: emptyRange(), connects: emptyRange(), talk_sec: emptyRange(), connected: emptyRange(),
+        dials: emptyRange(), connects: emptyRange(), conversations: emptyRange(), talk_sec: emptyRange(), connected: emptyRange(),
         meetings: emptyRange(), emails: emptyRange(),
         mtg_outcomes: { interested: 0, needs_time: 0, rescheduled: 0, no_show: 0, closed_won: 0, closed_lost: 0 },
         closed: 0, mrr_cents: 0
@@ -138,6 +138,12 @@ module.exports = async function handler(req, res) {
             if (r) {
                 addRange(r.connects, b); addRange(r.connected, b);
                 if (c.duration_seconds) addRange(r.talk_sec, b, c.duration_seconds);
+            }
+            // A "conversation" = a real talk past the gatekeeper: answered AND
+            // longer than 2 minutes. Proxy for reaching the decision-maker.
+            if ((c.duration_seconds || 0) > 120) {
+                addRange(company.conversations, b);
+                if (r) addRange(r.conversations, b);
             }
         }
     }
@@ -227,10 +233,14 @@ module.exports = async function handler(req, res) {
 
     // ── shape the response ──────────────────────────────────────────────────
     const rate = function (num, den) { return den > 0 ? Math.round((num / den) * 1000) / 10 : 0; };
-    const terminalMtgs = function (o) { return o.closed_won + o.closed_lost + o.no_show; };
+    // "Held" = the prospect showed up and engaged (won/lost/interested/needs_time).
+    // no_show and rescheduled did NOT hold; upcoming hasn't happened yet. Held rate
+    // depends on reps logging meeting outcomes (Data Health flags the gaps).
+    const heldCount = function (o) { return o.closed_won + o.closed_lost + o.interested + o.needs_time; };
     function shapeRep(r) {
         const activeDays = r.dial_days.size || 1;
         const o = r.mtg_outcomes;
+        const held = heldCount(o);
         return {
             name: r.name, email: r.email, sdr_key: r.sdr_key, initials: r.initials, color: r.color,
             active: r.active, quota: r.quota,
@@ -239,15 +249,20 @@ module.exports = async function handler(req, res) {
             active_days: r.dial_days.size,
             connects: r.connects,
             connect_rate_pct: rate(r.connects.all, r.dials.all),
+            conversations: r.conversations,
+            conversation_rate_pct: rate(r.conversations.all, r.dials.all),
             talk_min: Math.round(r.talk_sec.all / 60),
             avg_call_sec: r.connected.all > 0 ? Math.round(r.talk_sec.all / r.connected.all) : 0,
             meetings: r.meetings,
+            booked_per_dial_pct: rate(r.meetings.all, r.dials.all),
+            booked_per_conversation_pct: rate(r.meetings.all, r.conversations.all),
             dials_per_meeting: r.meetings.all > 0 ? Math.round(r.dials.all / r.meetings.all) : null,
             quota_attainment_pct: rate(r.dials.today, r.quota),
             meeting_outcomes: o,
-            meetings_held: terminalMtgs(o),
+            meetings_held: held,
+            held_rate_pct: rate(held, r.meetings.all),
             no_show_rate_pct: rate(o.no_show, r.meetings.all),
-            meeting_close_rate_pct: rate(o.closed_won, terminalMtgs(o)),
+            meeting_close_rate_pct: rate(o.closed_won, held),
             closed_clients: r.closed,
             mrr_cents: r.mrr_cents
         };
@@ -255,17 +270,23 @@ module.exports = async function handler(req, res) {
     const perRep = Object.values(reps).map(shapeRep)
         .sort(function (a, b) { return b.meetings.all - a.meetings.all || b.dials.all - a.dials.all; });
 
+    const coHeld = heldCount(company.mtg_outcomes);
     const co = {
         dials: company.dials, connects: company.connects,
         connect_rate_pct: rate(company.connects.all, company.dials.all),
+        conversations: company.conversations,
+        conversation_rate_pct: rate(company.conversations.all, company.dials.all),
         talk_hours: Math.round(company.talk_sec.all / 360) / 10,
         avg_call_sec: company.connected.all > 0 ? Math.round(company.talk_sec.all / company.connected.all) : 0,
         meetings: company.meetings,
+        booked_per_dial_pct: rate(company.meetings.all, company.dials.all),
+        booked_per_conversation_pct: rate(company.meetings.all, company.conversations.all),
         dials_per_meeting: company.meetings.all > 0 ? Math.round(company.dials.all / company.meetings.all) : null,
         emails: company.emails,
         meeting_outcomes: company.mtg_outcomes,
-        meetings_held: terminalMtgs(company.mtg_outcomes),
-        meeting_close_rate_pct: rate(company.mtg_outcomes.closed_won, terminalMtgs(company.mtg_outcomes)),
+        meetings_held: coHeld,
+        held_rate_pct: rate(coHeld, company.meetings.all),
+        meeting_close_rate_pct: rate(company.mtg_outcomes.closed_won, coHeld),
         no_show_rate_pct: rate(company.mtg_outcomes.no_show, company.meetings.all),
         closed_clients: company.closed,
         mrr_cents: company.mrr_cents,

@@ -1908,6 +1908,16 @@
                     </div>
                 </section>
 
+                <section class="stilo-section" id="teamFunnelSection">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">SDR FUNNEL</h3>
+                        <span class="stilo-section-count" id="teamFunnelRange"></span>
+                    </div>
+                    <div id="teamFunnelPanel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
+                        <div class="stilo-empty" style="padding:14px;">Loading funnel…</div>
+                    </div>
+                </section>
+
                 <section class="stilo-section">
                     <div class="stilo-section-header">
                         <h3 class="stilo-section-title">SDRS</h3>
@@ -4267,6 +4277,7 @@
             });
             renderTeamGrid();
             renderCompanyKpis();
+            renderFunnel();
         }
 
         function renderTeamGrid() {
@@ -4418,6 +4429,47 @@
             }).join('');
             panel.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:640px;">' + head + body + '</table>';
         }
+        // The six-stage SDR funnel (per rep + team total), for the selected range.
+        // Dials/booked are range counts; the top-4 rates are computed per range
+        // from range counts; held/close are all-time (outcome-dependent).
+        function renderFunnel() {
+            var panel = document.getElementById('teamFunnelPanel');
+            var rl = document.getElementById('teamFunnelRange');
+            if (!panel) return;
+            if (!teamAnalytics) { panel.innerHTML = '<div class="stilo-empty" style="padding:14px;">No data.</div>'; return; }
+            var rk = teamArRange();
+            if (rl) rl.textContent = ({ today: 'today', week: 'this week', month: 'this month', all: 'all time' })[rk];
+            var pct = function (n, d) { return d > 0 ? Math.round((n / d) * 1000) / 10 : 0; };
+            var th = 'text-align:left;padding:10px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);white-space:nowrap;';
+            var td = 'padding:10px 12px;font-size:13px;white-space:nowrap;';
+            var tdR = td + 'text-align:right;font-family:var(--font-mono);';
+            var head = '<tr style="background:rgba(37,99,235,0.05);">'
+                + '<th style="' + th + '">Rep</th><th style="' + th + 'text-align:right;">Dials</th>'
+                + '<th style="' + th + 'text-align:right;">Connect%</th><th style="' + th + 'text-align:right;">Conv%</th>'
+                + '<th style="' + th + 'text-align:right;">Booked</th><th style="' + th + 'text-align:right;">Bkd/Conv</th>'
+                + '<th style="' + th + 'text-align:right;">Bkd/Dial</th><th style="' + th + 'text-align:right;">Held%</th>'
+                + '<th style="' + th + 'text-align:right;">Close%</th></tr>';
+            var mkRow = function (name, o, bold) {
+                var w = bold ? 'font-weight:800;' : 'font-weight:600;';
+                var bg = bold ? 'background:rgba(37,99,235,0.06);' : '';
+                var d = o.dials[rk], conn = o.connects[rk], conv = o.conversations[rk], bk = o.meetings[rk];
+                return '<tr style="border-top:1px solid var(--border-subtle);' + bg + '">'
+                    + '<td style="' + td + w + 'color:var(--text-primary);">' + escapeAdminHtml(name) + '</td>'
+                    + '<td style="' + tdR + '">' + d + '</td>'
+                    + '<td style="' + tdR + '">' + pct(conn, d) + '%</td>'
+                    + '<td style="' + tdR + 'color:#5A7BE8;">' + pct(conv, d) + '%</td>'
+                    + '<td style="' + tdR + 'font-weight:700;">' + bk + '</td>'
+                    + '<td style="' + tdR + '">' + pct(bk, conv) + '%</td>'
+                    + '<td style="' + tdR + '">' + pct(bk, d) + '%</td>'
+                    + '<td style="' + tdR + '">' + (o.held_rate_pct || 0) + '%</td>'
+                    + '<td style="' + tdR + 'color:#10b981;font-weight:700;">' + (o.meeting_close_rate_pct || 0) + '%</td>'
+                    + '</tr>';
+            };
+            var body = mkRow('Team total', teamAnalytics.company, true);
+            (teamAnalytics.per_rep || []).forEach(function (r) { body += mkRow(r.name, r, false); });
+            panel.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:800px;">' + head + body + '</table>'
+                + '<div style="padding:8px 12px;font-size:10px;color:var(--text-muted);border-top:1px solid var(--border-subtle);">Conversation = an answered call over 2 minutes (past the gatekeeper). Held% &amp; Close% are all-time and depend on reps logging meeting outcomes.</div>';
+        }
         function exportTeamForClaude() {
             if (!teamAnalytics) { alert('Analytics still loading — try again in a moment.'); return; }
             var c = teamAnalytics.company;
@@ -4431,6 +4483,7 @@
             L.push('- Connect rate: ' + c.connect_rate_pct + '% | Avg call: ' + fmtDur(c.avg_call_sec) + ' | Talk time: ' + c.talk_hours + 'h');
             L.push('- Meetings booked: ' + c.meetings.today + ' / ' + c.meetings.week + ' / ' + c.meetings.month + ' / ' + c.meetings.all + ' | Dials/meeting: ' + c.dials_per_meeting);
             L.push('- Meetings held: ' + c.meetings_held + ' | Meeting close rate: ' + c.meeting_close_rate_pct + '% | No-show: ' + c.no_show_rate_pct + '%');
+            L.push('- FUNNEL (all-time): dials ' + c.dials.all + ' -> connect ' + c.connect_rate_pct + '% -> conversation ' + c.conversation_rate_pct + '% -> booked/dial ' + c.booked_per_dial_pct + '% (booked/conv ' + c.booked_per_conversation_pct + '%) -> held ' + c.held_rate_pct + '% -> close ' + c.meeting_close_rate_pct + '%');
             L.push('- Emails sent: ' + c.emails.all + ' | Clients closed: ' + c.closed_clients + ' | MRR: ' + money(c.mrr_cents));
             L.push('');
             L.push('## Per SDR (all-time unless noted)');
@@ -4439,6 +4492,7 @@
                 L.push('- Dials: ' + r.dials.all + ' (today ' + r.dials.today + ', week ' + r.dials.week + ', ~' + r.avg_dials_per_day + '/active day over ' + r.active_days + ' days)');
                 L.push('- Connect rate: ' + r.connect_rate_pct + '% | Avg call: ' + fmtDur(r.avg_call_sec) + ' | Talk: ' + r.talk_min + ' min');
                 L.push('- Meetings booked: ' + r.meetings.all + ' | Dials/meeting: ' + (r.dials_per_meeting != null ? r.dials_per_meeting : 'n/a'));
+                L.push('- Funnel: dials ' + r.dials.all + ' -> connect ' + r.connect_rate_pct + '% -> conversation ' + r.conversation_rate_pct + '% -> booked/dial ' + r.booked_per_dial_pct + '% (booked/conv ' + r.booked_per_conversation_pct + '%) -> held ' + r.held_rate_pct + '% -> close ' + r.meeting_close_rate_pct + '%');
                 L.push('- Meetings held: ' + r.meetings_held + ' | Close rate: ' + r.meeting_close_rate_pct + '% | No-show: ' + r.no_show_rate_pct + '%');
                 L.push('- Outcomes: won ' + r.meeting_outcomes.closed_won + ', lost ' + r.meeting_outcomes.closed_lost + ', no-show ' + r.meeting_outcomes.no_show + ', rescheduled ' + r.meeting_outcomes.rescheduled + ', interested ' + r.meeting_outcomes.interested + ', needs-time ' + r.meeting_outcomes.needs_time);
                 L.push('- Clients closed: ' + r.closed_clients + ' | MRR: ' + money(r.mrr_cents));
