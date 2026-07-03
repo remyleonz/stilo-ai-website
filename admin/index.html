@@ -1874,30 +1874,6 @@
                     <button type="button" id="teamExportBtn" onclick="exportTeamForClaude()" title="Copy a full performance snapshot to paste into Claude for analysis" style="padding:7px 14px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.35);border-radius:9px;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background 150ms;" onmouseover="this.style.background='rgba(37,99,235,0.2)'" onmouseout="this.style.background='rgba(37,99,235,0.12)'">&#8599; Export for Claude</button>
                 </div>
 
-                <!-- Agency totals: hero strip -->
-                <div class="stilo-hero-grid">
-                    <div class="stilo-hero-card accent">
-                        <div class="stilo-hero-eyebrow" id="teamDialsEyebrow">DIALS TODAY</div>
-                        <div class="stilo-hero-value" id="teamTotalDialsToday">—</div>
-                        <div class="stilo-hero-meta">Across the team</div>
-                    </div>
-                    <div class="stilo-hero-card">
-                        <div class="stilo-hero-eyebrow" id="teamMeetingsEyebrow">MEETINGS THIS WEEK</div>
-                        <div class="stilo-hero-value" id="teamTotalMeetingsWeek">—</div>
-                        <div class="stilo-hero-meta">Booked across SDRs</div>
-                    </div>
-                    <div class="stilo-hero-card">
-                        <div class="stilo-hero-eyebrow">LIFETIME MRR</div>
-                        <div class="stilo-hero-value" id="teamTotalMrr">—</div>
-                        <div class="stilo-hero-meta">Closed by the team</div>
-                    </div>
-                    <div class="stilo-hero-card">
-                        <div class="stilo-hero-eyebrow">COMMISSION OWED</div>
-                        <div class="stilo-hero-value" id="teamTotalCommissionOwed">—</div>
-                        <div class="stilo-hero-meta">Pending payout</div>
-                    </div>
-                </div>
-
                 <section class="stilo-section" id="teamKpiSection">
                     <div class="stilo-section-header">
                         <h3 class="stilo-section-title">COMPANY PERFORMANCE</h3>
@@ -4267,6 +4243,7 @@
         var teamData = [];
         var TEAM_RANGE_LABEL = { today: 'Today', week: 'This week', month: 'This month', last_week: 'Last week', last_month: 'Last month' };
 
+        var teamAgencyMrrCents = 0, teamAgencyOwedCents = 0;
         function setTeamRange(range) {
             teamRange = range;
             var f = document.getElementById('teamRangeFilter');
@@ -4339,12 +4316,10 @@
             var totalMeetings = teamData.reduce(function (acc, x) { return acc + ((x.perf.meetings_booked && x.perf.meetings_booked[rk]) || 0); }, 0);
             var totalMrr = teamData.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.mrr_closed_cents) || 0); }, 0);
             var totalOwed = teamData.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.commission_pending_cents) || 0); }, 0);
-            var deyeb = document.getElementById('teamDialsEyebrow'); if (deyeb) deyeb.textContent = 'DIALS · ' + label;
-            var meyeb = document.getElementById('teamMeetingsEyebrow'); if (meyeb) meyeb.textContent = 'MEETINGS · ' + label;
-            document.getElementById('teamTotalDialsToday').textContent = totalDials;
-            document.getElementById('teamTotalMeetingsWeek').textContent = totalMeetings;
-            document.getElementById('teamTotalMrr').textContent = formatMoneyCents(totalMrr);
-            document.getElementById('teamTotalCommissionOwed').textContent = formatMoneyCents(totalOwed);
+            // Hero strip removed; stash the agency MRR + commission totals so the
+            // Company Performance band can render them as tiles.
+            teamAgencyMrrCents = totalMrr;
+            teamAgencyOwedCents = totalOwed;
         }
 
         /* ── Company + niche analytics (one call: /api/sdr/team-analytics) ── */
@@ -4404,7 +4379,9 @@
                 kpiTile('No-show rate', c.no_show_rate_pct + '%', null),
                 kpiTile('Emails · ' + rangeLabel, (c.emails[rk] || 0), null),
                 kpiTile('Clients closed', c.closed_clients, null),
-                kpiTile('MRR', formatMoneyCents(c.mrr_cents), 'live retainers')
+                kpiTile('MRR', formatMoneyCents(c.mrr_cents), 'live retainers'),
+                kpiTile('Lifetime MRR', formatMoneyCents(teamAgencyMrrCents), 'closed by the team'),
+                kpiTile('Commission owed', formatMoneyCents(teamAgencyOwedCents), 'pending payout')
             ].join('');
         }
         function renderNicheTable() {
