@@ -160,8 +160,12 @@ module.exports = async function handler(req, res) {
         const key = l.meeting_event_id || ('lead:' + l.id);
         if (seenEvent.has(key)) continue;
         seenEvent.add(key);
-        const bAt = l.meeting_booked_at || l.meeting_scheduled_at;
-        const b = buckets(bAt, tday, twk, tmon);
+        // Bucket by WHEN THE REP BOOKED IT, never by the meeting date. No
+        // fallback to meeting_scheduled_at — that would count a meeting in the
+        // period it's HELD, not booked (the "why does Luke show meetings
+        // scheduled-this-week" bug). A meeting missing booked_at counts only in
+        // all-time (buckets(null) → all:true, periods:false), never a wrong week.
+        const b = buckets(l.meeting_booked_at, tday, twk, tmon);
         addRange(company.meetings, b);
         const r = rep(l.meeting_booked_by_sdr);
         if (r) addRange(r.meetings, b);
