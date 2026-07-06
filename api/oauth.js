@@ -38,6 +38,20 @@ const PROVIDERS = {
     client_secret_env: 'GOOGLE_OAUTH_CLIENT_SECRET',
     config_key: 'gmail_oauth',
   },
+  // STILO-owned read-only connection to the master reply inbox
+  // (remyleon@stiloaipartners.com). Used by /api/prospects/capture-replies to
+  // read inbound cold-email replies. This is a SEPARATE oauth_tokens row from
+  // 'google-calendar' on purpose: authorizing it does NOT touch or clobber the
+  // calendar refresh token. Start it while signed into Google as
+  // remyleon@stiloaipartners.com (the inbox that STILO_REPLY_TO points at).
+  'gmail-inbox': {
+    auth_url: 'https://accounts.google.com/o/oauth2/v2/auth',
+    token_url: 'https://oauth2.googleapis.com/token',
+    scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
+    client_id_env: 'GOOGLE_OAUTH_CLIENT_ID',
+    client_secret_env: 'GOOGLE_OAUTH_CLIENT_SECRET',
+    config_key: 'gmail_inbox_oauth',
+  },
   'google-business': {
     auth_url: 'https://accounts.google.com/o/oauth2/v2/auth',
     token_url: 'https://oauth2.googleapis.com/token',

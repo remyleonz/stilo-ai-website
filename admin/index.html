@@ -1740,6 +1740,7 @@
                 </div>
                 <div id="prospectTableEmailable" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <div id="prospectTableCallbacks" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
+                <div id="nurtureMidBanner" style="display:none;margin-bottom:12px;padding:11px 15px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.25);border-radius:10px;font-size:13px;color:var(--text-secondary);align-items:center;gap:10px;"></div>
                 <div id="prospectTableBooked" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <div id="prospectTableDead" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
                 <div id="prospectTableCallsToday" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;"></div>
@@ -6015,6 +6016,9 @@
             document.getElementById('prospectTableEmailable').style.display   = name === 'emailable'    ? '' : 'none';
             document.getElementById('prospectTableCallbacks').style.display   = name === 'callbacks'    ? '' : 'none';
             document.getElementById('prospectTableBooked').style.display      = name === 'booked'       ? '' : 'none';
+            var nurtureBanner = document.getElementById('nurtureMidBanner');
+            if (nurtureBanner && name !== 'booked') nurtureBanner.style.display = 'none';
+            else if (nurtureBanner && name === 'booked') updateNurtureMidBadge();
             document.getElementById('prospectTableDead').style.display        = name === 'dead'         ? '' : 'none';
             document.getElementById('prospectTableCallsToday').style.display  = name === 'calls-today'  ? '' : 'none';
             var myHistoryHost = document.getElementById('prospectTableMyHistory');
@@ -6576,6 +6580,30 @@
             }
         }
 
+        // Mid-sequence = a booked lead whose nurture stage hasn't reached
+        // 'showed' yet. The booked list only carries nurture_stage (not the
+        // email/meeting signals the drawer uses), so we count: explicit stage
+        // that isn't 'showed', OR no explicit stage at all (auto-derives to
+        // at least 'booked', i.e. still in flight). Rendered as a banner above
+        // the booked table.
+        function updateNurtureMidBadge() {
+            var banner = document.getElementById('nurtureMidBanner');
+            if (!banner) return;
+            var rows = (prospectState.cache && prospectState.cache.booked) || [];
+            var mid = rows.filter(function (r) {
+                var s = r && r.nurture_stage;
+                return s !== 'showed'; // null/blank or any pre-show stage counts as mid-sequence
+            }).length;
+            var showed = rows.length - mid;
+            if (!rows.length) { banner.style.display = 'none'; return; }
+            banner.style.display = 'flex';
+            banner.innerHTML = '<span style="display:inline-flex;width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;"></span>'
+                + '<span><strong style="color:var(--text-primary);font-weight:700;">' + mid + '</strong> lead' + (mid === 1 ? '' : 's') + ' mid-sequence</span>'
+                + '<span style="color:var(--text-muted);">·</span>'
+                + '<span style="color:var(--text-muted);">' + showed + ' showed</span>'
+                + '<span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Open a lead to see its nurture stage</span>';
+        }
+
         async function loadProspectBooked(opts) {
             opts = opts || {};
             var host = document.getElementById('prospectTableBooked');
@@ -6595,6 +6623,7 @@
                 host.innerHTML = renderProspectTable(rows, 'booked');
                 var badge = document.getElementById('prospectBookedBadge');
                 if (badge) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
+                updateNurtureMidBadge();
             } catch (e) {
                 console.error('[booked]', e);
                 if (!cached) {
@@ -7260,8 +7289,129 @@
             }
         }
 
+        // ── Pre-meeting NURTURE sequence ─────────────────────────────────────
+        // Where a booked lead sits in the pre-meeting nurture flow. The email
+        // automation isn't built yet, so if leads.nurture_stage is null we
+        // DERIVE the stage from existing signals. An operator can override it
+        // via the stepper dropdown (persists to nurture_stage).
+        var NURTURE_STAGES = [
+            { key: 'booked',    label: 'Booked' },
+            { key: 'vsl_sent',  label: 'VSL sent' },
+            { key: 'value',     label: 'Value email' },
+            { key: 'triaged',   label: 'Triaged' },
+            { key: 'confirmed', label: 'Confirmed' },
+            { key: 'showed',    label: 'Showed' }
+        ];
+        function nurtureStageIndex(key) {
+            for (var i = 0; i < NURTURE_STAGES.length; i++) if (NURTURE_STAGES[i].key === key) return i;
+            return -1;
+        }
+        // Derive a stage from lead data when nurture_stage is null. Returns a
+        // stage key or null (null = not booked, no stepper).
+        function nurtureStageFrom(d) {
+            if (!d) return null;
+            var isBooked = (d.last_called_outcome === 'booked_meeting') || !!d.meeting_scheduled_at;
+            if (!isBooked) return null;
+            // A logged meeting outcome means the meeting happened → showed.
+            var meetings = d.meetings || [];
+            var hasOutcome = meetings.some(function (m) { return m && m.outcome; });
+            if (hasOutcome) return 'showed';
+            // At least one outbound value email sent → 'value' (past vsl_sent).
+            if ((d.nurture_email_count || 0) > 0) return 'value';
+            // Booked, nothing sent yet.
+            return 'booked';
+        }
+        // The stage to render: explicit override wins, else derived. `derived`
+        // flag tells the UI to show "(auto)".
+        function nurtureResolveStage(d) {
+            var explicit = d && d.nurture_stage;
+            if (explicit && nurtureStageIndex(explicit) >= 0) return { key: explicit, derived: false };
+            var k = nurtureStageFrom(d);
+            return { key: k, derived: true };
+        }
+        // Compact 6-step horizontal stepper. Steps up to+including the current
+        // stage are filled blue; the rest are muted. Matches the admin's blue
+        // accent + dark card styling. Includes an operator override <select>.
+        function renderNurtureStepper(d) {
+            var resolved = nurtureResolveStage(d);
+            if (!resolved.key) return '';
+            var curIdx = nurtureStageIndex(resolved.key);
+            var pips = NURTURE_STAGES.map(function (s, i) {
+                var done = i <= curIdx;
+                var isCur = i === curIdx;
+                var dot = '<div style="width:' + (isCur ? '13px' : '10px') + ';height:' + (isCur ? '13px' : '10px') + ';border-radius:50%;flex-shrink:0;'
+                    + (done ? 'background:var(--blue);' + (isCur ? 'box-shadow:0 0 0 4px rgba(59,130,246,0.22);' : '')
+                            : 'background:transparent;border:1.5px solid var(--border-medium);')
+                    + '"></div>';
+                var line = i < NURTURE_STAGES.length - 1
+                    ? '<div style="flex:1;height:2px;margin:0 4px;border-radius:2px;background:' + (i < curIdx ? 'var(--blue)' : 'var(--border-medium)') + ';"></div>'
+                    : '';
+                return '<div style="display:flex;flex-direction:column;align-items:center;' + (i < NURTURE_STAGES.length - 1 ? 'flex:1;' : '') + '">'
+                    + '<div style="display:flex;align-items:center;width:100%;">'
+                      + '<div style="flex:1;height:2px;background:transparent;"></div>' + dot + '<div style="flex:1;height:2px;background:transparent;"></div>'
+                    + '</div>'
+                    + '<div style="margin-top:6px;font-size:9.5px;font-weight:' + (isCur ? '700' : '500') + ';letter-spacing:0.02em;text-align:center;color:' + (done ? (isCur ? 'var(--text-primary)' : 'var(--text-secondary)') : 'var(--text-muted)') + ';white-space:nowrap;">' + s.label + '</div>'
+                    + '</div>';
+            });
+            // Interleave connector lines between the pip columns.
+            var track = '';
+            for (var i = 0; i < NURTURE_STAGES.length; i++) {
+                track += pips[i];
+                if (i < NURTURE_STAGES.length - 1) {
+                    track += '<div style="flex:1;height:2px;margin:5px -14px 0;border-radius:2px;align-self:flex-start;background:' + (i < curIdx ? 'var(--blue)' : 'var(--border-medium)') + ';"></div>';
+                }
+            }
+            var opts = NURTURE_STAGES.map(function (s) {
+                return '<option value="' + s.key + '"' + (s.key === resolved.key && !resolved.derived ? ' selected' : '') + '>' + s.label + '</option>';
+            }).join('');
+            var autoTag = resolved.derived
+                ? '<span style="font-size:10px;color:var(--text-muted);background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);padding:1px 7px;border-radius:999px;">auto</span>'
+                : '';
+            return '<div style="margin-bottom:16px;padding:14px 16px;background:var(--bg-card);border:1px solid rgba(59,130,246,0.25);border-radius:12px;">'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;">'
+                  + '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);">Nurture sequence</div>'
+                  + '<div style="display:flex;align-items:center;gap:8px;">' + autoTag
+                    + '<select id="nurtureStageSelect" onchange="setNurtureStage(' + (d.id != null ? d.id : 'null') + ', this.value)" style="padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:var(--text-secondary);font-size:11px;cursor:pointer;">'
+                      + '<option value="">Auto-derive</option>' + opts
+                    + '</select>'
+                  + '</div>'
+                + '</div>'
+                + '<div style="display:flex;align-items:flex-start;">' + track + '</div>'
+                + '<div id="nurtureStageMsg" style="margin-top:8px;font-size:11px;color:var(--text-muted);min-height:14px;"></div>'
+                + '</div>';
+        }
+        // Persist an operator override (or clear it with "" = auto-derive).
+        async function setNurtureStage(leadId, stage) {
+            var msg = document.getElementById('nurtureStageMsg');
+            if (msg) { msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving…'; }
+            try {
+                await prospectFetchJSON('/api/prospects/set-nurture-stage', {
+                    method: 'POST',
+                    body: JSON.stringify({ id: leadId, stage: stage || null })
+                });
+                // Reflect the change immediately: patch the cached lead + re-render
+                // the stepper in place without reloading the whole drawer.
+                if (msg) { msg.style.color = 'var(--green,#22c55e)'; msg.textContent = stage ? 'Stage set.' : 'Back to auto-derive.'; }
+                // Refresh the booked-tab mid-sequence badge if that cache is warm.
+                var cb = prospectState.cache && prospectState.cache.booked;
+                if (cb) {
+                    var row = cb.find(function (r) { return String(r.id) === String(leadId); });
+                    if (row) row.nurture_stage = stage || null;
+                    updateNurtureMidBadge();
+                }
+                // Re-render the stepper card with the new stage.
+                var d2 = Object.assign({}, window.__lastProspectData || {}, { id: leadId, nurture_stage: stage || null });
+                var host = document.getElementById('nurtureStepperHost');
+                if (host) host.innerHTML = renderNurtureStepper(d2);
+                if (window.__lastProspectData) window.__lastProspectData.nurture_stage = stage || null;
+            } catch (e) {
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + (e.message || 'unknown'); }
+            }
+        }
+
         function renderProspectDrawer(data, mode) {
             var d = data || {};
+            window.__lastProspectData = d;
             var business = d.business_name || d.business || d.name || '—';
             var owner    = d.owner_name || d.contact_name || '—';
             var phone    = d.owner_phone || d.phone || '';
@@ -7477,6 +7627,7 @@
                 + '</div>'
 
                 + meetingCardHtml
+                + '<div id="nurtureStepperHost">' + (mode !== 'emailable' ? renderNurtureStepper(d) : '') + '</div>'
                 + phoneCardHtml
                 + actionPillsHtml
                 + infoGridHtml

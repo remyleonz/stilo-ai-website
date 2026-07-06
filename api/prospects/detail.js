@@ -59,14 +59,41 @@ async function fetchCallHistory(leadId) {
     } catch (_) { return []; }
 }
 
+// Nurture-sequence signal: how many outbound value emails we've sent this lead,
+// plus the most recent one. Drives the pre-meeting nurture stepper's derivation
+// of the 'value' stage in the admin drawer (the nurture automation isn't built
+// yet, so we derive it). Cheap COUNT + a one-row lookup for the timestamp.
+async function fetchOutboundEmailStats(leadId) {
+    if (leadId == null || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+        return { count: 0, last_sent_at: null };
+    }
+    try {
+        const sb = leadsClient();
+        const { count } = await sb.from('lead_messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('lead_id', leadId)
+            .eq('direction', 'outbound')
+            .eq('channel', 'email');
+        const { data } = await sb.from('lead_messages')
+            .select('sent_at')
+            .eq('lead_id', leadId)
+            .eq('direction', 'outbound')
+            .eq('channel', 'email')
+            .order('sent_at', { ascending: false, nullsFirst: false })
+            .limit(1);
+        return { count: count || 0, last_sent_at: (data && data[0] && data[0].sent_at) || null };
+    } catch (_) { return { count: 0, last_sent_at: null }; }
+}
+
 // Sales-meeting records (Tactiq summaries + manual transcripts) for the lead's
-// "Meeting transcripts" panel section. Newest first.
+// "Meeting transcripts" panel section. Newest first. `outcome` drives the
+// nurture stepper's derivation of the 'showed' stage.
 async function fetchMeetings(leadId) {
     if (leadId == null || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return [];
     try {
         const sb = leadsClient();
         const { data, error } = await sb.from('lead_meetings')
-            .select('id, source, tactiq_meeting_id, title, occurred_at, duration_seconds, attendees, summary, action_items, transcript, meet_url, created_by, created_at')
+            .select('id, source, tactiq_meeting_id, title, occurred_at, duration_seconds, attendees, summary, action_items, transcript, meet_url, outcome, created_by, created_at')
             .eq('lead_id', leadId)
             .order('occurred_at', { ascending: false, nullsFirst: false })
             .order('created_at', { ascending: false })
@@ -88,14 +115,20 @@ module.exports = async function handler(req, res) {
 
     // Fetch lead + call history in parallel — most leads have 0 calls, so
     // the lead_calls query is essentially free. Merge after both resolve.
-    const [lead, callHistory, meetings] = await Promise.all([
+    const [lead, callHistory, meetings, emailStats] = await Promise.all([
         fetchLead({ id: id, phone: q.phone, business_name: q.business_name, email: q.email }),
         id != null ? fetchCallHistory(id) : Promise.resolve([]),
-        id != null ? fetchMeetings(id) : Promise.resolve([])
+        id != null ? fetchMeetings(id) : Promise.resolve([]),
+        id != null ? fetchOutboundEmailStats(id) : Promise.resolve({ count: 0, last_sent_at: null })
     ]);
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
     lead.call_history = callHistory;
     lead.meetings = meetings;
+    // Nurture-stepper signals (see set-nurture-stage.js + the admin drawer's
+    // nurtureStageFrom() derivation). nurture_stage itself comes through the
+    // select('*') on the lead row.
+    lead.nurture_email_count = emailStats.count;
+    lead.nurture_last_email_at = emailStats.last_sent_at;
     const status = 200;
     const json = lead;
 

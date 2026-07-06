@@ -15,6 +15,88 @@ const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = requi
 const { createClient } = require('@supabase/supabase-js');
 const kit = require('./_email_kit');
 const crypto = require('crypto');
+const dns = require('dns').promises;
+
+// ── Bounce guard ──────────────────────────────────────────────────────────
+// ~15% of cold emails bounce because many prospect addresses are GUESSED from
+// name+domain patterns. This guard blocks the clearly-undeliverable sends before
+// we hit Resend, without touching the rep's normal flow. It is deliberately
+// conservative: it only blocks addresses the data says are bad, and any MX/DNS
+// problem FAILS OPEN (never blocks a legit send because the check itself failed).
+
+// Known throwaway/disposable inbox domains. Sending to these wastes reputation
+// and never converts. Small, high-signal list; extend as new ones show up.
+const DISPOSABLE_DOMAINS = new Set([
+    'mailinator.com', 'guerrillamail.com', 'guerrillamail.info', 'sharklasers.com',
+    'trashmail.com', 'yopmail.com', '10minutemail.com', 'temp-mail.org', 'tempmail.com',
+    'getnada.com', 'maildrop.cc', 'dispostable.com', 'throwawaymail.com', 'fakeinbox.com',
+    'mailnesia.com', 'mohmal.com', 'emailondeck.com', 'spam4.me', 'discard.email'
+]);
+
+// Stored verdicts that mean the email-finder explicitly gave up: there is no
+// verified address, so anything present is a raw guess. In the current data all
+// three of these move together (the 55 "bad" leads carry all three) but we check
+// each independently so a future backfill of any one column still gates. We do
+// We deliberately do NOT block on the finder's stored confidence. Low/none
+// confidence addresses still send: guessed patterns often land, and the rep
+// confirms the real email with the client on the call. Only guaranteed-dead
+// addresses are blocked (already-bounced, no-MX domain, or a real-time
+// verifier's definitive 'undeliverable' verdict below).
+
+// Real-time mailbox verification via Emailable, and ONLY when EMAILABLE_API_KEY
+// is set. Blocks solely a definitive 'undeliverable' verdict (a confirmed-dead
+// mailbox = guaranteed bounce). 'deliverable', 'risky', and 'unknown' all SEND,
+// so a merely low-confidence guess is never blocked. Fails OPEN on any error,
+// timeout, or missing key.
+async function verifyGate(email, timeoutMs) {
+    const key = process.env.EMAILABLE_API_KEY;
+    if (!key) return { block: false, reason: 'verify_disabled' };
+    let timer;
+    try {
+        const url = 'https://api.emailable.com/v1/verify?email=' + encodeURIComponent(email) + '&api_key=' + encodeURIComponent(key) + '&timeout=5';
+        const ctrl = new AbortController();
+        timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || 6000);
+        const r = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!r.ok) return { block: false, reason: 'verify_http_' + r.status };
+        const data = await r.json().catch(function () { return {}; });
+        if (String(data.state || '').toLowerCase() === 'undeliverable') return { block: true, reason: 'undeliverable' };
+        return { block: false, reason: String(data.state || 'ok') };
+    } catch (e) {
+        clearTimeout(timer);
+        return { block: false, reason: 'verify_error:' + ((e && (e.name || e.message)) || 'unknown') };
+    }
+}
+
+function domainOf(email) {
+    const at = String(email || '').lastIndexOf('@');
+    return at === -1 ? '' : email.slice(at + 1).trim().toLowerCase();
+}
+
+// Inline MX check on the recipient domain. Blocks disposable domains and domains
+// that publish NO MX records (they cannot receive mail). FAILS OPEN on any
+// timeout, network error, or non-definitive DNS failure. Returns { block, reason }.
+async function mxGate(email, timeoutMs) {
+    const domain = domainOf(email);
+    if (!domain) return { block: false, reason: 'no_domain' };            // regex already validated shape; fail open
+    if (DISPOSABLE_DOMAINS.has(domain)) return { block: true, reason: 'disposable_domain' };
+    let timer;
+    try {
+        const lookup = dns.resolveMx(domain);
+        const guard = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('mx_timeout')), timeoutMs || 4000); });
+        const records = await Promise.race([lookup, guard]);
+        clearTimeout(timer);
+        if (!Array.isArray(records) || records.length === 0) return { block: true, reason: 'no_mx' };
+        return { block: false, reason: 'has_mx' };
+    } catch (e) {
+        clearTimeout(timer);
+        // ENOTFOUND / ENODATA definitively mean "domain publishes no MX" → block.
+        // Every OTHER error (timeout, SERVFAIL, transient network) fails OPEN.
+        const code = e && e.code;
+        if (code === 'ENOTFOUND' || code === 'ENODATA') return { block: true, reason: 'no_mx' };
+        return { block: false, reason: 'mx_lookup_error:' + (code || (e && e.message) || 'unknown') };
+    }
+}
 
 // One-click List-Unsubscribe. Gmail/Yahoo require this header on bulk mail or
 // they route it to spam. Mints the same signed token /api/unsubscribe verifies:
@@ -55,9 +137,32 @@ module.exports = async function handler(req, res) {
 
     const sb = leadsClient();
     const { data: lead } = await sb.from('leads')
-        .select('id,name,owner_email,email')
+        .select('id,name,owner_email,email,bounced_at')
         .eq('id', id).maybeSingle();
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
+
+    // ── Bounce guard (runs before Resend) ──────────────────────────────────
+    // 1. Never re-send to an address that already hard-bounced.
+    if (lead.bounced_at) {
+        return res.status(409).json({ error: 'recipient_bounced', detail: to + ' previously bounced and will not be re-emailed.' });
+    }
+    // 2. Inline MX / disposable check on the recipient domain. Blocks only a
+    //    domain that literally cannot receive mail (no MX) or a disposable inbox.
+    //    Fails OPEN on any lookup error or timeout so a DNS blip never blocks.
+    try {
+        const mx = await mxGate(to, 4000);
+        if (mx.block) {
+            return res.status(409).json({ error: 'recipient_undeliverable', detail: mx.reason === 'disposable_domain'
+                ? 'Recipient domain is a disposable/throwaway inbox.'
+                : 'Recipient domain has no mail server (no MX record).' });
+        }
+    } catch (_) { /* fail open: never block a send because the guard itself threw */ }
+    // 3. Real-time mailbox verification (only when EMAILABLE_API_KEY is set).
+    //    Blocks ONLY a confirmed-undeliverable mailbox; low-confidence still sends.
+    try {
+        const v = await verifyGate(to, 6000);
+        if (v.block) return res.status(409).json({ error: 'recipient_undeliverable', detail: to + ' is a confirmed-undeliverable mailbox and was not sent.' });
+    } catch (_) { /* fail open */ }
 
     // Honor unsubscribes: the one-click header writes to public.lcr_suppressions.
     // Never email an opted-out address (CAN-SPAM + deliverability). Fail open if

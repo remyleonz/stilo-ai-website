@@ -14,7 +14,8 @@ const SELECT_COLS = [
     'last_called_at', 'last_called_outcome', 'call_attempts', 'call_notes',
     'next_action_due_at', 'owner_phone_strict_pass', 'assigned_to',
     'meeting_event_id', 'meeting_event_link', 'meeting_meet_link',
-    'meeting_scheduled_at', 'meeting_duration_min', 'meeting_booked_by_sdr'
+    'meeting_scheduled_at', 'meeting_duration_min', 'meeting_booked_by_sdr',
+    'nurture_stage'
 ].join(',');
 
 module.exports = async function handler(req, res) {
