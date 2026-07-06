@@ -37,36 +37,11 @@ const DISPOSABLE_DOMAINS = new Set([
 // verified address, so anything present is a raw guess. In the current data all
 // three of these move together (the 55 "bad" leads carry all three) but we check
 // each independently so a future backfill of any one column still gates. We do
-// We deliberately do NOT block on the finder's stored confidence. Low/none
-// confidence addresses still send: guessed patterns often land, and the rep
-// confirms the real email with the client on the call. Only guaranteed-dead
-// addresses are blocked (already-bounced, no-MX domain, or a real-time
-// verifier's definitive 'undeliverable' verdict below).
-
-// Real-time mailbox verification via Emailable, and ONLY when EMAILABLE_API_KEY
-// is set. Blocks solely a definitive 'undeliverable' verdict (a confirmed-dead
-// mailbox = guaranteed bounce). 'deliverable', 'risky', and 'unknown' all SEND,
-// so a merely low-confidence guess is never blocked. Fails OPEN on any error,
-// timeout, or missing key.
-async function verifyGate(email, timeoutMs) {
-    const key = process.env.EMAILABLE_API_KEY;
-    if (!key) return { block: false, reason: 'verify_disabled' };
-    let timer;
-    try {
-        const url = 'https://api.emailable.com/v1/verify?email=' + encodeURIComponent(email) + '&api_key=' + encodeURIComponent(key) + '&timeout=5';
-        const ctrl = new AbortController();
-        timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || 6000);
-        const r = await fetch(url, { signal: ctrl.signal });
-        clearTimeout(timer);
-        if (!r.ok) return { block: false, reason: 'verify_http_' + r.status };
-        const data = await r.json().catch(function () { return {}; });
-        if (String(data.state || '').toLowerCase() === 'undeliverable') return { block: true, reason: 'undeliverable' };
-        return { block: false, reason: String(data.state || 'ok') };
-    } catch (e) {
-        clearTimeout(timer);
-        return { block: false, reason: 'verify_error:' + ((e && (e.name || e.message)) || 'unknown') };
-    }
-}
+// We do NOT verify addresses with a paid external service (no per-email cost).
+// Low/none-confidence guesses still send; the rep confirms the real email with
+// the client on the call. Only guaranteed-dead addresses are blocked below:
+// already-bounced, or a domain that literally cannot receive mail (no MX /
+// disposable). Those are free DNS checks, not a verification service.
 
 function domainOf(email) {
     const at = String(email || '').lastIndexOf('@');
@@ -157,12 +132,6 @@ module.exports = async function handler(req, res) {
                 : 'Recipient domain has no mail server (no MX record).' });
         }
     } catch (_) { /* fail open: never block a send because the guard itself threw */ }
-    // 3. Real-time mailbox verification (only when EMAILABLE_API_KEY is set).
-    //    Blocks ONLY a confirmed-undeliverable mailbox; low-confidence still sends.
-    try {
-        const v = await verifyGate(to, 6000);
-        if (v.block) return res.status(409).json({ error: 'recipient_undeliverable', detail: to + ' is a confirmed-undeliverable mailbox and was not sent.' });
-    } catch (_) { /* fail open */ }
 
     // Honor unsubscribes: the one-click header writes to public.lcr_suppressions.
     // Never email an opted-out address (CAN-SPAM + deliverability). Fail open if
@@ -175,6 +144,9 @@ module.exports = async function handler(req, res) {
 
     const sender = await kit.getSenderIdentity(gate.email);
     const html = kit.buildEmailHtml({ bodyText: message, sender: sender });
+    // Plain-text alternative (multipart). Mirrors the HTML body, so the message
+    // reads clean in text-only clients and looks less "marketing" to Gmail.
+    const plainText = kit.ensureBookingLink(kit.sanitizeCopy(message)) + '\n\n' + kit.footerText(sender);
 
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
     // Quote the display name (RFC 5322) — it carries a middot, and the rep's
@@ -195,6 +167,7 @@ module.exports = async function handler(req, res) {
                 reply_to: process.env.STILO_REPLY_TO || fromEmail,
                 subject: subject,
                 html: html,
+                text: plainText,
                 // Gmail/Yahoo deliverability: one-click unsubscribe.
                 headers: (function () {
                     const t = unsubToken(to);

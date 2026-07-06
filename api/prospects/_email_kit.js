@@ -333,47 +333,35 @@ function footerText(sender) {
     return [sender.name, 'STILO AI Partners', sender.phone, MARKETING_SITE].filter(Boolean).join('\n');
 }
 
-// Light-mode HTML email. Authored LIGHT on purpose: Gmail's iPhone app force
-// inverts dark emails into washed-out gray, while light emails invert cleanly
-// (see memory: email-light-for-dark-mode). White bg, near-black text, blue
-// accents. Inline CSS only. Body paragraphs come from the rep's editable text;
-// the calendar URL becomes a button + link, and the footer is appended here.
+// PLAIN, personal-style HTML built to land in Gmail's PRIMARY tab, not
+// Promotions. Marketing chrome (a card/background, a colored button, images, a
+// footer table, brand-colored links) is exactly what Gmail reads as
+// "promotional", so this strips ALL of it: no wrapper card, no button, no
+// images, just the message text and a one-line signature, so it reads like an
+// email a person typed. Light on purpose (see memory: email-light-for-dark-mode).
+// Pair this with a text/plain part on the send and with Resend open/click
+// tracking OFF (the pixel + rewritten links are themselves Promotions signals).
 function buildEmailHtml(opts) {
     const sender = opts.sender;
-    const ctaButton = '<p style="margin:22px 0;"><a href="' + CALENDAR_LINK + '" '
-        + 'style="display:inline-block;background:' + BLUE + ';color:#ffffff;text-decoration:none;'
-        + 'font-weight:700;font-size:15px;padding:13px 22px;border-radius:8px;">Book a 15-minute call</a></p>';
     const paras = ensureBookingLink(sanitizeCopy(opts.bodyText))
         .split(/\n{2,}/)
         .map(function (block) {
-            // Walk lines so a line that is exactly the calendar URL becomes the
-            // CTA button (even when it sits one line under the booking sentence,
-            // which is how the model usually writes it). Other lines stay text.
-            var out = '', buf = [];
-            var flush = function () {
-                if (buf.length) { out += '<p style="margin:14px 0;">' + buf.join('<br>') + '</p>'; buf = []; }
-            };
-            block.split('\n').forEach(function (line) {
-                if (line.trim() === CALENDAR_LINK) { flush(); out += ctaButton; return; }
-                buf.push(escapeHtml(line).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:' + BLUE + ';">$1</a>'));
+            var lines = block.split('\n').map(function (line) {
+                // Plain <a> (no brand color) so a link doesn't read as a marketing button.
+                return escapeHtml(line).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
             });
-            flush();
-            return out;
+            return '<p style="margin:0 0 14px;">' + lines.join('<br>') + '</p>';
         }).join('');
-
-    return [
-        '<div style="background:#f4f5f7;padding:24px 0;">',
-        '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;padding:30px 34px;color:#1a1a1a;font-size:15px;line-height:1.6;">',
-        paras,
-        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:26px 0 14px;" />',
-        '<table cellpadding="0" cellspacing="0" border="0" style="font-size:13px;color:#4b5563;line-height:1.5;"><tr><td>',
-        '<strong style="color:#111111;">' + escapeHtml(sender.name) + '</strong><br>',
-        'STILO AI Partners<br>',
-        (sender.phone ? escapeHtml(sender.phone) + '<br>' : ''),
-        '<a href="https://stiloaipartners.com" style="color:' + BLUE + ';text-decoration:none;">' + MARKETING_SITE + '</a>',
-        '</td></tr></table>',
-        '</div></div>'
-    ].join('');
+    const sig = [
+        escapeHtml(sender.name),
+        'STILO AI Partners',
+        (sender.phone ? escapeHtml(sender.phone) : ''),
+        '<a href="https://stiloaipartners.com">' + MARKETING_SITE + '</a>'
+    ].filter(Boolean).join('<br>');
+    return '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#222222;font-size:15px;line-height:1.6;">'
+        + paras
+        + '<p style="margin:18px 0 0;color:#222222;">' + sig + '</p>'
+        + '</div>';
 }
 
 module.exports = {
