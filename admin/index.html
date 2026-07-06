@@ -3374,6 +3374,22 @@
                 switchPage('prospecting');
                 setTimeout(function() { openProspectDrawer(hashLeadId, 'callable'); }, 300);
             }
+
+            // Refresh reply capture on dashboard open, throttled to once per 3
+            // minutes. Stamps replies to our cold emails onto the right lead with
+            // NO background cron. Fire-and-forget: never blocks or breaks the UI.
+            try {
+                var _rc = +(localStorage.getItem('stilo_replies_last') || 0);
+                if (Date.now() - _rc >= 3 * 60 * 1000) {
+                    localStorage.setItem('stilo_replies_last', String(Date.now()));
+                    sb.auth.getSession().then(function(_s) {
+                        var _tok = _s && _s.data && _s.data.session && _s.data.session.access_token;
+                        if (!_tok) return;
+                        fetch('/api/prospects/capture-replies?days=7', { method: 'POST', headers: { 'Authorization': 'Bearer ' + _tok } })
+                            .catch(function() { /* best-effort */ });
+                    });
+                }
+            } catch (_) { /* never break the dashboard over reply capture */ }
         });
 
         /* ============================================================
