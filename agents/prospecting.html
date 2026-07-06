@@ -67,7 +67,7 @@
   .btn-primary:hover{background:transparent;border-color:#fff;color:#fff;transform:translateY(-1px)}
 
   /* ===== HERO ===== */
-  .hero{position:relative;padding:150px 0 40px;overflow:hidden}
+  .hero{position:relative;padding:56px 0 40px;overflow:hidden}
   .hero::before{content:"";position:absolute;top:-6%;left:50%;transform:translateX(-50%);width:1000px;height:640px;background:radial-gradient(ellipse at center,rgba(45,79,184,.16),transparent 62%);pointer-events:none}
   .hero h1{position:relative;text-align:center;font-size:clamp(1.4rem,3.5vw,2.9rem);line-height:1.14;max-width:min(900px,94vw);margin:0 auto 30px;font-weight:600}
   .hero h1 .g{background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -140,30 +140,6 @@
 </style>
 </head>
 <body>
-
-<nav id="topNav">
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">
-      <img class="nav-logo-mark" src="/assets/STILOMOBILELOGO.png" alt="STILO AI PARTNERS">
-      <img class="nav-logo-wordmark" src="/assets/StiloLogoOfficial.png" alt="STILO AI PARTNERS">
-    </a>
-    <ul class="nav-links">
-      <li><a href="/#agents">Agents</a></li>
-      <li><a href="/#industries">Use cases</a></li>
-      <li><a href="/#process">Process</a></li>
-      <li><a href="/#why-us">Why us</a></li>
-    </ul>
-    <a class="nav-cta js-book">Talk to a partner</a>
-    <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu"><span></span></button>
-  </div>
-</nav>
-<div class="mobile-menu" id="mobileMenu">
-  <a href="/#agents">Agents</a>
-  <a href="/#industries">Use cases</a>
-  <a href="/#process">Process</a>
-  <a href="/#why-us">Why us</a>
-  <a class="js-book" style="color:var(--accent-glow)">Talk to a partner</a>
-</div>
 
 <!-- HERO -->
 <section class="hero">
@@ -269,6 +245,7 @@
       <div class="footer-brand">
         <a href="/" class="flogo">STILO AI PARTNERS</a>
         <p>Custom AI agents for growing businesses. Receptionist, lead response, customer reactivation, websites, SEO, growth intelligence, and sales coaching.</p>
+        <a href="/" style="display:inline-block;margin-top:14px;color:var(--accent-glow);font-family:var(--font-mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;text-decoration:none">Visit stiloaipartners.com &rarr;</a>
       </div>
       <div class="footer-col">
         <h4>Explore</h4>
@@ -317,14 +294,6 @@
 </div>
 
 <script>
-/* header: scroll-compact + mobile menu */
-(function(){
-  var nav=document.getElementById('topNav'), mt=document.getElementById('menuToggle'), mm=document.getElementById('mobileMenu');
-  addEventListener('scroll',function(){ nav.classList.toggle('scrolled', scrollY>10); },{passive:true});
-  if(mt)mt.addEventListener('click',function(){ mm.classList.toggle('open'); });
-  if(mm)mm.querySelectorAll('a').forEach(function(a){ a.addEventListener('click',function(){ mm.classList.remove('open'); }); });
-})();
-
 /* Booking modal (ported from stiloaipartners.com, hits the same public API) */
 (function(){
   var modal=document.getElementById('bookingModal'); if(!modal)return;
