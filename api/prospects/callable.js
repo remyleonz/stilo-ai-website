@@ -56,7 +56,13 @@ async function callableFromSupabase(opts) {
     q = q.or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
 
     const { data, error } = await q
-        // Hottest first: brief Tier 1 → 2 → 3 → untiered, then by score within.
+        // Flow-state ordering (per Remy / the Connor Murray batching idea):
+        // cluster by niche so a rep runs all same-type calls back-to-back in one
+        // script headspace, fresh never-called leads first within each niche,
+        // then hottest brief Tier (1→2→3→untiered), then score. When a rep filters
+        // to a single niche this collapses to "newest-first, hottest-first".
+        .order('category', { ascending: true, nullsFirst: false })
+        .order('last_called_at', { ascending: true, nullsFirst: true })
         .order('brief_tier', { ascending: true, nullsFirst: false })
         .order('prospect_score', { ascending: false, nullsFirst: false })
         .limit(opts.limit || 200);

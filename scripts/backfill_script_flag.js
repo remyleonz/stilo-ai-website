@@ -3,7 +3,8 @@
  * scripts/backfill_script_flag.js
  *
  * David's cold-call briefs (cold-call-briefs/rep-{a,b,c}/<slug>-<date>.md) ARE
- * the callable set: 250 per rep (rep-a=Jack, rep-b=Luke, rep-c=Alejandro).
+ * the callable set: ~250 per rep (rep-a=Luke, rep-b=Alejandro, rep-c=Jack —
+ * see REP_EMAIL below, which is the source of truth for this mapping).
  * This matches every brief to its lead (by slugified business name), sets
  * prospecting.leads.has_cold_call_script=true, and assigns the lead to the
  * rep whose folder the brief is in. The SDR dashboard then shows exactly these
