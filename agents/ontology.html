@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Growth Intelligence Agent - STILO AI Partners</title>
+<meta name="description" content="Every growth opportunity you can't currently see. STILO's Growth Intelligence agent ingests your business data and surfaces the highest-value moves, ranked by dollar impact, with a plan to act. Watch the walkthrough and book a 15-minute call.">
+<meta property="og:title" content="Growth Intelligence Agent - STILO AI Partners">
+<meta property="og:description" content="Stop making six-figure decisions on gut feel. Your data, turned into ranked, dollar-tied opportunities. Watch the walkthrough, then book 15 minutes with a partner.">
+<meta property="og:image" content="/og-image.png">
+<link rel="icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void:#07070A; --bg-plate:#0D0D11; --bg-elevated:#151519;
+    --stroke:rgba(255,255,255,0.055); --stroke-hi:rgba(255,255,255,0.13);
+    --fg:#F4F1EA; --fg-2:#cfcabf; --fg-3:#8b877e;
+    --accent:#1E3A8A; --accent-hi:#2D4FB8; --accent-deep:#102054; --accent-glow:#5A7BE8;
+    --accent-soft:rgba(45,79,184,0.12); --accent-line:rgba(45,79,184,0.28);
+    --grad-text:linear-gradient(135deg,#F4F1EA 0%,#5A7BE8 38%,#2D4FB8 72%,#F4F1EA 100%);
+    --font-display:'Bodoni Moda',Georgia,serif;
+    --font-body:'Barlow Semi Condensed',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,monospace;
+    --radius:14px; --radius-lg:22px; --container:min(1120px,92vw);
+    --ease-out:cubic-bezier(.2,.7,.2,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg-void);color:var(--fg);font-family:var(--font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:var(--font-display);font-optical-sizing:none;font-weight:600;letter-spacing:.005em;line-height:1.08}
+  .accent-italic{font-family:var(--font-display);font-style:italic;font-weight:400}
+  .mono{font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.14em}
+  a{color:inherit}
+  .container{width:var(--container);margin:0 auto}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:rgba(7,7,10,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--stroke)}
+  .nav-inner{width:var(--container);margin:0 auto;display:flex;align-items:center;gap:20px;padding:15px 0}
+  .nav-logo{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:1rem;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;color:var(--fg)}
+  .nav-logo img{height:26px;width:auto}
+  .nav-links{margin-left:auto;display:flex;gap:26px;list-style:none}
+  .nav-links a{font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-2);text-decoration:none}
+  .nav-links a:hover{color:var(--fg)}
+  .nav-cta{font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;padding:10px 18px;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;border:1px solid var(--accent-hi);cursor:pointer}
+  .nav-cta:hover{background:var(--accent-hi)}
+  @media(max-width:760px){.nav-links{display:none}}
+
+  /* BTN */
+  .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font-mono);font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;padding:17px 34px;border-radius:12px;background:var(--accent);color:#fff;border:1px solid var(--accent-hi);cursor:pointer;text-decoration:none;transition:.2s var(--ease-out)}
+  .btn-primary:hover{background:var(--accent-hi);transform:translateY(-1px);box-shadow:0 14px 40px rgba(30,58,138,.34)}
+  .btn-ghost{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;padding:15px 26px;border-radius:12px;background:transparent;color:var(--fg-2);border:1px solid var(--stroke-hi);text-decoration:none;cursor:pointer}
+  .btn-ghost:hover{border-color:var(--accent-hi);color:var(--fg)}
+
+  /* HERO */
+  .hero{position:relative;padding:60px 0 40px;overflow:hidden}
+  .hero::before{content:"";position:absolute;top:-30%;left:50%;transform:translateX(-50%);width:900px;height:700px;background:radial-gradient(ellipse at center,rgba(45,79,184,.18),transparent 62%);pointer-events:none}
+  .eyebrow{position:relative;font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.2em;color:var(--accent-glow);text-align:center;margin-bottom:18px}
+  .hero h1{position:relative;text-align:center;font-size:clamp(2.3rem,5.4vw,4rem);max-width:16ch;margin:0 auto 18px}
+  .hero h1 .g{background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lede{position:relative;text-align:center;color:var(--fg-2);font-size:1.12rem;max-width:60ch;margin:0 auto 34px}
+
+  /* VIDEO */
+  .videowrap{position:relative;width:min(940px,94vw);margin:0 auto;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--stroke-hi);box-shadow:0 40px 100px -30px rgba(0,0,0,.8),0 0 0 1px rgba(45,79,184,.15);background:#000;aspect-ratio:16/9}
+  .videowrap video{width:100%;height:100%;object-fit:cover;display:block}
+  .vsl-poster{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(ellipse at 50% 30%,#16223f,#0a0d16 70%);text-align:center;padding:20px}
+  .vsl-poster .pmark{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-glow)}
+  .vsl-poster h3{font-size:clamp(1.4rem,3vw,2rem);color:var(--fg);max-width:20ch}
+  .playbtn{width:74px;height:74px;border-radius:50%;background:var(--accent);border:1px solid var(--accent-hi);display:grid;place-items:center;cursor:pointer;box-shadow:0 16px 44px rgba(30,58,138,.5);transition:.2s}
+  .playbtn:hover{transform:scale(1.06);background:var(--accent-hi)}
+  .playbtn svg{width:26px;height:26px;margin-left:4px;fill:#fff}
+  .sound{position:absolute;bottom:14px;right:14px;z-index:3;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:rgba(7,7,10,.6);border:1px solid var(--stroke-hi);border-radius:999px;padding:7px 13px;cursor:pointer;display:none;align-items:center;gap:7px;backdrop-filter:blur(6px)}
+  .videowrap.playing .sound{display:inline-flex}
+
+  /* CTA block */
+  .ctaband{text-align:center;padding:34px 0 6px}
+  .ctaband .micro{font-family:var(--font-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;color:var(--fg-3);margin-top:16px}
+  .ctaband .micro b{color:var(--accent-glow);font-weight:500}
+
+  /* trust strip */
+  .trust{display:flex;flex-wrap:wrap;gap:10px 26px;justify-content:center;align-items:center;padding:30px 0;color:var(--fg-3);font-family:var(--font-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.1em}
+  .trust span{display:inline-flex;align-items:center;gap:8px}
+  .trust .dot{width:5px;height:5px;border-radius:50%;background:var(--accent-glow)}
+
+  /* FAQ */
+  .faq{padding:56px 0 70px}
+  .faq-head{text-align:center;margin-bottom:38px}
+  .faq-head .eyebrow{margin-bottom:12px}
+  .faq-head h2{font-size:clamp(1.9rem,4vw,2.8rem)}
+  .faq-head p{color:var(--fg-2);max-width:52ch;margin:12px auto 0}
+  .faq-list{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+  details.qa{border:1px solid var(--stroke);border-radius:var(--radius);background:linear-gradient(180deg,#101016,#0b0b0f);overflow:hidden;transition:border-color .2s}
+  details.qa[open]{border-color:var(--accent-line)}
+  details.qa summary{list-style:none;cursor:pointer;padding:20px 24px;display:flex;align-items:center;gap:16px;font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--fg)}
+  details.qa summary::-webkit-details-marker{display:none}
+  details.qa summary .plus{margin-left:auto;flex:none;width:24px;height:24px;position:relative;transition:transform .25s}
+  details.qa summary .plus::before,details.qa summary .plus::after{content:"";position:absolute;background:var(--accent-glow);border-radius:2px}
+  details.qa summary .plus::before{top:11px;left:2px;right:2px;height:2px}
+  details.qa summary .plus::after{left:11px;top:2px;bottom:2px;width:2px;transition:opacity .25s}
+  details.qa[open] summary .plus{transform:rotate(90deg)}
+  details.qa[open] summary .plus::after{opacity:0}
+  details.qa .a{padding:0 24px 22px;color:var(--fg-2);font-size:1rem;line-height:1.68}
+  details.qa .a p{margin:0 0 10px}
+  details.qa .a b{color:var(--fg)}
+  .faq-foot{text-align:center;margin-top:44px}
+  .faq-foot p{color:var(--fg-2);margin-bottom:20px;font-size:1.1rem}
+
+  /* FOOTER */
+  footer{border-top:1px solid var(--stroke);padding:46px 0 30px;margin-top:20px}
+  .footer-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:30px}
+  .footer-brand p{color:var(--fg-3);font-size:.95rem;margin-top:12px;max-width:36ch}
+  .footer-col h4{font-family:var(--font-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--fg-3);font-weight:500;margin-bottom:14px}
+  .footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .footer-col a{color:var(--fg-2);text-decoration:none;font-size:.95rem}
+  .footer-col a:hover{color:var(--fg)}
+  .footer-bottom{color:var(--fg-3);font-size:.82rem;margin-top:34px;text-align:center;font-family:var(--font-mono);letter-spacing:.06em}
+  @media(max-width:700px){.footer-grid{grid-template-columns:1fr}}
+
+  /* BOOKING MODAL (ported from main site) */
+  .booking-modal{position:fixed;inset:0;z-index:200;display:none;background:rgba(7,7,10,.78);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;animation:bmFade .25s var(--ease-out)}
+  .booking-modal.open{display:flex}
+  @keyframes bmFade{from{opacity:0}to{opacity:1}}
+  .booking-card{position:relative;width:min(640px,100%);max-height:90vh;overflow-y:auto;background:var(--bg-plate);border:1px solid var(--stroke-hi);border-radius:18px;padding:28px;color:var(--fg);box-shadow:0 40px 80px rgba(0,0,0,.6)}
+  .booking-card h3{font-family:var(--font-display);font-weight:700;font-size:1.5rem;letter-spacing:-.02em;margin:0 0 6px;text-transform:uppercase}
+  .booking-card .booking-sub{color:#fff;font-size:.92rem;margin:0 0 22px;line-height:1.45}
+  .booking-close{position:absolute;top:18px;right:22px;width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--stroke);color:var(--fg);cursor:pointer;font-size:1.1rem;line-height:1}
+  .booking-close:hover{background:rgba(255,255,255,.12)}
+  .booking-card .day-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .booking-card .day-btn{flex:1;min-width:100px;padding:10px 8px;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:8px;color:var(--fg);font-size:11.5px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3;letter-spacing:.04em;text-transform:uppercase;font-family:var(--font-display),system-ui}
+  .booking-card .day-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .booking-card .time-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;max-height:200px;overflow-y:auto;padding:2px;margin-bottom:18px}
+  .booking-card .time-btn{padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:6px;color:var(--fg);font-size:12px;font-weight:600;cursor:pointer}
+  .booking-card .time-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .booking-card .booking-form{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .booking-card input,.booking-card textarea{width:100%;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:8px;color:var(--fg);font-size:14px;font-family:inherit}
+  .booking-card textarea{min-height:74px;resize:vertical}
+  .booking-card .booking-msg{font-size:12.5px;margin-top:8px;line-height:1.4}
+  .booking-card .booking-msg.error{color:#ef4444}
+  .booking-card .booking-msg.ok{color:#10b981}
+  .booking-card .booking-confirm{margin-top:14px;width:100%}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo"><span>STILO AI PARTNERS</span></a>
+    <ul class="nav-links">
+      <li><a href="/#agents">Agents</a></li>
+      <li><a href="/#industries">Use cases</a></li>
+      <li><a href="/#process">Process</a></li>
+      <li><a href="/#why-us">Why us</a></li>
+    </ul>
+    <a class="nav-cta js-book">Talk to a partner</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="eyebrow">STILO · Growth Intelligence Agent</div>
+    <h1>Every growth opportunity <span class="g accent-italic">you can't currently see</span>.</h1>
+    <p class="lede">You're making six-figure decisions on gut feel. This agent ingests your business data and surfaces the opportunities you're missing, ranked by dollar impact, with a clear plan to act on each one. Watch the walkthrough.</p>
+
+    <div class="videowrap" id="videowrap">
+      <!-- Drop the recorded VSL at /agents/vsl/ontology.mp4, or replace this <video> with the Wistia embed. -->
+      <video id="vsl" playsinline muted loop preload="metadata" poster="/agents/vsl/ontology-poster.jpg">
+        <source src="/agents/vsl/ontology.mp4" type="video/mp4">
+      </video>
+      <div class="vsl-poster" id="vslPoster">
+        <div class="pmark">4-minute walkthrough</div>
+        <h3>See it turn your data into ranked, dollar-tied opportunities.</h3>
+        <button class="playbtn" id="playbtn" aria-label="Play video"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+      </div>
+      <button class="sound" id="soundBtn">🔇 Tap for sound</button>
+    </div>
+
+    <!-- CTA -->
+    <div class="ctaband">
+      <a class="btn-primary js-book">Book a 15-minute call with a partner</a>
+      <div class="micro">15 minutes · <b>no pitch deck</b> · we map your numbers and show you what we'd recover</div>
+    </div>
+
+    <div class="trust">
+      <span><span class="dot"></span>Miami-based, real partners</span>
+      <span><span class="dot"></span>Bilingual EN / ES</span>
+      <span><span class="dot"></span>50% to start, 50% when you're happy</span>
+      <span><span class="dot"></span>Live in under 2 weeks</span>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ / OBJECTION HANDLING -->
+<section class="faq">
+  <div class="container">
+    <div class="faq-head">
+      <div class="eyebrow">Everything you'd want to know</div>
+      <h2>Questions, answered straight.</h2>
+      <p>No fine print. Here is exactly what the agent does, how it works, what it costs you, and who you're working with.</p>
+    </div>
+
+    <div class="faq-list">
+      <details class="qa" open>
+        <summary>What does the Growth Intelligence agent actually do?<span class="plus"></span></summary>
+        <div class="a"><p>It reads your business data, the numbers you're already sitting on, and tells you where the money is hiding. It finds the highest-value moves you can't currently see, ranks them by dollar impact, and hands you a plan to act on each one. Think of it as a growth analyst who never sleeps, never guesses, and only points you at the things that actually move revenue.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>What data does it use? What do I have to connect?<span class="plus"></span></summary>
+        <div class="a"><p>The numbers that already run your business: point-of-sale and booking history, your CRM, pricing and service lists, marketing and ad spend, reviews, and your calendar. Most of it exports in a couple of clicks, and we handle the hookup with you on a short call. If it's in a spreadsheet, that works too. You don't have to clean anything up first.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>How does it work, step by step?<span class="plus"></span></summary>
+        <div class="a">
+          <p><b>1.</b> We connect your data sources on a short setup call. Nothing you have to build.</p>
+          <p><b>2.</b> The agent maps how your business actually makes money: which services, which locations, which customers, which times.</p>
+          <p><b>3.</b> It hunts for gaps and mismatches, then sizes each one in real dollars so you know what it's worth.</p>
+          <p><b>4.</b> You get a ranked list of opportunities, top of the list first, each with a plain-language plan for how to capture it.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What kind of insights does it actually find?<span class="plus"></span></summary>
+        <div class="a"><p>Specific, dollar-tied things. Services you're charging below the market, so you're leaving margin on the table. Locations with no-show rates high enough to be quietly costing you thousands a month. Customer segments that spend the most but get contacted the least. Gaps where a competitor is winning a service you don't even offer. Seasonal dips you could smooth out. Every one comes with a number attached and a next step, not a vague chart.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>Is my business data secure?<span class="plus"></span></summary>
+        <div class="a"><p>Yes, and this one matters, so here's the detail. Your data is encrypted in transit and at rest. Access is scoped to your account only and locked behind role-based permissions, so nobody sees your numbers who shouldn't. We never sell, share, or train public models on your data, full stop. It stays isolated to your engagement. For health-related businesses we sign a BAA. And if you ever leave, we delete it on request. Your numbers are yours, and they stay that way.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>How is this different from a dashboard, a BI tool, or a consultant?<span class="plus"></span></summary>
+        <div class="a"><p>A dashboard shows you what happened and leaves the thinking to you. A BI tool makes you build the report before it tells you anything, and you still have to know what to ask. A consultant is smart but expensive, slow, and gone in a month. This agent does the analyst's job continuously: it reads everything, decides what's worth your attention, ranks it by dollars, and tells you what to do. You don't stare at charts and you don't wait on a $20k report. You get answers.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>How often do I get new insights?<span class="plus"></span></summary>
+        <div class="a"><p>It runs continuously and refreshes as your data changes, so you get a standing feed of opportunities, not a one-time audit. New patterns surface as they form, and you get a clear summary on a regular cadence, usually weekly, plus flags the moment something big shifts.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>Do I need a data team or an analyst to use it?<span class="plus"></span></summary>
+        <div class="a"><p>No. That's the whole point. You don't need to write a query, build a report, or understand a chart. The agent does the analysis and hands you the answer in plain English. If you can read a short list and pick what to act on first, you can run this. We handle the technical side end to end.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>What do you need from me to get started?<span class="plus"></span></summary>
+        <div class="a"><p>Access to the data you already have and a short call to connect it. That's the lift on your end. We handle the setup, the mapping, and the maintenance. Once it's running, you just read the opportunities as they land.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>How do I actually act on what it finds?<span class="plus"></span></summary>
+        <div class="a"><p>Every opportunity comes with a prioritized action plan, not just a finding. It tells you the move, the dollar impact if you make it, and the steps to get there. You work down the list from the top, capturing the biggest wins first. And because a few of our other agents can execute, the agent can hand the right work straight to them: a price change, a reactivation campaign, a follow-up push. You decide, it points the way.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>How do I know it's paying off?<span class="plus"></span></summary>
+        <div class="a"><p>Because every opportunity carries a dollar figure, you can track exactly what you acted on and what it returned. You'll see the revenue tied to the moves you made, in a clear running view. It's the opposite of a black box: the whole product is putting a number on things you were guessing at before.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>What businesses is this best for?<span class="plus"></span></summary>
+        <div class="a"><p>Established businesses with real data to work with, especially multi-location operators. The more history and the more moving parts you have, the more hidden opportunities there are to find. If you're doing solid revenue and making big calls on instinct because nobody's had time to dig into the numbers, this is built for you.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>What does it cost?<span class="plus"></span></summary>
+        <div class="a"><p>It depends on how much data you're running and how deep you want it to go, so we give you the exact number on the call once we see your setup. What stays the same is how we work: you pay half to start and the other half only once it's built and you're happy with it, plus a flat monthly to keep it running. The point is it pays for itself in the opportunities it surfaces, most of which are worth more than the whole engagement on their own.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>What if it doesn't work? Can I cancel?<span class="plus"></span></summary>
+        <div class="a"><p>The monthly is not a long lock-in. If it's not surfacing opportunities worth acting on, you're not stuck. We take on the risk up front with the 50% on satisfaction structure because we're confident in what your own data will reveal, but the relationship continues because it works, not because a contract traps you.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary>Who is STILO? Who am I actually working with?<span class="plus"></span></summary>
+        <div class="a"><p>STILO AI Partners is a Miami-based team that builds custom AI agents for local businesses. You work directly with a partner, a real person you can call, not a support queue. We build it, we run it, and we're on the hook for the results. You can reach us any time at <a href="mailto:remyleon@stiloaipartners.com" style="color:var(--accent-glow)">remyleon@stiloaipartners.com</a> or <a href="tel:+17867557104" style="color:var(--accent-glow)">(786) 755-7104</a>.</p></div>
+      </details>
+    </div>
+
+    <div class="faq-foot">
+      <p>Still have a question? The fastest way to get it answered is 15 minutes with a partner.</p>
+      <a class="btn-primary js-book">Book your 15-minute call</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo"><span>STILO AI PARTNERS</span></a>
+        <p>Custom AI agents for growing businesses. Receptionist, lead response, customer reactivation, websites, SEO, growth intelligence, and sales coaching.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="/#agents">The agents</a></li>
+          <li><a href="/#industries">Use cases</a></li>
+          <li><a href="/#process">Our process</a></li>
+          <li><a href="/#why-us">Why STILO</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a class="js-book">Talk to a partner</a></li>
+          <li><a href="tel:+17867557104">(786) 755-7104</a></li>
+          <li><a href="mailto:remyleon@stiloaipartners.com">remyleon@stiloaipartners.com</a></li>
+          <li><span style="color:var(--fg-3)">Miami, FL</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">&copy; 2026 STILO AI PARTNERS. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- BOOKING MODAL -->
+<div class="booking-modal" id="bookingModal" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
+  <div class="booking-card">
+    <button type="button" class="booking-close" id="bookingClose" aria-label="Close">&times;</button>
+    <h3 id="bookingTitle">Book a 15-min call</h3>
+    <p class="booking-sub">Pick an open slot on Remy's calendar. You'll get a Google Calendar invite with a Meet link.</p>
+    <div id="bookingSlots"><div style="padding:30px 0;text-align:center;color:rgba(255,255,255,.7);font-size:13px">Loading available times...</div></div>
+    <div class="booking-form" id="bookingForm" style="display:none">
+      <input type="text" id="bookingName" placeholder="Your name *" autocomplete="name">
+      <input type="email" id="bookingEmail" placeholder="Your work email *" autocomplete="email">
+      <input type="text" id="bookingBusiness" placeholder="Business name (optional)" autocomplete="organization">
+      <textarea id="bookingNotes" placeholder="Anything Remy should know before the call (optional)"></textarea>
+      <button type="button" class="btn-primary booking-confirm" id="bookingConfirmBtn">Book this time</button>
+      <div class="booking-msg" id="bookingMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Video: autoplay muted on load, tap for sound, graceful fallback ===== */
+(function(){
+  var wrap=document.getElementById('videowrap'), v=document.getElementById('vsl'),
+      poster=document.getElementById('vslPoster'), play=document.getElementById('playbtn'),
+      sound=document.getElementById('soundBtn');
+  function reveal(){ poster.style.display='none'; wrap.classList.add('playing'); }
+  v.addEventListener('playing', reveal);
+  // try muted autoplay on load
+  var p=v.play&&v.play(); if(p&&p.catch)p.catch(function(){/* poster stays until user taps */});
+  play.addEventListener('click',function(){ v.muted=false; sound.textContent='🔊 Sound on'; v.play(); reveal(); });
+  sound.addEventListener('click',function(){ v.muted=!v.muted; sound.textContent=(v.muted?'🔇 Tap for sound':'🔊 Sound on'); });
+  // if the video asset isn't in place yet, keep the poster and let the play button jump to booking
+  v.addEventListener('error',function(){ play.setAttribute('aria-label','Book a call'); });
+})();
+
+/* ===== Booking modal (ported from stiloaipartners.com, hits the same public API) ===== */
+(function(){
+  var modal=document.getElementById('bookingModal'); if(!modal)return;
+  var slotsHost=document.getElementById('bookingSlots'), formEl=document.getElementById('bookingForm'),
+      msgEl=document.getElementById('bookingMsg'), btnConfirm=document.getElementById('bookingConfirmBtn'),
+      btnClose=document.getElementById('bookingClose');
+  var state={slots:[],byDay:{},dayOrder:[],expandedDay:null,selectedIso:null};
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function dayKey(iso){return new Date(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});}
+  function timeLabel(iso){return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'});}
+  window.openBookingModal=function(){ msgEl.textContent=''; msgEl.className='booking-msg'; formEl.style.display='none'; state.selectedIso=null; modal.classList.add('open'); document.body.style.overflow='hidden'; loadSlots(); };
+  function closeModal(){ modal.classList.remove('open'); document.body.style.overflow=''; }
+  btnClose.addEventListener('click',closeModal);
+  modal.addEventListener('click',function(e){ if(e.target===modal)closeModal(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&modal.classList.contains('open'))closeModal(); });
+  async function loadSlots(){
+    slotsHost.innerHTML='<div style="padding:30px 0;text-align:center;color:rgba(255,255,255,.7);font-size:13px">Loading available times...</div>';
+    try{
+      var r=await fetch('/api/public/calendar-slots?days=7'); var data=await r.json();
+      if(!r.ok||!data.configured){ slotsHost.innerHTML='<div style="padding:18px;background:rgba(234,179,8,.1);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:13px">Online booking is being set up. Email <a href="mailto:remyleon@stiloaipartners.com" style="color:#5A7BE8">remyleon@stiloaipartners.com</a> and we will set up a time directly.</div>'; return; }
+      state.slots=data.slots||[]; state.byDay={}; state.dayOrder=[];
+      state.slots.forEach(function(s){ var k=dayKey(s.start); if(!state.byDay[k]){state.byDay[k]=[];state.dayOrder.push(k);} state.byDay[k].push(s); });
+      state.expandedDay=state.dayOrder[0]||null; renderSlots();
+    }catch(e){ slotsHost.innerHTML='<div style="padding:18px;color:#ef4444;font-size:13px">Could not load times: '+esc(e.message||e)+'</div>'; }
+  }
+  function renderSlots(){
+    if(!state.dayOrder.length){ slotsHost.innerHTML='<div style="padding:18px;color:rgba(255,255,255,.7);font-size:13px">No open slots in the next 7 business days. Email <a href="mailto:remyleon@stiloaipartners.com" style="color:#5A7BE8">remyleon@stiloaipartners.com</a> directly.</div>'; return; }
+    var dayRow=state.dayOrder.map(function(d){ var a=state.expandedDay===d?' active':''; return '<button type="button" class="day-btn'+a+'" data-day="'+esc(d)+'"><div>'+esc(d)+'</div><div style="font-size:10px;font-weight:500;opacity:.75;margin-top:2px">'+state.byDay[d].length+' slots</div></button>'; }).join('');
+    var timeGrid='';
+    if(state.expandedDay&&state.byDay[state.expandedDay]){
+      timeGrid='<div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin:6px 0">'+esc(state.expandedDay)+' &middot; open times (ET)</div><div class="time-grid">'+state.byDay[state.expandedDay].map(function(s){ var a=state.selectedIso===s.start?' active':''; return '<button type="button" class="time-btn'+a+'" data-iso="'+esc(s.start)+'">'+esc(timeLabel(s.start))+'</button>'; }).join('')+'</div>';
+    }
+    slotsHost.innerHTML='<div class="day-row">'+dayRow+'</div>'+timeGrid;
+    slotsHost.querySelectorAll('.day-btn').forEach(function(b){ b.addEventListener('click',function(){ state.expandedDay=b.dataset.day; renderSlots(); }); });
+    slotsHost.querySelectorAll('.time-btn').forEach(function(b){ b.addEventListener('click',function(){ state.selectedIso=b.dataset.iso; renderSlots(); formEl.style.display='flex'; msgEl.className='booking-msg ok'; msgEl.textContent='Selected: '+new Date(state.selectedIso).toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET'; }); });
+  }
+  btnConfirm.addEventListener('click',async function(){
+    var name=document.getElementById('bookingName').value.trim(), email=document.getElementById('bookingEmail').value.trim(),
+        business=document.getElementById('bookingBusiness').value.trim(), notes=document.getElementById('bookingNotes').value.trim();
+    if(!name||!email||!state.selectedIso){ msgEl.className='booking-msg error'; msgEl.textContent='Name, email, and a selected time are all required.'; return; }
+    btnConfirm.textContent='Booking...'; btnConfirm.disabled=true;
+    try{
+      var r=await fetch('/api/public/book-meeting',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({start_iso:state.selectedIso,email:email,name:name,business_name:business,notes:notes})});
+      var data=await r.json();
+      if(!r.ok||!data.ok){ msgEl.className='booking-msg error'; msgEl.textContent='Could not book: '+(data.detail||data.error||'unknown error'); btnConfirm.textContent='Book this time'; btnConfirm.disabled=false; return; }
+      msgEl.className='booking-msg ok'; msgEl.innerHTML='Booked! Check your inbox for the Google Calendar invite.'+(data.meet_link?' <a href="'+esc(data.meet_link)+'" target="_blank" style="color:#5A7BE8">Meet link</a>':''); btnConfirm.textContent='Booked'; setTimeout(closeModal,2500);
+    }catch(e){ msgEl.className='booking-msg error'; msgEl.textContent='Network error: '+(e.message||e); btnConfirm.textContent='Book this time'; btnConfirm.disabled=false; }
+  });
+  document.querySelectorAll('.js-book').forEach(function(a){ a.style.cursor='pointer'; a.addEventListener('click',function(e){ e.preventDefault(); window.openBookingModal(); }); });
+})();
+</script>
+</body>
+</html>
