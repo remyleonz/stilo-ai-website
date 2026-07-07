@@ -33,7 +33,10 @@ module.exports = async function handler(req, res) {
 
     // Headline counts (head:true → count only, no rows).
     const emails_sent = await count(prospect.from('lead_messages').select('id', { count: 'exact', head: true }).eq('channel', 'email'));
-    const cold_calls = await count(prospect.from('lead_calls').select('id', { count: 'exact', head: true }));
+    // Cold calls = outbound DIALS only (outbound|outgoing), attributed to a rep.
+    // Must match the per-rep tally below exactly, or the headline and the
+    // "cold calls by rep" breakdown disagree. Inbound calls are NOT cold calls.
+    const cold_calls = await count(prospect.from('lead_calls').select('id', { count: 'exact', head: true }).in('direction', ['outbound', 'outgoing']).not('logged_by', 'is', null));
     // Rep roster for display names + sdr_id->email (deals attribute by sdr_id).
     const { data: roster } = await pub.from('sdr_users').select('id, email, display_name');
     const nameByEmail = {}, emailById = {};
@@ -120,9 +123,24 @@ module.exports = async function handler(req, res) {
         if (!board[e]) board[e] = { sdr: e, name: nameByEmail[e] || e, dials: 0, emails: 0, booked: 0, closed: 0 };
         board[e][k] += (n || 1);
     };
+    // Tally per-rep dials. Supabase caps ANY response at 1000 rows regardless of
+    // .limit(), so the old single-shot fetch only ever saw the first 1000 calls
+    // and undercounted every rep (rows summed to exactly 1000 while the headline
+    // count showed the true total). Paginate in 1000-row pages and count outbound
+    // dials only, matching the headline definition.
     try {
-        const { data: calls } = await prospect.from('lead_calls').select('logged_by').not('logged_by', 'is', null).limit(5000);
-        (calls || []).forEach(function (c) { bump(c.logged_by, 'dials'); });
+        let from = 0;
+        for (;;) {
+            const { data: calls } = await prospect.from('lead_calls')
+                .select('logged_by')
+                .in('direction', ['outbound', 'outgoing'])
+                .not('logged_by', 'is', null)
+                .range(from, from + 999);
+            if (!calls || !calls.length) break;
+            calls.forEach(function (c) { bump(c.logged_by, 'dials'); });
+            if (calls.length < 1000) break;
+            from += 1000;
+        }
     } catch (_) {}
     try {
         const { data: msgs } = await prospect.from('lead_messages').select('sent_by').eq('channel', 'email').not('sent_by', 'is', null).limit(5000);
