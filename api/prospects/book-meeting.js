@@ -138,10 +138,31 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
     const { data: lead, error: leadErr } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,owner_phone,phone,call_attempts')
+        .select('id,name,owner_name,owner_email,email,owner_phone,phone,call_attempts,meeting_scheduled_at,meeting_meet_link,meeting_event_link')
         .eq('id', leadId).maybeSingle();
     if (leadErr) return res.status(500).json({ error: 'lead_read_failed', detail: leadErr.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
+
+    // Follow-up booking (a client wants a 2nd/3rd meeting): unlike a reschedule,
+    // which MOVES the current meeting, a follow-up must KEEP the prior one. Snapshot
+    // the lead's current meeting into lead_meetings history BEFORE we overwrite the
+    // meeting_* columns below, so re-opening the lead shows every meeting. A plain
+    // reschedule (is_followup falsy) skips this and just rewrites the time.
+    const isFollowup = body.is_followup === true || body.is_followup === 'true';
+    if (isFollowup && lead.meeting_scheduled_at) {
+        try {
+            const priorWhen = new Date(lead.meeting_scheduled_at);
+            await sb.from('lead_meetings').insert({
+                lead_id: leadId,
+                source: 'booked',
+                title: 'Earlier meeting (' + priorWhen.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET)',
+                occurred_at: priorWhen.toISOString(),
+                summary: 'Scheduled meeting that a follow-up was booked after. Moved into history so both meetings are tracked.',
+                meet_url: lead.meeting_meet_link || lead.meeting_event_link || null,
+                created_by: gate.email || null
+            });
+        } catch (_) { /* history snapshot is best-effort; never block the booking */ }
+    }
 
     // Email the rep typed/confirmed in the booking form wins, then the lead's
     // stored address. The SDR UI requires a valid email before booking.

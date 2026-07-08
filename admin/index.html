@@ -7248,30 +7248,53 @@
         }
 
         /* ===== MEETING TRANSCRIPTS (Tactiq + manual) ===== */
+        // Phone-sync (openphone) can write several PARTIAL rows for one call, so a
+        // real 25k-char transcript sits next to 300-char stubs and it looks cut off.
+        // Keep only the richest openphone row per calendar day (the complete one);
+        // manual notes, booked, Granola and Tactiq rows are always kept as-is.
+        function dedupeMeetings(meetings) {
+            var bestByDay = {};
+            meetings.forEach(function (m) {
+                if (m.source !== 'openphone') return;
+                var day = String(m.occurred_at || m.created_at || '').slice(0, 10);
+                var score = (m.transcript ? m.transcript.length : 0) + (m.summary ? m.summary.length : 0);
+                if (!bestByDay[day] || score > bestByDay[day].score) bestByDay[day] = { id: m.id, score: score };
+            });
+            return meetings.filter(function (m) {
+                if (m.source !== 'openphone') return true;
+                var day = String(m.occurred_at || m.created_at || '').slice(0, 10);
+                return bestByDay[day] && bestByDay[day].id === m.id;
+            });
+        }
         function renderMeetingsSection(d) {
-            var meetings = Array.isArray(d.meetings) ? d.meetings : [];
+            var meetings = dedupeMeetings(Array.isArray(d.meetings) ? d.meetings : []);
+            // Newest meeting is expanded by default so the latest notes / next step
+            // are visible the moment you re-open the lead.
             var rows = meetings.length
-                ? meetings.map(renderMeetingRow).join('')
-                : '<div style="color:var(--text-muted);font-size:12px;line-height:1.5;">No meeting transcripts yet. After a sales call, the Tactiq summary lands here, or paste one with "Add".</div>';
+                ? meetings.map(function (m, i) { return renderMeetingRow(m, i === 0); }).join('')
+                : '<div style="color:var(--text-muted);font-size:12px;line-height:1.5;">No meetings or notes logged yet. Log an outcome or note on the booked card above, or paste a transcript with "Add".</div>';
             return '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-top:16px;">'
                 + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-                  + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin:0;">Meeting transcripts</h3>'
+                  + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin:0;">Meeting history &amp; notes</h3>'
                   + '<button type="button" onclick="openAddMeeting(' + (d.id != null ? d.id : 'null') + ')" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;">+ Add</button>'
                 + '</div>' + rows + '</div>';
         }
-        function renderMeetingRow(m) {
+        var MEETING_OUTCOME_LABELS = { interested: 'Interested', needs_time: 'Needs time', rescheduled: 'Rescheduled', no_show: 'No-show', closed_won: 'Closed won', closed_lost: 'Closed lost' };
+        function renderMeetingRow(m, expanded) {
             var when = m.occurred_at ? new Date(m.occurred_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET'
                 : (m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');
             var dur = m.duration_seconds ? (Math.round(m.duration_seconds / 60) + ' min') : '';
-            var meta = [when, dur, (m.source === 'manual' ? 'manual' : 'Tactiq')].filter(Boolean).join(' · ');
+            var srcLabel = m.source === 'manual' ? 'note/manual' : (m.source === 'booked' ? 'booked' : (m.source === 'openphone' ? 'phone' : (m.source === 'granola' ? 'Granola' : 'Tactiq')));
+            var meta = [when, dur, srcLabel].filter(Boolean).join(' · ');
+            var outcomeBadge = m.outcome ? '<span style="margin-left:8px;display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;background:rgba(37,99,235,0.15);color:var(--blue);vertical-align:1px;">' + escapeAdminHtml(MEETING_OUTCOME_LABELS[m.outcome] || m.outcome) + '</span>' : '';
             var body = '';
             if (m.summary) body += '<div style="margin-top:8px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:3px;">Summary</div><div style="font-size:13px;line-height:1.55;color:var(--text-primary);white-space:pre-wrap;">' + escapeAdminHtml(m.summary) + '</div></div>';
             if (m.action_items) body += '<div style="margin-top:10px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:3px;">Action items</div><div style="font-size:13px;line-height:1.55;color:var(--text-primary);white-space:pre-wrap;">' + escapeAdminHtml(m.action_items) + '</div></div>';
             if (m.transcript) body += '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;color:var(--blue);">Full transcript</summary><div style="margin-top:6px;font-size:12px;line-height:1.5;color:var(--text-secondary);white-space:pre-wrap;max-height:320px;overflow-y:auto;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;padding:10px;">' + escapeAdminHtml(m.transcript) + '</div></details>';
             if (!body) body = '<div style="margin-top:6px;color:var(--text-muted);font-size:12px;">No content captured.</div>';
-            return '<details style="border-top:1px solid var(--border-subtle);padding:10px 0;">'
+            return '<details' + (expanded ? ' open' : '') + ' style="border-top:1px solid var(--border-subtle);padding:10px 0;">'
                 + '<summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:baseline;">'
-                  + '<span style="font-weight:700;font-size:13px;color:var(--text-primary);">' + escapeAdminHtml(m.title || 'Sales meeting') + '</span>'
+                  + '<span style="font-weight:700;font-size:13px;color:var(--text-primary);">' + escapeAdminHtml(m.title || 'Sales meeting') + outcomeBadge + '</span>'
                   + '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + escapeAdminHtml(meta) + '</span>'
                 + '</summary>' + body + '</details>';
         }
@@ -7604,7 +7627,10 @@
                       + (d.meeting_meet_link ? '<a href="' + escapeAdminHtml(d.meeting_meet_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;">Join Google Meet</a>' : '')
                       + (d.meeting_event_link ? '<a href="' + escapeAdminHtml(d.meeting_event_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);">Open in Calendar</a>' : '')
                       + '<button type="button" onclick="startReschedule(' + (d.id != null ? d.id : 'null') + ')" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);cursor:pointer;">Reschedule</button>'
+                      + '<button type="button" onclick="startFollowupMeeting(' + (d.id != null ? d.id : 'null') + ')" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);cursor:pointer;">Book follow-up</button>'
+                      + '<button type="button" onclick="sendNoShowEmail(' + (d.id != null ? d.id : 'null') + ')" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);cursor:pointer;">No-show email</button>'
                     + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;"><strong>Reschedule</strong> moves this meeting. <strong>Book follow-up</strong> keeps it and adds a 2nd, both show in the history below.</div>'
                     + ((!d.meeting_meet_link && !d.meeting_event_link) ? '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">The Meet link appears once the calendar sync runs.</div>' : '')
                     // Log what happened in the meeting (the meeting analog of the
                     // call-log chips). Writes a lead_meetings record; closed-won/lost
@@ -7618,7 +7644,7 @@
                         + meetingOutcomeChip('closed_won', 'Closed won')
                         + meetingOutcomeChip('closed_lost', 'Closed lost')
                       + '</div>'
-                      + '<textarea id="meetingOutcomeNotes" rows="2" placeholder="What happened, next steps, objections..." style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;font-family:inherit;margin-bottom:8px;"></textarea>'
+                      + '<textarea id="meetingOutcomeNotes" rows="2" oninput="onMeetingNotesInput()" placeholder="What happened, next steps, objections... (saves on its own, even with no outcome picked)" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;font-family:inherit;margin-bottom:8px;"></textarea>'
                       + '<button type="button" id="meetingOutcomeLogBtn" disabled onclick="logMeetingOutcome(' + (d.id != null ? d.id : 'null') + ')" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.5;">Log meeting outcome</button>'
                       + '<span id="meetingOutcomeMsg" style="font-size:11px;margin-left:10px;"></span>'
                     + '</div>'
@@ -7910,21 +7936,40 @@
                 el.style.borderColor = on ? '#16a34a' : 'var(--border-medium)';
             });
             var btn = document.getElementById('meetingOutcomeLogBtn');
-            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Log meeting outcome'; }
+        }
+        // Enable the log/save button as soon as the rep types a note, even with no
+        // outcome chip picked. Fixes notes silently vanishing: before, the button
+        // stayed dead and a note-only save did nothing.
+        function onMeetingNotesInput() {
+            var notesEl = document.getElementById('meetingOutcomeNotes');
+            var btn = document.getElementById('meetingOutcomeLogBtn');
+            if (!btn) return;
+            var hasNote = !!(notesEl && notesEl.value.trim());
+            var enable = hasNote || !!meetingOutcomeSel;
+            btn.disabled = !enable;
+            btn.style.opacity = enable ? '1' : '0.5';
+            btn.textContent = meetingOutcomeSel ? 'Log meeting outcome' : (hasNote ? 'Save note' : 'Log meeting outcome');
         }
         async function logMeetingOutcome(leadId) {
-            if (!meetingOutcomeSel) return;
             var msg = document.getElementById('meetingOutcomeMsg');
             var notesEl = document.getElementById('meetingOutcomeNotes');
+            var noteVal = (notesEl && notesEl.value.trim()) || '';
+            // Outcome is optional. A plain note ("client wants pricing, follow up
+            // Fri") saves on its own. Only block a truly empty save.
+            if (!meetingOutcomeSel && !noteVal) {
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Pick an outcome or write a note first.'; }
+                return;
+            }
             var btn = document.getElementById('meetingOutcomeLogBtn');
             if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
             if (msg) { msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving…'; }
             try {
                 var resp = await prospectFetchJSON('/api/prospects/meeting-outcome', {
                     method: 'POST',
-                    body: JSON.stringify({ lead_id: leadId, outcome: meetingOutcomeSel, notes: (notesEl && notesEl.value) || '' })
+                    body: JSON.stringify({ lead_id: leadId, outcome: meetingOutcomeSel || '', notes: noteVal })
                 });
-                if (msg) { msg.style.color = 'var(--green,#10b981)'; msg.textContent = 'Logged' + (resp && resp.stage ? ' and moved to ' + resp.stage : '') + '.'; }
+                if (msg) { msg.style.color = 'var(--green,#10b981)'; msg.textContent = (meetingOutcomeSel ? 'Logged' : 'Note saved') + (resp && resp.stage ? ' and moved to ' + resp.stage : '') + '.'; }
                 meetingOutcomeSel = null;
                 setTimeout(function () { openProspectDrawer(leadId, 'callable'); }, 900);
             } catch (e) {
@@ -7932,9 +7977,11 @@
                 if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Failed: ' + (e.message || 'unknown'); }
             }
         }
-        // Reschedule reuses the booking flow: reveal the native slot picker and
-        // load slots. Picking a new time + Book rewrites the meeting via book-meeting.
-        function startReschedule(leadId) {
+        // Whether the next booking is a follow-up (2nd/3rd meeting, keep the current
+        // one) vs a reschedule (move the current one). Reset every time the picker
+        // is opened from either button, so it never leaks between leads.
+        var bookingIsFollowup = false;
+        function openBookingPicker(leadId, msgText) {
             if (typeof selectProspectOutcome === 'function') selectProspectOutcome('booked_meeting');
             var sel = document.getElementById('prospectOutcome');
             if (sel) sel.value = 'booked_meeting';
@@ -7943,7 +7990,30 @@
             var picker = document.getElementById('prospectBookingPicker');
             if (picker) picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
             var msg = document.getElementById('prospectFormMsg');
-            if (msg) { msg.style.color = 'var(--blue)'; msg.textContent = 'Pick a new time below to reschedule. The prospect gets an updated invite.'; }
+            if (msg) { msg.style.color = 'var(--blue)'; msg.textContent = msgText; }
+        }
+        // Reschedule: MOVE the current meeting. Picking a new time rewrites it.
+        function startReschedule(leadId) {
+            bookingIsFollowup = false;
+            openBookingPicker(leadId, 'Pick a new time below to reschedule. The prospect gets an updated invite.');
+        }
+        // Book follow-up: KEEP the current meeting and add a 2nd. The prior meeting
+        // is snapshotted into the history list (book-meeting is_followup=true).
+        function startFollowupMeeting(leadId) {
+            bookingIsFollowup = true;
+            openBookingPicker(leadId, 'Pick a time for the follow-up meeting. The current one stays in the history below.');
+        }
+        // No-show follow-up: email the prospect from remyleon@stiloaipartners.com
+        // asking what happened, with the booking link to grab a new time.
+        async function sendNoShowEmail(leadId) {
+            if (!confirm('Send the no-show follow-up email (with a reschedule link) to this lead?')) return;
+            try {
+                var resp = await prospectFetchJSON('/api/prospects/noshow-email', { method: 'POST', body: JSON.stringify({ id: leadId }) });
+                if (typeof showToast === 'function') showToast('No-show email sent to ' + (resp && resp.to ? resp.to : 'the lead') + '.');
+            } catch (e) {
+                var detail = (e && e.body && e.body.detail) || (e && e.message) || 'unknown';
+                if (typeof showToast === 'function') showToast('Could not send: ' + detail); else alert('Could not send: ' + detail);
+            }
         }
 
         function onOutcomeChange() {
@@ -8364,11 +8434,16 @@
                     var emailEl = document.getElementById('prospectBookEmail');
                     var bookBody = { lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 };
                     if (emailEl && emailEl.value.trim()) bookBody.email = emailEl.value.trim();
+                    // Follow-up keeps the prior meeting in history; reschedule moves it.
+                    if (bookingIsFollowup) bookBody.is_followup = true;
                     await prospectFetchJSON('/api/prospects/book-meeting', {
                         method: 'POST', body: JSON.stringify(bookBody)
                     });
                     msgEl.style.color = 'var(--green,#10b981)';
-                    msgEl.textContent = 'Booked. Invite and Meet link sent. It is on the Booked tab.';
+                    msgEl.textContent = bookingIsFollowup
+                        ? 'Follow-up booked. The earlier meeting is saved in the history.'
+                        : 'Booked. Invite and Meet link sent. It is on the Booked tab.';
+                    bookingIsFollowup = false;
                     bookingState.selectedIso = null;
                     setTimeout(function () { openProspectDrawer(leadId, 'callable'); }, 1300);
                 } catch (e) {
