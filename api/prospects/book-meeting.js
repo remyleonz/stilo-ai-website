@@ -16,6 +16,7 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL } = require('./_google_calendar');
 const { createClient } = require('@supabase/supabase-js');
+const { sendConfirmEmail: sendVslConfirmEmail } = require('./_vsl');
 
 function buildEmailHtml(opts) {
     // STILO-branded confirmation. No em dashes, no AI buzzwords (humanizer rules).
@@ -238,6 +239,17 @@ module.exports = async function handler(req, res) {
                 whenIso: startIso, meetLink: meetLink || ''
             });
         } catch (e) { emailResult = { error: String(e.message || e) }; }
+
+        // Second, STILO-branded "confirm your meeting" email with the VSL button.
+        // No-op unless VSL_FLOW_ENABLED === 'true' (guarded inside sendVslConfirmEmail),
+        // so this stays dark until the VSL videos are filmed and the flow is flipped on.
+        // Agent defaults to 'echo' when the SDR hasn't set which one we're selling.
+        try {
+            await sendVslConfirmEmail({
+                leadId: leadId, toEmail: ownerEmail, firstName: ownerFirstName,
+                businessName: businessName, whenIso: startIso, agent: body.agent
+            });
+        } catch (e) { /* never block booking on the VSL email */ }
 
         // Internal heads-up so the STILO team gets an email on every booking too
         // (Google only emails the guest, never the organizer). Best-effort.

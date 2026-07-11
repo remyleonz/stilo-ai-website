@@ -6564,6 +6564,159 @@
                 return ax - bx;
             });
         }
+        // ── Callbacks calendar (Google-Calendar style: month / week / day) ──
+        // Admin port of the SDR callback calendar. Renders into
+        // #prospectTableCallbacks; nav mutates ADMIN_CB and re-renders in place.
+        // Buckets by America/New_York day; opens leads via openProspectDrawer.
+        var ADMIN_CB = { rows: [], view: 'month', focus: null };
+        var CBCAL_STYLE_A = '<style>'
+          + '.acb-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 16px;flex-wrap:wrap;padding:0 2px}'
+          + '.acb-nav{display:flex;align-items:center;gap:8px}'
+          + '.acb-nav button{background:var(--bg-card,#151519);border:1px solid var(--border-subtle,#2a2a33);color:var(--text-primary,#f4f4f6);width:34px;height:34px;border-radius:8px;font-size:18px;cursor:pointer;line-height:1}'
+          + '.acb-nav .acb-today{width:auto;padding:0 14px;font-size:13px;font-weight:600}'
+          + '.acb-title{font-size:17px;font-weight:700;color:var(--text-primary,#f4f4f6);margin-left:8px}'
+          + '.acb-views{display:flex;gap:4px;background:var(--bg-card,#151519);border:1px solid var(--border-subtle,#2a2a33);border-radius:9px;padding:3px}'
+          + '.acb-views button{background:none;border:none;color:var(--text-secondary,#a7a7b4);padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}'
+          + '.acb-views button.on{background:var(--blue,#2563EB);color:#fff}'
+          + '.acb-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}'
+          + '.acb-dows>div{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted,#6c6c79);text-align:center}'
+          + '.acb-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(94px,auto);gap:6px}'
+          + '.acb-cell{background:var(--bg-card,#151519);border:1px solid var(--border-subtle,#2a2a33);border-radius:9px;padding:6px;cursor:pointer;overflow:hidden;transition:border-color .15s}'
+          + '.acb-cell:hover{border-color:var(--blue,#2563EB)}'
+          + '.acb-cell.off{opacity:.4}'
+          + '.acb-cell.today{border-color:var(--blue,#2563EB);box-shadow:inset 0 0 0 1px var(--blue,#2563EB)}'
+          + '.acb-dn{font-size:12px;font-weight:600;color:var(--text-secondary,#a7a7b4);margin-bottom:4px}'
+          + '.acb-cell.today .acb-dn{color:var(--blue,#2563EB)}'
+          + '.acb-chip{font-size:11px;background:rgba(37,99,235,.16);border-left:2px solid var(--blue,#2563EB);color:var(--text-primary,#f4f4f6);padding:2px 5px;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}'
+          + '.acb-chip.od{background:rgba(239,68,68,.16);border-left-color:var(--red,#ef4444)}'
+          + '.acb-ct{font-weight:700;font-variant-numeric:tabular-nums}'
+          + '.acb-more{font-size:10.5px;color:var(--text-muted,#6c6c79);padding:1px 5px}'
+          + '.acb-wgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}'
+          + '.acb-col{background:var(--bg-card,#151519);border:1px solid var(--border-subtle,#2a2a33);border-radius:9px;padding:8px;min-height:130px;cursor:pointer}'
+          + '.acb-col:hover{border-color:var(--blue,#2563EB)}'
+          + '.acb-col.today{border-color:var(--blue,#2563EB)}'
+          + '.acb-whead{font-size:12px;font-weight:700;color:var(--text-secondary,#a7a7b4);margin-bottom:8px;text-align:center}'
+          + '.acb-col.today .acb-whead{color:var(--blue,#2563EB)}'
+          + '.acb-witem{font-size:11.5px;background:rgba(37,99,235,.14);border-radius:5px;padding:4px 6px;margin-bottom:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+          + '.acb-witem.od{background:rgba(239,68,68,.16)}'
+          + '.acb-wt{font-weight:700}'
+          + '.acb-wnone{color:var(--text-muted,#6c6c79);font-size:12px;text-align:center;padding:6px 0}'
+          + '.acb-dwrap{border:1px solid var(--border-subtle,#2a2a33);border-radius:10px;overflow:hidden}'
+          + '.acb-drow{display:flex;border-bottom:1px solid var(--border-subtle,#2a2a33);min-height:54px}'
+          + '.acb-drow:last-child{border-bottom:none}'
+          + '.acb-dhr{width:72px;flex:none;padding:8px 10px;font-size:12px;color:var(--text-muted,#6c6c79);border-right:1px solid var(--border-subtle,#2a2a33);font-variant-numeric:tabular-nums}'
+          + '.acb-dslot{flex:1;padding:6px;display:flex;flex-wrap:wrap;gap:6px}'
+          + '.acb-block{background:rgba(37,99,235,.14);border-left:3px solid var(--blue,#2563EB);border-radius:6px;padding:6px 10px;min-width:190px;cursor:pointer}'
+          + '.acb-block.od{background:rgba(239,68,68,.14);border-left-color:var(--red,#ef4444)}'
+          + '.acb-bt{font-size:12px;font-weight:700;color:var(--blue,#2563EB)}'
+          + '.acb-bn{font-size:14px;font-weight:600;color:var(--text-primary,#f4f4f6)}'
+          + '.acb-bm{font-size:12px;color:var(--text-secondary,#a7a7b4)}'
+          + '.acb-empty{padding:40px;text-align:center;color:var(--text-muted,#6c6c79)}'
+          + '</style>';
+        function acbET(ms) {
+            var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+                .formatToParts(new Date(ms)).reduce(function (o, x) { o[x.type] = x.value; return o; }, {});
+            return { iso: p.year + '-' + p.month + '-' + p.day, y: +p.year, m: +p.month, d: +p.day, hour: (+p.hour) % 24, min: +p.minute };
+        }
+        function acbTimeLabel(h, mi) { var ap = h < 12 ? 'a' : 'p'; var hh = h % 12; if (hh === 0) hh = 12; return hh + (mi ? (':' + String(mi).padStart(2, '0')) : '') + ap; }
+        function acbDueMs(r) { return tsToMsP(r.next_action_due_at || r.next_callback_at || null); }
+        function acbId(r) { return r.id != null ? r.id : r.lead_id; }
+        function acbFocusInit() { if (!ADMIN_CB.focus) { var t = acbET(Date.now()); ADMIN_CB.focus = { y: t.y, m: t.m, d: t.d }; } if (!ADMIN_CB.view) ADMIN_CB.view = 'month'; }
+        function acbRerender() { var h = document.getElementById('cbCalHostAdmin'); if (h) h.innerHTML = adminCallbackCalendarHtml(); }
+        function acbShift(kind, delta) {
+            var f = ADMIN_CB.focus, base = new Date(Date.UTC(f.y, f.m - 1, f.d, 12));
+            if (kind === 'month') base.setUTCMonth(base.getUTCMonth() + delta);
+            else if (kind === 'week') base.setUTCDate(base.getUTCDate() + 7 * delta);
+            else base.setUTCDate(base.getUTCDate() + delta);
+            ADMIN_CB.focus = { y: base.getUTCFullYear(), m: base.getUTCMonth() + 1, d: base.getUTCDate() }; acbRerender();
+        }
+        function acbToday() { var t = acbET(Date.now()); ADMIN_CB.focus = { y: t.y, m: t.m, d: t.d }; acbRerender(); }
+        function acbSetView(v) { ADMIN_CB.view = v; acbRerender(); }
+        function acbOpenDay(iso) { var a = iso.split('-'); ADMIN_CB.focus = { y: +a[0], m: +a[1], d: +a[2] }; ADMIN_CB.view = 'day'; acbRerender(); }
+        function acbBucket() {
+            var b = {};
+            (ADMIN_CB.rows || []).forEach(function (r) { var ms = acbDueMs(r); if (ms == null) return; var p = acbET(ms); (b[p.iso] = b[p.iso] || []).push({ ms: ms, hour: p.hour, min: p.min, r: r }); });
+            Object.keys(b).forEach(function (k) { b[k].sort(function (a, c) { return a.ms - c.ms; }); });
+            return b;
+        }
+        function acbBiz(r) { return r.business_name || r.business || r.name || 'Lead'; }
+        function acbToolbar() {
+            var f = ADMIN_CB.focus, v = ADMIN_CB.view;
+            var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            var wdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            var title;
+            if (v === 'day') { var d = new Date(Date.UTC(f.y, f.m - 1, f.d, 12)); title = wdays[d.getUTCDay()] + ', ' + months[f.m - 1] + ' ' + f.d; }
+            else title = months[f.m - 1] + ' ' + f.y;
+            var kind = v;
+            return CBCAL_STYLE_A
+                + '<div class="acb-bar">'
+                + '<div class="acb-nav"><button onclick="acbShift(\'' + kind + '\',-1)">&lsaquo;</button><button class="acb-today" onclick="acbToday()">Today</button><button onclick="acbShift(\'' + kind + '\',1)">&rsaquo;</button><span class="acb-title">' + escapeAdminHtml(title) + '</span></div>'
+                + '<div class="acb-views"><button class="' + (v === 'month' ? 'on' : '') + '" onclick="acbSetView(\'month\')">Month</button><button class="' + (v === 'week' ? 'on' : '') + '" onclick="acbSetView(\'week\')">Week</button><button class="' + (v === 'day' ? 'on' : '') + '" onclick="acbSetView(\'day\')">Day</button></div>'
+                + '</div>';
+        }
+        function acbMonthHtml() {
+            var f = ADMIN_CB.focus, bucket = acbBucket(), todayIso = acbET(Date.now()).iso, now = Date.now();
+            var startDow = new Date(Date.UTC(f.y, f.m - 1, 1, 12)).getUTCDay();
+            var dows = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            var head = '<div class="acb-dows">' + dows.map(function (d) { return '<div>' + d + '</div>'; }).join('') + '</div>';
+            var grid = '<div class="acb-grid">';
+            for (var i = 0; i < 42; i++) {
+                var cd = new Date(Date.UTC(f.y, f.m - 1, 1 - startDow + i, 12));
+                var iso = cd.toISOString().slice(0, 10);
+                var inM = cd.getUTCMonth() === f.m - 1;
+                var items = bucket[iso] || [];
+                var chips = '';
+                items.slice(0, 3).forEach(function (it) {
+                    var od = it.ms < now;
+                    chips += '<div class="acb-chip' + (od ? ' od' : '') + '" onclick="event.stopPropagation();openProspectDrawer(\'' + acbId(it.r) + '\',\'callable\')" title="' + escapeAdminHtml(acbBiz(it.r) + (it.r.owner_phone ? ' · ' + it.r.owner_phone : '')) + '"><span class="acb-ct">' + acbTimeLabel(it.hour, it.min) + '</span> ' + escapeAdminHtml(acbBiz(it.r)) + '</div>';
+                });
+                if (items.length > 3) chips += '<div class="acb-more">+' + (items.length - 3) + ' more</div>';
+                grid += '<div class="acb-cell' + (inM ? '' : ' off') + (iso === todayIso ? ' today' : '') + '" onclick="acbOpenDay(\'' + iso + '\')"><div class="acb-dn">' + cd.getUTCDate() + '</div>' + chips + '</div>';
+            }
+            return head + grid + '</div>';
+        }
+        function acbWeekHtml() {
+            var f = ADMIN_CB.focus, bucket = acbBucket(), todayIso = acbET(Date.now()).iso, now = Date.now();
+            var startDow = new Date(Date.UTC(f.y, f.m - 1, f.d, 12)).getUTCDay();
+            var dows = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            var cols = '';
+            for (var i = 0; i < 7; i++) {
+                var cd = new Date(Date.UTC(f.y, f.m - 1, f.d - startDow + i, 12));
+                var iso = cd.toISOString().slice(0, 10);
+                var items = bucket[iso] || [];
+                var list = items.map(function (it) { var od = it.ms < now; return '<div class="acb-witem' + (od ? ' od' : '') + '" onclick="event.stopPropagation();openProspectDrawer(\'' + acbId(it.r) + '\',\'callable\')"><span class="acb-wt">' + acbTimeLabel(it.hour, it.min) + '</span> ' + escapeAdminHtml(acbBiz(it.r)) + '</div>'; }).join('') || '<div class="acb-wnone">—</div>';
+                cols += '<div class="acb-col' + (iso === todayIso ? ' today' : '') + '" onclick="acbOpenDay(\'' + iso + '\')"><div class="acb-whead">' + dows[cd.getUTCDay()] + ' ' + cd.getUTCDate() + '</div>' + list + '</div>';
+            }
+            return '<div class="acb-wgrid">' + cols + '</div>';
+        }
+        function acbDayHtml() {
+            var f = ADMIN_CB.focus, bucket = acbBucket(), now = Date.now();
+            var iso = f.y + '-' + String(f.m).padStart(2, '0') + '-' + String(f.d).padStart(2, '0');
+            var items = bucket[iso] || [];
+            if (!items.length) return '<div class="acb-empty">No callbacks scheduled this day.</div>';
+            var minH = 7, maxH = 20;
+            items.forEach(function (it) { if (it.hour < minH) minH = it.hour; if (it.hour > maxH) maxH = it.hour; });
+            var rows = '';
+            for (var h = minH; h <= maxH; h++) {
+                var blocks = items.filter(function (it) { return it.hour === h; }).map(function (it) {
+                    var od = it.ms < now;
+                    return '<div class="acb-block' + (od ? ' od' : '') + '" onclick="openProspectDrawer(\'' + acbId(it.r) + '\',\'callable\')"><div class="acb-bt">' + acbTimeLabel(it.hour, it.min) + '</div><div class="acb-bn">' + escapeAdminHtml(acbBiz(it.r)) + '</div><div class="acb-bm">' + escapeAdminHtml(it.r.owner_name || it.r.contact_name || '') + (it.r.owner_phone ? ' · ' + escapeAdminHtml(it.r.owner_phone) : '') + '</div></div>';
+                }).join('');
+                rows += '<div class="acb-drow"><div class="acb-dhr">' + acbTimeLabel(h, 0) + '</div><div class="acb-dslot">' + blocks + '</div></div>';
+            }
+            return '<div class="acb-dwrap">' + rows + '</div>';
+        }
+        function adminCallbackCalendarHtml() {
+            acbFocusInit();
+            var v = ADMIN_CB.view, body = v === 'day' ? acbDayHtml() : v === 'week' ? acbWeekHtml() : acbMonthHtml();
+            return acbToolbar() + body;
+        }
+        function renderAdminCallbackCalendar(rows) {
+            ADMIN_CB.rows = rows || [];
+            var host = document.getElementById('prospectTableCallbacks');
+            if (host) host.innerHTML = '<div id="cbCalHostAdmin">' + adminCallbackCalendarHtml() + '</div>';
+        }
+
         async function loadProspectCallbacks(opts) {
             opts = opts || {};
             var host = document.getElementById('prospectTableCallbacks');
@@ -6573,7 +6726,7 @@
             var cached = !opts.force && !dueOnly && prospectState.cache.callbacks;
             if (cached) {
                 prospectState.rows = sortByCallbackDue(applyClientFilters(cached));
-                host.innerHTML = renderProspectTable(prospectState.rows, 'callbacks');
+                renderAdminCallbackCalendar(prospectState.rows);
             } else {
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading callbacks...</div>';
             }
@@ -6585,7 +6738,7 @@
                 if (!dueOnly) prospectState.cache.callbacks = raw;
                 var rows = sortByCallbackDue(applyClientFilters(raw));
                 prospectState.rows = rows;
-                host.innerHTML = renderProspectTable(rows, 'callbacks');
+                renderAdminCallbackCalendar(rows);
                 var badge = document.getElementById('prospectCallbackBadge');
                 if (badge && !dueOnly) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
             } catch (e) {

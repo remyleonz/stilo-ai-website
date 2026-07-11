@@ -1572,7 +1572,8 @@
                     });
                     html += '</tbody></table>';
                 } else if (sub === 'callbacks') {
-                    html = callbackTableHtml(rows);
+                    STATE.cbRows = rows;
+                    html = '<div id="cbCalHost">' + callbackCalendarHtml() + '</div>';
                 } else {
                     html = standardLeadTableHtml(rows);
                 }
@@ -1609,6 +1610,152 @@
                     + '</tr>';
             });
             return html + '</tbody></table>';
+        }
+
+        // ── Callbacks calendar (Google-Calendar style: month / week / day) ──
+        // Replaces the old vertical list. Reads STATE.cbRows; nav mutates
+        // STATE.cbFocus/cbView and re-renders #cbCalHost in place. All times are
+        // bucketed by America/New_York calendar day (callback times are ET).
+        var CBCAL_STYLE = '<style>'
+          + '.cbcal-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}'
+          + '.cbcal-nav{display:flex;align-items:center;gap:8px}'
+          + '.cbcal-nav button{background:var(--bg-elevated,#151519);border:1px solid var(--border-medium,#2a2a33);color:var(--text-primary,#f4f4f6);width:34px;height:34px;border-radius:8px;font-size:18px;cursor:pointer;line-height:1}'
+          + '.cbcal-nav .cbcal-today{width:auto;padding:0 14px;font-size:13px;font-weight:600}'
+          + '.cbcal-title{font-size:17px;font-weight:700;color:var(--text-primary,#f4f4f6);margin-left:8px}'
+          + '.cbcal-views{display:flex;gap:4px;background:var(--bg-elevated,#151519);border:1px solid var(--border-medium,#2a2a33);border-radius:9px;padding:3px}'
+          + '.cbcal-views button{background:none;border:none;color:var(--text-secondary,#a7a7b4);padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}'
+          + '.cbcal-views button.on{background:var(--blue,#2563EB);color:#fff}'
+          + '.cbm-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}'
+          + '.cbm-dows>div{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-tertiary,#6c6c79);text-align:center}'
+          + '.cbm-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(94px,auto);gap:6px}'
+          + '.cbm-cell{background:var(--bg-elevated,#151519);border:1px solid var(--border-medium,#2a2a33);border-radius:9px;padding:6px;cursor:pointer;overflow:hidden;transition:border-color .15s}'
+          + '.cbm-cell:hover{border-color:var(--blue,#2563EB)}'
+          + '.cbm-cell.off{opacity:.4}'
+          + '.cbm-cell.today{border-color:var(--blue,#2563EB);box-shadow:inset 0 0 0 1px var(--blue,#2563EB)}'
+          + '.cbm-dn{font-size:12px;font-weight:600;color:var(--text-secondary,#a7a7b4);margin-bottom:4px}'
+          + '.cbm-cell.today .cbm-dn{color:var(--blue,#2563EB)}'
+          + '.cbm-chip{font-size:11px;background:rgba(37,99,235,.16);border-left:2px solid var(--blue,#2563EB);color:var(--text-primary,#f4f4f6);padding:2px 5px;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}'
+          + '.cbm-chip.od{background:rgba(239,68,68,.16);border-left-color:var(--red,#ef4444)}'
+          + '.cbm-ct{font-weight:700;font-variant-numeric:tabular-nums}'
+          + '.cbm-more{font-size:10.5px;color:var(--text-tertiary,#6c6c79);padding:1px 5px}'
+          + '.cbw-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}'
+          + '.cbw-col{background:var(--bg-elevated,#151519);border:1px solid var(--border-medium,#2a2a33);border-radius:9px;padding:8px;min-height:130px;cursor:pointer}'
+          + '.cbw-col:hover{border-color:var(--blue,#2563EB)}'
+          + '.cbw-col.today{border-color:var(--blue,#2563EB)}'
+          + '.cbw-head{font-size:12px;font-weight:700;color:var(--text-secondary,#a7a7b4);margin-bottom:8px;text-align:center}'
+          + '.cbw-col.today .cbw-head{color:var(--blue,#2563EB)}'
+          + '.cbw-item{font-size:11.5px;background:rgba(37,99,235,.14);border-radius:5px;padding:4px 6px;margin-bottom:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+          + '.cbw-item.od{background:rgba(239,68,68,.16)}'
+          + '.cbw-t{font-weight:700}'
+          + '.cbw-none{color:var(--text-tertiary,#6c6c79);font-size:12px;text-align:center;padding:6px 0}'
+          + '.cbd-wrap{border:1px solid var(--border-medium,#2a2a33);border-radius:10px;overflow:hidden}'
+          + '.cbd-row{display:flex;border-bottom:1px solid var(--border-medium,#2a2a33);min-height:54px}'
+          + '.cbd-row:last-child{border-bottom:none}'
+          + '.cbd-hr{width:72px;flex:none;padding:8px 10px;font-size:12px;color:var(--text-tertiary,#6c6c79);border-right:1px solid var(--border-medium,#2a2a33);font-variant-numeric:tabular-nums}'
+          + '.cbd-slot{flex:1;padding:6px;display:flex;flex-wrap:wrap;gap:6px}'
+          + '.cbd-block{background:rgba(37,99,235,.14);border-left:3px solid var(--blue,#2563EB);border-radius:6px;padding:6px 10px;min-width:190px;cursor:pointer}'
+          + '.cbd-block.od{background:rgba(239,68,68,.14);border-left-color:var(--red,#ef4444)}'
+          + '.cbd-bt{font-size:12px;font-weight:700;color:var(--blue,#2563EB)}'
+          + '.cbd-bn{font-size:14px;font-weight:600;color:var(--text-primary,#f4f4f6)}'
+          + '.cbd-bm{font-size:12px;color:var(--text-secondary,#a7a7b4)}'
+          + '.cbcal-empty{padding:40px;text-align:center;color:var(--text-tertiary,#6c6c79)}'
+          + '</style>';
+
+        function cbET(ms) {
+            var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+                .formatToParts(new Date(ms)).reduce(function (o, x) { o[x.type] = x.value; return o; }, {});
+            return { iso: p.year + '-' + p.month + '-' + p.day, y: +p.year, m: +p.month, d: +p.day, hour: (+p.hour) % 24, min: +p.minute };
+        }
+        function cbTimeLabel(h, mi) { var ap = h < 12 ? 'a' : 'p'; var hh = h % 12; if (hh === 0) hh = 12; return hh + (mi ? (':' + String(mi).padStart(2, '0')) : '') + ap; }
+        function cbDueMs(r) { return tsToMs(r.next_action_due_at || r.next_callback_at || null); }
+        function cbFocusInit() { if (!STATE.cbFocus) { var t = cbET(Date.now()); STATE.cbFocus = { y: t.y, m: t.m, d: t.d }; } if (!STATE.cbView) STATE.cbView = 'month'; }
+        function cbRerender() { var h = document.getElementById('cbCalHost'); if (h) h.innerHTML = callbackCalendarHtml(); }
+        function cbShift(kind, delta) {
+            var f = STATE.cbFocus, base = new Date(Date.UTC(f.y, f.m - 1, f.d, 12));
+            if (kind === 'month') base.setUTCMonth(base.getUTCMonth() + delta);
+            else if (kind === 'week') base.setUTCDate(base.getUTCDate() + 7 * delta);
+            else base.setUTCDate(base.getUTCDate() + delta);
+            STATE.cbFocus = { y: base.getUTCFullYear(), m: base.getUTCMonth() + 1, d: base.getUTCDate() }; cbRerender();
+        }
+        function cbToday() { var t = cbET(Date.now()); STATE.cbFocus = { y: t.y, m: t.m, d: t.d }; cbRerender(); }
+        function cbSetView(v) { STATE.cbView = v; cbRerender(); }
+        function cbOpenDay(iso) { var a = iso.split('-'); STATE.cbFocus = { y: +a[0], m: +a[1], d: +a[2] }; STATE.cbView = 'day'; cbRerender(); }
+        function cbBucket() {
+            var b = {};
+            (STATE.cbRows || []).forEach(function (r) { var ms = cbDueMs(r); if (ms == null) return; var p = cbET(ms); (b[p.iso] = b[p.iso] || []).push({ ms: ms, hour: p.hour, min: p.min, r: r }); });
+            Object.keys(b).forEach(function (k) { b[k].sort(function (a, c) { return a.ms - c.ms; }); });
+            return b;
+        }
+        function cbToolbar() {
+            var f = STATE.cbFocus, v = STATE.cbView;
+            var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            var wdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            var title;
+            if (v === 'day') { var d = new Date(Date.UTC(f.y, f.m - 1, f.d, 12)); title = wdays[d.getUTCDay()] + ', ' + months[f.m - 1] + ' ' + f.d; }
+            else title = months[f.m - 1] + ' ' + f.y;
+            var kind = v;
+            return CBCAL_STYLE
+                + '<div class="cbcal-bar">'
+                + '<div class="cbcal-nav"><button onclick="cbShift(\'' + kind + '\',-1)">&lsaquo;</button><button class="cbcal-today" onclick="cbToday()">Today</button><button onclick="cbShift(\'' + kind + '\',1)">&rsaquo;</button><span class="cbcal-title">' + escapeHtml(title) + '</span></div>'
+                + '<div class="cbcal-views"><button class="' + (v === 'month' ? 'on' : '') + '" onclick="cbSetView(\'month\')">Month</button><button class="' + (v === 'week' ? 'on' : '') + '" onclick="cbSetView(\'week\')">Week</button><button class="' + (v === 'day' ? 'on' : '') + '" onclick="cbSetView(\'day\')">Day</button></div>'
+                + '</div>';
+        }
+        function cbMonthHtml() {
+            var f = STATE.cbFocus, bucket = cbBucket(), todayIso = cbET(Date.now()).iso, now = Date.now();
+            var startDow = new Date(Date.UTC(f.y, f.m - 1, 1, 12)).getUTCDay();
+            var dows = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            var head = '<div class="cbm-dows">' + dows.map(function (d) { return '<div>' + d + '</div>'; }).join('') + '</div>';
+            var grid = '<div class="cbm-grid">';
+            for (var i = 0; i < 42; i++) {
+                var cd = new Date(Date.UTC(f.y, f.m - 1, 1 - startDow + i, 12));
+                var iso = cd.toISOString().slice(0, 10);
+                var inM = cd.getUTCMonth() === f.m - 1;
+                var items = bucket[iso] || [];
+                var chips = '';
+                items.slice(0, 3).forEach(function (it) {
+                    var od = it.ms < now;
+                    chips += '<div class="cbm-chip' + (od ? ' od' : '') + '" onclick="event.stopPropagation();openLeadDrawer(' + (it.r.id || 'null') + ')" title="' + escapeHtml((it.r.business_name || it.r.name || '') + (it.r.owner_phone ? ' · ' + it.r.owner_phone : '')) + '"><span class="cbm-ct">' + cbTimeLabel(it.hour, it.min) + '</span> ' + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div>';
+                });
+                if (items.length > 3) chips += '<div class="cbm-more">+' + (items.length - 3) + ' more</div>';
+                grid += '<div class="cbm-cell' + (inM ? '' : ' off') + (iso === todayIso ? ' today' : '') + '" onclick="cbOpenDay(\'' + iso + '\')"><div class="cbm-dn">' + cd.getUTCDate() + '</div>' + chips + '</div>';
+            }
+            return head + grid + '</div>';
+        }
+        function cbWeekHtml() {
+            var f = STATE.cbFocus, bucket = cbBucket(), todayIso = cbET(Date.now()).iso, now = Date.now();
+            var startDow = new Date(Date.UTC(f.y, f.m - 1, f.d, 12)).getUTCDay();
+            var dows = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            var cols = '';
+            for (var i = 0; i < 7; i++) {
+                var cd = new Date(Date.UTC(f.y, f.m - 1, f.d - startDow + i, 12));
+                var iso = cd.toISOString().slice(0, 10);
+                var items = bucket[iso] || [];
+                var list = items.map(function (it) { var od = it.ms < now; return '<div class="cbw-item' + (od ? ' od' : '') + '" onclick="event.stopPropagation();openLeadDrawer(' + (it.r.id || 'null') + ')"><span class="cbw-t">' + cbTimeLabel(it.hour, it.min) + '</span> ' + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div>'; }).join('') || '<div class="cbw-none">—</div>';
+                cols += '<div class="cbw-col' + (iso === todayIso ? ' today' : '') + '" onclick="cbOpenDay(\'' + iso + '\')"><div class="cbw-head">' + dows[cd.getUTCDay()] + ' ' + cd.getUTCDate() + '</div>' + list + '</div>';
+            }
+            return '<div class="cbw-grid">' + cols + '</div>';
+        }
+        function cbDayHtml() {
+            var f = STATE.cbFocus, bucket = cbBucket(), now = Date.now();
+            var iso = f.y + '-' + String(f.m).padStart(2, '0') + '-' + String(f.d).padStart(2, '0');
+            var items = bucket[iso] || [];
+            if (!items.length) return '<div class="cbcal-empty">No callbacks scheduled this day.</div>';
+            var minH = 7, maxH = 20;
+            items.forEach(function (it) { if (it.hour < minH) minH = it.hour; if (it.hour > maxH) maxH = it.hour; });
+            var rows = '';
+            for (var h = minH; h <= maxH; h++) {
+                var blocks = items.filter(function (it) { return it.hour === h; }).map(function (it) {
+                    var od = it.ms < now;
+                    return '<div class="cbd-block' + (od ? ' od' : '') + '" onclick="openLeadDrawer(' + (it.r.id || 'null') + ')"><div class="cbd-bt">' + cbTimeLabel(it.hour, it.min) + '</div><div class="cbd-bn">' + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div><div class="cbd-bm">' + escapeHtml(it.r.owner_name || '') + (it.r.owner_phone ? ' · ' + escapeHtml(it.r.owner_phone) : '') + '</div></div>';
+                }).join('');
+                rows += '<div class="cbd-row"><div class="cbd-hr">' + cbTimeLabel(h, 0) + '</div><div class="cbd-slot">' + blocks + '</div></div>';
+            }
+            return '<div class="cbd-wrap">' + rows + '</div>';
+        }
+        function callbackCalendarHtml() {
+            cbFocusInit();
+            var v = STATE.cbView, body = v === 'day' ? cbDayHtml() : v === 'week' ? cbWeekHtml() : cbMonthHtml();
+            return cbToolbar() + body;
         }
 
         // Standard lead table (Business / Owner / Phone / Niche / Tier / Last
