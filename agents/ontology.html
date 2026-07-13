@@ -298,7 +298,7 @@
       msgEl.className='booking-msg ok'; msgEl.innerHTML='Booked! Check your inbox for the Google Calendar invite.'+(data.meet_link?' <a href="'+esc(data.meet_link)+'" target="_blank" style="color:#5A7BE8">Meet link</a>':''); btnConfirm.textContent='Booked'; setTimeout(closeModal,2500);
     }catch(e){ msgEl.className='booking-msg error'; msgEl.textContent='Network error: '+(e.message||e); btnConfirm.textContent='Book this time'; btnConfirm.disabled=false; }
   });
-  document.querySelectorAll('.js-book').forEach(function(a){ a.style.cursor='pointer'; a.addEventListener('click',function(e){ e.preventDefault(); window.openBookingModal(); }); });
+  document.querySelectorAll('.js-book').forEach(function(a){ a.style.cursor='pointer'; a.setAttribute('href','https://calendar.app.google/LwPZjbZznvz742d76'); a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); });
 })();
 </script>
 </body>
