@@ -53,8 +53,18 @@ function baseUrl() {
     return (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 }
 
-function landingUrl(slug) {
-    return baseUrl() + '/agents/' + agentKey(slug);
+function landingUrl(slug, leadId) {
+    var url = baseUrl() + '/agents/' + agentKey(slug);
+    // When we know the lead, sign an attribution token onto the link so a
+    // booking from the landing-page slot picker writes straight to that lead
+    // (auto-appears in the admin dashboard, no fuzzy matching). Best-effort.
+    if (leadId != null) {
+        try {
+            var t = require('../public/_token').signLead(leadId);
+            if (t) url += '?lid=' + encodeURIComponent(leadId) + '&t=' + encodeURIComponent(t);
+        } catch (e) { /* attribution is a nice-to-have; never break the redirect */ }
+    }
+    return url;
 }
 
 // ---- signed confirm token (HMAC, verify without a DB round-trip) ----

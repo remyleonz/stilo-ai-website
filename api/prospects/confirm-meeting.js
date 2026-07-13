@@ -44,6 +44,6 @@ module.exports = async function handler(req, res) {
         }
     } catch (e) { /* swallow — redirect regardless */ }
 
-    res.writeHead(302, { Location: landingUrl(agent) });
+    res.writeHead(302, { Location: landingUrl(agent, leadId) });
     return res.end();
 };

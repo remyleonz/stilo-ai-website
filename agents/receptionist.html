@@ -269,14 +269,14 @@
     slotsHost.innerHTML='<div style="padding:30px 0;text-align:center;color:rgba(255,255,255,.7);font-size:13px">Loading available times...</div>';
     try{
       var r=await fetch('/api/public/calendar-slots?days=7'); var data=await r.json();
-      if(!r.ok||!data.configured){ slotsHost.innerHTML='<div style="padding:18px;background:rgba(234,179,8,.1);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:13px">Online booking is being set up. Email <a href="mailto:remyleon@stiloaipartners.com" style="color:#5A7BE8">remyleon@stiloaipartners.com</a> and we will set up a time directly.</div>'; return; }
+      if(!r.ok||!data.configured){ slotsHost.innerHTML='<div style="padding:18px;background:rgba(234,179,8,.1);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:13px">Pick a time directly on our calendar: <a href="https://calendar.app.google/LwPZjbZznvz742d76" target="_blank" rel="noopener" style="color:#5A7BE8">open scheduler &rarr;</a></div>'; return; }
       state.slots=data.slots||[]; state.byDay={}; state.dayOrder=[];
       state.slots.forEach(function(s){ var k=dayKey(s.start); if(!state.byDay[k]){state.byDay[k]=[];state.dayOrder.push(k);} state.byDay[k].push(s); });
       state.expandedDay=state.dayOrder[0]||null; renderSlots();
     }catch(e){ slotsHost.innerHTML='<div style="padding:18px;color:#ef4444;font-size:13px">Could not load times: '+esc(e.message||e)+'</div>'; }
   }
   function renderSlots(){
-    if(!state.dayOrder.length){ slotsHost.innerHTML='<div style="padding:18px;color:rgba(255,255,255,.7);font-size:13px">No open slots in the next 7 business days. Email <a href="mailto:remyleon@stiloaipartners.com" style="color:#5A7BE8">remyleon@stiloaipartners.com</a> directly.</div>'; return; }
+    if(!state.dayOrder.length){ slotsHost.innerHTML='<div style="padding:18px;color:rgba(255,255,255,.7);font-size:13px">No open slots in the next 7 business days. <a href="https://calendar.app.google/LwPZjbZznvz742d76" target="_blank" rel="noopener" style="color:#5A7BE8">Pick a time on our calendar &rarr;</a></div>'; return; }
     var dayRow=state.dayOrder.map(function(d){ var a=state.expandedDay===d?' active':''; return '<button type="button" class="day-btn'+a+'" data-day="'+esc(d)+'"><div>'+esc(d)+'</div><div style="font-size:10px;font-weight:500;opacity:.75;margin-top:2px">'+state.byDay[d].length+' slots</div></button>'; }).join('');
     var timeGrid='';
     if(state.expandedDay&&state.byDay[state.expandedDay]){
@@ -292,13 +292,13 @@
     if(!name||!email||!state.selectedIso){ msgEl.className='booking-msg error'; msgEl.textContent='Name, email, and a selected time are all required.'; return; }
     btnConfirm.textContent='Booking...'; btnConfirm.disabled=true;
     try{
-      var r=await fetch('/api/public/book-meeting',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({start_iso:state.selectedIso,email:email,name:name,business_name:business,notes:notes})});
+      var r=await fetch('/api/public/book-meeting',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({start_iso:state.selectedIso,email:email,name:name,business_name:business,notes:notes,lid:(new URLSearchParams(location.search)).get('lid'),t:(new URLSearchParams(location.search)).get('t')})});
       var data=await r.json();
       if(!r.ok||!data.ok){ msgEl.className='booking-msg error'; msgEl.textContent='Could not book: '+(data.detail||data.error||'unknown error'); btnConfirm.textContent='Book this time'; btnConfirm.disabled=false; return; }
       msgEl.className='booking-msg ok'; msgEl.innerHTML='Booked! Check your inbox for the Google Calendar invite.'+(data.meet_link?' <a href="'+esc(data.meet_link)+'" target="_blank" style="color:#5A7BE8">Meet link</a>':''); btnConfirm.textContent='Booked'; setTimeout(closeModal,2500);
     }catch(e){ msgEl.className='booking-msg error'; msgEl.textContent='Network error: '+(e.message||e); btnConfirm.textContent='Book this time'; btnConfirm.disabled=false; }
   });
-  document.querySelectorAll('.js-book').forEach(function(a){ a.style.cursor='pointer'; a.setAttribute('href','https://calendar.app.google/LwPZjbZznvz742d76'); a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); });
+  document.querySelectorAll('.js-book').forEach(function(a){ a.style.cursor='pointer'; a.addEventListener('click',function(e){ e.preventDefault(); window.openBookingModal(); }); });
 })();
 </script>
 </body>

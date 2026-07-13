@@ -1,166 +1,198 @@
 /**
  * POST /api/public/book-meeting
  *
- * Public booking endpoint for the marketing site's "Book a 15-min call" CTA.
- * Creates a Google Calendar event on Remy's calendar with the prospect as a
- * guest, and emails a confirmation via Resend.
+ * Public booking endpoint for the VSL landing pages' slot picker. Books a Google
+ * Calendar event (Remy's booking calendar, David + prospect invited, Meet link),
+ * then writes the meeting straight onto a prospecting.leads row so it AUTO-APPEARS
+ * in the admin dashboard — no manual matching.
  *
- * Body: {
- *   start_iso:     "2026-05-28T19:30:00.000Z",   // ISO 8601, required
- *   email:         "jane@plumbingco.com",        // required
- *   name:          "Jane Doe",                   // required
- *   business_name: "Plumbing Co",                // optional
- *   notes:         "We get 30 missed calls a day...",  // optional
- * }
+ * Attribution:
+ *   - If the emailed link carried ?lid=<id>&t=<token> and the token verifies, we
+ *     book onto that EXACT lead (perfect attribution for emailed prospects).
+ *   - Otherwise we match an existing lead by email, or create a new one
+ *     (source = 'vsl_landing') for cold/organic visitors.
  *
- * Requires env: GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN, RESEND_API_KEY (optional)
+ * Body: { start_iso, email, name, business_name?, notes?, lid?, t?, agent? }
+ * Uses the shared _google_calendar helper (DB-first refresh token).
  */
-
 const { createClient } = require('@supabase/supabase-js');
-
-async function getAccessToken() {
-  const r = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
-      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-      refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
-      grant_type: 'refresh_token'
-    })
-  });
-  if (!r.ok) throw new Error('oauth_refresh_failed: ' + (await r.text()).slice(0, 200));
-  return (await r.json()).access_token;
-}
+const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL } = require('../prospects/_google_calendar');
+const { verifyLead } = require('./_token');
 
 async function readJsonBody(req) {
-  if (req.body && typeof req.body === 'object') return req.body;
-  const chunks = [];
-  for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { return {}; }
+    if (req.body && typeof req.body === 'object') return req.body;
+    const chunks = [];
+    for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { return {}; }
+}
+function isEmail(s) { return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
+
+async function sendResend(payload) {
+    if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
+    try {
+        const r = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const j = await r.json().catch(function () { return {}; });
+        return { status: r.status, id: j.id, error: r.ok ? null : (j.message || 'send_failed') };
+    } catch (e) { return { error: String(e.message || e) }; }
 }
 
-function isEmail(s) { return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
-
 module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'method_not_allowed' });
-  }
+    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'method_not_allowed' }); }
 
-  if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_REFRESH_TOKEN) {
-    return res.status(503).json({ error: 'google_calendar_not_configured' });
-  }
+    const body = await readJsonBody(req);
+    const startIso = body.start_iso;
+    const email = (body.email || '').trim();
+    const name = (body.name || '').trim();
+    const businessName = (body.business_name || '').trim();
+    const notes = (body.notes || '').slice(0, 1000);
+    const lid = body.lid != null && /^\d+$/.test(String(body.lid)) ? parseInt(String(body.lid), 10) : null;
+    const token = body.t || null;
 
-  const body = await readJsonBody(req);
-  const startIso = body.start_iso;
-  const email = body.email;
-  const name = (body.name || '').trim();
-  const businessName = (body.business_name || '').trim();
-  const notes = (body.notes || '').slice(0, 1000);
+    if (!startIso || !email || !name) return res.status(400).json({ error: 'missing_required_fields' });
+    if (!isEmail(email)) return res.status(400).json({ error: 'invalid_email' });
+    const startDate = new Date(startIso);
+    if (isNaN(startDate.getTime())) return res.status(400).json({ error: 'invalid_start_iso' });
+    if (startDate.getTime() < Date.now() + 60 * 60 * 1000) return res.status(400).json({ error: 'slot_too_soon' });
 
-  if (!startIso || !email || !name) return res.status(400).json({ error: 'missing_required_fields' });
-  if (!isEmail(email)) return res.status(400).json({ error: 'invalid_email' });
+    const refreshToken = await getCalendarRefreshToken();
+    if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !refreshToken) return res.status(503).json({ error: 'google_calendar_not_configured', detail: 'The booking calendar is not connected yet.' });
 
-  const startDate = new Date(startIso);
-  if (isNaN(startDate.getTime())) return res.status(400).json({ error: 'invalid_start_iso' });
-  if (startDate.getTime() < Date.now() + 60 * 60 * 1000) {
-    return res.status(400).json({ error: 'slot_too_soon' });
-  }
-  const endDate = new Date(startDate.getTime() + 15 * 60 * 1000);
+    const durationMin = 30;
+    const endDate = new Date(startDate.getTime() + durationMin * 60000);
 
-  let accessToken;
-  try { accessToken = await getAccessToken(); }
-  catch (e) { return res.status(502).json({ error: 'oauth_failed', detail: String(e.message || e) }); }
+    const sb = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
+        ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } })
+        : null;
 
-  const summary = 'STILO AI Partners x ' + (businessName || name);
-  const description = [
-    'Prospect:   ' + name + ' <' + email + '>',
-    businessName ? 'Business:   ' + businessName : '',
-    'Source:     stiloaipartners.com booking',
-    notes ? '\nNotes from prospect:\n' + notes : ''
-  ].filter(Boolean).join('\n');
-
-  // Create the calendar event with the prospect as a guest
-  try {
-    const createResp = await fetch(
-      'https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1',
-      {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          summary: summary,
-          description: description,
-          start: { dateTime: startDate.toISOString() },
-          end: { dateTime: endDate.toISOString() },
-          attendees: [{ email: email, displayName: name, responseStatus: 'accepted' }],
-          conferenceData: {
-            createRequest: {
-              requestId: 'stilo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
-              conferenceSolutionKey: { type: 'hangoutsMeet' }
+    // --- Resolve the lead (token attribution first, then match, then create) ---
+    let leadId = null, attributed = false, lead = null;
+    if (sb) {
+        try {
+            if (lid != null && verifyLead(lid, token)) {
+                const { data } = await sb.from('leads').select('id,name,owner_name,owner_email,call_attempts').eq('id', lid).maybeSingle();
+                if (data) { lead = data; leadId = data.id; attributed = true; }
             }
-          },
-          reminders: { useDefault: true }
-        })
-      }
-    );
-    if (!createResp.ok) {
-      const errText = await createResp.text();
-      console.error('[public/book-meeting] create failed:', createResp.status, errText.slice(0, 300));
-      return res.status(502).json({ error: 'event_create_failed', detail: errText.slice(0, 300) });
+            if (leadId == null) {
+                const { data: match } = await sb.from('leads').select('id,name,owner_name,owner_email,call_attempts').or('owner_email.ilike.' + email + ',email.ilike.' + email).limit(1);
+                if (match && match[0]) { lead = match[0]; leadId = match[0].id; }
+            }
+            if (leadId == null) {
+                const { data: created, error: cErr } = await sb.from('leads').insert({
+                    name: businessName || name || 'Website booking',
+                    owner_name: name || null,
+                    owner_email: email,
+                    source: 'vsl_landing',
+                    stage: 'NEW'
+                }).select('id').single();
+                if (!cErr && created) { leadId = created.id; lead = { id: leadId, call_attempts: 0 }; }
+            }
+        } catch (e) { console.warn('[public/book-meeting] lead resolve failed:', e && e.message); }
     }
-    const ev = await createResp.json();
 
-    // Booking tracking: find the most-recent quiz_complete row for this
-    // email and stamp the booking details onto it. That way the admin sees
-    // ONE row per lead with a "Booked" pill, instead of a fresh audit row
-    // disconnected from the quiz answers. If no quiz_complete exists yet
-    // (someone got the email and clicked the link from a different inbox),
-    // we insert a new audit row as a fallback.
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
-      try {
-        const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
-          auth: { autoRefreshToken: false, persistSession: false }
+    // --- Access token ---
+    let accessToken;
+    try { accessToken = await accessTokenFromRefresh(refreshToken); }
+    catch (e) {
+        if (isReauthError(e)) return res.status(409).json({ error: 'calendar_reauth_required', reauth_url: REAUTH_URL });
+        return res.status(502).json({ error: 'oauth_failed', detail: String(e.message || e) });
+    }
+
+    // --- Create the calendar event (David rides every meeting) ---
+    const summary = 'STILO AI Partners discovery · ' + (businessName || name);
+    const description = [
+        'Contact: ' + name + ' <' + email + '>',
+        businessName ? 'Business: ' + businessName : '',
+        'Source: VSL landing page' + (attributed ? ' (attributed lead #' + leadId + ')' : ''),
+        body.agent ? 'Interested in: ' + String(body.agent) : '',
+        notes ? '\nNotes from prospect:\n' + notes : ''
+    ].filter(Boolean).join('\n');
+    let ev;
+    try {
+        const createResp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                summary: summary,
+                description: description,
+                start: { dateTime: startDate.toISOString(), timeZone: 'America/New_York' },
+                end: { dateTime: endDate.toISOString(), timeZone: 'America/New_York' },
+                attendees: [
+                    { email: 'davidcoira@stiloaipartners.com', displayName: 'David Coira (STILO)', responseStatus: 'accepted' },
+                    { email: email, displayName: name }
+                ],
+                conferenceData: { createRequest: { requestId: 'stilo-vsl-' + (leadId || 'x') + '-' + Date.now(), conferenceSolutionKey: { type: 'hangoutsMeet' } } },
+                reminders: { useDefault: true }
+            })
         });
-        const bookingPatch = {
-          meeting_booked_at: new Date().toISOString(),
-          meeting_event_id: ev.id || null,
-          meeting_start_iso: ev.start && ev.start.dateTime,
-          meeting_meet_link: ev.hangoutLink || null
-        };
-        const { data: existing, error: lookupErr } = await sb
-          .from('quiz_submissions')
-          .select('id, created_at')
-          .ilike('email', email)
-          .eq('cta_type', 'quiz_complete')
-          .order('created_at', { ascending: false })
-          .limit(1);
-        if (!lookupErr && existing && existing[0]) {
-          await sb.from('quiz_submissions').update(bookingPatch).eq('id', existing[0].id);
-        } else {
-          await sb.from('quiz_submissions').insert(Object.assign({
-            cta_type: 'audit',
-            contact_name: name,
-            email: email,
-            business_name: businessName || null,
-            page_url: 'booking-modal',
-            quiz_answers: { source: 'book_meeting_modal', notes: notes || '' },
-            tier: null,
-            selected_agents: []
-          }, bookingPatch));
+        if (!createResp.ok) {
+            const t = await createResp.text();
+            console.error('[public/book-meeting] create failed:', createResp.status, t.slice(0, 300));
+            return res.status(502).json({ error: 'event_create_failed', detail: t.slice(0, 300) });
         }
-      } catch (e) { console.warn('[public/book-meeting] supabase log failed:', e && e.message); }
+        ev = await createResp.json();
+    } catch (e) { return res.status(500).json({ error: 'unexpected', detail: String(e.message || e) }); }
+
+    const meetLink = (ev.conferenceData && ev.conferenceData.entryPoints && (ev.conferenceData.entryPoints.find(function (p) { return p.entryPointType === 'video'; }) || {}).uri) || ev.hangoutLink || null;
+
+    // --- Persist onto the lead so it shows in the admin dashboard ---
+    let persisted = false;
+    if (sb && leadId != null) {
+        try {
+            const upd = await sb.from('leads').update({
+                meeting_event_id: ev.id || null,
+                meeting_event_link: ev.htmlLink || null,
+                meeting_meet_link: meetLink || null,
+                meeting_scheduled_at: startDate.toISOString(),
+                meeting_duration_min: durationMin,
+                meeting_booked_by_sdr: 'vsl_landing',
+                meeting_booked_at: new Date().toISOString(),
+                stage: 'MEETING_BOOKED',
+                last_called_outcome: 'booked_meeting',
+                last_called_at: new Date().toISOString(),
+                call_attempts: (Number(lead && lead.call_attempts) || 0) + 1,
+                owner_email: (lead && lead.owner_email) || email,
+                owner_name: (lead && lead.owner_name) || name || null,
+                call_notes: 'Self-booked from VSL landing page for ' + startDate.toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET' + (attributed ? ' (attributed via emailed link)' : ' (matched/created by email)')
+            }).eq('id', leadId);
+            persisted = !upd.error;
+            if (upd.error) console.warn('[public/book-meeting] persist failed:', upd.error.message);
+        } catch (e) { console.warn('[public/book-meeting] persist threw:', e && e.message); }
     }
 
-    return res.status(200).json({
-      ok: true,
-      event_id: ev.id,
-      meet_link: ev.hangoutLink || null,
-      start: ev.start && ev.start.dateTime,
-      end: ev.end && ev.end.dateTime
-    });
-  } catch (e) {
-    console.error('[public/book-meeting]', e);
-    return res.status(500).json({ error: 'unexpected', detail: String(e.message || e) });
-  }
+    // --- Prospect confirmation + internal heads-up (best-effort) ---
+    const whenStr = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(startDate);
+    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
+    const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
+    try {
+        await sendResend({
+            from: senderName + ' <' + fromEmail + '>', to: [email], reply_to: fromEmail,
+            subject: 'Confirmed: your STILO call, ' + whenStr,
+            html: '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
+                + '<p>Hi ' + esc(firstName(name)) + ',</p><p>You are booked for <strong>' + esc(whenStr) + '</strong>.</p>'
+                + (meetLink ? '<p>Google Meet: <a href="' + esc(meetLink) + '" style="color:#2563EB">' + esc(meetLink) + '</a></p>' : '')
+                + '<p>If anything comes up, just reply and we will move it.</p><p>Talk soon,<br/>' + esc(senderName) + '<br/>STILO AI Partners</p></div>'
+        });
+    } catch (_) { /* never block booking on email */ }
+    try {
+        const notify = process.env.STILO_NOTIFY_EMAIL || 'remyleon@stiloaipartners.com';
+        await sendResend({
+            from: 'STILO AI Partners <' + fromEmail + '>', to: [notify],
+            subject: 'New VSL booking: ' + (businessName || name) + ' (' + whenStr + ')',
+            html: '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
+                + '<p><strong>New self-booking from a VSL page.</strong></p><ul style="padding-left:18px">'
+                + '<li>Business: <strong>' + esc(businessName || name) + '</strong></li><li>When: <strong>' + esc(whenStr) + '</strong></li>'
+                + '<li>Contact: ' + esc(name) + ' &middot; ' + esc(email) + '</li>'
+                + '<li>Lead: ' + (leadId != null ? '#' + leadId + (attributed ? ' (attributed)' : ' (matched/created)') : 'not linked') + '</li>'
+                + (body.agent ? '<li>Interested in: ' + esc(String(body.agent)) + '</li>' : '')
+                + (meetLink ? '<li>Meet: <a href="' + esc(meetLink) + '">' + esc(meetLink) + '</a></li>' : '') + '</ul></div>'
+        });
+    } catch (_) { /* best-effort */ }
+
+    return res.status(200).json({ ok: true, event_id: ev.id, meet_link: meetLink, start: ev.start && ev.start.dateTime, lead_id: leadId, attributed: attributed, persisted: persisted });
 };
