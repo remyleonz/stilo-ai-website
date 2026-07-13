@@ -74,7 +74,7 @@
 
   /* ===== VIDEO ===== */
   .videowrap{position:relative;width:min(920px,94vw);margin:0 auto;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--stroke-hi);box-shadow:0 40px 100px -34px rgba(0,0,0,.85),0 0 0 1px rgba(45,79,184,.14);background:#05070d;aspect-ratio:16/9}
-  .videowrap video{width:100%;height:100%;object-fit:cover;display:block}
+  .videowrap video,.videowrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover;display:block}
 
   /* ===== CTA ===== */
   .ctaband{text-align:center;padding:40px 0 8px}
@@ -146,10 +146,11 @@
   <div class="container">
     <h1>A website that<br>actually books customers.</h1>
     <div class="videowrap">
-      <!-- Drop the recorded VSL at /agents/vsl/website.mp4 (poster optional). Autoplays muted on load. -->
-      <video id="vsl" autoplay muted loop playsinline preload="auto" poster="/agents/vsl/website-poster.jpg">
-        <source src="/agents/vsl/website.mp4" type="video/mp4">
-      </video>
+      <!-- Website Agent VSL, hosted on Loom. Loom's dashboard tracks views + watch time. -->
+      <iframe src="https://www.loom.com/embed/eff996a83a4e444ba7b512006fa7781b?autoplay=1&hide_owner=true&hide_share=true&hide_title=true"
+              title="Rebuilding a Local Business Website That Actually Converts"
+              frameborder="0" allow="autoplay; fullscreen; picture-in-picture"
+              webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
     </div>
     <div class="ctaband">
       <h2>Book a 15-Minute Meeting with a Partner</h2>
