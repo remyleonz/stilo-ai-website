@@ -6773,12 +6773,27 @@
                 + '<span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Open a lead to see its nurture stage</span>';
         }
 
+        // Booked list order: upcoming meetings first (soonest at top), past
+        // meetings pushed to the bottom (most-recent past first). The API returns
+        // plain ascending-by-date, which buries upcoming meetings under old ones.
+        function sortBookedUpcomingFirst(rows) {
+            var now = Date.now();
+            return (rows || []).slice().sort(function (a, b) {
+                var am = a.meeting_scheduled_at ? new Date(a.meeting_scheduled_at).getTime() : Infinity;
+                var bm = b.meeting_scheduled_at ? new Date(b.meeting_scheduled_at).getTime() : Infinity;
+                if (isNaN(am)) am = Infinity; if (isNaN(bm)) bm = Infinity;
+                var aUp = am >= now, bUp = bm >= now;
+                if (aUp && bUp) return am - bm;
+                if (!aUp && !bUp) return bm - am;
+                return aUp ? -1 : 1;
+            });
+        }
         async function loadProspectBooked(opts) {
             opts = opts || {};
             var host = document.getElementById('prospectTableBooked');
             var cached = !opts.force && prospectState.cache.booked;
             if (cached) {
-                prospectState.rows = applyClientFilters(cached);
+                prospectState.rows = sortBookedUpcomingFirst(applyClientFilters(cached));
                 host.innerHTML = renderProspectTable(prospectState.rows, 'booked');
             } else {
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading booked meetings...</div>';
@@ -6787,7 +6802,7 @@
                 var data = await prospectFetchJSON('/api/prospects/list-booked?limit=400');
                 var raw = data.results || [];
                 prospectState.cache.booked = raw;
-                var rows = applyClientFilters(raw);
+                var rows = sortBookedUpcomingFirst(applyClientFilters(raw));
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'booked');
                 var badge = document.getElementById('prospectBookedBadge');

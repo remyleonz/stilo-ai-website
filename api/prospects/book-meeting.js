@@ -253,10 +253,18 @@ module.exports = async function handler(req, res) {
 
         // Internal heads-up so the STILO team gets an email on every booking too
         // (Google only emails the guest, never the organizer). Best-effort.
+        // Resolve the SDR's real name from sdr_users so the email reads
+        // "Booked by: Alejandro Barrios" instead of a raw login email.
+        let bookedByName = gate.email || null;
+        try {
+            const pubSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+            const { data: sdrRow } = await pubSb.from('sdr_users').select('display_name').eq('email', gate.email).maybeSingle();
+            if (sdrRow && sdrRow.display_name) bookedByName = sdrRow.display_name;
+        } catch (_) { /* fall back to the email */ }
         try {
             await sendInternalNotification({
                 businessName: businessName, whenIso: startIso, meetLink: meetLink || '',
-                bookedBy: gate.email || null, contact: ownerName, email: ownerEmail, phone: ownerPhone
+                bookedBy: bookedByName, contact: ownerName, email: ownerEmail, phone: ownerPhone
             });
         } catch (e) { /* never block the booking on the internal notification */ }
 
