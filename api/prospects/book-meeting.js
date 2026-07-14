@@ -80,7 +80,13 @@ async function sendConfirmationEmail(opts) {
 // Sends to STILO_NOTIFY_EMAIL (falls back to the sender address).
 async function sendInternalNotification(opts) {
     if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
-    const toEmail = process.env.STILO_NOTIFY_EMAIL || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    // Send the booking heads-up to Remy, David, AND the SDR who booked it.
+    var recips = [process.env.STILO_NOTIFY_EMAIL || 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
+    if (opts.sdrEmail) recips.push(opts.sdrEmail);
+    var toList = recips.map(function (e) { return String(e || '').toLowerCase().trim(); })
+        .filter(function (e) { return e && /.+@.+\..+/.test(e); })
+        .filter(function (e, i, a) { return a.indexOf(e) === i; });
+    const toEmail = toList[0];
     const fromName = process.env.STILO_SENDER_NAME || 'STILO AI Partners';
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
     const whenStr = new Intl.DateTimeFormat('en-US', {
@@ -105,7 +111,7 @@ async function sendInternalNotification(opts) {
         headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
             from: fromName + ' <' + fromEmail + '>',
-            to: [toEmail],
+            to: toList,
             subject: 'New meeting booked: ' + (opts.businessName || 'STILO') + ' (' + whenStr + ')',
             html: html
         })
@@ -264,7 +270,7 @@ module.exports = async function handler(req, res) {
         try {
             await sendInternalNotification({
                 businessName: businessName, whenIso: startIso, meetLink: meetLink || '',
-                bookedBy: bookedByName, contact: ownerName, email: ownerEmail, phone: ownerPhone
+                bookedBy: bookedByName, sdrEmail: gate.email || null, contact: ownerName, email: ownerEmail, phone: ownerPhone
             });
         } catch (e) { /* never block the booking on the internal notification */ }
 

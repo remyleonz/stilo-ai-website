@@ -1498,6 +1498,22 @@
                 <div id="prospectDrawerContent"></div>
             </div>
             <div id="prospectDrawerOverlay" onclick="closeProspectDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99;"></div>
+            <!-- Share-lead-to-rep modal (admin -> SDR "Shared with me") -->
+            <div id="adminShareModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;">
+              <div style="background:#0f0f16;border:1px solid var(--border-medium);border-radius:14px;padding:24px;width:min(420px,92vw);">
+                <div style="font-family:var(--font-display);font-weight:800;font-size:17px;margin-bottom:4px;">Send lead to a rep</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">It lands on their "Shared with me" tab.</div>
+                <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Rep</label>
+                <select id="adminShareRecipient" style="width:100%;margin:6px 0 14px;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:14px;"></select>
+                <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Note (optional)</label>
+                <textarea id="adminShareNote" rows="2" style="width:100%;margin:6px 0 6px;padding:10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:13px;resize:vertical;"></textarea>
+                <div id="adminShareMsg" style="font-size:12px;min-height:16px;margin-bottom:10px;"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                  <button type="button" onclick="document.getElementById('adminShareModal').style.display='none'" style="padding:9px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:13px;cursor:pointer;">Cancel</button>
+                  <button type="button" onclick="adminSubmitShareToRep()" style="padding:9px 18px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Share</button>
+                </div>
+              </div>
+            </div>
 
             <!-- EMAIL COMPOSER MODAL (shared by prospect drawer + Shared tab) -->
             <div id="emailComposerModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.62);align-items:flex-start;justify-content:center;padding:34px 20px;overflow-y:auto;">
@@ -7149,6 +7165,42 @@
             else if (tab === 'my-history')   loadMyHistory();
         }
 
+        // Share a lead with an SDR rep -> lands on their "Shared with me" tab.
+        // (The old Share button only copied a link; this actually sends it.)
+        var adminShareLeadId = null;
+        async function adminShareToRep(leadId) {
+            adminShareLeadId = leadId;
+            var modal = document.getElementById('adminShareModal');
+            var sel = document.getElementById('adminShareRecipient');
+            document.getElementById('adminShareNote').value = '';
+            document.getElementById('adminShareMsg').textContent = '';
+            sel.innerHTML = '<option value="">Loading…</option>';
+            modal.style.display = 'flex';
+            try {
+                var d = await prospectFetchJSON('/api/sdr/roster');
+                var roster = (d && d.sdrs) || [];
+                var skip = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
+                var opts = '';
+                roster.forEach(function (s) {
+                    if (!s.email || s.active === false) return;
+                    if (skip.indexOf(String(s.email).toLowerCase()) !== -1) return;
+                    opts += '<option value="' + escapeAdminHtml(s.email) + '">' + escapeAdminHtml(s.display_name || s.email) + '</option>';
+                });
+                sel.innerHTML = opts || '<option value="">No reps found</option>';
+            } catch (e) { sel.innerHTML = '<option value="">Could not load reps</option>'; }
+        }
+        async function adminSubmitShareToRep() {
+            var to = document.getElementById('adminShareRecipient').value;
+            var note = document.getElementById('adminShareNote').value.trim();
+            var msg = document.getElementById('adminShareMsg');
+            if (!to) { msg.style.color = '#ef4444'; msg.textContent = 'Pick a rep.'; return; }
+            msg.style.color = 'var(--text-secondary)'; msg.textContent = 'Sharing…';
+            try {
+                await prospectFetchJSON('/api/prospects/share-lead', { method: 'POST', body: JSON.stringify({ lead_id: adminShareLeadId, to: to, note: note }) });
+                msg.style.color = '#10b981'; msg.textContent = 'Shared. It is on their "Shared with me" tab.';
+                setTimeout(function () { document.getElementById('adminShareModal').style.display = 'none'; }, 1200);
+            } catch (e) { msg.style.color = '#ef4444'; msg.textContent = 'Share failed: ' + (e.message || 'unknown'); }
+        }
         async function openProspectDrawer(leadId, mode) {
             mode = mode || 'callable';
             prospectState.currentLeadId = leadId;
@@ -7726,7 +7778,7 @@
             var mailIconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>';
             var actionPillsHtml = '<div style="display:flex;gap:8px;margin-bottom:18px;">'
                 + '<button type="button" onclick="openEmailComposer(' + JSON.stringify(d.id) + ')" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;">' + mailIconSvg + 'Email this lead</button>'
-                + '<button id="prospectShareBtn" type="button" onclick="shareLeadLink(' + JSON.stringify(d.id) + ')" title="Copy shareable link" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">' + shareIconSvg + 'Share</button>'
+                + '<button id="prospectShareBtn" type="button" onclick="adminShareToRep(' + JSON.stringify(d.id) + ')" title="Send this lead to a rep" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">' + shareIconSvg + 'Share</button>'
                 + '</div>';
 
             // Info grid — Niche / City / Email (+ Recommended), matching SDR.
