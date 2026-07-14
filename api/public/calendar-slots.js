@@ -23,6 +23,9 @@ const TZ_OFFSET_HOURS = 4;   // ET = UTC-4 (DST)
 function generateBusinessSlots(days, fromOffset) {
     const slots = [];
     const now = new Date();
+    // No same-day booking on the VSL pages: skip any slot on today's ET date.
+    const _etDay = function (t) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(t); };
+    const todayET = _etDay(now);
     const start = Math.max(0, fromOffset || 0);
     for (let d = start; d <= start + days; d++) {
         const day = new Date(now.getTime() + d * 86400000);
@@ -32,6 +35,7 @@ function generateBusinessSlots(days, fromOffset) {
             for (let m = 0; m < 60; m += SLOT_MIN) {
                 const s = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), h + TZ_OFFSET_HOURS, m, 0));
                 if (s.getTime() < now.getTime() + 60 * 60 * 1000) continue;
+                if (_etDay(s) === todayET) continue; // no same-day booking
                 const e = new Date(s.getTime() + SLOT_MIN * 60000);
                 slots.push({ start: s.toISOString(), end: e.toISOString() });
             }
