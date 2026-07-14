@@ -32,6 +32,10 @@
     {
       "path": "/api/prospects/sync-meetings",
       "schedule": "20 11-23 * * *"
+    },
+    {
+      "path": "/api/prospects/send-confirmations",
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": []

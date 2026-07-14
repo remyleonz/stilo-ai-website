@@ -317,5 +317,6 @@
 function startVsl(btn){var w=btn.parentNode,id=btn.getAttribute("data-loom"),agent=btn.getAttribute("data-agent"),lid=(new URLSearchParams(location.search)).get("lid");w.innerHTML='<iframe src="https://www.loom.com/embed/'+id+'?autoplay=1&hide_owner=true&hide_share=true&hide_title=true" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>';try{if(window.va)window.va("event",{name:"vsl_play",agent:agent});}catch(e){}try{fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"play",agent:agent,lid:lid,path:location.pathname})});}catch(e){}}
 (function(){try{var a=document.querySelector(".vsl-play"),agent=a?a.getAttribute("data-agent"):null,lid=(new URLSearchParams(location.search)).get("lid");fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:agent,lid:lid,path:location.pathname})});}catch(e){}})();
 </script>
+<script src="/agents/_confirm.js"></script>
 </body>
 </html>
