@@ -409,7 +409,9 @@ module.exports = async function handler(req, res) {
     const QUO_USER_ID_TO_EMAIL = {
         'UShj8EpsSW': 'remyleon@stiloaipartners.com',         // Remy Leon (owner)
         'USxSahMbat': 'huronfire5@gmail.com',                 // Luke Huron (now has a Quo seat)
-        'USCFfV4w6g': 'jackmaguire@stiloaipartners.com',      // Jack Maguire
+        // Jack Maguire removed (terminated); his old line +17869819302 is now
+        // Jorge's, attributed by phone number via sdr_users. Add Jorge's Quo
+        // user id here once he accepts the seat, if metadata attribution is needed.
         'USHJZZYPss': 'alejandrobarrios@stiloaipartners.com', // Alejandro Barrios
         'USsSwYdBtK': 'davidcoira@stiloaipartners.com'        // David Coira (legacy id)
     };
