@@ -2091,7 +2091,8 @@
             try {
                 const data = await fetchJSON(url);
                 if (data && data.content_md) {
-                    host.innerHTML = renderScriptMarkdown(normalizeAgentSection(data.content_md, r));
+                    host.innerHTML = agentBadge(resolveAgentName(data.content_md, r))
+                        + renderScriptMarkdown(stripScriptChrome(normalizeAgentSection(data.content_md, r)));
                     if (metaEl && data.generated_at) metaEl.textContent = '· generated ' + new Date(data.generated_at).toLocaleDateString();
                     return;
                 }
@@ -2102,7 +2103,8 @@
                 if (e.status === 404) {
                     const synth = buildScriptFromResearch(r);
                     if (synth) {
-                        host.innerHTML = renderScriptMarkdown(normalizeAgentSection(synth, r));
+                        host.innerHTML = agentBadge(resolveAgentName(synth, r))
+                            + renderScriptMarkdown(stripScriptChrome(normalizeAgentSection(synth, r)));
                         if (metaEl) metaEl.textContent = '· auto-built from research';
                     } else {
                         host.textContent = 'No cold-call script for this lead yet. Use the pain points + business summary above.';
@@ -2209,6 +2211,42 @@
                 return /primary\s*:\s*unknown|secondary[^\r\n]*none/i.test(b) ? '' : b;
             });
             return src;
+        }
+
+        // The briefs ship with a wall of pre-call chrome (A/B arm, rep/ask-for
+        // line, meeting product, best window, pre-call notes) and a trailing
+        // Footer of generation notes. Reps don't read any of it and it buries the
+        // actual call. Strip it. The agent we're pitching is pulled out first and
+        // shown in its own badge (agentBadge) so it's impossible to miss.
+        function stripScriptChrome(md) {
+            var lines = String(md || '').split('\n');
+            var out = [], skipping = false, inFooter = false;
+            var CHROME = /^(A\/B arm|Rep|Ask for|Meeting product|Best window|Pre-call|Name note|Product override)\b/i;
+            for (var i = 0; i < lines.length; i++) {
+                var ln = lines[i];
+                var bare = ln.replace(/^[>*\-\s#]+/, '').trim();
+                if (/^footer$/i.test(bare)) { inFooter = true; continue; }
+                if (inFooter) {
+                    if (/^#{1,6}\s/.test(ln) && !/footer/i.test(bare)) inFooter = false;
+                    else continue;
+                }
+                if (CHROME.test(bare)) { skipping = true; continue; }
+                if (skipping) {
+                    if (!ln.trim()) { skipping = false; continue; }
+                    if (/^#{1,6}\s/.test(ln) || /^[①-⑳]/.test(ln.trim())) skipping = false;
+                    else continue;
+                }
+                out.push(ln);
+            }
+            return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+        }
+
+        // Big, unmissable "this is what you're selling" badge at the top of the script.
+        function agentBadge(agent) {
+            if (!agent) return '';
+            return '<div style="margin:0 0 14px;border:1px solid var(--blue);background:rgba(37,99,235,0.16);border-radius:10px;padding:12px 16px;">'
+                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:4px;">Pitching this agent</div>'
+                + '<div style="font-size:18px;font-weight:800;color:#fff;font-family:var(--font-display);">' + escapeHtml(agent) + '</div></div>';
         }
 
         // Minimal, safe Markdown -> HTML for the brief. Escapes first (no HTML
