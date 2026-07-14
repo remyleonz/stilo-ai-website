@@ -166,7 +166,8 @@ module.exports = async function handler(req, res) {
                 // not the rep's personal email. So all replies land in one place.
                 reply_to: process.env.STILO_REPLY_TO || fromEmail,
                 subject: subject,
-                html: html,
+                // Open-tracking pixel (logs email_open into vsl_events for the Sales tab).
+                html: html + '<img src="https://stiloaipartners.com/api/public/vsl-event?event=email_open&lid=' + id + '" width="1" height="1" style="display:none" alt=""/>',
                 text: plainText,
                 // Gmail/Yahoo deliverability: one-click unsubscribe.
                 headers: (function () {

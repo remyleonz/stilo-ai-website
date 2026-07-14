@@ -9044,6 +9044,37 @@
                 + '<div style="font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px;">' + escapeAdminHtml(title) + '</div>'
                 + inner + '</div>';
         }
+        // VSL funnel analytics (view -> play -> confirm) shown under the Emails card.
+        var VSL_ANALYTICS = null;
+        async function loadVslAnalytics() {
+            try { VSL_ANALYTICS = await prospectFetchJSON('/api/prospects/vsl-analytics'); }
+            catch (e) { VSL_ANALYTICS = { error: e.message || 'failed' }; }
+            if (SALES_OPEN === 'emails_sent') renderSalesPanel('emails_sent');
+        }
+        function vslFunnelPanel() {
+            if (VSL_ANALYTICS === null) return salesPanelWrap('VSL funnel', '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>');
+            if (VSL_ANALYTICS.error) return salesPanelWrap('VSL funnel', '<div style="color:var(--red);font-size:13px;">' + escapeAdminHtml(VSL_ANALYTICS.error) + '</div>');
+            var t = VSL_ANALYTICS.totals || {};
+            var v = t.view || 0, pl = t.play || 0, co = t.confirm_open || 0, cf = t.confirm || 0, eo = t.email_open || 0;
+            var pct = function (n, d) { return d ? Math.round(n / d * 100) + '%' : '—'; };
+            var stat = function (lbl, val, sub, color) { return '<div style="flex:1;min-width:100px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">' + lbl + '</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:' + (color || 'var(--text-primary)') + ';">' + val + '</div>' + (sub ? '<div style="font-size:11px;color:var(--text-tertiary);">' + sub + '</div>' : '') + '</div>'; };
+            var row = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + stat('Emails sent', VSL_ANALYTICS.email_sends || 0, null, '#5A7BE8')
+                + stat('Email opens', eo, null, '#5A7BE8')
+                + stat('Page views', v, 'landed on a VSL')
+                + stat('Video plays', pl, pct(pl, v) + ' of views', '#2563eb')
+                + stat('Confirm clicks', cf, pct(cf, co) + ' of confirm opens', '#10b981')
+                + '</div>';
+            var ba = VSL_ANALYTICS.by_agent || {};
+            var agents = Object.keys(ba).filter(function (a) { return a !== 'unknown'; }).sort();
+            var tbl = '';
+            if (agents.length) {
+                tbl = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;"><thead><tr style="color:var(--text-secondary);text-align:left;"><th style="padding:6px;">Agent</th><th style="padding:6px;text-align:right;">Views</th><th style="padding:6px;text-align:right;">Plays</th><th style="padding:6px;text-align:right;">Confirms</th></tr></thead><tbody>'
+                    + agents.map(function (a) { var x = ba[a]; return '<tr style="border-top:1px solid var(--border-subtle);"><td style="padding:6px;">' + escapeAdminHtml(a) + '</td><td style="padding:6px;text-align:right;">' + (x.view || 0) + '</td><td style="padding:6px;text-align:right;">' + (x.play || 0) + '</td><td style="padding:6px;text-align:right;">' + (x.confirm || 0) + '</td></tr>'; }).join('')
+                    + '</tbody></table>';
+            }
+            return salesPanelWrap('VSL funnel (last ' + (VSL_ANALYTICS.days || 60) + ' days)', row + tbl);
+        }
         function renderSalesPanel(k) {
             var p = document.getElementById('salesPanel');
             if (!p) return;
@@ -9071,7 +9102,13 @@
                 var inner = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><tbody>'
                     + board.map(function (r) { return '<tr style="border-top:1px solid var(--border-subtle);"><td style="padding:8px 6px;">' + escapeAdminHtml(r.name || (r.sdr ? sdrFromEmail(r.sdr).displayName : '—')) + '</td><td style="padding:8px 6px;text-align:right;font-weight:700;">' + (r[metric] || 0) + '</td></tr>'; }).join('')
                     + '</tbody></table>';
-                p.innerHTML = salesPanelWrap((k === 'cold_calls' ? 'Cold calls' : 'Emails') + ' by rep', board.length ? inner : '<div style="color:var(--text-muted);font-size:13px;">No activity yet.</div>');
+                var byRep = salesPanelWrap((k === 'cold_calls' ? 'Cold calls' : 'Emails') + ' by rep', board.length ? inner : '<div style="color:var(--text-muted);font-size:13px;">No activity yet.</div>');
+                if (k === 'emails_sent') {
+                    p.innerHTML = byRep + '<div style="height:14px;"></div>' + vslFunnelPanel();
+                    if (VSL_ANALYTICS === null) loadVslAnalytics();
+                } else {
+                    p.innerHTML = byRep;
+                }
             }
         }
         function salesDealRow(d, stage) {

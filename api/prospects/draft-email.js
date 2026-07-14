@@ -16,6 +16,13 @@ const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = requi
 const { createClient } = require('@supabase/supabase-js');
 const kit = require('./_email_kit');
 const scriptAgent = require('./_script_agent');
+const { signLead } = require('../public/_token');
+
+// Interested Lead Flow: the follow-up email links to the agent's VSL landing
+// page (attributed) instead of a generic calendar link. Map the playbook key
+// (from _email_kit) to the /agents/<slug> VSL page.
+const VSL_BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
+const VSL_SLUG = { receptionist: 'receptionist', lead_response: 'lead-reply', reactivation: 'reactivation', lead_gen: 'prospecting', website: 'website', seo: 'ai-seo', growth: 'ontology', custom: 'sales-agent' };
 
 function leadsClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -152,23 +159,20 @@ module.exports = async function handler(req, res) {
     // (body.variant) for previewing, but normal use leaves it auto.
     const variant = (body.variant === 'A' || body.variant === 'B') ? body.variant : kit.pickVariant(id);
 
-    // Default = the deterministic template for this arm: business + the agent
-    // we're actually selling + the rep's footer. Reliable, no AI cost. AI
-    // drafting is opt-in via use_ai:true (and is excluded from the A/B body).
-    let source = 'template';
-    let draft = null;
-    if (body.use_ai === true) {
-        draft = await geminiDraft({
-            business: business, firstName: fName, niche: niche, hook: researchHook(lead),
-            agent: playbook.agent, oneLiner: playbook.oneLiner, pain: playbook.pain
-        });
-        if (draft) source = 'gemini';
-    }
-    if (!draft) draft = kit.buildVariantBody(variant, { firstName: fName, business: business, senderName: sender.name, playbook: playbook });
+    // Short VSL email (Interested Lead Flow): thank them for the call, then link
+    // to the agent's VSL page. The link is attributed (?lid&t) so a booking off
+    // the page ties straight to this lead. The agent switcher (body.agent) still
+    // decides which VSL. Reps can switch and re-draft as before.
+    const slug = VSL_SLUG[kit.playbookKey(playbook)] || 'receptionist';
+    const vslLink = VSL_BASE + '/agents/' + slug + '?lid=' + id + '&t=' + signLead(id);
+    const source = 'vsl_template';
+    let draft = 'Hi ' + (fName || 'there') + ',\n\n'
+        + 'Thanks for the call. Here is a quick 2-minute look at how the ' + playbook.agent + ' would work for ' + business + ':\n'
+        + vslLink + '\n\n'
+        + 'If it looks like a fit, you can grab a 15-minute call with us right from that page. Any questions, just reply.\n';
+    draft = kit.sanitizeCopy(draft);
 
-    draft = kit.ensureBookingLink(kit.sanitizeCopy(draft));
-
-    const subject = kit.buildSubject(variant, { business: business, firstName: fName, playbook: playbook });
+    const subject = 'Quick look for ' + business;
 
     const toEmail = lead.owner_email || lead.email || researchEmail(lead) || '';
 
