@@ -140,6 +140,11 @@
   .booking-card .booking-msg{font-size:12.5px;margin-top:8px;line-height:1.4}
   .booking-card .booking-msg.error{color:#ef4444}.booking-card .booking-msg.ok{color:#10b981}
   .booking-card .booking-confirm{margin-top:14px;width:100%;justify-content:center}
+
+  .videowrap .vsl-play{position:absolute;inset:0;width:100%;height:100%;border:0;background:radial-gradient(ellipse at 50% 45%,rgba(45,79,184,.28),#05070d 72%);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .videowrap .vsl-orb{width:82px;height:82px;border-radius:50%;background:rgba(255,255,255,.96);box-shadow:0 14px 46px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+  .videowrap .vsl-play:hover .vsl-orb{transform:scale(1.07)}
+  .videowrap .vsl-orb::after{content:"";width:0;height:0;border-style:solid;border-width:15px 0 15px 25px;border-color:transparent transparent transparent #1E3A8A;margin-left:7px}
 </style>
 </head>
 <body>
@@ -150,10 +155,7 @@
     <h1>A website that<br>actually books customers.</h1>
     <div class="videowrap">
       <!-- Website Agent VSL, hosted on Loom. Loom's dashboard tracks views + watch time. -->
-      <iframe src="https://www.loom.com/embed/eff996a83a4e444ba7b512006fa7781b?autoplay=1&hide_owner=true&hide_share=true&hide_title=true"
-              title="Rebuilding a Local Business Website That Actually Converts"
-              frameborder="0" allow="autoplay; fullscreen; picture-in-picture"
-              webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+      <button type="button" class="vsl-play" onclick="startVsl(this)" data-loom="eff996a83a4e444ba7b512006fa7781b" data-agent="website" aria-label="Play the walkthrough"><span class="vsl-orb"></span></button>
     </div>
     <div class="ctaband">
       <h2>Book a 15-Minute Meeting with a Partner</h2>
@@ -308,6 +310,10 @@
   });
   document.querySelectorAll('.js-book').forEach(function(a){ a.style.cursor='pointer'; a.addEventListener('click',function(e){ e.preventDefault(); window.openBookingModal(); }); });
 })();
+</script>
+<script>
+function startVsl(btn){var w=btn.parentNode,id=btn.getAttribute("data-loom"),agent=btn.getAttribute("data-agent"),lid=(new URLSearchParams(location.search)).get("lid");w.innerHTML='<iframe src="https://www.loom.com/embed/'+id+'?autoplay=1&hide_owner=true&hide_share=true&hide_title=true" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>';try{if(window.va)window.va("event",{name:"vsl_play",agent:agent});}catch(e){}try{fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"play",agent:agent,lid:lid,path:location.pathname})});}catch(e){}}
+(function(){try{var a=document.querySelector(".vsl-play"),agent=a?a.getAttribute("data-agent"):null,lid=(new URLSearchParams(location.search)).get("lid");fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:agent,lid:lid,path:location.pathname})});}catch(e){}})();
 </script>
 </body>
 </html>
