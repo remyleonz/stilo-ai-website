@@ -408,11 +408,14 @@ module.exports = async function handler(req, res) {
     // phone-line map below. Keep this in sync with `list-users` in Quo.
     const QUO_USER_ID_TO_EMAIL = {
         'UShj8EpsSW': 'remyleon@stiloaipartners.com',         // Remy Leon (owner)
-        'USxSahMbat': 'huronfire5@gmail.com',                 // Luke Huron (now has a Quo seat)
-        // Jack Maguire removed (terminated); his old line +17869819302 is now
-        // Jorge's, attributed by phone number via sdr_users. Add Jorge's Quo
-        // user id here once he accepts the seat, if metadata attribution is needed.
-        'USHJZZYPss': 'alejandrobarrios@stiloaipartners.com', // Alejandro Barrios
+        'USxSahMbat': 'huronfire5@gmail.com',                 // Luke Huron
+        // Jack Maguire removed (terminated). His old line +17869819302 is now
+        // Jorge's; Jorge has his own Quo seat below.
+        'UScVtcqU89': 'ayesjorge911@gmail.com',              // Jorge Ayes
+        // NOTE: must be the rep's sdr_users.email (their dashboard identity), not
+        // a company alias — logged_by is matched against sdr_users downstream.
+        // Ale's Quo seat + login are both aleb1027@gmail.com.
+        'USHJZZYPss': 'aleb1027@gmail.com',                  // Alejandro Barrios
         'USsSwYdBtK': 'davidcoira@stiloaipartners.com'        // David Coira (legacy id)
     };
 
