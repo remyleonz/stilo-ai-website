@@ -121,8 +121,11 @@
   .booking-modal.open{display:flex}
   @keyframes bmFade{from{opacity:0}to{opacity:1}}
   .booking-card{position:relative;width:min(640px,100%);max-height:90vh;overflow-y:auto;background:var(--bg-plate);border:1px solid var(--stroke-hi);border-radius:18px;padding:28px;color:var(--fg);box-shadow:0 40px 80px rgba(0,0,0,.6)}
-  .booking-card h3{font-family:var(--font-display);font-weight:700;font-size:1.5rem;letter-spacing:-.02em;margin:0 0 6px;text-transform:uppercase}
+  .booking-card h3{font-family:var(--font-display);font-weight:700;font-size:1.5rem;letter-spacing:-.02em;margin:0 0 20px;text-transform:uppercase;text-align:center}
   .booking-card .booking-sub{color:#fff;font-size:.92rem;margin:0 0 22px;line-height:1.45}
+  .booking-card .wk-nav-btn{background:rgba(255,255,255,.05);border:1px solid var(--stroke);color:var(--fg);font-family:var(--font-body),system-ui;font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;letter-spacing:.03em}
+  .booking-card .wk-nav-btn:hover{background:rgba(255,255,255,.1)}
+  .booking-card .wk-nav-btn:disabled{opacity:.35;cursor:not-allowed}
   .booking-close{position:absolute;top:18px;right:22px;width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--stroke);color:var(--fg);cursor:pointer;font-size:1.1rem;line-height:1}
   .booking-close:hover{background:rgba(255,255,255,.12)}
   .booking-card .day-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -236,7 +239,7 @@
   <div class="booking-card">
     <button type="button" class="booking-close" id="bookingClose" aria-label="Close">&times;</button>
     <h3 id="bookingTitle">Book a 15-min call</h3>
-    <p class="booking-sub">Pick an open slot on Remy's calendar. You'll get a Google Calendar invite with a Meet link.</p>
+    <div class="booking-weeknav" id="bookingWeekNav" style="display:none;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px"><button type="button" id="bkPrev" class="wk-nav-btn">&lsaquo; Earlier</button><span id="bkWeekLabel" style="font-size:11.5px;color:var(--fg-2);letter-spacing:.04em;text-transform:uppercase"></span><button type="button" id="bkNext" class="wk-nav-btn">Later &rsaquo;</button></div>
     <div id="bookingSlots"><div style="padding:30px 0;text-align:center;color:rgba(255,255,255,.7);font-size:13px">Loading available times...</div></div>
     <div class="booking-form" id="bookingForm" style="display:none">
       <input type="text" id="bookingName" placeholder="Your name *" autocomplete="name">
@@ -256,23 +259,27 @@
   var slotsHost=document.getElementById('bookingSlots'), formEl=document.getElementById('bookingForm'),
       msgEl=document.getElementById('bookingMsg'), btnConfirm=document.getElementById('bookingConfirmBtn'),
       btnClose=document.getElementById('bookingClose');
-  var state={slots:[],byDay:{},dayOrder:[],expandedDay:null,selectedIso:null};
+  var state={slots:[],byDay:{},dayOrder:[],expandedDay:null,selectedIso:null,fromOffset:0};
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function dayKey(iso){return new Date(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});}
   function timeLabel(iso){return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'});}
-  window.openBookingModal=function(){ msgEl.textContent=''; msgEl.className='booking-msg'; formEl.style.display='none'; state.selectedIso=null; modal.classList.add('open'); document.body.style.overflow='hidden'; loadSlots(); };
+  window.openBookingModal=function(){ msgEl.textContent=''; msgEl.className='booking-msg'; formEl.style.display='none'; state.selectedIso=null; state.fromOffset=0; modal.classList.add('open'); document.body.style.overflow='hidden'; loadSlots(); };
   function closeModal(){ modal.classList.remove('open'); document.body.style.overflow=''; }
   btnClose.addEventListener('click',closeModal);
+  var weekNav=document.getElementById('bookingWeekNav'), bkPrev=document.getElementById('bkPrev'), bkNext=document.getElementById('bkNext'), bkWeekLabel=document.getElementById('bkWeekLabel');
+  function updateWeekNav(){ if(!weekNav)return; weekNav.style.display='flex'; if(bkPrev)bkPrev.disabled=state.fromOffset<=0; if(bkNext)bkNext.disabled=state.fromOffset>=49; if(bkWeekLabel)bkWeekLabel.textContent=state.dayOrder.length?((state.dayOrder[0]||'')+' - '+(state.dayOrder[state.dayOrder.length-1]||'')):''; }
+  if(bkPrev)bkPrev.addEventListener('click',function(){ if(state.fromOffset>0){ state.fromOffset=Math.max(0,state.fromOffset-7); loadSlots(); } });
+  if(bkNext)bkNext.addEventListener('click',function(){ if(state.fromOffset<49){ state.fromOffset=state.fromOffset+7; loadSlots(); } });
   modal.addEventListener('click',function(e){ if(e.target===modal)closeModal(); });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&modal.classList.contains('open'))closeModal(); });
   async function loadSlots(){
     slotsHost.innerHTML='<div style="padding:30px 0;text-align:center;color:rgba(255,255,255,.7);font-size:13px">Loading available times...</div>';
     try{
-      var r=await fetch('/api/public/calendar-slots?days=7'); var data=await r.json();
+      var r=await fetch('/api/public/calendar-slots?days=7&from='+state.fromOffset); var data=await r.json();
       if(!r.ok||!data.configured){ slotsHost.innerHTML='<div style="padding:18px;background:rgba(234,179,8,.1);border:1px solid #eab308;border-radius:8px;color:#eab308;font-size:13px">Pick a time directly on our calendar: <a href="https://calendar.app.google/LwPZjbZznvz742d76" target="_blank" rel="noopener" style="color:#5A7BE8">open scheduler &rarr;</a></div>'; return; }
       state.slots=data.slots||[]; state.byDay={}; state.dayOrder=[];
       state.slots.forEach(function(s){ var k=dayKey(s.start); if(!state.byDay[k]){state.byDay[k]=[];state.dayOrder.push(k);} state.byDay[k].push(s); });
-      state.expandedDay=state.dayOrder[0]||null; renderSlots();
+      state.expandedDay=state.dayOrder[0]||null; renderSlots(); updateWeekNav();
     }catch(e){ slotsHost.innerHTML='<div style="padding:18px;color:#ef4444;font-size:13px">Could not load times: '+esc(e.message||e)+'</div>'; }
   }
   function renderSlots(){
