@@ -28,7 +28,7 @@ const AGENTS = {
     'receptionist': { name: 'Receptionist' },
     'lead-reply':   { name: 'Outbound Lead Reply' },
     'reactivation': { name: 'Lost Customer Reactivation' },
-    'prospecting':  { name: 'B2B Lead Generator' },
+    'b2bleadgen':   { name: 'B2B Lead Generator' },
     'website':      { name: 'Website' },
     'sales-agent':  { name: 'Sales Coach' }
 };
@@ -36,9 +36,12 @@ const DEFAULT_AGENT = 'receptionist';
 
 // Accept a few friendly aliases (dashboard codenames / product ids) so the SDR
 // or lead.matched_product can pass whatever it has and still resolve a slug.
+// 'prospecting' is the old slug for b2bleadgen (renamed 2026-07-15). Keep it as an
+// alias: emails already in inboxes carry /agents/prospecting links, and vercel.json
+// redirects the page, but anything resolving the slug in code still needs it.
 const ALIASES = {
     echo: 'receptionist', ignite: 'lead-reply', revive: 'reactivation', lcr: 'reactivation',
-    scout: 'prospecting', forge: 'website',
+    scout: 'b2bleadgen', prospecting: 'b2bleadgen', forge: 'website',
     pitch: 'sales-agent', sales: 'sales-agent', web: 'website'
 };
 

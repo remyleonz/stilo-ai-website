@@ -42,6 +42,11 @@
       "source": "/agents/ontology",
       "destination": "/",
       "permanent": false
+    },
+    {
+      "source": "/agents/prospecting",
+      "destination": "/agents/b2bleadgen",
+      "permanent": true
     }
   ],
   "crons": [

@@ -25,7 +25,7 @@ function slugFor(name) {
     if (/recept/.test(s)) return 'receptionist';
     if (/reactiv|lcr|lost customer/.test(s)) return 'reactivation';
     if (/lead reply|lead response|outbound|instant lead/.test(s)) return 'lead-reply';
-    if (/lead gen|b2b|prospect|scout/.test(s)) return 'prospecting';
+    if (/lead gen|b2b|prospect|scout/.test(s)) return 'b2bleadgen';
     if (/website|web build/.test(s)) return 'website';
     if (/sales coach|coach|sales agent|pitch/.test(s)) return 'sales-agent';
     return 'receptionist';

@@ -49,7 +49,7 @@
         try {
             var r = await fetch('/api/public/meeting-details?lid=' + encodeURIComponent(lid) + '&t=' + encodeURIComponent(t));
             var d = await r.json();
-            if (!r.ok) { box.innerHTML = '<div style="color:#eab308;padding:8px">We could not pull up your meeting. Email remyleon@stiloaipartners.com and we will sort it out.</div>'; return; }
+            if (!r.ok) { box.innerHTML = '<div style="color:#eab308;padding:8px">We could not pull up your meeting. Email stiloaiconsulting@gmail.com and we will sort it out.</div>'; return; }
             var when = fmtWhen(d.when_iso), meet = d.meet_link || d.event_link || '';
             box.innerHTML =
                 '<h2 style="font-family:Georgia,serif;font-size:1.7rem;margin:0 0 6px">Confirm your meeting</h2>'
@@ -69,6 +69,6 @@
                 ev('confirm');
                 var note = document.createElement('div'); note.style.cssText = 'color:#10b981;margin-top:12px;font-weight:600'; note.textContent = 'Thank you. Your meeting is confirmed. See you then.'; btn.parentNode.appendChild(note);
             });
-        } catch (e) { box.innerHTML = '<div style="color:#eab308;padding:8px">Something went wrong. Email remyleon@stiloaipartners.com.</div>'; }
+        } catch (e) { box.innerHTML = '<div style="color:#eab308;padding:8px">Something went wrong. Email stiloaiconsulting@gmail.com.</div>'; }
     }
 })();
