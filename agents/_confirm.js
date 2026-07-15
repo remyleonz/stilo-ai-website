@@ -10,8 +10,15 @@
     if (!lid || !t) return;
 
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-    function agentSlug() { var a = document.querySelector('.vsl-play'); return a ? a.getAttribute('data-agent') : null; }
-    function ev(name) { try { fetch('/api/public/vsl-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: name, agent: agentSlug(), lid: lid, path: location.pathname }) }); } catch (e) {} }
+    // ai-seo and ontology have no .vsl-play button, so fall back to the slug in
+    // the path (vsl-event.js does the same derivation server-side).
+    function agentSlug() {
+        var a = document.querySelector('.vsl-play');
+        if (a) return a.getAttribute('data-agent');
+        var m = /^\/agents\/([a-z0-9-]+)/.exec(location.pathname);
+        return m ? m[1] : null;
+    }
+    function ev(name) { try { fetch('/api/public/vsl-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: name, agent: agentSlug(), lid: lid, flow: 'confirm', path: location.pathname }) }); } catch (e) {} }
     function fmtWhen(iso) { if (!iso) return 'your scheduled time'; try { return new Date(iso).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET'; } catch (e) { return iso; } }
 
     function ready(fn) { if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }

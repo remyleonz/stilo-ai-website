@@ -142,6 +142,25 @@ module.exports = async function handler(req, res) {
                 nurture_stage: 'vsl_sent'
             }).eq('id', ld.id);
         }
+
+        // Log the email like every other outbound send. Without this the whole
+        // confirmation flow was invisible: no row on the lead panel, nothing for
+        // vsl-analytics to count, and Resend's bounce/open webhooks had no row to
+        // attach to (they match on provider_message_id). The lead stamp above
+        // says "we sent something" but can't say what, to whom, or whether it
+        // landed. variant='meeting_confirm' is what the confirm funnel counts.
+        if (emailOk) {
+            await sb.from('lead_messages').insert({
+                lead_id: ld.id, direction: 'outbound', channel: 'email',
+                subject: 'You are booked, quick confirm',
+                body_preview: 'Confirmation + VSL link for ' + when,
+                to_address: email,
+                from_address: 'remyleon@stiloaipartners.com',
+                provider: 'resend', provider_message_id: er.id || null,
+                status: 'sent', variant: 'meeting_confirm',
+                sent_at: new Date().toISOString(),
+            });
+        }
         results.push({ id: ld.id, slug: slug, sent: (emailOk || smsOk), email: er, sms: sr });
     }
     return res.status(200).json({ ok: true, sent: results.length, results: results });

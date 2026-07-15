@@ -187,11 +187,16 @@ module.exports = async function handler(req, res) {
     // Candidates: scripted + assigned to one of the four reps + has an email.
     // Skip anyone already in a real conversation (a booked meeting or a closed
     // deal doesn't want a cold intro) and anyone we've already campaigned.
+    // meeting_booked_at, not just stage: stage lags the booking (it stayed 'NEW'
+    // on a lead who had booked the day before), and this copy opens by assuming
+    // no prior contact. Sending "here is a 2-minute look, no pitch" to someone
+    // who already has a call on the calendar with us reads as a bad mailing list.
     const { data: leads, error } = await sb.from('leads')
         .select('id,name,owner_name,owner_email,email,address,matched_product_name,stage')
         .eq('has_cold_call_script', true)
         .in('assigned_to', REPS)
         .not('stage', 'in', '("MEETING_BOOKED","CLOSED_LOST","CLIENT","DNC")')
+        .is('meeting_booked_at', null)
         .limit(2000);
     if (error) return res.status(500).json({ error: 'read_failed', detail: error.message });
 

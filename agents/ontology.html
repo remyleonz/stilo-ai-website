@@ -308,6 +308,9 @@
   document.querySelectorAll('.js-book').forEach(function(a){ a.style.cursor='pointer'; a.addEventListener('click',function(e){ e.preventDefault(); window.openBookingModal(); }); });
 })();
 </script>
+<script>
+(function(){try{var q=new URLSearchParams(location.search),lid=q.get("lid"),flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic");fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:"ontology",lid:lid,flow:flow,path:location.pathname})});}catch(e){}})();
+</script>
 <script src="/agents/_confirm.js"></script>
 </body>
 </html>

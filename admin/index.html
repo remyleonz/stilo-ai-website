@@ -9115,29 +9115,68 @@
             catch (e) { VSL_ANALYTICS = { error: e.message || 'failed' }; }
             if (SALES_OPEN === 'emails_sent') renderSalesPanel('emails_sent');
         }
+        // Two separate funnels. They share the /agents/<slug> pages but are
+        // different campaigns to different audiences (cold blast vs post-booking
+        // confirmation), so averaging them together tells you nothing.
+        function vslStat(lbl, val, sub, color) {
+            var shown = (val === null || val === undefined) ? '—' : val;
+            return '<div style="flex:1;min-width:96px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;padding:12px;">'
+                + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">' + lbl + '</div>'
+                + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:' + (color || 'var(--text-primary)') + ';">' + shown + '</div>'
+                + (sub ? '<div style="font-size:11px;color:var(--text-tertiary);">' + sub + '</div>' : '') + '</div>';
+        }
+        function vslPct(n, d) { return (d && n != null) ? Math.round(n / d * 100) + '%' : '—'; }
+        function vslAgentTable(ba, cols) {
+            var agents = Object.keys(ba || {}).filter(function (a) { return a && a !== 'unknown'; }).sort();
+            if (!agents.length) return '';
+            return '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;"><thead><tr style="color:var(--text-secondary);text-align:left;">'
+                + '<th style="padding:6px;">Agent</th>'
+                + cols.map(function (c) { return '<th style="padding:6px;text-align:right;">' + c.label + '</th>'; }).join('')
+                + '</tr></thead><tbody>'
+                + agents.map(function (a) {
+                    return '<tr style="border-top:1px solid var(--border-subtle);"><td style="padding:6px;">' + escapeAdminHtml(a) + '</td>'
+                        + cols.map(function (c) { return '<td style="padding:6px;text-align:right;">' + ((ba[a] || {})[c.key] || 0) + '</td>'; }).join('') + '</tr>';
+                }).join('') + '</tbody></table>';
+        }
         function vslFunnelPanel() {
-            if (VSL_ANALYTICS === null) return salesPanelWrap('VSL funnel', '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>');
-            if (VSL_ANALYTICS.error) return salesPanelWrap('VSL funnel', '<div style="color:var(--red);font-size:13px;">' + escapeAdminHtml(VSL_ANALYTICS.error) + '</div>');
-            var t = VSL_ANALYTICS.totals || {};
-            var v = t.view || 0, pl = t.play || 0, co = t.confirm_open || 0, cf = t.confirm || 0, eo = t.email_open || 0;
-            var pct = function (n, d) { return d ? Math.round(n / d * 100) + '%' : '—'; };
-            var stat = function (lbl, val, sub, color) { return '<div style="flex:1;min-width:100px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">' + lbl + '</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:' + (color || 'var(--text-primary)') + ';">' + val + '</div>' + (sub ? '<div style="font-size:11px;color:var(--text-tertiary);">' + sub + '</div>' : '') + '</div>'; };
-            var row = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                + stat('Emails sent', VSL_ANALYTICS.email_sends || 0, null, '#5A7BE8')
-                + stat('Email opens', eo, null, '#5A7BE8')
-                + stat('Page views', v, 'landed on a VSL')
-                + stat('Video plays', pl, pct(pl, v) + ' of views', '#2563eb')
-                + stat('Confirm clicks', cf, pct(cf, co) + ' of confirm opens', '#10b981')
-                + '</div>';
-            var ba = VSL_ANALYTICS.by_agent || {};
-            var agents = Object.keys(ba).filter(function (a) { return a !== 'unknown'; }).sort();
-            var tbl = '';
-            if (agents.length) {
-                tbl = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;"><thead><tr style="color:var(--text-secondary);text-align:left;"><th style="padding:6px;">Agent</th><th style="padding:6px;text-align:right;">Views</th><th style="padding:6px;text-align:right;">Plays</th><th style="padding:6px;text-align:right;">Confirms</th></tr></thead><tbody>'
-                    + agents.map(function (a) { var x = ba[a]; return '<tr style="border-top:1px solid var(--border-subtle);"><td style="padding:6px;">' + escapeAdminHtml(a) + '</td><td style="padding:6px;text-align:right;">' + (x.view || 0) + '</td><td style="padding:6px;text-align:right;">' + (x.play || 0) + '</td><td style="padding:6px;text-align:right;">' + (x.confirm || 0) + '</td></tr>'; }).join('')
-                    + '</tbody></table>';
-            }
-            return salesPanelWrap('VSL funnel (last ' + (VSL_ANALYTICS.days || 60) + ' days)', row + tbl);
+            if (VSL_ANALYTICS === null) return salesPanelWrap('VSL funnels', '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>');
+            if (VSL_ANALYTICS.error) return salesPanelWrap('VSL funnels', '<div style="color:var(--red);font-size:13px;">' + escapeAdminHtml(VSL_ANALYTICS.error) + '</div>');
+            var d = VSL_ANALYTICS.days || 60;
+            var c = VSL_ANALYTICS.campaign || {}, f = VSL_ANALYTICS.confirm || {}, o = VSL_ANALYTICS.organic || {};
+
+            // Headline is unique leads, not raw events: mail scanners fetch every
+            // link, so raw views run ~5x the number of humans.
+            var campaign = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + vslStat('Emails sent', c.emails_sent, (c.bounced != null ? c.bounced + ' bounced' : null), '#5A7BE8')
+                + vslStat('Email opens', null, 'not tracked (plain text)')
+                + vslStat('Leads who viewed', c.view_leads, (c.views || 0) + ' raw views')
+                + vslStat('Leads who played', c.play_leads, vslPct(c.play_leads, c.view_leads) + ' of viewers', '#2563eb')
+                + vslStat('Booked', c.booked, vslPct(c.booked, c.emails_sent) + ' of sent', '#10b981')
+                + '</div>'
+                + vslAgentTable(c.by_agent, [{ key: 'view', label: 'Views' }, { key: 'play', label: 'Plays' }]);
+
+            var confirm = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + vslStat('Emails sent', f.emails_sent, null, '#5A7BE8')
+                + vslStat('Email opens', f.email_opens, vslPct(f.email_opens, f.emails_sent) + ' of sent', '#5A7BE8')
+                + vslStat('Leads who viewed', f.view_leads, (f.views || 0) + ' raw views')
+                + vslStat('Confirm opens', f.confirm_opens, 'opened the modal')
+                + vslStat('Confirmed', f.confirms, vslPct(f.confirms, f.confirm_opens) + ' of opens', '#10b981')
+                + '</div>'
+                + vslAgentTable(f.by_agent, [{ key: 'view', label: 'Views' }, { key: 'confirm_open', label: 'Opens' }, { key: 'confirm', label: 'Confirms' }]);
+
+            var warn = (VSL_ANALYTICS.warnings || []).length
+                ? '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:9px 11px;font-size:12px;color:#ef4444;margin-bottom:12px;">'
+                    + VSL_ANALYTICS.warnings.map(escapeAdminHtml).join('<br/>') + '</div>'
+                : '';
+            var org = (o.views || o.plays)
+                ? '<div style="font-size:12px;color:var(--text-tertiary);margin-top:10px;">Organic / direct (no campaign link): '
+                    + (o.views || 0) + ' views, ' + (o.plays || 0) + ' plays. Mostly our own testing.</div>'
+                : '';
+
+            return warn
+                + salesPanelWrap('Interested lead VSL · cold campaign (last ' + d + ' days)', campaign)
+                + '<div style="height:14px;"></div>'
+                + salesPanelWrap('Meeting confirmation VSL (last ' + d + ' days)', confirm + org);
         }
         function renderSalesPanel(k) {
             var p = document.getElementById('salesPanel');
