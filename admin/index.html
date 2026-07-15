@@ -9084,7 +9084,8 @@
                 var labels = { onboarding: 'Onboarding (paid half, implementing)', active: 'Paid clients (live)', churned: 'Churned' };
                 p.innerHTML = salesPanelWrap(labels[k], list.length ? list.map(function (d) { return salesDealRow(d, k); }).join('') : '<div style="color:var(--text-muted);font-size:13px;">None yet.</div>');
             } else if (k === 'booked') {
-                var bl = SALES.booked_leads || [];
+                // Upcoming meetings first (soonest at top), past ones at the bottom.
+                var bl = sortBookedUpcomingFirst(SALES.booked_leads || []);
                 var bs = SALES.booked_summary || {};
                 var chip = function (n, lbl, color) { return '<span style="white-space:nowrap;"><b style="color:' + (color || 'var(--text-primary)') + ';">' + (n || 0) + '</b> <span style="color:var(--text-secondary);">' + lbl + '</span></span>'; };
                 var summary = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:2px 0 14px;font-size:12px;">'
