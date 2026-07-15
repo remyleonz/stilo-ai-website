@@ -66,9 +66,49 @@ function slugFor(name) {
     if (/sales coach|coach|sales agent|pitch/.test(s)) return 'sales-agent';
     return 'receptionist';
 }
-function firstName(n) {
-    const f = String(n || '').trim().split(/\s+/)[0];
-    return f && f.length > 1 ? f : null;
+// owner_name is scraped and only ~70% real names. The rest is cities
+// ("Hallandale Beach"), business names ("Brakes Complete", "Affinity
+// Construction") and junk ("Program", "Executives"). A dry run of this campaign
+// produced "Hi Program," and "Hi Executives,". A wrong name is worse than no
+// name: it is an instant spam-complaint and it tells the reader we scraped them.
+// So the bar is high and the fallback ("Hi,") is always safe.
+const NOT_A_NAME = new RegExp('^(' + [
+    'program', 'programs', 'executive', 'executives', 'team', 'teams', 'alert', 'alerts',
+    'system', 'systems', 'group', 'inc', 'llc', 'corp', 'company', 'co',
+    'complete', 'construction', 'service', 'services', 'auto', 'realty', 'realtors',
+    'office', 'sales', 'info', 'contact', 'admin', 'support', 'billing',
+    'manager', 'owner', 'president', 'ceo', 'director', 'department', 'dept',
+    'main', 'front', 'desk', 'customer', 'client', 'new', 'the', 'best', 'top',
+    'north', 'south', 'east', 'west', 'beach', 'harbour', 'harbor', 'park',
+    'miami', 'florida', 'doral', 'hialeah', 'brickell', 'kendall', 'aventura',
+].join('|') + ')$', 'i');
+
+function firstName(ownerName, business, address) {
+    const raw = String(ownerName || '').trim();
+    if (!raw) return null;
+    const first = raw.split(/\s+/)[0];
+    if (!first || first.length < 2 || first.length > 20) return null;
+    // Letters only. Kills "24/7", "A-1", emails, phone fragments.
+    if (!/^[A-Za-z][A-Za-z'’.-]+$/.test(first)) return null;
+    if (NOT_A_NAME.test(first)) return null;
+    const f = first.toLowerCase();
+    // If the token also appears in the business name or the street address, it
+    // is almost certainly the business or a city, not a person. This also drops
+    // legitimate owner-named businesses ("Antonio Perez" of "Antonio Perez CPA"),
+    // which is a fine trade: we lose a greeting, we never send a wrong one.
+    if (String(business || '').toLowerCase().includes(f)) return null;
+    if (String(address || '').toLowerCase().includes(f)) return null;
+    return first;
+}
+
+// Scraped business names carry location/category tails:
+// "Melissa Carbonell Group - Fort Lauderdale, FL Real Estate".
+function cleanBusiness(name) {
+    let s = String(name || '').trim();
+    s = s.replace(/\s+[-–|]\s+.*$/, '');   // drop everything after " - "
+    s = s.replace(/,\s*(FL|Florida)\b.*$/i, ''); // drop ", FL ..." tails
+    s = s.replace(/\s{2,}/g, ' ').trim();
+    return s || null;
 }
 function b64url(s) {
     return Buffer.from(s).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -83,12 +123,11 @@ function unsubToken(email) {
 }
 
 function buildEmail(lead, slug, link) {
-    const first = firstName(lead.owner_name);
-    const business = lead.name || 'your shop';
+    const business = cleanBusiness(lead.name);
+    const first = firstName(lead.owner_name, lead.name, lead.address);
     const pitch = PITCH[slug] || PITCH['receptionist'];
-    const greeting = first ? 'Hi ' + first + ',' : 'Hi,';
     const body = [
-        greeting,
+        first ? 'Hi ' + first + ',' : 'Hi,',
         '',
         'I run a small AI agency here in Miami. We build the agent that ' + pitch + '.',
         '',
@@ -101,9 +140,9 @@ function buildEmail(lead, slug, link) {
         'STILO AI Partners',
         BASE.replace(/^https?:\/\//, ''),
     ].join('\n');
-    const subject = first
-        ? first + ', 2 minutes on ' + business
-        : '2 minutes on ' + business;
+    // Only put the business name in the subject if it survived cleaning.
+    const topic = business ? '2 minutes on ' + business : '2 minutes, for your shop';
+    const subject = first ? first + ', ' + topic : topic;
     return { subject: subject, text: body };
 }
 
@@ -149,7 +188,7 @@ module.exports = async function handler(req, res) {
     // Skip anyone already in a real conversation (a booked meeting or a closed
     // deal doesn't want a cold intro) and anyone we've already campaigned.
     const { data: leads, error } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,matched_product_name,stage')
+        .select('id,name,owner_name,owner_email,email,address,matched_product_name,stage')
         .eq('has_cold_call_script', true)
         .in('assigned_to', REPS)
         .not('stage', 'in', '("MEETING_BOOKED","CLOSED_LOST","CLIENT","DNC")')
