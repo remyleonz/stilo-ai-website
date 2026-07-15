@@ -3,12 +3,22 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "has": [{ "type": "host", "value": "app.stiloaipartners.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "app.stiloaipartners.com"
+        }
+      ],
       "destination": "/app/$1"
     },
     {
       "source": "/(.*)",
-      "has": [{ "type": "host", "value": "admin.stiloaipartners.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.stiloaipartners.com"
+        }
+      ],
       "destination": "/admin/$1"
     }
   ],
@@ -36,6 +46,10 @@
     {
       "path": "/api/prospects/send-confirmations",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/prospects/vsl-campaign",
+      "schedule": "0 14 * * 1-5"
     }
   ],
   "headers": []
