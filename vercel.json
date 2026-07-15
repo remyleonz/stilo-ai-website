@@ -46,10 +46,6 @@
     {
       "path": "/api/prospects/send-confirmations",
       "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/prospects/vsl-campaign",
-      "schedule": "0 14 * * 1-5"
     }
   ],
   "headers": []
