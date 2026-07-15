@@ -7301,6 +7301,43 @@
         // Rewrite the agent section to a clean "Lead with: <agent>" line, align the
         // value anchor to that agent, and drop the redundant "## Recommendation"
         // Unknown/none noise.
+        // The briefs ship with a wall of pre-call chrome (A/B arm, rep/ask-for
+        // line, meeting product, best window, pre-call notes) and a trailing
+        // Footer of generation notes. Reps don't read any of it and it buries the
+        // actual call. Strip it. The agent being pitched is pulled out first and
+        // shown in its own badge (psAgentBadge) so it's impossible to miss.
+        // Mirrors stripScriptChrome in the SDR dashboard — keep the two in sync.
+        function psStripScriptChrome(md) {
+            var lines = String(md || '').split('\n');
+            var out = [], skipping = false, inFooter = false;
+            var CHROME = /^(A\/B arm|Rep|Ask for|Meeting product|Best window|Pre-call|Name note|Product override)\b/i;
+            for (var i = 0; i < lines.length; i++) {
+                var ln = lines[i];
+                var bare = ln.replace(/^[>*\-\s#]+/, '').trim();
+                if (/^footer$/i.test(bare)) { inFooter = true; continue; }
+                if (inFooter) {
+                    if (/^#{1,6}\s/.test(ln) && !/footer/i.test(bare)) inFooter = false;
+                    else continue;
+                }
+                if (CHROME.test(bare)) { skipping = true; continue; }
+                if (skipping) {
+                    if (!ln.trim()) { skipping = false; continue; }
+                    if (/^#{1,6}\s/.test(ln) || /^[①-⑳]/.test(ln.trim())) skipping = false;
+                    else continue;
+                }
+                out.push(ln);
+            }
+            return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+        }
+
+        // Big, unmissable "this is what you're selling" badge at the top of the script.
+        function psAgentBadge(agent) {
+            if (!agent) return '';
+            return '<div style="margin:0 0 14px;border:1px solid var(--blue);background:rgba(37,99,235,0.16);border-radius:10px;padding:12px 16px;">'
+                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:4px;">Pitching this agent</div>'
+                + '<div style="font-size:18px;font-weight:800;color:#fff;font-family:var(--font-display);">' + escapeAdminHtml(agent) + '</div></div>';
+        }
+
         function psNormalizeAgentSection(md, lead) {
             var src = String(md || '');
             var agent = psResolveAgentName(src, lead);
@@ -7433,7 +7470,8 @@
                     body.innerHTML = '<div style="color:var(--text-muted);">No script returned for this lead.</div>';
                     return;
                 }
-                body.innerHTML = renderScriptMarkdown(psNormalizeAgentSection(data.content_md, lead));
+                body.innerHTML = psAgentBadge(psResolveAgentName(data.content_md, lead))
+                    + renderScriptMarkdown(psStripScriptChrome(psNormalizeAgentSection(data.content_md, lead)));
                 // Sync the Pitch pill + the drawer's "Recommended" line to the
                 // agent the script actually leads with (the lead's
                 // matched_product_name is often "Unknown").
@@ -7453,7 +7491,8 @@
                     // so the operator gets opener + hook + objections anyway.
                     var synth = psBuildScriptFromResearch(lead);
                     if (synth) {
-                        body.innerHTML = renderScriptMarkdown(psNormalizeAgentSection(synth, lead));
+                        body.innerHTML = psAgentBadge(psResolveAgentName(synth, lead))
+                            + renderScriptMarkdown(psStripScriptChrome(psNormalizeAgentSection(synth, lead)));
                         if (meta) meta.textContent = 'Auto-built from this lead\'s research';
                     } else {
                         body.innerHTML = '<div style="color:var(--text-muted);">No cold-call script for this lead yet. Use the pain points + business summary above.</div>';
