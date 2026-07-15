@@ -2087,6 +2087,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/assets/cold-call-script.js"></script>
     <script>
         /* ===========================================================
            Supabase Auth
@@ -7374,16 +7375,6 @@
             });
             return src;
         }
-        function psOpenerBox(innerHtml) {
-            return '<div style="margin:12px 0;border:1px solid var(--green,#22c55e);background:rgba(34,197,94,0.12);border-radius:10px;padding:14px 16px;">'
-                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--green,#22c55e);text-transform:uppercase;margin-bottom:8px;">▶ Opener — say this first</div>'
-                + '<div style="font-size:15px;line-height:1.6;color:#fff;font-weight:500;">' + innerHtml + '</div></div>';
-        }
-        function psDmBox(value) {
-            return '<div style="margin:12px 0;border:1px solid rgba(37,99,235,0.45);background:rgba(37,99,235,0.12);border-radius:10px;padding:12px 16px;">'
-                + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:4px;">Decision-maker</div>'
-                + '<div style="font-size:18px;font-weight:800;color:#fff;font-family:var(--font-display);">' + value + '</div></div>';
-        }
         // Synthesize a brief from the lead's own research when David hasn't
         // written one (the 404 path), so the operator is never empty-handed.
         function psBuildScriptFromResearch(r) {
@@ -7407,77 +7398,8 @@
             if (roi) md += '## Value anchor\n' + roi + '\n';
             return md;
         }
-        function renderScriptMarkdown(md) {
-            var src = String(md || '');
-            var lines = src.split('\n');
-            var plainOf = function (l) { return l.replace(/^[>#\s*]+/, '').replace(/\*\*/g, '').trim(); };
-            // Pre-extract the "Suggested opener" lines → green box at the "Open:" spot.
-            var suggested = [];
-            (function () {
-                var cap = false;
-                for (var i = 0; i < lines.length; i++) {
-                    var ln = lines[i], pl = plainOf(ln);
-                    if (/^#{1,6}\s/.test(ln) && /^suggested opener/i.test(pl)) { cap = true; continue; }
-                    if (cap) {
-                        if (/^#{1,6}\s/.test(ln) || /^rep\s+[a-z]\b.*extension/i.test(pl)) break;
-                        if (ln.trim()) suggested.push(pl);
-                    }
-                }
-            })();
-            var openerHtml = suggested.length ? suggested.map(escapeAdminHtml).join('<br><br>') : null;
-            var html = '', inList = false, expectOpener = false, skipSection = false;
-            var closeList = function () { if (inList) { html += '</ul>'; inList = false; } };
-            var inline = function (s) {
-                return escapeAdminHtml(s)
-                    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;">$1</strong>')
-                    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-                    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue);">$1</a>');
-            };
-            var P = 'font-size:14px;line-height:1.6;color:var(--text-primary);';
-            for (var k = 0; k < lines.length; k++) {
-                var line = lines[k].replace(/\s+$/, '');
-                var plain = plainOf(line);
-                if (/^rep\s+[a-z]\b.*extension/i.test(plain)) break;
-                if (/^#{1,6}\s/.test(line) && /^suggested opener/i.test(plain)) { skipSection = true; continue; }
-                if (skipSection) { if (/^#{1,6}\s/.test(line)) skipSection = false; else continue; }
-                if (!line.trim()) { closeList(); continue; }
-                // Strip internal hook/diagnosis labels (operator-facing noise).
-                if (/^the hook$/i.test(plain) || /^(observable|source|diagnosis|archetype|current tool)\b/i.test(plain)) continue;
-                if (/^decision[-\s]?maker\s*:/i.test(plain)) {
-                    closeList(); expectOpener = false;
-                    html += psDmBox(escapeAdminHtml(plain.replace(/^decision[-\s]?maker\s*:\s*/i, '')));
-                    continue;
-                }
-                var m;
-                var openMatch = plain.match(/^open\s*:?\s*(.*)$/i);
-                if (openMatch && /^open\b/i.test(plain)) {
-                    closeList();
-                    var rest = openMatch[1].replace(/^>\s*/, '').trim();
-                    if (openerHtml) html += psOpenerBox(openerHtml);
-                    else if (rest) html += psOpenerBox(inline(rest));
-                    else expectOpener = true;
-                    continue;
-                }
-                if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
-                    closeList(); expectOpener = false;
-                    var lvl = Math.min(m[1].length, 4);
-                    var size = lvl <= 1 ? 17 : lvl === 2 ? 15 : 14;
-                    html += '<div style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:' + size + 'px;margin:16px 0 7px;">' + inline(m[2]) + '</div>';
-                } else if ((m = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/))) {
-                    if (!inList) { html += '<ul style="margin:6px 0 12px;padding-left:20px;">'; inList = true; }
-                    html += '<li style="' + P + 'margin:5px 0;">' + inline(m[1]) + '</li>';
-                } else if ((m = line.match(/^>\s?(.*)$/))) {
-                    closeList();
-                    if (expectOpener && !openerHtml) { html += psOpenerBox(inline(m[1])); expectOpener = false; }
-                    else html += '<div style="border-left:3px solid var(--blue);padding:8px 12px;margin:7px 0;color:#fff;font-size:14px;line-height:1.6;background:rgba(37,99,235,0.08);border-radius:0 6px 6px 0;">' + inline(m[1]) + '</div>';
-                } else {
-                    closeList(); expectOpener = false;
-                    html += '<p style="' + P + 'margin:7px 0;">' + inline(line) + '</p>';
-                }
-            }
-            closeList();
-            return html;
-        }
+        // Canonical renderer: /assets/cold-call-script.js (shared with /sdr/).
+        var renderScriptMarkdown = function (md) { return STILO_SCRIPT.render(md); };
 
         async function loadColdCallScript(lead) {
             var body = document.getElementById('prospectScriptBody');

@@ -32,6 +32,16 @@
       "source": "/dashboard.html",
       "destination": "/app",
       "permanent": true
+    },
+    {
+      "source": "/agents/ai-seo",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/agents/ontology",
+      "destination": "/",
+      "permanent": false
     }
   ],
   "crons": [

@@ -16,16 +16,20 @@
  */
 const crypto = require('crypto');
 
-// The eight live VSL landing pages under /agents/<slug>.html, keyed by slug.
+// The six live VSL landing pages under /agents/<slug>.html, keyed by slug.
 // `name` is only used in the email copy. Slugs must match sites/stilo-ai/agents/.
+//
+// ai-seo and ontology were retired 2026-07-15: neither VSL was ever filmed, so
+// both pages sat on an ambient autoplay <video> with nothing to watch. They are
+// redirected to / in vercel.json. Their old aliases (signal/oracle/seo) now
+// resolve to the default so no email can link to a retired page. To bring one
+// back: re-add it here, drop its redirect, and give it a Loom + poster.
 const AGENTS = {
     'receptionist': { name: 'Receptionist' },
     'lead-reply':   { name: 'Outbound Lead Reply' },
     'reactivation': { name: 'Lost Customer Reactivation' },
     'prospecting':  { name: 'B2B Lead Generator' },
     'website':      { name: 'Website' },
-    'ai-seo':       { name: 'AI SEO' },
-    'ontology':     { name: 'Business Report' },
     'sales-agent':  { name: 'Sales Coach' }
 };
 const DEFAULT_AGENT = 'receptionist';
@@ -34,8 +38,8 @@ const DEFAULT_AGENT = 'receptionist';
 // or lead.matched_product can pass whatever it has and still resolve a slug.
 const ALIASES = {
     echo: 'receptionist', ignite: 'lead-reply', revive: 'reactivation', lcr: 'reactivation',
-    scout: 'prospecting', forge: 'website', signal: 'ai-seo', oracle: 'ontology',
-    pitch: 'sales-agent', sales: 'sales-agent', seo: 'ai-seo', web: 'website'
+    scout: 'prospecting', forge: 'website',
+    pitch: 'sales-agent', sales: 'sales-agent', web: 'website'
 };
 
 function isEnabled() {

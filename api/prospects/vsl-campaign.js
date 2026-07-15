@@ -49,11 +49,12 @@ const PITCH = {
     'reactivation': 'goes through your old customers and gets the ones who are overdue back in',
     'prospecting': 'builds you a list of local businesses that actually need what you sell',
     'website': 'rebuilds your site so it books work instead of just sitting there',
-    'ai-seo': 'gets you showing up when someone asks ChatGPT for the best in your area',
-    'ontology': 'shows you where you are making money and where you are leaking it',
     'sales-agent': 'coaches your reps off their own call recordings',
 };
 
+// ai-seo and ontology were retired 2026-07-15 (never filmed, now redirected in
+// vercel.json). Anything that used to route there falls through to receptionist
+// rather than mailing a prospect a link that bounces them to the homepage.
 function slugFor(name) {
     const s = String(name || '').toLowerCase();
     if (/recept/.test(s)) return 'receptionist';
@@ -61,8 +62,6 @@ function slugFor(name) {
     if (/lead reply|lead response|outbound|instant lead/.test(s)) return 'lead-reply';
     if (/lead gen|b2b|prospect|scout/.test(s)) return 'prospecting';
     if (/website|web build/.test(s)) return 'website';
-    if (/seo|geo/.test(s)) return 'ai-seo';
-    if (/ontolog|business report/.test(s)) return 'ontology';
     if (/sales coach|coach|sales agent|pitch/.test(s)) return 'sales-agent';
     return 'receptionist';
 }
