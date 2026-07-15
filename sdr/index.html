@@ -2160,7 +2160,26 @@
         // The agent we're selling: prefer David's brief ("Recommended STILO
         // agent" human line, then a real "Primary:"); derive from niche only when
         // both are Unknown/none. (Never clobber a real agent like LCR.)
-        function resolveAgentName(md, lead) {
+        // The catalog is the 8 agents we actually sell. The scoring engine (and
+        // occasionally a brief) has invented products like "Client-Onboarding
+        // Agent" off a pain signal. Never show a rep something we don't sell:
+        // map to the canonical name, or return '' so no badge renders at all.
+        // Mirrors the prospecting.leads canonical_matched_product DB guard.
+        function canonicalAgent(name) {
+            var v = String(name || '').toLowerCase();
+            if (!v.trim()) return '';
+            if (/receptionist|\becho\b/.test(v)) return 'AI Receptionist';
+            if (/outbound|lead reply|lead response|\bignite\b/.test(v)) return 'Outbound Agent';
+            if (/website|\bforge\b/.test(v)) return 'Website Builder';
+            if (/\bseo\b|\bgeo\b|\bsignal\b/.test(v)) return 'AI SEO';
+            if (/ontology|\boracle\b/.test(v)) return 'Ontology';
+            if (/\blcr\b|reactivat|\brevive\b/.test(v)) return 'LCR';
+            if (/lead gen|\bscout\b/.test(v)) return 'Lead Generator';
+            if (/custom\s+(automation|workflow)/.test(v)) return 'Custom Automations';
+            return '';
+        }
+        function resolveAgentName(md, lead) { return canonicalAgent(resolveAgentNameRaw(md, lead)); }
+        function resolveAgentNameRaw(md, lead) {
             const src = String(md || '');
             // GCS cold-call SCRIPTS state it explicitly: "**PRODUCT TO PITCH ...:** <agent>".
             const ptp = src.match(/PRODUCT TO PITCH[^\r\n]*?:\**\s*([A-Za-z][^\r\n*]*)/i);
@@ -2205,8 +2224,14 @@
             let src = String(md || '');
             const agent = resolveAgentName(src, lead);
             src = normalizeValueAnchor(src, agent);
-            src = src.replace(/#{1,6}\s*Recommended STILO agent\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i,
-                '## Recommended STILO agent\n- **Lead with:** ' + agent + '\n');
+            // No catalog agent resolved (e.g. the brief named an invented one):
+            // drop the section entirely rather than render an empty "Lead with:".
+            if (agent) {
+                src = src.replace(/#{1,6}\s*Recommended STILO agent\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i,
+                    '## Recommended STILO agent\n- **Lead with:** ' + agent + '\n');
+            } else {
+                src = src.replace(/#{1,6}\s*Recommended STILO agent\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i, '');
+            }
             src = src.replace(/#{1,6}\s*Recommendation\s*\r?\n[\s\S]*?(?=\r?\n#{1,6}\s|$)/i, function (b) {
                 return /primary\s*:\s*unknown|secondary[^\r\n]*none/i.test(b) ? '' : b;
             });
