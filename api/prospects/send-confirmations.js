@@ -59,16 +59,41 @@ module.exports = async function handler(req, res) {
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });
     const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 
-    // Booked in the last 30 min, confirmation not yet sent, meeting still upcoming.
-    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    // TRIGGER SEMANTICS (not a catch-window): a lead is due for its confirmation
+    // once the booking is at least DELAY_MIN old and the meeting is still ahead.
+    // There is deliberately NO lower bound on meeting_booked_at — the old code
+    // only looked back 30 minutes, so anything booked before the feature shipped
+    // (or any run the cron missed) was silently skipped forever. Idempotency is
+    // meeting_confirmation_sent_at, so "no lower bound" can't double-send.
+    //
+    // HORIZON_DAYS stops us emailing "you're booked, quick confirm" for a meeting
+    // four months out. Those aren't dropped — they stay unsent and fire naturally
+    // once the meeting comes inside the horizon.
+    //
+    // ?lead_ids=1,2,3 forces a send for specific leads (manual backfill), still
+    // honouring the not-yet-sent + still-upcoming guards.
+    const DELAY_MIN = Number(process.env.CONFIRM_DELAY_MIN || 5);
+    const HORIZON_DAYS = Number(process.env.CONFIRM_HORIZON_DAYS || 30);
     const nowIso = new Date().toISOString();
-    const { data: leads, error } = await sb.from('leads')
+    const dueBy = new Date(Date.now() - DELAY_MIN * 60 * 1000).toISOString();
+    const horizon = new Date(Date.now() + HORIZON_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+    const explicitIds = String((req.query && req.query.lead_ids) || '')
+        .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
+
+    let q = sb.from('leads')
         .select('id,name,owner_name,owner_email,email,owner_phone,phone,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,meeting_booked_at')
         .is('meeting_confirmation_sent_at', null)
         .not('meeting_booked_at', 'is', null)
-        .gte('meeting_booked_at', since)
-        .gt('meeting_scheduled_at', nowIso)
-        .limit(50);
+        .gt('meeting_scheduled_at', nowIso);
+
+    if (explicitIds.length) {
+        q = q.in('id', explicitIds);
+    } else {
+        q = q.lte('meeting_booked_at', dueBy).lt('meeting_scheduled_at', horizon);
+    }
+
+    const { data: leads, error } = await q.order('meeting_scheduled_at', { ascending: true }).limit(50);
     if (error) return res.status(500).json({ error: 'read_failed', detail: error.message });
 
     // Resolve rep name + Quo line once.
@@ -104,8 +129,20 @@ module.exports = async function handler(req, res) {
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
         if (email) er = await sendEmail(email, 'You are booked, quick confirm', html);
         if (phone) sr = await sendSms(fromLine, phone, sms);
-        await sb.from('leads').update({ meeting_confirmation_sent_at: new Date().toISOString() }).eq('id', ld.id);
-        results.push({ id: ld.id, slug: slug, email: er, sms: sr });
+
+        // Only mark sent if a channel actually landed. The old code stamped
+        // unconditionally, so a lead whose email AND sms both failed was burned
+        // forever: the stamp made it invisible to every later run. Leaving it
+        // null lets the next 5-min tick retry.
+        const emailOk = er && !er.skip && !er.err;
+        const smsOk = sr && !sr.skip && !sr.err;
+        if (emailOk || smsOk) {
+            await sb.from('leads').update({
+                meeting_confirmation_sent_at: new Date().toISOString(),
+                nurture_stage: 'vsl_sent'
+            }).eq('id', ld.id);
+        }
+        results.push({ id: ld.id, slug: slug, sent: (emailOk || smsOk), email: er, sms: sr });
     }
     return res.status(200).json({ ok: true, sent: results.length, results: results });
 };
