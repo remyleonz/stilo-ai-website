@@ -61,6 +61,14 @@
     {
       "path": "/api/prospects/send-confirmations",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/prospects/send-meeting-reminders",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/prospects/sync-scripts",
+      "schedule": "40 * * * *"
     }
   ],
   "headers": []
