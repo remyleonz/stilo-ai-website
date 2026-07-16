@@ -7277,8 +7277,13 @@
         function psResolveAgentName(md, lead) { return psCanonicalAgent(psResolveAgentNameRaw(md, lead)); }
         function psResolveAgentNameRaw(md, lead) {
             var src = String(md || '');
-            // GCS cold-call SCRIPTS state it explicitly: "**PRODUCT TO PITCH ...:** <agent>".
-            var ptp = src.match(/PRODUCT TO PITCH[^\r\n]*?:\**\s*([A-Za-z][^\r\n*]*)/i);
+            // GCS cold-call SCRIPTS state it explicitly. David's OLDER format used
+            // "**PRODUCT TO PITCH ...:** <agent>"; his current format (2026-07)
+            // writes "**Meeting product (NOT said on this call):** <agent>". Match
+            // BOTH. Missing the newer label made every professional-services lead
+            // fall through to the niche guess below, which defaults to Receptionist
+            // and mislabeled ~340 of Luke's Outbound/Lead-Gen leads as AI Receptionist.
+            var ptp = src.match(/(?:PRODUCT TO PITCH|Meeting product)[^\r\n]*?:\**\s*([A-Za-z][^\r\n*]*)/i);
             if (ptp) { var pv = psCleanAgent(ptp[1]); if (pv && !/^(unknown|none|n\/?a|tbd)$/i.test(pv)) return pv; }
             var sec = src.match(/#{1,6}\s*Recommended STILO agent\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);
             if (sec) {
@@ -7303,6 +7308,12 @@
                 var pm2 = rec[1].replace(/[*`]/g, '').match(/primary\s*:\s*([^\r\n]+)/i);
                 if (pm2) { var v = psCleanAgent(pm2[1]); if (v && !/^(unknown|none|n\/?a|tbd)$/i.test(v)) return v; }
             }
+            // David's script/brief didn't name an agent our parser caught. Prefer
+            // the scoring engine's matched_product_name over guessing from niche:
+            // the niche guesser only knows trades and gyms and dumps everything
+            // else into Receptionist, which is what mislabeled the book.
+            var mp = psCanonicalAgent(lead && lead.matched_product_name);
+            if (mp) return mp;
             return psDeriveAgent(lead && (lead.niche || lead.category)).agent;
         }
         // Per-agent value prop. David's brief hardcodes the AI-receptionist
