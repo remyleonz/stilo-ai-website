@@ -28,6 +28,12 @@ async function callableFromSupabase(opts) {
     let q = sb.from('leads')
         .select('*')
         .eq('has_cold_call_script', true)
+        // A lead is only dial-ready if David actually stated an agent to pitch
+        // (pitch_agent, set at ingest from his script). No agent = the rep would
+        // be dialing with nothing to sell, so it drops from the queue until David
+        // briefs it. Self-healing: sync-scripts sets pitch_agent when he does, and
+        // the lead reappears. This is what keeps un-briefed leads off the boards.
+        .not('pitch_agent', 'is', null)
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false');
 

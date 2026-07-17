@@ -38,6 +38,37 @@ const BRIEFS_BUCKET = 'cold-call-briefs';
 const BRIEF_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rl', 'dc'];
 const GENERATED_BUCKET = 'cold-call-scripts-generated';
 
+// The agent David states in a script, mapped to a canonical name. Kept in sync
+// with the dashboards' canonicalAgent(). This is written to leads.pitch_agent so
+// the boards read one field instead of re-parsing script text every load.
+function canonAgent(name) {
+    const v = String(name || '').toLowerCase();
+    if (!v.trim()) return null;
+    if (/receptionist|\becho\b/.test(v)) return 'AI Receptionist';
+    if (/outbound|lead reply|lead response|\bignite\b/.test(v)) return 'Outbound Agent';
+    if (/\blcr\b|reactivat|lost customer|\brevive\b/.test(v)) return 'LCR';
+    if (/lead gen|b2b|\bscout\b/.test(v)) return 'Lead Generator';
+    if (/website|web build|\bforge\b/.test(v)) return 'Website Builder';
+    if (/\bseo\b|\bgeo\b|\bsignal\b/.test(v)) return 'AI SEO';
+    if (/ontology|\boracle\b/.test(v)) return 'Ontology';
+    if (/sales coach|sales agent|\bpitch\b/.test(v)) return 'AI Sales Agent';
+    if (/custom\s+(automation|workflow)|\bflux\b/.test(v)) return 'Custom Automations';
+    return null;
+}
+function agentFromScript(md) {
+    const m = String(md || '').match(/(?:PRODUCT TO PITCH|Meeting product)[^\r\n]*?:\**\s*([A-Za-z][^\r\n*(]*)/i);
+    return m ? canonAgent(m[1]) : null;
+}
+// Fetch a lead's script (GCS listing, else our generated fallback) and return
+// David's stated agent, or null. Best-effort: any failure yields null.
+async function pitchAgentForLead(token, name) {
+    try {
+        const it = await cc.findScriptByListing(token, cc.slugify(name));
+        let md = it ? await cc.readObject(token, it.name) : await cc.readGeneratedScript(cc.slugify(name));
+        return agentFromScript(md);
+    } catch (_) { return null; }
+}
+
 // David's manifest maps business_name/lead_id -> script filename. A lead counts
 // as scripted if its name or slug is in there. Mirrors backfill_script_flag.js.
 async function loadManifestSlugs(token) {
@@ -142,10 +173,24 @@ module.exports = async function handler(req, res) {
     }
 
     const chunk = (arr, n) => { const o = []; for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; };
-    let enabled = 0, disabled = 0;
+    let enabled = 0, disabled = 0, agented = 0;
     for (const ids of chunk(toEnable, 200)) {
         const { error } = await pro.from('leads').update({ has_cold_call_script: true, updated_at: new Date().toISOString() }).in('id', ids);
         if (!error) enabled += ids.length;
+    }
+    // Store David's stated agent for each lead we just enabled, so it's set the
+    // moment the lead becomes callable. The callable queue filters on pitch_agent,
+    // so a newly-scripted lead only surfaces once this runs. Only the (small)
+    // newly-enabled set is processed to stay within maxDuration; the historical
+    // bulk was populated by a one-time backfill. A lead whose script states no
+    // agent stays pitch_agent=null and correctly stays out of the queue.
+    const idToLead = {};
+    for (const s in bySlug) idToLead[bySlug[s].id] = bySlug[s];
+    for (const id of toEnable) {
+        const lead = idToLead[id];
+        if (!lead) continue;
+        const agent = await pitchAgentForLead(token, lead.name);
+        if (agent) { const { error } = await pro.from('leads').update({ pitch_agent: agent }).eq('id', id); if (!error) agented++; }
     }
     // Only prune when explicitly asked. The default cron path never disables.
     if (prune) {
@@ -168,7 +213,7 @@ module.exports = async function handler(req, res) {
         ok: true, prune: prune,
         briefed: briefed.size, scripted: scripted.size,
         target_callable: targetCallable.size,
-        enabled: enabled, disabled: disabled,
+        enabled: enabled, agented: agented, disabled: disabled,
         stale_left: prune ? 0 : toDisable.length,
         awaiting: awaitingDedup.length,
     });

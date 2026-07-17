@@ -2183,6 +2183,11 @@
         }
         function resolveAgentName(md, lead) { return canonicalAgent(resolveAgentNameRaw(md, lead)); }
         function resolveAgentNameRaw(md, lead) {
+            // Single source of truth: David's agent, parsed once at ingest and
+            // stored on the lead (see prospecting.leads.pitch_agent + sync-scripts).
+            // Read it directly instead of re-deriving from script text every load.
+            // The text-parsing below stays as a fallback for any lead missing it.
+            if (lead && lead.pitch_agent) return lead.pitch_agent;
             const src = String(md || '');
             // GCS cold-call SCRIPTS state it explicitly. David's OLDER format used
             // "**PRODUCT TO PITCH ...:** <agent>"; his current format (2026-07)
