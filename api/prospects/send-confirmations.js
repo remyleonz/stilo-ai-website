@@ -159,6 +159,9 @@ module.exports = async function handler(req, res) {
                 from_address: 'remyleon@stiloaipartners.com',
                 provider: 'resend', provider_message_id: er.id || null,
                 status: 'sent', variant: 'meeting_confirm',
+                // The rep who booked the meeting owns the confirmation, so it lands
+                // on their Emailed tab where they can chase an unconfirmed lead.
+                sent_by: ld.meeting_booked_by_sdr || null,
                 sent_at: new Date().toISOString(),
             });
         }

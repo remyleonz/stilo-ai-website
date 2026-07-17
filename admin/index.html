@@ -9092,12 +9092,19 @@
                 + '</div>'
                 + vslAgentTable(c.by_agent, [{ key: 'view', label: 'Views' }, { key: 'play', label: 'Plays' }]);
 
+            // Funnel order, all in DISTINCT LEADS: sent -> viewed -> opened modal
+            // -> confirmed. Email opens sit OUTSIDE the funnel as a caveated aside:
+            // the pixel undercounts (image blocking) and views also come from the
+            // confirmation SMS, so opens < views is normal, not a data error.
             var confirm = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
                 + vslStat('Emails sent', f.emails_sent, null, '#5A7BE8')
-                + vslStat('Email opens', f.email_opens, vslPct(f.email_opens, f.emails_sent) + ' of sent', '#5A7BE8')
-                + vslStat('Leads who viewed', f.view_leads, (f.views || 0) + ' raw views')
-                + vslStat('Confirm opens', f.confirm_opens, 'opened the modal')
-                + vslStat('Confirmed', f.confirms, vslPct(f.confirms, f.confirm_opens) + ' of opens', '#10b981')
+                + vslStat('Leads who viewed', f.view_leads, (f.views || 0) + ' raw views · incl. SMS clicks')
+                + vslStat('Opened confirm', f.confirm_open_leads, 'tapped Confirm My Meeting')
+                + vslStat('Confirmed', f.confirm_leads, vslPct(f.confirm_leads, f.view_leads) + ' of viewers', '#10b981')
+                + '</div>'
+                + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:8px;">'
+                + 'Email opens (pixel): <b>' + (f.open_leads != null ? f.open_leads : '—') + '</b> leads. '
+                + 'Undercounts on purpose: most email clients block the tracking pixel, and the SMS confirmation drives views with no open. Trust "viewed" over "opened."'
                 + '</div>'
                 + vslAgentTable(f.by_agent, [{ key: 'view', label: 'Views' }, { key: 'confirm_open', label: 'Opens' }, { key: 'confirm', label: 'Confirms' }]);
 

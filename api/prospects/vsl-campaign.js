@@ -272,7 +272,7 @@ module.exports = async function handler(req, res) {
     }
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,address,matched_product_name,stage')
+        .select('id,name,owner_name,owner_email,email,address,matched_product_name,stage,assigned_to')
         .not('stage', 'in', '("MEETING_BOOKED","CLOSED_LOST","CLIENT","DNC")')
         .is('meeting_booked_at', null);
     if (audience === 'warm') q = q.in('id', warmIds);
@@ -362,6 +362,9 @@ module.exports = async function handler(req, res) {
                 to_address: item.email, from_address: SENDER_EMAIL,
                 provider: 'resend', provider_message_id: r.id || null,
                 status: 'sent',
+                // Attribute the auto send to the lead's owning rep so it shows on
+                // their Emailed tab (the rep "sends" it, even though a cron fires it).
+                sent_by: l.assigned_to || null,
                 variant: audience === 'warm' ? ('vsl_warm_' + e.arm.toLowerCase()) : 'vsl_campaign',
                 sent_at: new Date().toISOString(),
             });

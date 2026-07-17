@@ -148,16 +148,32 @@ module.exports = async function handler(req, res) {
             booked: campaignBooked,
             by_agent: byAgent.campaign || {},
         },
-        confirm: {
-            label: 'Meeting confirmation',
-            emails_sent: confirmSent,
-            email_opens: ev('confirm', 'email_open').events,
-            email_opens_tracked: true,
-            views: fView.events, view_leads: fView.leads,
-            confirm_opens: ev('confirm', 'confirm_open').events,
-            confirms: ev('confirm', 'confirm').events,
-            by_agent: byAgent.confirm || {},
-        },
+        confirm: (function () {
+            // Report DISTINCT LEADS for every step, same as the campaign funnel.
+            // Raw events made this card read as "corrupted": 24 raw views next to
+            // 11 raw opens looked impossible, but they measure different things.
+            //   - views are inflated by mail scanners prefetching links, by a lead
+            //     reloading the page, AND by the confirmation SMS (send-confirmations
+            //     mails AND texts the same &confirm=1 link, so SMS clicks fire a view
+            //     with no email open at all).
+            //   - opens are SUPPRESSED: the pixel only fires when a client loads
+            //     images, which most now block by default.
+            // So raw views > raw opens is expected, not a bug. Leading with distinct
+            // leads makes the funnel narrow the way a human reads it.
+            const fOpen = ev('confirm', 'email_open');
+            const fCO = ev('confirm', 'confirm_open');
+            const fC = ev('confirm', 'confirm');
+            return {
+                label: 'Meeting confirmation',
+                emails_sent: confirmSent,
+                email_opens: fOpen.events, open_leads: fOpen.leads,
+                email_opens_tracked: true,
+                views: fView.events, view_leads: fView.leads,
+                confirm_opens: fCO.events, confirm_open_leads: fCO.leads,
+                confirms: fC.events, confirm_leads: fC.leads,
+                by_agent: byAgent.confirm || {},
+            };
+        })(),
         organic: {
             label: 'Organic / direct',
             views: ev('organic', 'view').events,

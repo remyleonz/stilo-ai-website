@@ -1558,17 +1558,50 @@
                     });
                     html += '</tbody></table>';
                 } else if (sub === 'emailed') {
-                    // Leads this rep emailed via the Email button.
-                    html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Emailed to</th><th>Niche</th><th>Sent</th></tr></thead><tbody>';
+                    // Every email that went to this rep's leads (manual + the auto
+                    // VSL blast + the auto confirmation), with engagement so the rep
+                    // knows who to chase. VSL email -> did they view + book?
+                    // Confirmation email -> did they view + confirm the meeting?
+                    html = '<div style="font-size:11px;color:var(--text-tertiary);margin:0 0 8px;">'
+                        + '<b>Type:</b> VSL = interested-lead video · Confirm = meeting confirmation · Manual = you hit Email. '
+                        + '<b>Dots:</b> <span style="color:#10b981;">●</span> done · <span style="color:#eab308;">●</span> partial · <span style="color:var(--text-tertiary);">●</span> nothing yet.'
+                        + '</div>';
+                    html += '<table><thead><tr><th>Business</th><th>Owner</th><th>Type</th><th>Sent</th><th>Opened</th><th>Viewed</th><th>Confirmed / Booked</th><th>Next step</th></tr></thead><tbody>';
+                    const dot = (state) => {
+                        const c = state === 'yes' ? '#10b981' : (state === 'part' ? '#eab308' : 'var(--text-tertiary)');
+                        return '<span style="color:' + c + ';font-size:15px;">●</span>';
+                    };
+                    const typeBadge = (t) => {
+                        const map = { vsl: ['VSL', '#2563eb'], confirm: ['Confirm', '#8b5cf6'], manual: ['Manual', 'var(--text-tertiary)'] };
+                        const m = map[t] || map.manual;
+                        return '<span style="font-size:11px;font-weight:700;color:' + m[1] + ';">' + m[0] + '</span>';
+                    };
                     rows.slice(0, 200).forEach(r => {
-                        const em = r._email || {};
-                        const sent = em.at ? new Date(em.at).toLocaleString() : '—';
+                        const em = r._email || {}, g = r._engagement || {};
+                        const sent = em.at ? new Date(em.at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—';
+                        const isConfirm = em.type === 'confirm';
+                        // Right-most funnel step + the call-to-action nudge.
+                        let last, step, stepColor;
+                        if (isConfirm) {
+                            last = g.confirmed ? dot('yes') + ' Confirmed' : (g.booked ? dot('part') + ' Booked' : dot('no') + ' —');
+                            if (g.confirmed) { step = 'Confirmed ✓'; stepColor = '#10b981'; }
+                            else if (g.viewed) { step = 'Viewed, not confirmed. Nudge them'; stepColor = '#eab308'; }
+                            else { step = 'Not viewed. CALL to confirm'; stepColor = '#ef4444'; }
+                        } else {
+                            last = g.booked ? dot('yes') + ' Booked' : (g.confirmed ? dot('yes') + ' Confirmed' : dot('no') + ' —');
+                            if (g.booked) { step = 'Booked ✓'; stepColor = '#10b981'; }
+                            else if (g.viewed) { step = 'Viewed, not booked. Follow up'; stepColor = '#eab308'; }
+                            else { step = 'Not viewed. Call or re-send'; stepColor = '#ef4444'; }
+                        }
                         html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
                             + '<td><strong>' + escapeHtml(r.business_name || r.name || ('Lead ' + r.id)) + '</strong></td>'
                             + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
-                            + '<td style="word-break:break-all;">' + escapeHtml(em.to || r.owner_email || r.email || '—') + '</td>'
-                            + '<td>' + escapeHtml(r.niche || '—') + '</td>'
+                            + '<td style="white-space:nowrap;">' + typeBadge(em.type) + '</td>'
                             + '<td style="white-space:nowrap;">' + escapeHtml(sent) + '</td>'
+                            + '<td style="white-space:nowrap;">' + dot(g.opened ? 'yes' : 'no') + '</td>'
+                            + '<td style="white-space:nowrap;">' + dot(g.viewed ? 'yes' : 'no') + '</td>'
+                            + '<td style="white-space:nowrap;">' + last + '</td>'
+                            + '<td style="white-space:nowrap;color:' + stepColor + ';font-weight:600;font-size:12px;">' + step + '</td>'
                             + '</tr>';
                     });
                     html += '</tbody></table>';
