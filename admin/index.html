@@ -7505,7 +7505,15 @@
             var when = m.occurred_at ? new Date(m.occurred_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET'
                 : (m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');
             var dur = m.duration_seconds ? (Math.round(m.duration_seconds / 60) + ' min') : '';
-            var srcLabel = m.source === 'manual' ? 'note/manual' : (m.source === 'booked' ? 'booked' : (m.source === 'openphone' ? 'phone' : (m.source === 'granola' ? 'Granola' : 'Tactiq')));
+            // Provenance matters here: a Google Meet transcript is the verbatim
+            // record, a phone row is a Quo call, and 'manual' is somebody's
+            // paste. Reading them as the same thing leads to trusting a summary
+            // as if it were a transcript.
+            var SRC_LABELS = {
+                manual: 'note/manual', booked: 'booked', openphone: 'phone',
+                granola: 'Granola', google_meet: 'Google Meet', tactiq: 'Tactiq'
+            };
+            var srcLabel = SRC_LABELS[m.source] || m.source || 'Tactiq';
             var meta = [when, dur, srcLabel].filter(Boolean).join(' · ');
             var outcomeBadge = m.outcome ? '<span style="margin-left:8px;display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;background:rgba(37,99,235,0.15);color:var(--blue);vertical-align:1px;">' + escapeAdminHtml(MEETING_OUTCOME_LABELS[m.outcome] || m.outcome) + '</span>' : '';
             var body = '';

@@ -30,6 +30,22 @@ const PROVIDERS = {
     client_secret_env: 'GOOGLE_OAUTH_CLIENT_SECRET',
     config_key: 'booking_credentials.google_oauth',
   },
+  // Read-only access to Google Meet conference records + transcripts, used by
+  // /api/prospects/sync-meet-transcripts. SEPARATE from 'google-calendar' on
+  // purpose: re-authorizing transcripts must never clobber the booking
+  // calendar's refresh token, or bookings go offline.
+  //
+  // Requires Workspace Business Standard or higher on the account that ORGANISES
+  // the meetings (remyleon@stiloaipartners.com). Start this while signed in as
+  // that account.
+  'google-meet': {
+    auth_url: 'https://accounts.google.com/o/oauth2/v2/auth',
+    token_url: 'https://oauth2.googleapis.com/token',
+    scopes: ['https://www.googleapis.com/auth/meetings.space.readonly'],
+    client_id_env: 'GOOGLE_OAUTH_CLIENT_ID',
+    client_secret_env: 'GOOGLE_OAUTH_CLIENT_SECRET',
+    config_key: 'google_meet_oauth',
+  },
   'gmail': {
     auth_url: 'https://accounts.google.com/o/oauth2/v2/auth',
     token_url: 'https://oauth2.googleapis.com/token',

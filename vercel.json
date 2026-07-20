@@ -81,6 +81,10 @@
     {
       "path": "/api/admin/health-alerts",
       "schedule": "25 * * * *"
+    },
+    {
+      "path": "/api/prospects/sync-meet-transcripts",
+      "schedule": "35 * * * *"
     }
   ],
   "headers": []

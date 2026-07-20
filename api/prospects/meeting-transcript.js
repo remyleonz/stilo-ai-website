@@ -43,7 +43,10 @@ module.exports = async function handler(req, res) {
 
     const row = {
         lead_id: leadId,
-        source: (body.source === 'manual' ? 'manual' : 'tactiq'),
+        // Known sources. Anything unrecognised falls back to 'manual' rather
+        // than being silently relabelled 'tactiq', which is what used to happen
+        // and made provenance untrustworthy.
+        source: (['manual', 'tactiq', 'google_meet', 'granola'].indexOf(body.source) >= 0 ? body.source : 'manual'),
         tactiq_meeting_id: (body.tactiq_meeting_id && String(body.tactiq_meeting_id)) || null,
         title: (body.title && String(body.title).slice(0, 500)) || 'Sales meeting',
         occurred_at: occurredAt,

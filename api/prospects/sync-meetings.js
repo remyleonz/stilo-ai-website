@@ -57,9 +57,14 @@ module.exports = async function handler(req, res) {
         if (!mtgCall) continue;
 
         const { data: existing } = await sb.from('lead_meetings').select('id, raw, source').eq('lead_id', l.id);
+        // Don't promote a phone transcript when a richer verbatim record already
+        // exists for this lead. A Google Meet transcript is the actual call;
+        // dropping a partial phone stub next to it just makes the panel look
+        // like the transcript got cut off.
+        const RICHER = ['granola', 'tactiq', 'google_meet'];
         const already = (existing || []).some(m =>
             (m.raw && m.raw.openphone_call_id === mtgCall.openphone_call_id)
-            || (m.source && (m.source.startsWith('granola') || m.source.startsWith('tactiq'))));
+            || (m.source && RICHER.some(s => String(m.source).startsWith(s))));
         if (already) { skipped++; continue; }
 
         const row = {
