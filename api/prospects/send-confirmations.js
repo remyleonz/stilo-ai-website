@@ -36,13 +36,55 @@ function fmtWhen(iso) {
     if (!iso) return 'the time we set';
     return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(new Date(iso));
 }
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+// (No esc() here any more — this file sends plain text only, so there is no
+// HTML to escape. If you find yourself needing it again, you are re-adding the
+// markup that put these emails in spam.)
 
-async function sendEmail(to, subject, html) {
+const REPLY_TO = process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com';
+
+// One-click unsubscribe, same signing scheme as vsl-campaign.js. Gmail's bulk
+// sender rules expect this header even on transactional mail, and its absence
+// is a scored spam signal.
+function unsubToken(email) {
+    const secret = process.env.UNSUBSCRIBE_SIGNING_SECRET;
+    if (!secret) return null;
+    const payload = Buffer.from(JSON.stringify({ c: 'prospecting', e: String(email).toLowerCase(), ts: Date.now() }))
+        .toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const sig = require('crypto').createHmac('sha256', secret).update(payload).digest('base64')
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return payload + '.' + sig;
+}
+
+/**
+ * PLAIN TEXT ONLY. No HTML part, no tracking pixel, no button.
+ *
+ * This email was landing in prospects' SPAM — confirmed live by Max Bertrand on
+ * 2026-07-20, and it is the email a BOOKED prospect must see. It was built the
+ * exact opposite way from vsl-campaign.js, which was hardened for this and
+ * works: it had an HTML-only body (no text/plain alternative), a hidden 1x1
+ * tracking pixel with a query-string id, a #2563EB rounded CTA button, a
+ * centered max-width card, and no List-Unsubscribe header. Every one of those
+ * is a Promotions/spam signal, and _email_kit.js:336-343 already documented
+ * exactly that. This file simply never followed it.
+ *
+ * DNS is NOT the cause — SPF, DKIM and DMARC all pass and align. Do not go
+ * re-checking DNS when this regresses; check for HTML, pixels and buttons.
+ */
+async function sendEmail(to, subject, text) {
     if (!process.env.RESEND_API_KEY || !to) return { skip: 'no_email_or_key' };
+    const t = unsubToken(to);
+    const headers = t ? {
+        'List-Unsubscribe': '<' + BASE + '/api/unsubscribe?t=' + t + '>, <mailto:' + REPLY_TO + '?subject=unsubscribe>',
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    } : undefined;
     const r = await fetch('https://api.resend.com/emails', {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'Remy Leon <remyleon@stiloaipartners.com>', to: [to], reply_to: 'remyleon@stiloaipartners.com', subject: subject, html: html })
+        body: JSON.stringify({
+            from: 'Remy Leon <' + REPLY_TO + '>',
+            to: [to], reply_to: REPLY_TO, subject: subject,
+            text: text,   // plain text only: no html part, no pixel
+            headers: headers,
+        })
     });
     const j = await r.json().catch(function () { return {}; });
     return { status: r.status, id: j.id, err: r.ok ? null : (j.message || 'fail') };
@@ -130,14 +172,24 @@ module.exports = async function handler(req, res) {
         const repFirst = firstName(repName);
         const fromLine = (rep && rep.openphone_number) || REMY_LINE;
 
-        const pixel = BASE + '/api/public/vsl-event?event=email_open&lid=' + ld.id + '&agent=' + slug;
-        const html = '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
-            + '<p>Hi ' + esc(first) + ',</p>'
-            + '<p>You are on the calendar for <strong>' + esc(when) + '</strong>. Quick thing: tap below to confirm you are still good, and you will see your details and the video link.</p>'
-            + '<div style="text-align:center;margin:24px 0"><a href="' + esc(link) + '" style="display:inline-block;background:#2563EB;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 26px;border-radius:8px">Confirm my meeting</a></div>'
-            + '<p style="color:#374151;font-size:13px">Cannot make it? Just reply and we will find a better time.</p>'
-            + '<p>See you then,<br/>Remy<br/>STILO AI Partners</p>'
-            + '<img src="' + esc(pixel) + '" width="1" height="1" style="display:none" alt=""/></div>';
+        // Plain text, written the way a person types an email. No pixel (the
+        // open-tracking signal is not worth the spam score, and image blocking
+        // made it undercount anyway), no button, no card. The bare link is the
+        // only thing that has to survive.
+        const body = [
+            'Hi ' + first + ',',
+            '',
+            'You are on the calendar for ' + when + '.',
+            '',
+            'Confirm you are still good here, and you will see your details plus a short video on what we are building for you:',
+            link,
+            '',
+            'Cannot make it? Just reply and we will find a better time.',
+            '',
+            'See you then,',
+            repName,
+            'STILO AI Partners',
+        ].join('\n');
         // Step 1 of the nurture SMS sequence. Deliberately carries NO link: it
         // points at the email so the prospect has to open it, which is what puts
         // them on the VSL page where the confirm button lives. The rep's first
@@ -179,12 +231,12 @@ module.exports = async function handler(req, res) {
             // Email has no provider-side dedupe and this cron runs every 5 min.
             // Same backstop the SMS path gets: refuse a repeat subject to the
             // same lead inside 24h.
-            const eg = await guardOutbound(ld.id, 'email', html, subject);
+            const eg = await guardOutbound(ld.id, 'email', body, subject);
             if (!eg.ok) {
                 console.error('[send-confirmations] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
                 er = { skip: eg.reason, blocked: true };
             } else {
-                er = await sendEmail(email, subject, html);
+                er = await sendEmail(email, subject, body);
             }
         }
         if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
