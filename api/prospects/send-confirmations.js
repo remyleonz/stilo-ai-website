@@ -79,7 +79,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,address,owner_name,owner_email,email,owner_phone,phone,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,meeting_booked_at')
+        .select('id,name,address,owner_name,owner_email,email,owner_phone,phone,pitch_agent,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,meeting_booked_at')
         .is('meeting_confirmation_sent_at', null)
         .not('meeting_booked_at', 'is', null)
         .gt('meeting_scheduled_at', nowIso);
@@ -102,7 +102,12 @@ module.exports = async function handler(req, res) {
 
     const results = [];
     for (const ld of (leads || [])) {
-        const slug = slugFor(ld.matched_product_name);
+        // pitch_agent FIRST: it carries the agent the rep actually picked at
+        // booking time, on the call, with the prospect. matched_product_name is
+        // the older derived guess and is only the fallback. Reading it first is
+        // what made the confirmation email able to pitch a different agent than
+        // the rep sold.
+        const slug = slugFor(ld.pitch_agent || ld.matched_product_name);
         const token = signLead(ld.id);
         const link = BASE + '/agents/' + slug + '?lid=' + ld.id + '&t=' + token + '&confirm=1';
         // Email keeps the softer 'Hi there' fallback; the SMS must not use it,

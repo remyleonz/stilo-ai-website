@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/assets/cold-call-script.js"></script>
+    <script src="/assets/vsl-agents.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -2582,6 +2583,10 @@
                 + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;line-height:1.5;">Pick a real open time on the STILO calendar, enter the prospect\'s email, and tap Book. We create the Google Meet event, send the prospect the invite, notify Remy, and it lands on your Booked tab automatically.</div>'
                 + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (gets the invite)</label>'
                 + '<input id="sdrBookingEmail" type="email" oninput="updateBookBtn()" value="' + escapeHtml(r.owner_email || r.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;margin-bottom:12px;">'
+                // Which agent the rep actually sold on the call. Same picker the
+                // admin drawer uses (assets/vsl-agents.js) so the two dashboards
+                // cannot drift — the booking markup is otherwise duplicated.
+                + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('sdrBookingAgent', r, { helperColor: 'var(--text-tertiary)' }) : '')
                 + '<div id="sdrBookingSlots"></div>'
                 + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
                   + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
@@ -2963,9 +2968,13 @@
                 // One call does it all: creates the Google Meet event on Remy's
                 // calendar, emails the prospect the invite, notifies Remy, sets the
                 // meeting fields, and lands it on the Booked tab attributed to this SDR.
+                var sdrBookBody = { lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15, email: email };
+                // Omit when absent so the server keeps its own default.
+                var sdrAgent = window.VSL_AGENT_PICKER && VSL_AGENT_PICKER.readSelect('sdrBookingAgent');
+                if (sdrAgent) sdrBookBody.agent = sdrAgent;
                 await fetchJSON('/api/prospects/book-meeting', {
                     method: 'POST',
-                    body: JSON.stringify({ lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15, email: email })
+                    body: JSON.stringify(sdrBookBody)
                 });
                 if (msg) { msg.style.color = 'var(--green)'; msg.textContent = 'Booked. Invite and Meet link sent. It is on your Booked tab.'; }
                 setTimeout(function () { closeLeadDrawer(); loadLeads(); loadOverview(); }, 1500);

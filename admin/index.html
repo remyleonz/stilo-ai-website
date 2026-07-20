@@ -2088,6 +2088,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/assets/cold-call-script.js"></script>
+    <script src="/assets/vsl-agents.js"></script>
     <script>
         /* ===========================================================
            Supabase Auth
@@ -8083,6 +8084,12 @@
                       + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">These are real open slots on Remy\'s calendar. Click one and Book, we create the Google Meet event, email the prospect the invite, and it lands on the Booked tab automatically. No separate Google page.</div>'
                       + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (gets the invite)</label>'
                       + '<input id="prospectBookEmail" type="email" value="' + escapeAdminHtml(d.owner_email || d.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;margin-bottom:10px;">'
+                      // Which agent the rep actually sold on the call. Sits next
+                      // to the email because both are facts about THIS booking.
+                      // Without it every booking silently defaulted to
+                      // receptionist, so the confirmation VSL could pitch
+                      // something the rep never mentioned.
+                      + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('prospectBookAgent', d) : '')
                       + '<div id="prospectBookingSlots"></div>'
                       + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
                         + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
@@ -8793,6 +8800,11 @@
                     var emailEl = document.getElementById('prospectBookEmail');
                     var bookBody = { lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 };
                     if (emailEl && emailEl.value.trim()) bookBody.email = emailEl.value.trim();
+                    // Omit the key entirely when the picker is absent, so the
+                    // server keeps its own default instead of being handed a
+                    // wrong one.
+                    var pickedAgent = window.VSL_AGENT_PICKER && VSL_AGENT_PICKER.readSelect('prospectBookAgent');
+                    if (pickedAgent) bookBody.agent = pickedAgent;
                     // Follow-up keeps the prior meeting in history; reschedule moves it.
                     if (bookingIsFollowup) bookBody.is_followup = true;
                     await prospectFetchJSON('/api/prospects/book-meeting', {

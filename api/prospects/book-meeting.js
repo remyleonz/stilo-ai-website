@@ -16,7 +16,7 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL } = require('./_google_calendar');
 const { createClient } = require('@supabase/supabase-js');
-const { sendConfirmEmail: sendVslConfirmEmail } = require('./_vsl');
+const { sendConfirmEmail: sendVslConfirmEmail, agentKey, AGENTS } = require('./_vsl');
 const {
     getMeetRefreshToken, accessTokenFromRefresh: meetAccessToken,
     meetingCodeFromLink: meetMeetingCode, enableAutoTranscription
@@ -330,6 +330,20 @@ module.exports = async function handler(req, res) {
             };
             // Save the email the rep captured on the call so the lead has it going forward.
             if (typedEmail && !lead.owner_email) updateRow.owner_email = typedEmail;
+            // PERSIST THE REP'S AGENT PICK. Without this the choice only reached
+            // the immediate confirmation email and was then lost: the
+            // send-confirmations cron re-derives a slug from matched_product_name,
+            // so a rep who sold the receptionist could have the follow-up pitch
+            // something else entirely. pitch_agent is the single source of truth
+            // for which agent a lead pitches, so the rep's pick — made on the
+            // call, with the prospect — overrides David's script parse.
+            if (body.agent) {
+                const picked = agentKey(body.agent);
+                if (picked) {
+                    updateRow.pitch_agent = (AGENTS[picked] && AGENTS[picked].name) || picked;
+                    updateRow.matched_product_name = updateRow.pitch_agent;
+                }
+            }
             const upd = await sb.from('leads').update(updateRow).eq('id', leadId);
             if (upd.error) persistError = upd.error.message;
         } catch (e) { persistError = String(e.message || e); }
