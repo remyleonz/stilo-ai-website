@@ -39,7 +39,10 @@ module.exports = async function handler(req, res) {
               .order('called_at', { ascending: false })
               .limit(200),
             sb.from('lead_messages')
-              .select('id, direction, channel, subject, body, body_preview, sent_at, sent_by, to_address, from_address, status, provider')
+              // opened_at and variant drive the nurture panel in the lead drawer:
+              // which step of the sequence a message belongs to, and whether the
+              // prospect ever opened it.
+              .select('id, direction, channel, subject, body, body_preview, sent_at, sent_by, to_address, from_address, status, provider, opened_at, variant')
               .eq('lead_id', id)
               .order('sent_at', { ascending: false })
               .limit(200),

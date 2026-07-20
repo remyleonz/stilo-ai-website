@@ -137,7 +137,19 @@ module.exports = async function handler(req, res) {
         // them on the VSL page where the confirm button lives. The rep's first
         // name and their own Quo line make it read as a personal follow-up to the
         // call that just happened, not an automated blast.
-        const sms = greet('Hey', safeFirst) + 'this is ' + repFirst + ' from Stilo Partners. Really enjoyed talking just now. '
+        //
+        // The opener is time-aware. Normally this fires ~5 min after the booking
+        // call, so "just now" is right. But the cron also picks up leads booked
+        // days earlier (a missed run, a failed first attempt, a manual backfill),
+        // and texting "really enjoyed talking just now" about a call from last
+        // week is the exact tell we are trying to avoid.
+        const bookedAgeH = ld.meeting_booked_at
+            ? (Date.now() - new Date(ld.meeting_booked_at).getTime()) / 3600000
+            : 0;
+        const whenWeTalked = bookedAgeH <= 6 ? 'just now'
+            : bookedAgeH <= 48 ? 'the other day'
+            : 'the other day';
+        const sms = greet('Hey', safeFirst) + 'this is ' + repFirst + ' from Stilo Partners. Really enjoyed talking ' + whenWeTalked + '. '
             + 'As I mentioned, I just emailed you a short video that explains the implementation we talked about in detail. '
             + 'Give it a watch ASAP, so you can confirm your meeting on that page. The link\'s in your email.';
 

@@ -1924,10 +1924,78 @@
                 const r = data.lead || data;
                 body.innerHTML = buildLeadDrawerHtml(r);
                 loadColdCallScript(r);
+                // Messages live in prospecting.lead_messages, not on the lead row,
+                // so the nurture panel fills in after the drawer paints. Failing
+                // to load it must never blank the drawer.
+                loadNurturePanel(leadId, r);
             } catch (e) {
                 body.innerHTML = '<div style="color:var(--red);">Failed: ' + escapeHtml(e.message) + '</div>';
             }
         }
+        /* ===== NURTURE PANEL =====
+           Shows the rep where a booked lead actually sits in the post-booking
+           sequence, and every text and email we have sent them. Before this, the
+           SDR drawer showed calls only: the confirmation email, the VSL link and
+           all three nurture texts were invisible to the rep who booked the
+           meeting, so nobody could tell whether a prospect had heard from us at
+           all. Feeds off /api/prospects/timeline, which merges lead_messages. */
+        var NURTURE_STEPS = [
+            { key: 'meeting_confirmation_sent_at', label: 'Booked: email + text sent' },
+            { key: 'meeting_confirmed_at',         label: 'Prospect confirmed on the VSL page' },
+            { key: 'vsl_followup_sms_sent_at',     label: 'Watched the video: text sent' },
+            { key: 'day_before_sms_sent_at',       label: 'Day-before text sent' }
+        ];
+        function nurtureStepHtml(r) {
+            return NURTURE_STEPS.map(function (s) {
+                var ts = r[s.key];
+                var done = !!ts;
+                var when = done ? new Date(ts).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet';
+                return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;">'
+                    + '<span style="width:14px;flex:none;color:' + (done ? '#16a34a' : 'var(--text-tertiary)') + ';">' + (done ? '✓' : '○') + '</span>'
+                    + '<span style="color:' + (done ? 'var(--text-primary)' : 'var(--text-tertiary)') + ';">' + escapeHtml(s.label) + '</span>'
+                    + '<span style="margin-left:auto;color:var(--text-tertiary);font-size:11px;white-space:nowrap;">' + escapeHtml(when) + '</span>'
+                    + '</div>';
+            }).join('');
+        }
+        async function loadNurturePanel(leadId, r) {
+            var host = document.getElementById('nurtureHost');
+            if (!host) return;
+            var msgs = [];
+            try {
+                var t = await fetchJSON('/api/prospects/timeline?id=' + encodeURIComponent(leadId));
+                msgs = (t.events || []).filter(function (e) { return e.kind === 'message'; });
+            } catch (e) { /* keep the step tracker even if messages fail to load */ }
+
+            var stepsHtml = '<div style="margin-bottom:10px;">' + nurtureStepHtml(r) + '</div>';
+
+            var msgHtml;
+            if (!msgs.length) {
+                msgHtml = '<div style="font-size:12px;color:var(--text-tertiary);">No emails or texts logged for this lead yet.</div>';
+            } else {
+                msgHtml = msgs.slice(0, 25).map(function (m) {
+                    var when = m.ts ? new Date(m.ts).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+                    var isSms = String(m.channel || '').toLowerCase() === 'sms';
+                    var status = String(m.status || '').toLowerCase();
+                    // A bounced send is the single most useful thing on this panel:
+                    // it means the prospect received nothing at all.
+                    var bad = status === 'bounced' || status === 'failed';
+                    var chip = '<span style="font-size:10px;font-weight:700;letter-spacing:.04em;padding:1px 6px;border-radius:3px;background:' + (isSms ? 'rgba(37,99,235,.18)' : 'rgba(148,163,184,.18)') + ';color:var(--text-primary);">' + (isSms ? 'SMS' : 'EMAIL') + '</span>';
+                    var statusChip = bad
+                        ? '<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(239,68,68,.18);color:#ef4444;">' + escapeHtml(status.toUpperCase()) + '</span>'
+                        : (m.opened_at ? '<span style="font-size:10px;color:#16a34a;">opened</span>' : '');
+                    var text = m.body_preview || m.body || m.subject || '';
+                    return '<div style="border-left:2px solid ' + (bad ? '#ef4444' : 'var(--border-medium)') + ';padding:2px 0 10px 10px;margin-left:4px;">'
+                        + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--text-secondary);">'
+                        + chip + '<span>' + escapeHtml(when) + '</span>' + statusChip
+                        + '</div>'
+                        + (m.subject && !isSms ? '<div style="font-size:12px;color:var(--text-primary);margin-top:3px;font-weight:600;">' + escapeHtml(m.subject) + '</div>' : '')
+                        + (text ? '<div style="font-size:11.5px;color:var(--text-secondary);margin-top:3px;line-height:1.5;">' + escapeHtml(String(text).slice(0, 260)) + '</div>' : '')
+                        + '</div>';
+                }).join('');
+            }
+            host.innerHTML = stepsHtml + msgHtml;
+        }
+
         function closeLeadDrawer() {
             // Flush any unsaved notes before the drawer closes so nothing is lost.
             try { if (_notesDirty && _notesLeadId) saveNotesNow(_notesLeadId); } catch (e) {}
@@ -2404,6 +2472,17 @@
                     + '</div>';
             }
 
+            // Nurture panel: filled in by loadNurturePanel once the messages come
+            // back. Only shown on a lead that actually has a meeting, since the
+            // sequence does not run before one is booked.
+            var nurtureBlock = '';
+            if (r.meeting_scheduled_at || r.last_called_outcome === 'booked_meeting') {
+                nurtureBlock = '<div style="margin-bottom:22px;">'
+                    + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Nurture &amp; messages</div>'
+                    + '<div id="nurtureHost" style="color:var(--text-tertiary);font-size:12px;">Loading…</div>'
+                    + '</div>';
+            }
+
             // Booked-meeting card: the time + a Join Meet button, shown above
             // everything else on a booked lead.
             var sdrMeetingCard = '';
@@ -2467,6 +2546,7 @@
                 + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
                 + '<div id="sdrScriptBody" style="font-size:14px;line-height:1.6;color:var(--text-primary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:16px 18px;">Loading script…</div>'
                 + '</div>'
+                + nurtureBlock
                 + historyHtml
                 // ── Log outcome ──
                 + '<div class="section-title" style="font-size:14px;margin-bottom:12px;">Log the call</div>'
