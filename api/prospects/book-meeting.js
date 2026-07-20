@@ -330,6 +330,33 @@ module.exports = async function handler(req, res) {
             };
             // Save the email the rep captured on the call so the lead has it going forward.
             if (typedEmail && !lead.owner_email) updateRow.owner_email = typedEmail;
+
+            // RESET THE PER-MEETING NURTURE STAMPS WHEN THE MEETING MOVES.
+            //
+            // Every nurture cron is idempotent on a stamp and eligible only when
+            // that stamp IS NULL. Those stamps describe a MEETING, but they live
+            // on the LEAD — so a second meeting inherits the first one's stamps
+            // and the whole sequence silently skips it.
+            //
+            // Found live on Hugo Garcia (lead 16050): rebooked for Friday, but
+            // meeting_confirmation_sent_at and meeting_reminder_sent_at still
+            // held values from the previous meeting. He would have received no
+            // confirmation email, no VSL link, and no T-15 reminder, with nothing
+            // logging a reason. Every rebooked lead has had this.
+            //
+            // meeting_confirmed_at clears too: a confirmation of the OLD meeting
+            // is not a confirmation of the new one, and leaving it makes the
+            // callback calendar show a meeting as confirmed that nobody agreed to.
+            const movedTo = new Date(startIso).getTime();
+            const movedFrom = lead.meeting_scheduled_at ? new Date(lead.meeting_scheduled_at).getTime() : null;
+            if (movedFrom === null || movedFrom !== movedTo) {
+                updateRow.meeting_confirmation_sent_at = null;
+                updateRow.meeting_confirmed_at = null;
+                updateRow.meeting_reminder_sent_at = null;
+                updateRow.vsl_followup_sms_sent_at = null;
+                updateRow.day_before_sms_sent_at = null;
+                updateRow.nurture_stage = 'booked';
+            }
             // PERSIST THE REP'S AGENT PICK. Without this the choice only reached
             // the immediate confirmation email and was then lost: the
             // send-confirmations cron re-derives a slug from matched_product_name,
