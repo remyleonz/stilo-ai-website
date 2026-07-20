@@ -7554,32 +7554,86 @@
         // automation isn't built yet, so if leads.nurture_stage is null we
         // DERIVE the stage from existing signals. An operator can override it
         // via the stepper dropdown (persists to nurture_stage).
+        // These are the six steps the shipped sequence actually has (see
+        // api/prospects/send-confirmations.js, send-vsl-followup.js,
+        // send-day-before.js). The old list showed 'VSL sent' twice and carried
+        // 'Value email' and 'Triaged', neither of which any cron ever sends --
+        // so three of six pips could only ever be lit by hand.
+        //
+        // `signal` reads the lead and returns the timestamp that proves the step
+        // happened, or null. Derivation is now real for every step; nothing here
+        // depends on an operator remembering to set a dropdown.
         var NURTURE_STAGES = [
-            { key: 'booked',    label: 'Booked' },
-            { key: 'vsl_sent',  label: 'VSL sent' },
-            { key: 'value',     label: 'Value email' },
-            { key: 'triaged',   label: 'Triaged' },
-            { key: 'confirmed', label: 'Confirmed' },
-            { key: 'showed',    label: 'Showed' }
+            {
+                key: 'booked', label: 'Booked',
+                signal: function (d) { return d.meeting_booked_at || d.meeting_scheduled_at || null; },
+                variants: [], events: []
+            },
+            {
+                key: 'vsl_sent', label: 'VSL sent',
+                signal: function (d) { return d.meeting_confirmation_sent_at || null; },
+                variants: ['meeting_confirm', 'nurture_sms_1_booked', 'nurture_sms_1_booked_recovery'],
+                events: []
+            },
+            {
+                key: 'vsl_watched', label: 'Watched',
+                // Either they hit the page, or we saw enough to text them about it.
+                signal: function (d) {
+                    var e = (d.nurture_vsl || []).filter(function (x) {
+                        return x.flow === 'confirm' && (x.event === 'view' || x.event === 'play' || x.event === 'confirm_open');
+                    });
+                    return (e.length && e[0].created_at) || d.vsl_followup_sms_sent_at || null;
+                },
+                variants: ['nurture_sms_2_watched'], events: ['view', 'play', 'confirm_open']
+            },
+            {
+                key: 'confirmed', label: 'Confirmed',
+                signal: function (d) {
+                    if (d.meeting_confirmed_at) return d.meeting_confirmed_at;
+                    var e = (d.nurture_vsl || []).filter(function (x) { return x.event === 'confirm'; });
+                    return (e.length && e[0].created_at) || null;
+                },
+                variants: [], events: ['confirm']
+            },
+            {
+                key: 'day_before_sent', label: 'Day-before',
+                signal: function (d) { return d.day_before_sms_sent_at || null; },
+                variants: ['nurture_sms_3_day_before'], events: []
+            },
+            {
+                key: 'showed', label: 'Showed',
+                signal: function (d) {
+                    var m = (d.meetings || []).filter(function (x) { return x && x.outcome; });
+                    return (m.length && (m[0].occurred_at || m[0].created_at)) || null;
+                },
+                variants: [], events: []
+            }
         ];
+        // Which step is expanded in the drawer. null = collapsed.
+        var NURTURE_OPEN = null;
         function nurtureStageIndex(key) {
             for (var i = 0; i < NURTURE_STAGES.length; i++) if (NURTURE_STAGES[i].key === key) return i;
             return -1;
         }
-        // Derive a stage from lead data when nurture_stage is null. Returns a
-        // stage key or null (null = not booked, no stepper).
+        // Evaluate every step's signal once. Returns an array of timestamps (or
+        // null) parallel to NURTURE_STAGES.
+        function nurtureSignals(d) {
+            return NURTURE_STAGES.map(function (s) {
+                try { return s.signal(d || {}) || null; } catch (_) { return null; }
+            });
+        }
+        // Derive from the signals: the furthest step that actually fired. Steps
+        // are evaluated independently and a gap is REAL, not something to paper
+        // over -- a lead can be Confirmed with no Watched if they replied to the
+        // SMS instead of opening the page, and that gap is worth seeing.
         function nurtureStageFrom(d) {
             if (!d) return null;
-            var isBooked = (d.last_called_outcome === 'booked_meeting') || !!d.meeting_scheduled_at;
+            var isBooked = (d.last_called_outcome === 'booked_meeting') || !!d.meeting_scheduled_at || !!d.meeting_booked_at;
             if (!isBooked) return null;
-            // A logged meeting outcome means the meeting happened → showed.
-            var meetings = d.meetings || [];
-            var hasOutcome = meetings.some(function (m) { return m && m.outcome; });
-            if (hasOutcome) return 'showed';
-            // At least one outbound value email sent → 'value' (past vsl_sent).
-            if ((d.nurture_email_count || 0) > 0) return 'value';
-            // Booked, nothing sent yet.
-            return 'booked';
+            var sig = nurtureSignals(d);
+            var furthest = 0;
+            for (var i = 0; i < NURTURE_STAGES.length; i++) if (sig[i]) furthest = i;
+            return NURTURE_STAGES[furthest].key;
         }
         // The stage to render: explicit override wins, else derived. `derived`
         // flag tells the UI to show "(auto)".
@@ -7589,6 +7643,66 @@
             var k = nurtureStageFrom(d);
             return { key: k, derived: true };
         }
+        function nurtureToggle(key) {
+            NURTURE_OPEN = (NURTURE_OPEN === key) ? null : key;
+            var host = document.getElementById('nurtureStepperHost');
+            if (host) host.innerHTML = renderNurtureStepper(window.__lastProspectData || {});
+        }
+        // The artifacts for one step: the messages we sent and what they did with
+        // them. This is the answer to "where can I see this information" -- it was
+        // in the database the whole time, just never rendered.
+        function nurtureStepDetail(d, stage) {
+            var msgs = (d.nurture_messages || []).filter(function (m) {
+                return stage.variants.indexOf(m.variant) >= 0;
+            });
+            var evs = (d.nurture_vsl || []).filter(function (e) {
+                return stage.events.indexOf(e.event) >= 0 && (stage.key !== 'vsl_watched' || e.flow === 'confirm');
+            });
+            if (!msgs.length && !evs.length) {
+                return '<div style="font-size:12px;color:var(--text-muted);padding:10px 2px;">Nothing recorded for this step yet.</div>';
+            }
+            var pill = function (txt, color) {
+                return '<span style="display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:600;'
+                    + 'background:rgba(255,255,255,.05);color:' + color + ';margin-right:5px;">' + txt + '</span>';
+            };
+            var msgHtml = msgs.map(function (m) {
+                var flags = '';
+                if (m.bounced_at) flags += pill('bounced', '#ef4444');
+                else if (m.status) flags += pill(escapeAdminHtml(m.status), 'var(--text-secondary)');
+                if (m.opened_at) flags += pill('opened ' + fmtETp(m.opened_at), '#10b981');
+                if (m.clicked_at) flags += pill('clicked', '#10b981');
+                if (m.replied_at) flags += pill('replied', '#10b981');
+                return '<div style="border:1px solid var(--border-subtle);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:var(--bg-input);">'
+                    + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:5px;">'
+                    + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:' + (m.channel === 'sms' ? '#2563eb' : '#5A7BE8') + ';">'
+                    + escapeAdminHtml(m.channel || 'msg') + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-tertiary);white-space:nowrap;">' + fmtETp(m.sent_at) + '</div></div>'
+                    + (m.subject ? '<div style="font-size:12px;font-weight:600;margin-bottom:3px;">' + escapeAdminHtml(m.subject) + '</div>' : '')
+                    + (m.body_preview ? '<div style="font-size:12px;color:var(--text-secondary);line-height:1.5;white-space:pre-wrap;">' + escapeAdminHtml(m.body_preview) + '</div>' : '')
+                    + '<div style="margin-top:7px;font-size:11px;color:var(--text-tertiary);">'
+                    + (m.to_address ? 'to ' + escapeAdminHtml(m.to_address) + ' · ' : '') + flags + '</div>'
+                    + '</div>';
+            }).join('');
+            // Collapse repeat events into a count: 20 scanner-driven views is one
+            // fact, not twenty rows.
+            var byEv = {};
+            evs.forEach(function (e) {
+                byEv[e.event] = byEv[e.event] || { n: 0, first: e.created_at, last: e.created_at };
+                byEv[e.event].n++;
+                if (new Date(e.created_at) > new Date(byEv[e.event].last)) byEv[e.event].last = e.created_at;
+            });
+            var evHtml = Object.keys(byEv).length
+                ? '<div style="font-size:12px;color:var(--text-secondary);padding:2px;">'
+                    + Object.keys(byEv).map(function (k) {
+                        var x = byEv[k];
+                        return '<div style="margin-bottom:3px;">' + pill(escapeAdminHtml(k) + (x.n > 1 ? ' ×' + x.n : ''), '#10b981')
+                            + '<span style="color:var(--text-tertiary);font-size:11px;">first ' + fmtETp(x.first)
+                            + (x.n > 1 ? ' · last ' + fmtETp(x.last) : '') + '</span></div>';
+                    }).join('')
+                + '</div>'
+                : '';
+            return '<div style="padding:10px 2px 2px;">' + msgHtml + evHtml + '</div>';
+        }
         // Compact 6-step horizontal stepper. Steps up to+including the current
         // stage are filled blue; the rest are muted. Matches the admin's blue
         // accent + dark card styling. Includes an operator override <select>.
@@ -7596,21 +7710,28 @@
             var resolved = nurtureResolveStage(d);
             if (!resolved.key) return '';
             var curIdx = nurtureStageIndex(resolved.key);
+            var sig = nurtureSignals(d);
+            // A pip is FILLED only when its own signal fired. The old stepper
+            // filled everything up to the current stage, which quietly asserted
+            // steps we never actually performed -- a lead who booked and confirmed
+            // without ever watching showed a lit "Watched" pip.
             var pips = NURTURE_STAGES.map(function (s, i) {
-                var done = i <= curIdx;
+                var done = !!sig[i];
                 var isCur = i === curIdx;
+                var isOpen = NURTURE_OPEN === s.key;
                 var dot = '<div style="width:' + (isCur ? '13px' : '10px') + ';height:' + (isCur ? '13px' : '10px') + ';border-radius:50%;flex-shrink:0;'
                     + (done ? 'background:var(--blue);' + (isCur ? 'box-shadow:0 0 0 4px rgba(59,130,246,0.22);' : '')
                             : 'background:transparent;border:1.5px solid var(--border-medium);')
                     + '"></div>';
-                var line = i < NURTURE_STAGES.length - 1
-                    ? '<div style="flex:1;height:2px;margin:0 4px;border-radius:2px;background:' + (i < curIdx ? 'var(--blue)' : 'var(--border-medium)') + ';"></div>'
-                    : '';
-                return '<div style="display:flex;flex-direction:column;align-items:center;' + (i < NURTURE_STAGES.length - 1 ? 'flex:1;' : '') + '">'
+                return '<div onclick="nurtureToggle(\'' + s.key + '\')" title="Click to see what we sent"'
+                    + ' style="display:flex;flex-direction:column;align-items:center;cursor:pointer;'
+                    + (isOpen ? 'background:rgba(59,130,246,0.10);border-radius:8px;' : '')
+                    + (i < NURTURE_STAGES.length - 1 ? 'flex:1;' : '') + 'padding:4px 2px;">'
                     + '<div style="display:flex;align-items:center;width:100%;">'
                       + '<div style="flex:1;height:2px;background:transparent;"></div>' + dot + '<div style="flex:1;height:2px;background:transparent;"></div>'
                     + '</div>'
                     + '<div style="margin-top:6px;font-size:9.5px;font-weight:' + (isCur ? '700' : '500') + ';letter-spacing:0.02em;text-align:center;color:' + (done ? (isCur ? 'var(--text-primary)' : 'var(--text-secondary)') : 'var(--text-muted)') + ';white-space:nowrap;">' + s.label + '</div>'
+                    + '<div style="margin-top:2px;font-size:9px;color:var(--text-muted);white-space:nowrap;">' + (sig[i] ? fmtETp(sig[i]) : '—') + '</div>'
                     + '</div>';
             });
             // Interleave connector lines between the pip columns.
@@ -7618,9 +7739,17 @@
             for (var i = 0; i < NURTURE_STAGES.length; i++) {
                 track += pips[i];
                 if (i < NURTURE_STAGES.length - 1) {
-                    track += '<div style="flex:1;height:2px;margin:5px -14px 0;border-radius:2px;align-self:flex-start;background:' + (i < curIdx ? 'var(--blue)' : 'var(--border-medium)') + ';"></div>';
+                    track += '<div style="flex:1;height:2px;margin:9px -14px 0;border-radius:2px;align-self:flex-start;background:' + (sig[i] && sig[i + 1] ? 'var(--blue)' : 'var(--border-medium)') + ';"></div>';
                 }
             }
+            var openStage = null;
+            for (var j = 0; j < NURTURE_STAGES.length; j++) if (NURTURE_STAGES[j].key === NURTURE_OPEN) openStage = NURTURE_STAGES[j];
+            var detail = openStage
+                ? '<div style="margin-top:12px;border-top:1px solid var(--border-subtle);padding-top:10px;">'
+                    + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:2px;">'
+                    + escapeAdminHtml(openStage.label) + '</div>'
+                    + nurtureStepDetail(d, openStage) + '</div>'
+                : '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Click any step to see the exact email and SMS we sent, and whether they opened it.</div>';
             var opts = NURTURE_STAGES.map(function (s) {
                 return '<option value="' + s.key + '"' + (s.key === resolved.key && !resolved.derived ? ' selected' : '') + '>' + s.label + '</option>';
             }).join('');
@@ -7637,6 +7766,7 @@
                   + '</div>'
                 + '</div>'
                 + '<div style="display:flex;align-items:flex-start;">' + track + '</div>'
+                + detail
                 + '<div id="nurtureStageMsg" style="margin-top:8px;font-size:11px;color:var(--text-muted);min-height:14px;"></div>'
                 + '</div>';
         }
@@ -9047,33 +9177,140 @@
         }
         // VSL funnel analytics (view -> play -> confirm) shown under the Emails card.
         var VSL_ANALYTICS = null;
+        // Per-lead rosters behind every count. A number with no roster is not
+        // actionable ("22 leads viewed" doesn't tell a rep who to call) and can't
+        // be audited when it looks wrong. Loaded once per flow, filtered locally.
+        var VSL_LEADS = { campaign: null, confirm: null };
+        // Which stat is currently drilled into. null = show the whole roster.
+        var VSL_DRILL = { campaign: null, confirm: null };
         async function loadVslAnalytics() {
             try { VSL_ANALYTICS = await prospectFetchJSON('/api/prospects/vsl-analytics'); }
             catch (e) { VSL_ANALYTICS = { error: e.message || 'failed' }; }
             if (SALES_OPEN === 'emails_sent') renderSalesPanel('emails_sent');
+            ['campaign', 'confirm'].forEach(async function (flow) {
+                try {
+                    var r = await prospectFetchJSON('/api/prospects/vsl-leads?flow=' + flow);
+                    VSL_LEADS[flow] = (r && r.leads) || [];
+                } catch (e) { VSL_LEADS[flow] = { error: e.message || 'failed' }; }
+                if (SALES_OPEN === 'emails_sent') renderSalesPanel('emails_sent');
+            });
+        }
+        function vslDrill(flow, stage) {
+            VSL_DRILL[flow] = (VSL_DRILL[flow] === stage) ? null : stage;
+            renderSalesPanel('emails_sent');
         }
         // Two separate funnels. They share the /agents/<slug> pages but are
         // different campaigns to different audiences (cold blast vs post-booking
         // confirmation), so averaging them together tells you nothing.
-        function vslStat(lbl, val, sub, color) {
+        // Every stat is a button. Clicking filters the roster underneath to the
+        // leads in that stage; clicking again clears it.
+        function vslStat(flow, stage, lbl, val, sub, color) {
             var shown = (val === null || val === undefined) ? '—' : val;
-            return '<div style="flex:1;min-width:96px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;padding:12px;">'
+            var on = VSL_DRILL[flow] === stage;
+            var clickable = !!stage;
+            return '<div ' + (clickable ? 'onclick="vslDrill(\'' + flow + '\',\'' + stage + '\')" ' : '')
+                + 'style="flex:1;min-width:96px;background:' + (on ? 'rgba(37,99,235,.14)' : 'var(--bg-input)') + ';'
+                + 'border:1px solid ' + (on ? '#2563eb' : 'var(--border-subtle)') + ';border-radius:10px;padding:12px;'
+                + (clickable ? 'cursor:pointer;' : '') + '">'
                 + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">' + lbl + '</div>'
                 + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:' + (color || 'var(--text-primary)') + ';">' + shown + '</div>'
                 + (sub ? '<div style="font-size:11px;color:var(--text-tertiary);">' + sub + '</div>' : '') + '</div>';
         }
         function vslPct(n, d) { return (d && n != null) ? Math.round(n / d * 100) + '%' : '—'; }
-        function vslAgentTable(ba, cols) {
-            var agents = Object.keys(ba || {}).filter(function (a) { return a && a !== 'unknown'; }).sort();
-            if (!agents.length) return '';
-            return '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;"><thead><tr style="color:var(--text-secondary);text-align:left;">'
-                + '<th style="padding:6px;">Agent</th>'
+
+        // Stage predicates. Deliberately independent, not cumulative: a lead can
+        // have played with no recorded open, because the confirmation SMS carries
+        // the same link and an SMS click fires a view with no email open at all.
+        // Inferring earlier stages would hide exactly that.
+        var VSL_STAGE_TEST = {
+            sent: function (l) { return !!l.sent_at; },
+            bounced: function (l) { return !!l.bounced_at; },
+            opened: function (l) { return !!l.opened_at; },
+            viewed: function (l) { return !!l.viewed_at; },
+            played: function (l) { return !!l.played_at; },
+            confirmed: function (l) { return !!l.confirmed_at; },
+            booked: function (l) { return !!l.booked_at; }
+        };
+        var VSL_STAGE_LABEL = {
+            sent: 'Sent', bounced: 'Bounced', opened: 'Opened', viewed: 'Viewed',
+            played: 'Played', confirmed: 'Confirmed', booked: 'Booked'
+        };
+        var VSL_STAGE_COLOR = {
+            booked: '#10b981', confirmed: '#10b981', played: '#2563eb',
+            viewed: '#5A7BE8', opened: 'var(--text-secondary)',
+            sent: 'var(--text-tertiary)', bounced: '#ef4444'
+        };
+
+        // Agent rollup built from the roster, not from vsl_events.agent counts.
+        // Two reasons: the roster carries the canonical product name (the raw
+        // column holds a URL slug like 'b2bleadgen', which is what used to print
+        // on this table), and counting distinct leads here keeps it consistent
+        // with the headline stats instead of counting scanner-inflated raw events.
+        function vslAgentTable(flow, rows, cols) {
+            if (!rows || !rows.length) return '';
+            var by = {};
+            rows.forEach(function (l) {
+                var k = l.agent_label || 'Unknown';
+                by[k] = by[k] || { leads: 0, viewed: 0, played: 0, confirmed: 0, booked: 0 };
+                by[k].leads++;
+                cols.forEach(function (c) { if (VSL_STAGE_TEST[c.key] && VSL_STAGE_TEST[c.key](l)) by[k][c.key]++; });
+            });
+            var agents = Object.keys(by).sort(function (a, b) { return by[b].leads - by[a].leads; });
+            return '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:14px;"><thead><tr style="color:var(--text-secondary);text-align:left;">'
+                + '<th style="padding:6px;">Agent pitched</th><th style="padding:6px;text-align:right;">Leads</th>'
                 + cols.map(function (c) { return '<th style="padding:6px;text-align:right;">' + c.label + '</th>'; }).join('')
                 + '</tr></thead><tbody>'
                 + agents.map(function (a) {
                     return '<tr style="border-top:1px solid var(--border-subtle);"><td style="padding:6px;">' + escapeAdminHtml(a) + '</td>'
-                        + cols.map(function (c) { return '<td style="padding:6px;text-align:right;">' + ((ba[a] || {})[c.key] || 0) + '</td>'; }).join('') + '</tr>';
+                        + '<td style="padding:6px;text-align:right;font-weight:700;">' + by[a].leads + '</td>'
+                        + cols.map(function (c) { return '<td style="padding:6px;text-align:right;">' + (by[a][c.key] || 0) + '</td>'; }).join('') + '</tr>';
                 }).join('') + '</tbody></table>';
+        }
+
+        // The roster. This is the part that makes the funnel usable: who, where
+        // they stopped, and one click into the lead.
+        function vslRoster(flow, rows) {
+            if (rows && rows.error) return '<div style="color:var(--red);font-size:12px;margin-top:12px;">Roster failed: ' + escapeAdminHtml(rows.error) + '</div>';
+            if (!rows) return '<div style="color:var(--text-muted);font-size:12px;margin-top:12px;">Loading leads…</div>';
+            var stage = VSL_DRILL[flow];
+            var list = stage ? rows.filter(VSL_STAGE_TEST[stage] || function () { return true; }) : rows;
+            var head = '<div style="display:flex;align-items:center;gap:10px;margin-top:16px;margin-bottom:8px;">'
+                + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);">'
+                + (stage ? VSL_STAGE_LABEL[stage] + ' · ' + list.length + ' leads' : 'All leads · ' + list.length)
+                + '</div>'
+                + (stage ? '<button onclick="vslDrill(\'' + flow + '\',\'' + stage + '\')" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--text-secondary);cursor:pointer;">Clear filter</button>' : '')
+                + '</div>';
+            if (!list.length) return head + '<div style="color:var(--text-muted);font-size:12px;">No leads at this stage.</div>';
+
+            var body = list.map(function (l) {
+                var badge = '<span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;'
+                    + 'background:rgba(255,255,255,.05);color:' + (VSL_STAGE_COLOR[l.furthest] || 'var(--text-secondary)') + ';">'
+                    + (VSL_STAGE_LABEL[l.furthest] || l.furthest) + '</span>';
+                // Show the engagement trail, not just the endpoint: a lead who
+                // viewed 6 times and never played is a different call than one
+                // who viewed once.
+                var trail = [];
+                if (l.opened_at) trail.push('opened');
+                if (l.viewed_at) trail.push('viewed' + (l.view_count > 1 ? ' ×' + l.view_count : ''));
+                if (l.played_at) trail.push('played' + (l.play_count > 1 ? ' ×' + l.play_count : ''));
+                if (l.confirmed_at) trail.push('confirmed');
+                if (l.booked_at) trail.push('booked');
+                if (l.bounced_at) trail.push('bounced');
+                return '<tr onclick="openProspectDrawer(' + l.lead_id + ')" style="border-top:1px solid var(--border-subtle);cursor:pointer;">'
+                    + '<td style="padding:8px 6px;"><div style="font-weight:600;">' + escapeAdminHtml(l.business || ('Lead ' + l.lead_id)) + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-tertiary);">' + escapeAdminHtml(l.owner || '—') + (l.email ? ' · ' + escapeAdminHtml(l.email) : '') + '</div></td>'
+                    + '<td style="padding:8px 6px;font-size:12px;color:var(--text-secondary);">' + escapeAdminHtml(l.agent_label || '—') + '</td>'
+                    + '<td style="padding:8px 6px;">' + badge + '</td>'
+                    + '<td style="padding:8px 6px;font-size:11px;color:var(--text-tertiary);">' + (trail.length ? trail.join(' → ') : '—') + '</td>'
+                    + '<td style="padding:8px 6px;font-size:11px;color:var(--text-tertiary);white-space:nowrap;text-align:right;">' + (l.sent_at ? fmtETp(l.sent_at) : '—') + '</td>'
+                    + '</tr>';
+            }).join('');
+
+            return head + '<div style="max-height:420px;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                + '<thead><tr style="color:var(--text-secondary);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">'
+                + '<th style="padding:6px;">Lead</th><th style="padding:6px;">Agent</th><th style="padding:6px;">Furthest</th>'
+                + '<th style="padding:6px;">Engagement</th><th style="padding:6px;text-align:right;">Sent</th></tr></thead>'
+                + '<tbody>' + body + '</tbody></table></div>';
         }
         function vslFunnelPanel() {
             if (VSL_ANALYTICS === null) return salesPanelWrap('VSL funnels', '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>');
@@ -9083,30 +9320,40 @@
 
             // Headline is unique leads, not raw events: mail scanners fetch every
             // link, so raw views run ~5x the number of humans.
+            // The "Email opens" tile is gone on purpose. vsl-campaign.js sends
+            // plain text with no pixel (deliberately, to stay out of Promotions),
+            // so the tile could only ever print an em dash. A permanent blank
+            // stat trains you to ignore the row it sits in.
+            var cRows = VSL_LEADS.campaign;
             var campaign = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                + vslStat('Emails sent', c.emails_sent, (c.bounced != null ? c.bounced + ' bounced' : null), '#5A7BE8')
-                + vslStat('Email opens', null, 'not tracked (plain text)')
-                + vslStat('Leads who viewed', c.view_leads, (c.views || 0) + ' raw views')
-                + vslStat('Leads who played', c.play_leads, vslPct(c.play_leads, c.view_leads) + ' of viewers', '#2563eb')
-                + vslStat('Booked', c.booked, vslPct(c.booked, c.emails_sent) + ' of sent', '#10b981')
+                + vslStat('campaign', 'sent', 'Emails sent', c.emails_sent, (c.bounced != null ? c.bounced + ' bounced' : null), '#5A7BE8')
+                + vslStat('campaign', 'viewed', 'Leads who viewed', c.view_leads, (c.views || 0) + ' raw views')
+                + vslStat('campaign', 'played', 'Leads who played', c.play_leads, vslPct(c.play_leads, c.view_leads) + ' of viewers', '#2563eb')
+                + vslStat('campaign', 'booked', 'Booked', c.booked, vslPct(c.booked, c.emails_sent) + ' of sent', '#10b981')
                 + '</div>'
-                + vslAgentTable(c.by_agent, [{ key: 'view', label: 'Views' }, { key: 'play', label: 'Plays' }]);
+                + vslAgentTable('campaign', Array.isArray(cRows) ? cRows : null, [
+                    { key: 'viewed', label: 'Viewed' }, { key: 'played', label: 'Played' }, { key: 'booked', label: 'Booked' }])
+                + vslRoster('campaign', cRows);
 
             // Funnel order, all in DISTINCT LEADS: sent -> viewed -> opened modal
             // -> confirmed. Email opens sit OUTSIDE the funnel as a caveated aside:
             // the pixel undercounts (image blocking) and views also come from the
             // confirmation SMS, so opens < views is normal, not a data error.
+            var fRows = VSL_LEADS.confirm;
             var confirm = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                + vslStat('Emails sent', f.emails_sent, null, '#5A7BE8')
-                + vslStat('Leads who viewed', f.view_leads, (f.views || 0) + ' raw views · incl. SMS clicks')
-                + vslStat('Opened confirm', f.confirm_open_leads, 'tapped Confirm My Meeting')
-                + vslStat('Confirmed', f.confirm_leads, vslPct(f.confirm_leads, f.view_leads) + ' of viewers', '#10b981')
+                + vslStat('confirm', 'sent', 'Emails sent', f.emails_sent, null, '#5A7BE8')
+                + vslStat('confirm', 'opened', 'Opened email', f.open_leads, 'pixel · undercounts')
+                + vslStat('confirm', 'viewed', 'Leads who viewed', f.view_leads, (f.views || 0) + ' raw views · incl. SMS clicks')
+                + vslStat('confirm', 'played', 'Leads who played', (Array.isArray(fRows) ? fRows.filter(VSL_STAGE_TEST.played).length : null), 'watched the video', '#2563eb')
+                + vslStat('confirm', 'confirmed', 'Confirmed', (Array.isArray(fRows) ? fRows.filter(VSL_STAGE_TEST.confirmed).length : null), vslPct((Array.isArray(fRows) ? fRows.filter(VSL_STAGE_TEST.confirmed).length : null), f.view_leads) + ' of viewers', '#10b981')
                 + '</div>'
                 + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:8px;">'
-                + 'Email opens (pixel): <b>' + (f.open_leads != null ? f.open_leads : '—') + '</b> leads. '
-                + 'Undercounts on purpose: most email clients block the tracking pixel, and the SMS confirmation drives views with no open. Trust "viewed" over "opened."'
+                + 'Opens undercount on purpose: most clients block the tracking pixel, and the confirmation SMS drives views with no open at all. Trust "viewed" over "opened." '
+                + '"Confirmed" counts leads.meeting_confirmed_at, not just the confirm click event.'
                 + '</div>'
-                + vslAgentTable(f.by_agent, [{ key: 'view', label: 'Views' }, { key: 'confirm_open', label: 'Opens' }, { key: 'confirm', label: 'Confirms' }]);
+                + vslAgentTable('confirm', Array.isArray(fRows) ? fRows : null, [
+                    { key: 'viewed', label: 'Viewed' }, { key: 'played', label: 'Played' }, { key: 'confirmed', label: 'Confirmed' }])
+                + vslRoster('confirm', fRows);
 
             var warn = (VSL_ANALYTICS.warnings || []).length
                 ? '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:9px 11px;font-size:12px;color:#ef4444;margin-bottom:12px;">'

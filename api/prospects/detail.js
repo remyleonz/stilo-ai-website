@@ -85,6 +85,40 @@ async function fetchOutboundEmailStats(leadId) {
     } catch (_) { return { count: 0, last_sent_at: null }; }
 }
 
+// Everything the nurture stepper needs to show WHAT we actually sent and whether
+// it landed. The old stepper only knew a stage name, so "VSL sent" was a claim
+// with nothing behind it -- you could not see the email, the SMS, or whether the
+// prospect ever opened either. This returns the real artifacts.
+//
+// Two sources, kept separate on purpose:
+//   messages  - what we sent (prospecting.lead_messages), including body preview
+//   vsl       - what they did (public.vsl_events), the engagement signal
+async function fetchNurtureDetail(leadId) {
+    const empty = { messages: [], vsl: [] };
+    if (leadId == null || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return empty;
+    const out = { messages: [], vsl: [] };
+    try {
+        const sb = leadsClient();
+        const { data } = await sb.from('lead_messages')
+            .select('id,direction,channel,variant,subject,body_preview,to_address,from_address,status,sent_at,delivered_at,opened_at,clicked_at,replied_at,bounced_at')
+            .eq('lead_id', leadId)
+            .order('sent_at', { ascending: false, nullsFirst: false })
+            .limit(200);
+        out.messages = data || [];
+    } catch (_) { /* stepper degrades to stage-only */ }
+    try {
+        // vsl_events lives in public, not prospecting.
+        const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+        const { data } = await pub.from('vsl_events')
+            .select('event,flow,agent,created_at')
+            .eq('lead_id', leadId)
+            .order('created_at', { ascending: true })
+            .limit(500);
+        out.vsl = data || [];
+    } catch (_) { /* engagement pills just won't light up */ }
+    return out;
+}
+
 // Sales-meeting records (Tactiq summaries + manual transcripts) for the lead's
 // "Meeting transcripts" panel section. Newest first. `outcome` drives the
 // nurture stepper's derivation of the 'showed' stage.
@@ -115,11 +149,12 @@ module.exports = async function handler(req, res) {
 
     // Fetch lead + call history in parallel — most leads have 0 calls, so
     // the lead_calls query is essentially free. Merge after both resolve.
-    const [lead, callHistory, meetings, emailStats] = await Promise.all([
+    const [lead, callHistory, meetings, emailStats, nurture] = await Promise.all([
         fetchLead({ id: id, phone: q.phone, business_name: q.business_name, email: q.email }),
         id != null ? fetchCallHistory(id) : Promise.resolve([]),
         id != null ? fetchMeetings(id) : Promise.resolve([]),
-        id != null ? fetchOutboundEmailStats(id) : Promise.resolve({ count: 0, last_sent_at: null })
+        id != null ? fetchOutboundEmailStats(id) : Promise.resolve({ count: 0, last_sent_at: null }),
+        id != null ? fetchNurtureDetail(id) : Promise.resolve({ messages: [], vsl: [] })
     ]);
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
     lead.call_history = callHistory;
@@ -129,6 +164,8 @@ module.exports = async function handler(req, res) {
     // select('*') on the lead row.
     lead.nurture_email_count = emailStats.count;
     lead.nurture_last_email_at = emailStats.last_sent_at;
+    lead.nurture_messages = nurture.messages;
+    lead.nurture_vsl = nurture.vsl;
     const status = 200;
     const json = lead;
 

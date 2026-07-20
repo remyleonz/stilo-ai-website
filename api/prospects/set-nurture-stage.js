@@ -18,7 +18,11 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
-const STAGES = ['booked', 'vsl_sent', 'value', 'triaged', 'confirmed', 'showed'];
+// Must stay in sync with the leads_nurture_stage_check constraint. 'vsl_watched'
+// and 'day_before_sent' are the stages the shipped SMS sequence writes; 'value'
+// and 'triaged' are kept for back-compat with rows set by hand before the
+// sequence existed, but no cron produces them.
+const STAGES = ['booked', 'vsl_sent', 'vsl_watched', 'day_before_sent', 'value', 'triaged', 'confirmed', 'showed'];
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
