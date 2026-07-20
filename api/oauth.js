@@ -41,7 +41,17 @@ const PROVIDERS = {
   'google-meet': {
     auth_url: 'https://accounts.google.com/o/oauth2/v2/auth',
     token_url: 'https://oauth2.googleapis.com/token',
-    scopes: ['https://www.googleapis.com/auth/meetings.space.readonly'],
+    // readonly  -> read conference records + transcripts.
+    // settings  -> turn AUTO-TRANSCRIPTION on for a space. Added by Google in
+    //              Feb 2025 specifically so an app can set auto-artifacts on
+    //              spaces created by OTHER apps, including Google Calendar,
+    //              which is exactly how book-meeting.js creates them.
+    //              This is what stops transcription being a thing a human has
+    //              to remember to click at the start of every call.
+    scopes: [
+      'https://www.googleapis.com/auth/meetings.space.readonly',
+      'https://www.googleapis.com/auth/meetings.space.settings'
+    ],
     client_id_env: 'GOOGLE_OAUTH_CLIENT_ID',
     client_secret_env: 'GOOGLE_OAUTH_CLIENT_SECRET',
     config_key: 'google_meet_oauth',

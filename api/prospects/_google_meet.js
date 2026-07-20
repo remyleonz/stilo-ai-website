@@ -135,8 +135,64 @@ function renderTranscript(entries, nameMap) {
     return lines.join('\n');
 }
 
+// ---- auto-transcription -----------------------------------------------------
+// Google Meet does NOT transcribe by default. Upgrading the Workspace seat only
+// grants the ABILITY; someone still has to hit Start in the call. That cost us
+// Hugo Garcia's 33-minute meeting on 2026-07-20 — the conference record existed
+// with both participants, and zero transcripts.
+//
+// The org-wide Admin console default ("Meetings are transcribed by default")
+// requires Business Plus. On Business Standard the only programmatic route is
+// per-space: spaces.patch with the meetings.space.settings scope, which Google
+// added in Feb 2025 expressly for spaces created by Calendar.
+//
+// The Calendar API cannot do this — its Events resource has no meeting-records
+// field at all. Don't go looking for one again.
+
+async function meetPatch(accessToken, path, params, body) {
+    const qs = params ? ('?' + new URLSearchParams(params).toString()) : '';
+    const r = await fetch(MEET_API + path + qs, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const text = await r.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) { /* ignore */ }
+    if (!r.ok) {
+        const msg = (json && json.error && json.error.message) || text.slice(0, 300);
+        const err = new Error('meet_api_' + r.status + ': ' + msg);
+        err.status = r.status;
+        throw err;
+    }
+    return json || {};
+}
+
+// spaces/{meetingCode} is a valid alias for GET, but patch wants the canonical
+// server id, so resolve first. Meeting codes are also reusable and expire ~365
+// days after last use, so they are never a durable key.
+async function resolveSpaceName(accessToken, meetingCode) {
+    const s = await meetFetch(accessToken, '/spaces/' + meetingCode);
+    return (s && s.name) || null;
+}
+
+async function enableAutoTranscription(accessToken, meetingCode) {
+    const spaceName = await resolveSpaceName(accessToken, meetingCode);
+    if (!spaceName) throw new Error('space_not_found for ' + meetingCode);
+    const updated = await meetPatch(
+        accessToken, '/' + spaceName,
+        { updateMask: 'config.artifactConfig.transcriptionConfig.autoTranscriptionGeneration' },
+        { config: { artifactConfig: { transcriptionConfig: { autoTranscriptionGeneration: 'ON' } } } }
+    );
+    const got = updated && updated.config && updated.config.artifactConfig
+        && updated.config.artifactConfig.transcriptionConfig
+        && updated.config.artifactConfig.transcriptionConfig.autoTranscriptionGeneration;
+    return { space: spaceName, autoTranscription: got || null, raw: updated };
+}
+
 module.exports = {
     getMeetRefreshToken, accessTokenFromRefresh, isReauthError,
-    meetFetch, meetingCodeFromLink, listConferenceRecords, listTranscripts,
-    listAllEntries, participantNameMap, renderTranscript, REAUTH_URL
+    meetFetch, meetPatch, meetingCodeFromLink, listConferenceRecords, listTranscripts,
+    listAllEntries, participantNameMap, renderTranscript,
+    resolveSpaceName, enableAutoTranscription, REAUTH_URL
 };

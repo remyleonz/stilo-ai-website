@@ -17,6 +17,10 @@ const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = requi
 const { getCalendarRefreshToken, accessTokenFromRefresh, isReauthError, REAUTH_URL } = require('./_google_calendar');
 const { createClient } = require('@supabase/supabase-js');
 const { sendConfirmEmail: sendVslConfirmEmail } = require('./_vsl');
+const {
+    getMeetRefreshToken, accessTokenFromRefresh: meetAccessToken,
+    meetingCodeFromLink: meetMeetingCode, enableAutoTranscription
+} = require('./_google_meet');
 
 function buildEmailHtml(opts) {
     // STILO-branded confirmation. No em dashes, no AI buzzwords (humanizer rules).
@@ -236,6 +240,35 @@ module.exports = async function handler(req, res) {
         const meetLink = (evJson.conferenceData && evJson.conferenceData.entryPoints
             && (evJson.conferenceData.entryPoints.find(function (p) { return p.entryPointType === 'video'; }) || {}).uri)
             || evJson.hangoutLink || null;
+
+        // Turn AUTO-TRANSCRIPTION on for this Meet space.
+        //
+        // Meet does not transcribe by default; the host has to click Start in
+        // the call, every call. That lost Hugo Garcia's 33-minute meeting on
+        // 2026-07-20 — the conference record existed with both participants and
+        // zero transcripts. The org-wide Admin console default needs Business
+        // Plus; we're on Standard, so this per-space call is the only route.
+        // The Calendar API cannot do it (no meeting-records field exists).
+        //
+        // Best-effort: a booking must NEVER fail because transcription config
+        // failed. Worst case we lose a transcript, not a meeting.
+        let autoTranscript = null;
+        try {
+            const code = meetMeetingCode(meetLink);
+            if (code) {
+                const meetRefresh = await getMeetRefreshToken();
+                if (meetRefresh) {
+                    const meetToken = await meetAccessToken(meetRefresh);
+                    const r = await enableAutoTranscription(meetToken, code);
+                    autoTranscript = r.autoTranscription || 'unknown';
+                } else {
+                    autoTranscript = 'not_authorized';
+                }
+            }
+        } catch (e) {
+            autoTranscript = 'failed: ' + ((e && e.message) || e);
+            console.error('[book-meeting] auto-transcription setup failed for lead=' + leadId + ':', (e && e.message) || e);
+        }
 
         // Branded confirmation email (best-effort; don't fail booking if email fails)
         let emailResult = null;

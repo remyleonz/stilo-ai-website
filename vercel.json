@@ -85,6 +85,10 @@
     {
       "path": "/api/prospects/sync-meet-transcripts",
       "schedule": "35 * * * *"
+    },
+    {
+      "path": "/api/prospects/enable-meet-transcription",
+      "schedule": "50 * * * *"
     }
   ],
   "headers": []
