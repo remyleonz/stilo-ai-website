@@ -155,17 +155,20 @@ module.exports = async function handler(req, res) {
         for (let i = 0; i < ids.length; i += CHUNK) {
             const slice = ids.slice(i, i + CHUNK);
             try {
+                // The business name column is `name`, NOT `business_name` -- that
+                // alias only exists after normalizeLead() in the API layer, and
+                // selecting it here 400s the whole query and blanks every row.
                 const { data, error } = await pro.from('leads')
-                    .select('id,business_name,owner_name,email,phone,assigned_to,stage,pitch_agent,meeting_booked_at,meeting_scheduled_at,meeting_confirmed_at,nurture_stage')
+                    .select('id,name,owner_name,email,owner_email,phone,owner_phone,assigned_to,stage,pitch_agent,meeting_booked_at,meeting_scheduled_at,meeting_confirmed_at,nurture_stage')
                     .in('id', slice);
                 if (error) throw error;
                 (data || []).forEach(function (l) {
                     const r = rows.get(l.id);
                     if (!r) return;
-                    r.business = l.business_name || null;
+                    r.business = l.name || null;
                     r.owner = l.owner_name || null;
-                    r.email = l.email || null;
-                    r.phone = l.phone || null;
+                    r.email = l.owner_email || l.email || null;
+                    r.phone = l.owner_phone || l.phone || null;
                     r.assigned_to = l.assigned_to || null;
                     r.stage = l.stage || null;
                     r.nurture_stage = l.nurture_stage || null;
