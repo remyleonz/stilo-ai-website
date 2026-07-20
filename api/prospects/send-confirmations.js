@@ -75,6 +75,12 @@ module.exports = async function handler(req, res) {
     const dueBy = new Date(Date.now() - DELAY_MIN * 60 * 1000).toISOString();
     const horizon = new Date(Date.now() + HORIZON_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
+    // ?dry=1 previews without sending. This did NOT exist while every sibling
+    // cron had it, so "?dry=1" here looked like a safe preview and was actually
+    // a live send — it texted a real prospect on 2026-07-20. An unsupported
+    // safety flag is worse than no safety flag.
+    const dry = String((req.query && req.query.dry) || '') === '1';
+
     const explicitIds = String((req.query && req.query.lead_ids) || '')
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
@@ -153,17 +159,32 @@ module.exports = async function handler(req, res) {
             + 'As I mentioned, I just emailed you a short video that explains the implementation we talked about in detail. '
             + 'Give it a watch ASAP, so you can confirm your meeting on that page. The link\'s in your email.';
 
+        // Subject carries the meeting date. Two reasons: it reads better in a
+        // crowded inbox, and it makes a REBOOKING a genuinely different subject.
+        // The 24h duplicate guard keys on subject, so a fixed string made a
+        // legitimate second meeting look like a resend loop and silently blocked
+        // it — which happened to Hugo Garcia on 2026-07-20: he got the SMS
+        // saying "I just emailed you" while the email itself was suppressed.
+        const subject = 'You are booked, quick confirm — ' + new Intl.DateTimeFormat('en-US', {
+            weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York'
+        }).format(new Date(ld.meeting_scheduled_at));
+
+        if (dry) {
+            results.push({ id: ld.id, slug: slug, to_email: email, to_phone: phone, when: when, sms_preview: sms, subject: subject });
+            continue;
+        }
+
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
         if (email) {
             // Email has no provider-side dedupe and this cron runs every 5 min.
             // Same backstop the SMS path gets: refuse a repeat subject to the
             // same lead inside 24h.
-            const eg = await guardOutbound(ld.id, 'email', html, 'You are booked, quick confirm');
+            const eg = await guardOutbound(ld.id, 'email', html, subject);
             if (!eg.ok) {
                 console.error('[send-confirmations] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
                 er = { skip: eg.reason, blocked: true };
             } else {
-                er = await sendEmail(email, 'You are booked, quick confirm', html);
+                er = await sendEmail(email, subject, html);
             }
         }
         if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
@@ -204,7 +225,7 @@ module.exports = async function handler(req, res) {
         if (emailOk) {
             await sb.from('lead_messages').insert({
                 lead_id: ld.id, direction: 'outbound', channel: 'email',
-                subject: 'You are booked, quick confirm',
+                subject: subject,
                 body_preview: 'Confirmation + VSL link for ' + when,
                 to_address: email,
                 from_address: 'remyleon@stiloaipartners.com',
