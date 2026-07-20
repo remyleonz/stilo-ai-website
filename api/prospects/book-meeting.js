@@ -149,7 +149,10 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
     const { data: lead, error: leadErr } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,owner_phone,phone,call_attempts,meeting_scheduled_at,meeting_meet_link,meeting_event_link')
+        // meeting_event_id is load-bearing: the reschedule path needs it to
+        // cancel the previous calendar event. It was missing here, so a
+        // reschedule left the old event orphaned on the calendar.
+        .select('id,name,owner_name,owner_email,email,owner_phone,phone,call_attempts,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_event_id')
         .eq('id', leadId).maybeSingle();
     if (leadErr) return res.status(500).json({ error: 'lead_read_failed', detail: leadErr.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
@@ -227,6 +230,34 @@ module.exports = async function handler(req, res) {
             conferenceData: { createRequest: { requestId: 'stilo-' + leadId + '-' + Date.now(), conferenceSolutionKey: { type: 'hangoutsMeet' } } },
             reminders: { useDefault: true }
         };
+        // CANCEL THE PREVIOUS EVENT BEFORE CREATING THE NEW ONE.
+        //
+        // Rescheduling created a second calendar event and orphaned the first.
+        // Remy's calendar showed JSE Insurance at both Mon 5pm and Thu 5pm on
+        // 2026-07-20, and the prospect kept a live invite to a meeting nobody
+        // was attending. Only meeting_event_id gets overwritten, so the old
+        // event was unreachable afterwards and had to be deleted by hand.
+        //
+        // sendUpdates=all so the prospect's calendar actually clears; they get
+        // one cancellation and then one new invite, which reads correctly as a
+        // reschedule. Best effort: never block a booking on cleanup of an old
+        // event that may already be gone.
+        if (lead.meeting_event_id) {
+            try {
+                const del = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'
+                    + encodeURIComponent(lead.meeting_event_id) + '?sendUpdates=all', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                // 410 = already deleted, 404 = never existed. Both are fine.
+                if (!del.ok && del.status !== 404 && del.status !== 410) {
+                    console.error('[book-meeting] could not cancel previous event ' + lead.meeting_event_id + ': HTTP ' + del.status);
+                }
+            } catch (e) {
+                console.error('[book-meeting] cancel of previous event threw:', (e && e.message) || e);
+            }
+        }
+
         const ev = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
