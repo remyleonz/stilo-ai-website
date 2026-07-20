@@ -13,6 +13,7 @@ const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { signLead } = require('../public/_token');
 const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
+const { firstName: safeFirstName, greet } = require('./_names');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 const REMY_LINE = '+17868376639';
@@ -83,7 +84,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,owner_phone,phone,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,meeting_booked_at')
+        .select('id,name,address,owner_name,owner_email,email,owner_phone,phone,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,meeting_booked_at')
         .is('meeting_confirmation_sent_at', null)
         .not('meeting_booked_at', 'is', null)
         .gt('meeting_scheduled_at', nowIso);
@@ -109,7 +110,10 @@ module.exports = async function handler(req, res) {
         const slug = slugFor(ld.matched_product_name);
         const token = signLead(ld.id);
         const link = BASE + '/agents/' + slug + '?lid=' + ld.id + '&t=' + token + '&confirm=1';
+        // Email keeps the softer 'Hi there' fallback; the SMS must not use it,
+        // so we carry a strict version that is null when the name is untrustworthy.
         const first = firstName(ld.owner_name);
+        const safeFirst = safeFirstName(ld.owner_name, ld.name, ld.address);
         const when = fmtWhen(ld.meeting_scheduled_at);
         const email = ld.owner_email || ld.email || null;
         const phone = ld.owner_phone || ld.phone || null;
@@ -133,7 +137,7 @@ module.exports = async function handler(req, res) {
         // them on the VSL page where the confirm button lives. The rep's first
         // name and their own Quo line make it read as a personal follow-up to the
         // call that just happened, not an automated blast.
-        const sms = 'Hey ' + first + ', this is ' + repFirst + ' from Stilo Partners. Really enjoyed talking just now. '
+        const sms = greet('Hey', safeFirst) + 'this is ' + repFirst + ' from Stilo Partners. Really enjoyed talking just now. '
             + 'As I mentioned, I just emailed you a short video that explains the implementation we talked about in detail. '
             + 'Give it a watch ASAP, so you can confirm your meeting on that page. The link\'s in your email.';
 

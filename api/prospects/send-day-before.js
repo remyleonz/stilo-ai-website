@@ -25,10 +25,10 @@
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
+const { firstName, greet } = require('./_names');
 
 const REMY_LINE = '+17868376639';
 
-function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
 async function sendSms(from, to, content) {
     if (!to) return { skip: 'no_phone' };
     const r = await openphoneFetch({ method: 'POST', path: '/messages', body: { from: from, to: [normalizePhone(to)], content: content } });
@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr')
+        .select('id,name,address,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr')
         .is('day_before_sms_sent_at', null)
         .not('meeting_scheduled_at', 'is', null);
     if (explicitIds.length) {
@@ -72,7 +72,9 @@ module.exports = async function handler(req, res) {
 
     const results = [];
     for (const ld of (leads || [])) {
-        const first = firstName(ld.owner_name);
+        // Null when owner_name is junk (a city, the business name, 'Program').
+        // greet() then drops the name entirely rather than saying 'Hey there'.
+        const first = firstName(ld.owner_name, ld.name, ld.address);
         const phone = ld.owner_phone || ld.phone || null;
         const rep = roster[String(ld.meeting_booked_by_sdr || '').toLowerCase()] || null;
         const fromLine = (rep && rep.openphone_number) || REMY_LINE;
@@ -80,7 +82,7 @@ module.exports = async function handler(req, res) {
         // raw null into a text the prospect actually reads.
         const biz = (ld.name || '').trim() || 'your business';
 
-        const sms = 'Hey ' + first + ', looking forward to the meeting tomorrow. '
+        const sms = greet('Hey', first) + 'looking forward to the meeting tomorrow. '
             + 'I had a deep look at ' + biz + ' with my team, and we have a plan set that you will find valuable. '
             + 'Anything in particular you want me and my team to look at before the meeting?';
 

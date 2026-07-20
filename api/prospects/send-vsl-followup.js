@@ -23,7 +23,6 @@ const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
 
 const REMY_LINE = '+17868376639';
 
-function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
 function fmtDay(iso) {
     if (!iso) return 'the day we set';
     return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'America/New_York' }).format(new Date(iso));
