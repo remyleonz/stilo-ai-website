@@ -12,7 +12,7 @@
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { signLead } = require('../public/_token');
-const { sendSms } = require('./_sms');
+const { sendSms, guardOutbound } = require('./_sms');
 const { firstName: safeFirstName, greet } = require('./_names');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
@@ -149,7 +149,18 @@ module.exports = async function handler(req, res) {
             + 'Give it a watch ASAP, so you can confirm your meeting on that page. The link\'s in your email.';
 
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
-        if (email) er = await sendEmail(email, 'You are booked, quick confirm', html);
+        if (email) {
+            // Email has no provider-side dedupe and this cron runs every 5 min.
+            // Same backstop the SMS path gets: refuse a repeat subject to the
+            // same lead inside 24h.
+            const eg = await guardOutbound(ld.id, 'email', html, 'You are booked, quick confirm');
+            if (!eg.ok) {
+                console.error('[send-confirmations] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
+                er = { skip: eg.reason, blocked: true };
+            } else {
+                er = await sendEmail(email, 'You are booked, quick confirm', html);
+            }
+        }
         if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
 
         // Only mark sent if a channel actually landed. The old code stamped
@@ -159,10 +170,24 @@ module.exports = async function handler(req, res) {
         const emailOk = er && !er.skip && !er.err;
         const smsOk = sr && !sr.skip && !sr.err;
         if (emailOk || smsOk) {
-            await sb.from('leads').update({
-                meeting_confirmation_sent_at: new Date().toISOString(),
-                nurture_stage: 'vsl_sent'
-            }).eq('id', ld.id);
+            // Stamp ALONE and check the error. This previously shared one UPDATE
+            // with nurture_stage -- the exact shape that sent one prospect 40
+            // texts on 2026-07-20 (see send-vsl-followup.js). 'vsl_sent' is legal
+            // today, which is the only reason this never fired; any constraint
+            // edit would have turned it into 288 sends/day per prospect. And
+            // unlike that outage this loop carries an EMAIL, which has no
+            // guardrail, so it would run unbounded.
+            const { error: stampErr } = await sb.from('leads')
+                .update({ meeting_confirmation_sent_at: new Date().toISOString() })
+                .eq('id', ld.id);
+            if (stampErr) {
+                console.error('[send-confirmations] STAMP FAILED lead=' + ld.id + ' — halting to avoid a resend loop:', stampErr.message);
+                results.push({ id: ld.id, sent: true, stamp_failed: true, detail: stampErr.message });
+                continue;
+            }
+            const { error: stageErr } = await sb.from('leads')
+                .update({ nurture_stage: 'vsl_sent' }).eq('id', ld.id);
+            if (stageErr) console.error('[send-confirmations] nurture_stage write failed lead=' + ld.id + ':', stageErr.message);
         }
 
         // Log the email like every other outbound send. Without this the whole

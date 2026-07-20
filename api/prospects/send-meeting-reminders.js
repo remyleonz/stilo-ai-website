@@ -19,7 +19,6 @@
  */
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
-const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 const REMY_LINE = '+17868376639';
@@ -40,11 +39,12 @@ async function sendEmail(to, subject, html) {
     const j = await r.json().catch(function () { return {}; });
     return { status: r.status, id: j.id, err: r.ok ? null : (j.message || 'fail') };
 }
-async function sendSms(from, to, content) {
-    if (!to) return { skip: 'no_phone' };
-    const r = await openphoneFetch({ method: 'POST', path: '/messages', body: { from: from, to: [normalizePhone(to)], content: content } });
-    return { status: r.status, err: (r.status >= 200 && r.status < 300) ? null : JSON.stringify(r.json).slice(0, 160) };
-}
+// Deliberately NOT a local sendSms any more. This file used to define its own,
+// which meant it bypassed the _sms.js guardrail entirely -- no duplicate-body
+// check, no 24h rate cap, and no from-line fallback for lines that cannot send.
+// A private copy of a shared safety mechanism is a safety mechanism you do not
+// have. See api/prospects/_sms.js.
+const { sendSms, guardOutbound } = require('./_sms');
 
 module.exports = async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
@@ -116,15 +116,44 @@ module.exports = async function handler(req, res) {
         if (dry) { results.push({ id: ld.id, to_email: email, to_phone: phone, when: when, meet: !!meet, sms_preview: sms }); continue; }
 
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
-        if (email) er = await sendEmail(email, 'Your STILO meeting starts in ~15 minutes', html);
-        if (phone) sr = await sendSms(fromLine, phone, sms);
+        if (email) {
+            const eg = await guardOutbound(ld.id, 'email', html, 'Your STILO meeting starts in ~15 minutes');
+            if (!eg.ok) {
+                console.error('[send-meeting-reminders] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
+                er = { skip: eg.reason, blocked: true };
+            } else {
+                er = await sendEmail(email, 'Your STILO meeting starts in ~15 minutes', html);
+            }
+        }
+        if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
 
         const emailOk = er && !er.skip && !er.err;
         const smsOk = sr && !sr.skip && !sr.err;
         // Only stamp if a channel landed, so a total failure retries next tick
-        // rather than being marked done forever.
+        // rather than being marked done forever. The error IS checked: an
+        // unchecked stamp on a cron whose eligibility filter is "stamp IS NULL"
+        // is precisely how one prospect got 40 texts on 2026-07-20.
         if (emailOk || smsOk) {
-            await sb.from('leads').update({ meeting_reminder_sent_at: new Date().toISOString() }).eq('id', ld.id);
+            const { error: stampErr } = await sb.from('leads')
+                .update({ meeting_reminder_sent_at: new Date().toISOString() }).eq('id', ld.id);
+            if (stampErr) {
+                console.error('[send-meeting-reminders] STAMP FAILED lead=' + ld.id + ' — halting to avoid a resend loop:', stampErr.message);
+                results.push({ id: ld.id, sent: true, stamp_failed: true, detail: stampErr.message });
+                continue;
+            }
+        }
+        // Log the SMS too. Reminder texts were written nowhere, so they were
+        // invisible on the lead panel AND uncounted by the _sms.js 24h rate cap,
+        // which quietly weakened that backstop for every other sender.
+        if (smsOk) {
+            await sb.from('lead_messages').insert({
+                lead_id: ld.id, direction: 'outbound', channel: 'sms',
+                subject: 'T-15 meeting reminder',
+                body_preview: sms.slice(0, 300),
+                to_address: phone, from_address: (sr && sr.from) || fromLine,
+                provider: 'openphone', status: 'sent',
+                variant: 'meeting_reminder', sent_at: new Date().toISOString(),
+            });
         }
         if (emailOk) {
             await sb.from('lead_messages').insert({

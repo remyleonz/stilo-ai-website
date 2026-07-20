@@ -1,5 +1,6 @@
 /**
- * Shared SMS send for the nurture sequence, with a from-line fallback.
+ * Shared SMS send for the nurture sequence, with a from-line fallback, plus
+ * the shared outbound guardrail used by BOTH the SMS and email senders.
  *
  * Texts go out from the booking rep's own Quo line so the prospect sees a reply
  * from the person who called them. But not every email in public.sdr_users maps
@@ -22,7 +23,7 @@ const REMY_LINE = '+17868376639';
 // Safety ceiling. Legitimate nurture is 3 texts and they can legally land in one
 // day (book in the morning, watch the VSL, meeting tomorrow). Anything past this
 // is a bug, not a campaign.
-const MAX_SMS_PER_LEAD_24H = 5;
+const MAX_PER_LEAD_24H = 5;
 
 /**
  * Refuse to send when the send looks like a loop rather than a campaign.
@@ -41,7 +42,7 @@ const MAX_SMS_PER_LEAD_24H = 5;
  * Fails OPEN: if the check itself errors we allow the send, because silently
  * swallowing outbound messages is worse than the thing we are guarding against.
  */
-async function guardrail(leadId, content) {
+async function guardOutbound(leadId, channel, content, subject) {
     if (!leadId) return { ok: true };
     try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -49,17 +50,21 @@ async function guardrail(leadId, content) {
         });
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { data, error } = await sb.from('lead_messages')
-            .select('body_preview')
-            .eq('lead_id', leadId).eq('channel', 'sms').eq('direction', 'outbound')
+            .select('body_preview,subject')
+            .eq('lead_id', leadId).eq('channel', channel).eq('direction', 'outbound')
             .gte('sent_at', since).limit(100);
         if (error) return { ok: true };
 
         const rows = data || [];
         const head = String(content || '').slice(0, 300);
-        if (rows.some(function (m) { return m.body_preview === head; })) {
-            return { ok: false, reason: 'duplicate_body_24h' };
-        }
-        if (rows.length >= MAX_SMS_PER_LEAD_24H) {
+        // For email the body is HTML that can vary on a timestamp, so a subject
+        // repeat to the same lead inside 24h is the stronger duplicate signal.
+        const dupe = rows.some(function (m) {
+            if (channel === 'email' && subject) return m.subject === subject;
+            return m.body_preview === head;
+        });
+        if (dupe) return { ok: false, reason: 'duplicate_' + channel + '_24h' };
+        if (rows.length >= MAX_PER_LEAD_24H) {
             return { ok: false, reason: 'rate_cap_24h', count: rows.length };
         }
         return { ok: true };
@@ -67,6 +72,7 @@ async function guardrail(leadId, content) {
         return { ok: true };
     }
 }
+function guardrail(leadId, content) { return guardOutbound(leadId, 'sms', content); }
 
 // OpenPhone's shape for "that from-number is not one you can send from".
 function isBadFromLine(r) {
@@ -106,4 +112,4 @@ async function sendSms(from, to, content, opts) {
     };
 }
 
-module.exports = { sendSms, REMY_LINE };
+module.exports = { sendSms, guardOutbound, REMY_LINE, MAX_PER_LEAD_24H };
