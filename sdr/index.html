@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/assets/cold-call-script.js"></script>
+    <script src="/assets/nurture-stepper.js"></script>
+    <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <style>
         :root {
@@ -1506,6 +1508,22 @@
         }
 
         var _leadsScopeWaits = 0;
+        // Booked list order: upcoming meetings first (soonest at top), past
+        // meetings pushed to the bottom (most-recent past first). Mirrors the
+        // admin dashboard's sortBookedUpcomingFirst so the two agree.
+        function sortBookedUpcomingFirst(rows) {
+            var now = Date.now();
+            return (rows || []).slice().sort(function (a, b) {
+                var am = a.meeting_scheduled_at ? new Date(a.meeting_scheduled_at).getTime() : Infinity;
+                var bm = b.meeting_scheduled_at ? new Date(b.meeting_scheduled_at).getTime() : Infinity;
+                if (isNaN(am)) am = Infinity;
+                if (isNaN(bm)) bm = Infinity;
+                var aUp = am >= now, bUp = bm >= now;
+                if (aUp && bUp) return am - bm;      // both upcoming: soonest first
+                if (!aUp && !bUp) return bm - am;    // both past: most recent first
+                return aUp ? -1 : 1;                 // upcoming always above past
+            });
+        }
         async function loadLeadsTable() {
             const wrap = document.getElementById('leadsTableWrap');
             // Wait for the impersonation scope before querying — otherwise the
@@ -1535,7 +1553,12 @@
             }[sub];
             try {
                 const data = await fetchJSON(endpoint);
-                const rows = data.results || data.leads || data || [];
+                let rows = data.results || data.leads || data || [];
+                // Booked tab: soonest meeting at the top, past ones at the bottom.
+                // The API returns plain ascending-by-date, which buries the
+                // meeting you have in an hour underneath every old one. Same
+                // ordering the admin dashboard uses.
+                if (sub === 'booked') rows = sortBookedUpcomingFirst(rows);
                 if (!rows.length) {
                     wrap.innerHTML = '<div class="empty-state">No leads in this view yet.</div>';
                     return;
@@ -1923,6 +1946,20 @@
             try {
                 const data = await fetchJSON('/api/prospects/detail?id=' + leadId);
                 const r = data.lead || data;
+                // The shared stepper needs the SDR's own helpers and the current
+                // lead. detail.js already returns nurture_messages + nurture_vsl,
+                // so the stepper has everything it needs on first paint.
+                window.__lastProspectData = r;
+                if (window.NURTURE_STEPPER) {
+                    NURTURE_STEPPER.reset();
+                    NURTURE_STEPPER.configure({
+                        escape: escapeHtml,
+                        fmtTime: fmtET,
+                        fetchJson: fetchJSON,
+                        hostId: 'nurtureStepperHost',
+                        getLead: function () { return window.__lastProspectData || {}; }
+                    });
+                }
                 body.innerHTML = buildLeadDrawerHtml(r);
                 loadColdCallScript(r);
                 // Messages live in prospecting.lead_messages, not on the lead row,
@@ -1940,24 +1977,11 @@
            all three nurture texts were invisible to the rep who booked the
            meeting, so nobody could tell whether a prospect had heard from us at
            all. Feeds off /api/prospects/timeline, which merges lead_messages. */
-        var NURTURE_STEPS = [
-            { key: 'meeting_confirmation_sent_at', label: 'Booked: email + text sent' },
-            { key: 'meeting_confirmed_at',         label: 'Prospect confirmed on the VSL page' },
-            { key: 'vsl_followup_sms_sent_at',     label: 'Watched the video: text sent' },
-            { key: 'day_before_sms_sent_at',       label: 'Day-before text sent' }
-        ];
-        function nurtureStepHtml(r) {
-            return NURTURE_STEPS.map(function (s) {
-                var ts = r[s.key];
-                var done = !!ts;
-                var when = done ? new Date(ts).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet';
-                return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;">'
-                    + '<span style="width:14px;flex:none;color:' + (done ? '#16a34a' : 'var(--text-tertiary)') + ';">' + (done ? '✓' : '○') + '</span>'
-                    + '<span style="color:' + (done ? 'var(--text-primary)' : 'var(--text-tertiary)') + ';">' + escapeHtml(s.label) + '</span>'
-                    + '<span style="margin-left:auto;color:var(--text-tertiary);font-size:11px;white-space:nowrap;">' + escapeHtml(when) + '</span>'
-                    + '</div>';
-            }).join('');
-        }
+        // The old inline 4-step checklist lived here. It is gone: the pre-meeting
+        // sequence is now rendered by the SHARED stepper in
+        // assets/nurture-stepper.js, directly under the meeting card, identical to
+        // /admin/. Two implementations of "where is this lead in the sequence" is
+        // how a rep and an admin end up looking at different answers.
         async function loadNurturePanel(leadId, r) {
             var host = document.getElementById('nurtureHost');
             if (!host) return;
@@ -1966,8 +1990,6 @@
                 var t = await fetchJSON('/api/prospects/timeline?id=' + encodeURIComponent(leadId));
                 msgs = (t.events || []).filter(function (e) { return e.kind === 'message'; });
             } catch (e) { /* keep the step tracker even if messages fail to load */ }
-
-            var stepsHtml = '<div style="margin-bottom:10px;">' + nurtureStepHtml(r) + '</div>';
 
             var msgHtml;
             if (!msgs.length) {
@@ -1994,7 +2016,7 @@
                         + '</div>';
                 }).join('');
             }
-            host.innerHTML = stepsHtml + msgHtml;
+            host.innerHTML = msgHtml;
         }
 
         function closeLeadDrawer() {
@@ -2473,13 +2495,14 @@
                     + '</div>';
             }
 
-            // Nurture panel: filled in by loadNurturePanel once the messages come
-            // back. Only shown on a lead that actually has a meeting, since the
-            // sequence does not run before one is booked.
+            // Full message history, filled in by loadNurturePanel. The SEQUENCE
+            // itself is the shared stepper under the meeting card; this is the
+            // raw list of every email and text, which the stepper only shows one
+            // step at a time. Only on a lead with a meeting.
             var nurtureBlock = '';
             if (r.meeting_scheduled_at || r.last_called_outcome === 'booked_meeting') {
                 nurtureBlock = '<div style="margin-bottom:22px;">'
-                    + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Nurture &amp; messages</div>'
+                    + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Messages sent</div>'
                     + '<div id="nurtureHost" style="color:var(--text-tertiary);font-size:12px;">Loading…</div>'
                     + '</div>';
             }
@@ -2514,6 +2537,10 @@
                 + '</div>'
                 + '</div>'
                 + sdrMeetingCard
+                // Nurture stepper sits directly under the meeting details, same
+                // as /admin/. Shared renderer (assets/nurture-stepper.js) so the
+                // rep sees exactly what the admin sees.
+                + '<div id="nurtureStepperHost">' + (window.NURTURE_STEPPER ? NURTURE_STEPPER.render(r) : '') + '</div>'
                 // ── Prominent phone + Call in Quo ──
                 + '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg,rgba(37,99,235,0.10),rgba(37,99,235,0.02));border:1px solid rgba(37,99,235,0.35);border-radius:12px;padding:16px 18px;margin-bottom:20px;">'
                 + '<div style="min-width:0;">'
@@ -2547,8 +2574,11 @@
                 + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
                 + '<div id="sdrScriptBody" style="font-size:14px;line-height:1.6;color:var(--text-primary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:16px 18px;">Loading script…</div>'
                 + '</div>'
-                + nurtureBlock
-                + historyHtml
+                // ── Log the call sits immediately under the script, because that is
+                // the order the rep works in: read the script, make the call, log it.
+                // It used to sit below the message history and the call log, which
+                // meant scrolling past everything that already happened to record
+                // the thing that just happened.
                 // ── Log outcome ──
                 + '<div class="section-title" style="font-size:14px;margin-bottom:12px;">Log the call</div>'
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
@@ -2594,7 +2624,9 @@
                 + '</div>'
                 + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
                 + '<button id="sdrBookBtn" disabled onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'
-                + '</div>';
+                + '</div>'
+                + nurtureBlock
+                + historyHtml;
         }
 
         // Clean two-line outcome button (title + helper text), accent on the left edge.
