@@ -1670,7 +1670,7 @@
           + '.cbm-dn{font-size:12px;font-weight:600;color:var(--text-secondary,#a7a7b4);margin-bottom:4px}'
           + '.cbm-cell.today .cbm-dn{color:var(--blue,#2563EB)}'
           + '.cbm-chip{font-size:11px;background:rgba(37,99,235,.16);border-left:2px solid var(--blue,#2563EB);color:var(--text-primary,#f4f4f6);padding:2px 5px;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}'
-          + '.cbm-chip.od{background:rgba(239,68,68,.16);border-left-color:var(--red,#ef4444)}' + '.cbm-chip.cx{background:rgba(16,185,129,.16);border-left-color:#10b981}' + '.cbm-chip.mtg{background:#2563EB;border-left-color:#1e3a8a;color:#fff}'
+          + '.cbm-chip.od{background:rgba(239,68,68,.16);border-left-color:var(--red,#ef4444)}' + '.cbm-chip.cx{background:rgba(16,185,129,.16);border-left-color:#10b981}' + '.cbm-chip.mtg{background:#2563EB;border-left-color:#1e3a8a;color:#fff}' + '.cbm-chip.mtgx{background:#b45309;border-left-color:#78350f;color:#fff}'
           + '.cbm-ct{font-weight:700;font-variant-numeric:tabular-nums}'
           + '.cbm-more{font-size:10.5px;color:var(--text-tertiary,#6c6c79);padding:1px 5px}'
           + '.cbw-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}'
@@ -1680,7 +1680,7 @@
           + '.cbw-head{font-size:12px;font-weight:700;color:var(--text-secondary,#a7a7b4);margin-bottom:8px;text-align:center}'
           + '.cbw-col.today .cbw-head{color:var(--blue,#2563EB)}'
           + '.cbw-item{font-size:11.5px;background:rgba(37,99,235,.14);border-radius:5px;padding:4px 6px;margin-bottom:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-          + '.cbw-item.od{background:rgba(239,68,68,.16)}' + '.cbw-item.cx{background:rgba(16,185,129,.16)}' + '.cbw-item.mtg{background:#2563EB;color:#fff}'
+          + '.cbw-item.od{background:rgba(239,68,68,.16)}' + '.cbw-item.cx{background:rgba(16,185,129,.16)}' + '.cbw-item.mtg{background:#2563EB;color:#fff}' + '.cbw-item.mtgx{background:#b45309;color:#fff}'
           + '.cbw-t{font-weight:700}'
           + '.cbw-none{color:var(--text-tertiary,#6c6c79);font-size:12px;text-align:center;padding:6px 0}'
           + '.cbd-wrap{border:1px solid var(--border-medium,#2a2a33);border-radius:10px;overflow:hidden}'
@@ -1689,7 +1689,7 @@
           + '.cbd-hr{width:72px;flex:none;padding:8px 10px;font-size:12px;color:var(--text-tertiary,#6c6c79);border-right:1px solid var(--border-medium,#2a2a33);font-variant-numeric:tabular-nums}'
           + '.cbd-slot{flex:1;padding:6px;display:flex;flex-wrap:wrap;gap:6px}'
           + '.cbd-block{background:rgba(37,99,235,.14);border-left:3px solid var(--blue,#2563EB);border-radius:6px;padding:6px 10px;min-width:190px;cursor:pointer}'
-          + '.cbd-block.od{background:rgba(239,68,68,.14);border-left-color:var(--red,#ef4444)}' + '.cbd-block.cx{background:rgba(16,185,129,.14);border-left-color:#10b981}' + '.cbd-block.mtg{background:#2563EB;border-left-color:#1e3a8a;color:#fff}' + '.cbcal-legend{display:flex;gap:12px;margin:0 0 12px;font-size:11px;color:var(--text-secondary,#a7a7b4);flex-wrap:wrap}.cbcal-legend .lg{display:inline-flex;align-items:center;gap:5px}.cbcal-legend .lg::before{content:\x22\x22;width:10px;height:10px;border-radius:3px;display:inline-block}.cbcal-legend .lg.up::before{background:rgba(37,99,235,.75)}.cbcal-legend .lg.cx::before{background:#10b981}.cbcal-legend .lg.od::before{background:#ef4444}.cbcal-legend .lg.mtg::before{background:#2563EB}'
+          + '.cbd-block.od{background:rgba(239,68,68,.14);border-left-color:var(--red,#ef4444)}' + '.cbd-block.cx{background:rgba(16,185,129,.14);border-left-color:#10b981}' + '.cbd-block.mtg{background:#2563EB;border-left-color:#1e3a8a;color:#fff}' + '.cbd-block.mtgx{background:#b45309;border-left-color:#78350f;color:#fff}' + '.cbcal-legend{display:flex;gap:12px;margin:0 0 12px;font-size:11px;color:var(--text-secondary,#a7a7b4);flex-wrap:wrap}.cbcal-legend .lg{display:inline-flex;align-items:center;gap:5px}.cbcal-legend .lg::before{content:\x22\x22;width:10px;height:10px;border-radius:3px;display:inline-block}.cbcal-legend .lg.up::before{background:rgba(37,99,235,.75)}.cbcal-legend .lg.cx::before{background:#10b981}.cbcal-legend .lg.od::before{background:#ef4444}.cbcal-legend .lg.mtg::before{background:#2563EB}.cbcal-legend .lg.mtgx::before{background:#b45309}'
           + '.cbd-bt{font-size:12px;font-weight:700;color:var(--blue,#2563EB)}'
           + '.cbd-bn{font-size:14px;font-weight:600;color:var(--text-primary,#f4f4f6)}'
           + '.cbd-bm{font-size:12px;color:var(--text-secondary,#a7a7b4)}'
@@ -1712,7 +1712,18 @@
             if (ms != null && ms < now) return 'overdue';
             return 'upcoming';
         }
-        function cbCls(it) { return it.type === 'meeting' ? ' mtg' : it.state === 'overdue' ? ' od' : it.state === 'called' ? ' cx' : ' up'; }
+        // A booked meeting the prospect never confirmed is the one that needs a
+        // triage call, so it gets its own amber treatment instead of blending in
+        // with the confirmed ones. Confirmation comes from the VSL confirm button
+        // (meeting_confirmed_at), which is what the nurture sequence drives at.
+        function cbNeedsConfirm(r) { return !r.meeting_confirmed_at; }
+        function cbCls(it) {
+            if (it.type === 'meeting') return cbNeedsConfirm(it.r) ? ' mtgx' : ' mtg';
+            return it.state === 'overdue' ? ' od' : it.state === 'called' ? ' cx' : ' up';
+        }
+        // Prefix shown on a meeting chip: a filled dot once confirmed, a warning
+        // triangle while it still needs the rep to phone and confirm.
+        function cbMtgMark(it) { return it.type === 'meeting' ? (cbNeedsConfirm(it.r) ? '⚠ ' : '● ') : ''; }
         function cbFocusInit() { if (!STATE.cbFocus) { var t = cbET(Date.now()); STATE.cbFocus = { y: t.y, m: t.m, d: t.d }; } if (!STATE.cbView) STATE.cbView = 'month'; }
         function cbRerender() { var h = document.getElementById('cbCalHost'); if (h) h.innerHTML = callbackCalendarHtml(); }
         function cbShift(kind, delta) {
@@ -1745,7 +1756,7 @@
                 + '<div class="cbcal-nav"><button onclick="cbShift(\'' + kind + '\',-1)">&lsaquo;</button><button class="cbcal-today" onclick="cbToday()">Today</button><button onclick="cbShift(\'' + kind + '\',1)">&rsaquo;</button><span class="cbcal-title">' + escapeHtml(title) + '</span></div>'
                 + '<div class="cbcal-views"><button class="' + (v === 'month' ? 'on' : '') + '" onclick="cbSetView(\'month\')">Month</button><button class="' + (v === 'week' ? 'on' : '') + '" onclick="cbSetView(\'week\')">Week</button><button class="' + (v === 'day' ? 'on' : '') + '" onclick="cbSetView(\'day\')">Day</button></div>'
                 + '</div>'
-                + '<div class="cbcal-legend"><span class="lg up">Callback</span><span class="lg cx">Called</span><span class="lg od">Overdue</span><span class="lg mtg">Meeting</span></div>';
+                + '<div class="cbcal-legend"><span class="lg up">Callback</span><span class="lg cx">Called</span><span class="lg od">Overdue</span><span class="lg mtg">Meeting confirmed</span><span class="lg mtgx">Meeting, needs confirm call</span></div>';
         }
         function cbMonthHtml() {
             var f = STATE.cbFocus, bucket = cbBucket(), todayIso = cbET(Date.now()).iso, now = Date.now();
@@ -1760,8 +1771,8 @@
                 var items = bucket[iso] || [];
                 var chips = '';
                 items.slice(0, 3).forEach(function (it) {
-                    var tip = (it.r.business_name || it.r.name || '') + (it.type === 'meeting' ? ' · MEETING' : '') + (it.r.owner_phone ? ' · ' + it.r.owner_phone : '');
-                    chips += '<div class="cbm-chip' + cbCls(it) + '" onclick="event.stopPropagation();openLeadDrawer(' + (it.r.id || 'null') + ')" title="' + escapeHtml(tip) + '"><span class="cbm-ct">' + cbTimeLabel(it.hour, it.min) + '</span> ' + (it.type === 'meeting' ? '● ' : '') + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div>';
+                    var tip = (it.r.business_name || it.r.name || '') + (it.type === 'meeting' ? (cbNeedsConfirm(it.r) ? ' · MEETING · NEEDS CONFIRM CALL' : ' · MEETING · confirmed') : '') + (it.r.owner_phone ? ' · ' + it.r.owner_phone : '');
+                    chips += '<div class="cbm-chip' + cbCls(it) + '" onclick="event.stopPropagation();openLeadDrawer(' + (it.r.id || 'null') + ')" title="' + escapeHtml(tip) + '"><span class="cbm-ct">' + cbTimeLabel(it.hour, it.min) + '</span> ' + cbMtgMark(it) + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div>';
                 });
                 if (items.length > 3) chips += '<div class="cbm-more">+' + (items.length - 3) + ' more</div>';
                 grid += '<div class="cbm-cell' + (inM ? '' : ' off') + (iso === todayIso ? ' today' : '') + '" onclick="cbOpenDay(\'' + iso + '\')"><div class="cbm-dn">' + cd.getUTCDate() + '</div>' + chips + '</div>';
@@ -1777,7 +1788,7 @@
                 var cd = new Date(Date.UTC(f.y, f.m - 1, f.d - startDow + i, 12));
                 var iso = cd.toISOString().slice(0, 10);
                 var items = bucket[iso] || [];
-                var list = items.map(function (it) { return '<div class="cbw-item' + cbCls(it) + '" onclick="event.stopPropagation();openLeadDrawer(' + (it.r.id || 'null') + ')"><span class="cbw-t">' + cbTimeLabel(it.hour, it.min) + '</span> ' + (it.type === 'meeting' ? '● ' : '') + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div>'; }).join('') || '<div class="cbw-none">—</div>';
+                var list = items.map(function (it) { return '<div class="cbw-item' + cbCls(it) + '" onclick="event.stopPropagation();openLeadDrawer(' + (it.r.id || 'null') + ')"><span class="cbw-t">' + cbTimeLabel(it.hour, it.min) + '</span> ' + cbMtgMark(it) + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div>'; }).join('') || '<div class="cbw-none">—</div>';
                 cols += '<div class="cbw-col' + (iso === todayIso ? ' today' : '') + '" onclick="cbOpenDay(\'' + iso + '\')"><div class="cbw-head">' + dows[cd.getUTCDay()] + ' ' + cd.getUTCDate() + '</div>' + list + '</div>';
             }
             return '<div class="cbw-grid">' + cols + '</div>';
@@ -1792,7 +1803,7 @@
             var rows = '';
             for (var h = minH; h <= maxH; h++) {
                 var blocks = items.filter(function (it) { return it.hour === h; }).map(function (it) {
-                    return '<div class="cbd-block' + cbCls(it) + '" onclick="openLeadDrawer(' + (it.r.id || 'null') + ')"><div class="cbd-bt">' + cbTimeLabel(it.hour, it.min) + (it.type === 'meeting' ? ' · MEETING' : '') + '</div><div class="cbd-bn">' + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div><div class="cbd-bm">' + escapeHtml(it.r.owner_name || '') + (it.r.owner_phone ? ' · ' + escapeHtml(it.r.owner_phone) : '') + '</div></div>';
+                    return '<div class="cbd-block' + cbCls(it) + '" onclick="openLeadDrawer(' + (it.r.id || 'null') + ')"><div class="cbd-bt">' + cbTimeLabel(it.hour, it.min) + (it.type === 'meeting' ? (cbNeedsConfirm(it.r) ? ' · MEETING · CONFIRM' : ' · MEETING') : '') + '</div><div class="cbd-bn">' + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div><div class="cbd-bm">' + escapeHtml(it.r.owner_name || '') + (it.r.owner_phone ? ' · ' + escapeHtml(it.r.owner_phone) : '') + '</div></div>';
                 }).join('');
                 rows += '<div class="cbd-row"><div class="cbd-hr">' + cbTimeLabel(h, 0) + '</div><div class="cbd-slot">' + blocks + '</div></div>';
             }

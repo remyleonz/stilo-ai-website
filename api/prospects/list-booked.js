@@ -15,7 +15,11 @@ const SELECT_COLS = [
     'next_action_due_at', 'owner_phone_strict_pass', 'assigned_to',
     'meeting_event_id', 'meeting_event_link', 'meeting_meet_link',
     'meeting_scheduled_at', 'meeting_duration_min', 'meeting_booked_by_sdr',
-    'nurture_stage'
+    'nurture_stage',
+    // Drives the "needs a triage call" flag on the callback calendar: a meeting
+    // the prospect never confirmed is the one the rep has to phone.
+    'meeting_confirmed_at', 'meeting_confirmation_sent_at',
+    'vsl_followup_sms_sent_at', 'day_before_sms_sent_at'
 ].join(',');
 
 module.exports = async function handler(req, res) {

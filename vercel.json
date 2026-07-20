@@ -69,6 +69,14 @@
     {
       "path": "/api/prospects/sync-scripts",
       "schedule": "40 * * * *"
+    },
+    {
+      "path": "/api/prospects/send-vsl-followup",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/prospects/send-day-before",
+      "schedule": "7 * * * *"
     }
   ],
   "headers": []

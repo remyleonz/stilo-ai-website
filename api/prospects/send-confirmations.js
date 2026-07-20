@@ -115,6 +115,9 @@ module.exports = async function handler(req, res) {
         const phone = ld.owner_phone || ld.phone || null;
         const rep = roster[String(ld.meeting_booked_by_sdr || '').toLowerCase()] || null;
         const repName = (rep && rep.display_name) || 'Remy';
+        // The SMS signs off with the rep's FIRST name only, the way they'd
+        // introduce themselves on the phone. display_name holds the full name.
+        const repFirst = firstName(repName);
         const fromLine = (rep && rep.openphone_number) || REMY_LINE;
 
         const pixel = BASE + '/api/public/vsl-event?event=email_open&lid=' + ld.id + '&agent=' + slug;
@@ -125,7 +128,14 @@ module.exports = async function handler(req, res) {
             + '<p style="color:#374151;font-size:13px">Cannot make it? Just reply and we will find a better time.</p>'
             + '<p>See you then,<br/>Remy<br/>STILO AI Partners</p>'
             + '<img src="' + esc(pixel) + '" width="1" height="1" style="display:none" alt=""/></div>';
-        const sms = 'Hi ' + first + ', it\'s ' + repName + ' from STILO. You\'re booked for ' + when + '. Confirm here so we hold your spot: ' + link;
+        // Step 1 of the nurture SMS sequence. Deliberately carries NO link: it
+        // points at the email so the prospect has to open it, which is what puts
+        // them on the VSL page where the confirm button lives. The rep's first
+        // name and their own Quo line make it read as a personal follow-up to the
+        // call that just happened, not an automated blast.
+        const sms = 'Hey ' + first + ', this is ' + repFirst + ' from Stilo Partners. Really enjoyed talking just now. '
+            + 'As I mentioned, I just emailed you a short video that explains the implementation we talked about in detail. '
+            + 'Give it a watch ASAP, so you can confirm your meeting on that page. The link\'s in your email.';
 
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
         if (email) er = await sendEmail(email, 'You are booked, quick confirm', html);
@@ -161,6 +171,22 @@ module.exports = async function handler(req, res) {
                 status: 'sent', variant: 'meeting_confirm',
                 // The rep who booked the meeting owns the confirmation, so it lands
                 // on their Emailed tab where they can chase an unconfirmed lead.
+                sent_by: ld.meeting_booked_by_sdr || null,
+                sent_at: new Date().toISOString(),
+            });
+        }
+        // Log the SMS too. Until now only the email got a lead_messages row, so
+        // the texts were invisible everywhere: nothing on the lead panel, nothing
+        // in the nurture tracker, and no way to answer "has this prospect heard
+        // from us?" without reading OpenPhone by hand.
+        if (smsOk) {
+            await sb.from('lead_messages').insert({
+                lead_id: ld.id, direction: 'outbound', channel: 'sms',
+                subject: 'Meeting booked, watch the video',
+                body_preview: sms.slice(0, 300),
+                to_address: phone, from_address: fromLine,
+                provider: 'openphone',
+                status: 'sent', variant: 'nurture_sms_1_booked',
                 sent_by: ld.meeting_booked_by_sdr || null,
                 sent_at: new Date().toISOString(),
             });

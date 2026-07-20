@@ -52,6 +52,9 @@ module.exports = async function handler(req, res) {
             auth: { persistSession: false },
             db: { schema: 'prospecting' }
         });
+        // NOTE: booked meetings are NOT merged in here. The callbacks calendar
+        // plots them as a separate layer from /api/prospects/list-booked, so
+        // adding them would double-draw every meeting.
         let q = sb.from('leads')
             .select(SELECT_COLS)
             .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
