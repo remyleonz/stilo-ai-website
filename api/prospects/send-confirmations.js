@@ -149,10 +149,20 @@ module.exports = async function handler(req, res) {
         // the older derived guess and is only the fallback. Reading it first is
         // what made the confirmation email able to pitch a different agent than
         // the rep sold.
+        // Resolve the booking rep FIRST: the email signs off with their name and
+        // the SMS goes from their own Quo line. This must precede
+        // buildConfirmation, which takes repName.
+        const rep = roster[String(ld.meeting_booked_by_sdr || '').toLowerCase()] || null;
+        const repName = (rep && rep.display_name) || 'Remy';
+        // The SMS signs off with the rep's FIRST name only, the way they would
+        // introduce themselves on the phone. display_name holds the full name.
+        const repFirst = firstName(repName);
+        const fromLine = (rep && rep.openphone_number) || REMY_LINE;
+
         // ONE source for this copy: _confirmation_email.js, shared with the
         // booking modal's editable preview. If this file built its own version,
         // the rep would approve one email and the prospect would get another.
-        const built = buildConfirmation({ lead: ld, repName: repName });
+        const built = buildConfirmation({ lead: ld, repName: repFirst });
         const slug = built.slug;
         const link = built.link;
 
