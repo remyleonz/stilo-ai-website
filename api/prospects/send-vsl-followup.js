@@ -19,7 +19,7 @@
  */
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
-const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
+const { sendSms } = require('./_sms');
 
 const REMY_LINE = '+17868376639';
 
@@ -30,11 +30,6 @@ function fmtDay(iso) {
 function fmtTime(iso) {
     if (!iso) return 'the time we set';
     return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(new Date(iso));
-}
-async function sendSms(from, to, content) {
-    if (!to) return { skip: 'no_phone' };
-    const r = await openphoneFetch({ method: 'POST', path: '/messages', body: { from: from, to: [normalizePhone(to)], content: content } });
-    return { status: r.status, err: (r.status >= 200 && r.status < 300) ? null : JSON.stringify(r.json).slice(0, 160) };
 }
 
 module.exports = async function handler(req, res) {
@@ -123,7 +118,7 @@ module.exports = async function handler(req, res) {
                 lead_id: ld.id, direction: 'outbound', channel: 'sms',
                 subject: 'Watched the video, meeting restated',
                 body_preview: sms.slice(0, 300),
-                to_address: phone, from_address: fromLine,
+                to_address: phone, from_address: (sr && sr.from) || fromLine,
                 provider: 'openphone',
                 status: 'sent', variant: 'nurture_sms_2_watched',
                 sent_by: ld.meeting_booked_by_sdr || null,

@@ -12,7 +12,7 @@
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { signLead } = require('../public/_token');
-const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
+const { sendSms } = require('./_sms');
 const { firstName: safeFirstName, greet } = require('./_names');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
@@ -46,11 +46,6 @@ async function sendEmail(to, subject, html) {
     });
     const j = await r.json().catch(function () { return {}; });
     return { status: r.status, id: j.id, err: r.ok ? null : (j.message || 'fail') };
-}
-async function sendSms(from, to, content) {
-    if (!to) return { skip: 'no_phone' };
-    const r = await openphoneFetch({ method: 'POST', path: '/messages', body: { from: from, to: [normalizePhone(to)], content: content } });
-    return { status: r.status, err: (r.status >= 200 && r.status < 300) ? null : JSON.stringify(r.json).slice(0, 160) };
 }
 
 module.exports = async function handler(req, res) {
@@ -200,7 +195,7 @@ module.exports = async function handler(req, res) {
                 lead_id: ld.id, direction: 'outbound', channel: 'sms',
                 subject: 'Meeting booked, watch the video',
                 body_preview: sms.slice(0, 300),
-                to_address: phone, from_address: fromLine,
+                to_address: phone, from_address: (sr && sr.from) || fromLine,
                 provider: 'openphone',
                 status: 'sent', variant: 'nurture_sms_1_booked',
                 sent_by: ld.meeting_booked_by_sdr || null,

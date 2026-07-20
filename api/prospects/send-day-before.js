@@ -24,16 +24,11 @@
  */
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
-const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
+const { sendSms } = require('./_sms');
 const { firstName, greet } = require('./_names');
 
 const REMY_LINE = '+17868376639';
 
-async function sendSms(from, to, content) {
-    if (!to) return { skip: 'no_phone' };
-    const r = await openphoneFetch({ method: 'POST', path: '/messages', body: { from: from, to: [normalizePhone(to)], content: content } });
-    return { status: r.status, err: (r.status >= 200 && r.status < 300) ? null : JSON.stringify(r.json).slice(0, 160) };
-}
 
 module.exports = async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
@@ -100,7 +95,7 @@ module.exports = async function handler(req, res) {
                 lead_id: ld.id, direction: 'outbound', channel: 'sms',
                 subject: 'Day-before check in',
                 body_preview: sms.slice(0, 300),
-                to_address: phone, from_address: fromLine,
+                to_address: phone, from_address: (sr && sr.from) || fromLine,
                 provider: 'openphone',
                 status: 'sent', variant: 'nurture_sms_3_day_before',
                 sent_by: ld.meeting_booked_by_sdr || null,
