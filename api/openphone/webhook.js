@@ -19,6 +19,24 @@
 
 const { verifySignature, readRawBody, serviceClient, publicClient, normalizePhone, openphoneFetch } = require('./_shared');
 
+// Quo ships TWO direction vocabularies depending on the event:
+//   call.completed                      -> 'incoming' / 'outgoing'
+//   call.summary/transcript.completed   -> 'inbound'  / 'outbound'
+// Everything downstream should reason in one. Normalize on read.
+//
+// This mismatch was not cosmetic: deriveOutcome tested direction === 'inbound'
+// while call.completed (the ONLY event that sets an outcome) always says
+// 'incoming'. So 'missed_inbound' never fired once in all of July -- every one
+// of the 72 incoming calls was filed as 'no_answer', and the 1-hour callback SLA
+// that keys off missed_inbound never applied to a single missed call.
+function normalizeDirection(d) {
+    const s = String(d || '').toLowerCase();
+    if (s === 'incoming' || s === 'inbound') return 'inbound';
+    if (s === 'outgoing' || s === 'outbound') return 'outbound';
+    return s || null;
+}
+function isInbound(d) { return normalizeDirection(d) === 'inbound'; }
+
 function deriveOutcome(callPayload) {
     const status = callPayload.status || callPayload.completedReason || '';
     const direction = callPayload.direction || 'outbound';
@@ -28,7 +46,7 @@ function deriveOutcome(callPayload) {
     // Voicemail check comes BEFORE the generic answered check because Quo
     // ships voicemail-only calls with status='completed' + voicemail=true.
     if (status === 'voicemail' || callPayload.voicemail) return 'voicemail';
-    if (direction === 'inbound' && !answered) return 'missed_inbound';
+    if (isInbound(direction) && !answered) return 'missed_inbound';
     if (!answered) return 'no_answer';
     return 'answered';
 }
@@ -372,10 +390,16 @@ module.exports = async function handler(req, res) {
         console.warn('[openphone/webhook] no call id in event:', type);
         return res.status(202).json({ ok: true, ignored: 'no_call_id' });
     }
-    const direction = call.direction || 'outbound';
+    // Normalize on WRITE so the stored value is stable regardless of which event
+    // wrote it last. Before this, an answered outbound call was stored as
+    // 'outgoing' by call.completed and then flipped to 'outbound' when the
+    // summary landed -- which is the entire reason three direction values exist
+    // in the table, and why every downstream filter has to say
+    // .in('direction', ['outbound','outgoing']).
+    const direction = normalizeDirection(call.direction) || 'outbound';
     const fromNumber = call.from || (call.participants && call.participants[0]) || null;
     const toNumber = call.to || (call.participants && call.participants[1]) || null;
-    let counterparty = direction === 'inbound' ? fromNumber : toNumber;
+    let counterparty = isInbound(direction) ? fromNumber : toNumber;
     // Transcript events have no from/to — fall back to dialogue identifier
     if (!counterparty && Array.isArray(call.dialogue)) {
         const ext = call.dialogue.find(function(t) { return t.userId == null && t.identifier; });
@@ -456,9 +480,16 @@ module.exports = async function handler(req, res) {
         const ourLines = new Set(Object.keys(OWNER_LINE_TO_EMAIL).map(normalizePhone).filter(Boolean));
         try {
             const pubLines = publicClient();
-            const { data: _lns } = await pubLines.from('sdr_users').select('openphone_number').eq('active', true).not('openphone_number', 'is', null);
+            const { data: _lns, error: _lnsErr } = await pubLines.from('sdr_users').select('openphone_number').eq('active', true).not('openphone_number', 'is', null);
+            // Log it. Falling back to owner lines alone silently means every SDR
+            // line stops being recognised as ours, so resolveCounterpartyLead
+            // starts treating OUR number as the prospect and stubs junk leads.
+            // Degrading is right; degrading invisibly is not.
+            if (_lnsErr) console.error('[openphone/webhook] sdr_users line fetch failed, falling back to owner lines only:', _lnsErr.message);
             (_lns || []).forEach(function (r) { const n = normalizePhone(r.openphone_number); if (n) ourLines.add(n); });
-        } catch (_) { /* owner lines alone still help */ }
+        } catch (e) {
+            console.error('[openphone/webhook] sdr_users line fetch threw, falling back to owner lines only:', (e && e.message) || e);
+        }
         const metaLeadId = (call.metadata && (call.metadata.lead_id || call.metadata.leadId
             || call.metadata.prospect_id || call.metadata.prospectId)) || null;
         if (metaLeadId) {
