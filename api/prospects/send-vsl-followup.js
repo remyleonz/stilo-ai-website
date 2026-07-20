@@ -104,16 +104,29 @@ module.exports = async function handler(req, res) {
 
         if (dry) { results.push({ id: ld.id, to_phone: phone, viewed_at: seen[ld.id], sms_preview: sms }); continue; }
 
-        const sr = await sendSms(fromLine, phone, sms);
+        const sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
         const smsOk = sr && !sr.skip && !sr.err;
 
         // Only stamp on a real send, so a failure retries next tick instead of
         // being marked done forever.
         if (smsOk) {
-            await sb.from('leads').update({
-                vsl_followup_sms_sent_at: new Date().toISOString(),
-                nurture_stage: 'vsl_watched'
-            }).eq('id', ld.id);
+            // Stamp the idempotency column ALONE and check the error. These must
+            // never share an UPDATE with nurture_stage: a rejected stage value
+            // fails the whole statement, the stamp never lands, and the lead is
+            // re-texted every tick forever. That shipped once (2026-07-20, one
+            // prospect got 40 texts) and must not ship again.
+            const { error: stampErr } = await sb.from('leads')
+                .update({ vsl_followup_sms_sent_at: new Date().toISOString() })
+                .eq('id', ld.id);
+            if (stampErr) {
+                console.error('[send-vsl-followup] STAMP FAILED lead=' + ld.id + ' — halting to avoid a resend loop:', stampErr.message);
+                results.push({ id: ld.id, sent: true, stamp_failed: true, detail: stampErr.message });
+                continue;
+            }
+            // Best effort, cosmetic. A failure here must not block anything.
+            const { error: stageErr } = await sb.from('leads')
+                .update({ nurture_stage: 'vsl_watched' }).eq('id', ld.id);
+            if (stageErr) console.error('[send-vsl-followup] nurture_stage write failed lead=' + ld.id + ':', stageErr.message);
             await sb.from('lead_messages').insert({
                 lead_id: ld.id, direction: 'outbound', channel: 'sms',
                 subject: 'Watched the video, meeting restated',

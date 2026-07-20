@@ -150,7 +150,7 @@ module.exports = async function handler(req, res) {
 
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
         if (email) er = await sendEmail(email, 'You are booked, quick confirm', html);
-        if (phone) sr = await sendSms(fromLine, phone, sms);
+        if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
 
         // Only mark sent if a channel actually landed. The old code stamped
         // unconditionally, so a lead whose email AND sms both failed was burned

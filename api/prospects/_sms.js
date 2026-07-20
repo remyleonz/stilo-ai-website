@@ -15,8 +15,58 @@
  * Returns { status, err, from, fellBack } so callers can log which line was used.
  */
 const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
+const { createClient } = require('@supabase/supabase-js');
 
 const REMY_LINE = '+17868376639';
+
+// Safety ceiling. Legitimate nurture is 3 texts and they can legally land in one
+// day (book in the morning, watch the VSL, meeting tomorrow). Anything past this
+// is a bug, not a campaign.
+const MAX_SMS_PER_LEAD_24H = 5;
+
+/**
+ * Refuse to send when the send looks like a loop rather than a campaign.
+ *
+ * On 2026-07-20 a rejected nurture_stage value made an idempotency stamp fail,
+ * and one prospect got the same text 40 times over three hours before anyone
+ * noticed. The per-cron stamp was fixed, but a stamp is a single point of
+ * failure: any future cron that fails to record "already sent" recreates the
+ * same outage. This is the backstop that makes that class of bug embarrassing
+ * instead of catastrophic.
+ *
+ * Two gates:
+ *   1. Identical body to the same lead inside 24h  -> always a bug. Block.
+ *   2. More than MAX_SMS_PER_LEAD_24H to one lead  -> runaway. Block.
+ *
+ * Fails OPEN: if the check itself errors we allow the send, because silently
+ * swallowing outbound messages is worse than the thing we are guarding against.
+ */
+async function guardrail(leadId, content) {
+    if (!leadId) return { ok: true };
+    try {
+        const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+            auth: { persistSession: false }, db: { schema: 'prospecting' },
+        });
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data, error } = await sb.from('lead_messages')
+            .select('body_preview')
+            .eq('lead_id', leadId).eq('channel', 'sms').eq('direction', 'outbound')
+            .gte('sent_at', since).limit(100);
+        if (error) return { ok: true };
+
+        const rows = data || [];
+        const head = String(content || '').slice(0, 300);
+        if (rows.some(function (m) { return m.body_preview === head; })) {
+            return { ok: false, reason: 'duplicate_body_24h' };
+        }
+        if (rows.length >= MAX_SMS_PER_LEAD_24H) {
+            return { ok: false, reason: 'rate_cap_24h', count: rows.length };
+        }
+        return { ok: true };
+    } catch (_) {
+        return { ok: true };
+    }
+}
 
 // OpenPhone's shape for "that from-number is not one you can send from".
 function isBadFromLine(r) {
@@ -25,8 +75,16 @@ function isBadFromLine(r) {
     return /Phone number not found/i.test(body);
 }
 
-async function sendSms(from, to, content) {
+async function sendSms(from, to, content, opts) {
     if (!to) return { skip: 'no_phone' };
+
+    const leadId = opts && opts.leadId;
+    const guard = await guardrail(leadId, content);
+    if (!guard.ok) {
+        console.error('[sms] BLOCKED lead=' + leadId + ' reason=' + guard.reason + (guard.count ? ' count=' + guard.count : ''));
+        return { skip: guard.reason, blocked: true };
+    }
+
     const target = normalizePhone(to);
 
     let r = await openphoneFetch({ method: 'POST', path: '/messages', body: { from: from, to: [target], content: content } });
