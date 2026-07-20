@@ -76,7 +76,7 @@ module.exports = async function handler(req, res) {
 
     const firstName = (lead.owner_name || '').trim().split(/\s+/)[0] || null;
     const fromName = process.env.STILO_SENDER_NAME || 'Remy Leon';
-    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
+    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const replyTo = process.env.STILO_REPLY_TO || fromEmail;
     const subject = 'Did we miss each other?';
     const html = buildHtml({ firstName: firstName, businessName: lead.name, whenIso: lead.meeting_scheduled_at });

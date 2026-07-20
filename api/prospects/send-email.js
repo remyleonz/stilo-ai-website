@@ -148,7 +148,7 @@ module.exports = async function handler(req, res) {
     // reads clean in text-only clients and looks less "marketing" to Gmail.
     const plainText = kit.ensureBookingLink(kit.sanitizeCopy(message)) + '\n\n' + kit.footerText(sender);
 
-    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
+    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     // Quote the display name (RFC 5322) — it carries a middot, and the rep's
     // name could contain characters that would otherwise need escaping.
     const fromName = '"' + sender.name.replace(/"/g, '') + ' · STILO AI Partners"';

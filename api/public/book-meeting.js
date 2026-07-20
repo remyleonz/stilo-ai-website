@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
 
     // --- Prospect confirmation + internal heads-up (best-effort) ---
     const whenStr = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(startDate);
-    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
+    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
     try {
         await sendResend({

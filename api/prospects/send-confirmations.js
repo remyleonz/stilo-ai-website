@@ -13,6 +13,7 @@ const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { signLead } = require('../public/_token');
 const { sendSms, guardOutbound } = require('./_sms');
+const { sendTransactional } = require('./_gmail_send');
 const { firstName: safeFirstName, greet } = require('./_names');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
@@ -71,23 +72,15 @@ function unsubToken(email) {
  * re-checking DNS when this regresses; check for HTML, pixels and buttons.
  */
 async function sendEmail(to, subject, text) {
-    if (!process.env.RESEND_API_KEY || !to) return { skip: 'no_email_or_key' };
+    if (!to) return { skip: 'no_email' };
     const t = unsubToken(to);
     const headers = t ? {
         'List-Unsubscribe': '<' + BASE + '/api/unsubscribe?t=' + t + '>, <mailto:' + REPLY_TO + '?subject=unsubscribe>',
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     } : undefined;
-    const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST', headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            from: 'Remy Leon <' + REPLY_TO + '>',
-            to: [to], reply_to: REPLY_TO, subject: subject,
-            text: text,   // plain text only: no html part, no pixel
-            headers: headers,
-        })
-    });
-    const j = await r.json().catch(function () { return {}; });
-    return { status: r.status, id: j.id, err: r.ok ? null : (j.message || 'fail') };
+    // Gmail first (this is transactional mail to someone who just booked),
+    // Resend as fallback. See _gmail_send.js for why the split matters.
+    return await sendTransactional({ to: to, subject: subject, text: text, replyTo: REPLY_TO, headers: headers });
 }
 
 module.exports = async function handler(req, res) {
@@ -217,7 +210,7 @@ module.exports = async function handler(req, res) {
         // legitimate second meeting look like a resend loop and silently blocked
         // it — which happened to Hugo Garcia on 2026-07-20: he got the SMS
         // saying "I just emailed you" while the email itself was suppressed.
-        const subject = 'You are booked, quick confirm — ' + new Intl.DateTimeFormat('en-US', {
+        const subject = 'You are booked, quick confirm for ' + new Intl.DateTimeFormat('en-US', {
             weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York'
         }).format(new Date(ld.meeting_scheduled_at));
 

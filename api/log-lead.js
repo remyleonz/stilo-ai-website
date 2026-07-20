@@ -107,9 +107,11 @@ function buildQuizReplyHtml(row) {
 async function sendQuizLeadReplyEmail(row, leadId) {
   var html = buildQuizReplyHtml(row);
   var subject = 'Your AI plan for ' + (row.business_name || 'your business');
-  // Sender: real Workspace user remy@stiloaipartners.com so Gmail recipients
+  // Sender: the real Workspace mailbox, so Gmail recipients
   // see a profile picture (hello@ has no Workspace mailbox, no pfp).
-  var from = 'Remy Leon <remy@stiloaipartners.com>';
+  // Standardised on remyleon@ 2026-07-20: every other sender falls back to it,
+  // and a From address that is not a real deliverable mailbox is a reputation hit.
+  var from = 'Remy Leon <' + (process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com') + '>';
   var to = row.email;
   if (!to) return { ok: false, reason: 'no_email' };
 

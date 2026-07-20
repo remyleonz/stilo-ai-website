@@ -118,7 +118,12 @@ function escapeHtml(s) {
 // The second, STILO-branded confirmation email. Light theme (Gmail dark-mode
 // inverts light emails cleanly). One clear CTA: confirm the meeting, which also
 // drops them on the VSL landing page for the agent we're selling them.
-function buildConfirmEmailHtml(opts) {
+// PLAIN TEXT. No button, no card, no footer table, no brand-coloured links.
+// Same reasoning as send-confirmations.js: every one of those is a Promotions
+// signal, and this email goes to someone who just booked a call and needs to
+// actually see it. Kept the name buildConfirmEmailHtml -> buildConfirmEmailText
+// so nothing silently keeps passing HTML.
+function buildConfirmEmailText(opts) {
     const fmt = new Intl.DateTimeFormat('en-US', {
         weekday: 'long', month: 'long', day: 'numeric',
         hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York'
@@ -128,51 +133,47 @@ function buildConfirmEmailHtml(opts) {
     const confirmUrl = baseUrl() + '/api/prospects/confirm-meeting?token=' + encodeURIComponent(opts.token);
     const a = AGENTS[agentKey(opts.agent)];
     return [
-        '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111;font-size:15px;line-height:1.55;">',
-        '<p>Hi ' + escapeHtml(opts.firstName || 'there') + ',</p>',
-        '<p>Great talking with you. I have us down for <strong>' + escapeHtml(whenStr) + '</strong> to walk through how the <strong>' + escapeHtml(a.name) + '</strong> agent would work for ' + escapeHtml(opts.businessName || 'your business') + '.</p>',
-        '<p>One quick thing so I know you are still good for it: hit the button below to confirm. It also pulls up a short walkthrough of exactly what I will show you on the call.</p>',
-        '<div style="text-align:center;margin:28px 0;">',
-        '<a href="' + escapeHtml(confirmUrl) + '" style="display:inline-block;background:#2563EB;color:#fff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 28px;border-radius:8px;">Confirm my meeting</a>',
-        '</div>',
-        '<p style="color:#374151;font-size:13px;">Cannot make it anymore? Just reply and we will find a better time.</p>',
-        '<p>Talk soon,<br/>' + escapeHtml(senderName) + '</p>',
-        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;" />',
-        '<div style="font-size:13px;color:#374151;"><strong style="color:#111;">' + escapeHtml(senderName) + '</strong><br/>STILO AI Partners<br/><a href="' + baseUrl() + '" style="color:#2563EB;text-decoration:none;">stiloaipartners.com</a></div>',
-        '</div>'
-    ].join('');
+        'Hi ' + (opts.firstName || 'there') + ',',
+        '',
+        'Great talking with you. I have us down for ' + whenStr + ' to walk through how the '
+            + a.name + ' agent would work for ' + (opts.businessName || 'your business') + '.',
+        '',
+        'One quick thing so I know you are still good for it. Confirm here, and the same page '
+            + 'pulls up a short walkthrough of exactly what I will show you on the call:',
+        confirmUrl,
+        '',
+        'Cannot make it anymore? Just reply and we will find a better time.',
+        '',
+        'Talk soon,',
+        senderName,
+        'STILO AI Partners',
+    ].join('\n');
 }
 
 async function sendConfirmEmail(opts) {
     // opts: { toEmail, firstName, businessName, whenIso, agent, leadId }
     if (!isEnabled()) return { skipped: 'vsl_flow_disabled' };
-    if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
     if (!opts.toEmail) return { skipped: 'no_lead_email' };
     const token = signConfirmToken({
         lead: opts.leadId,
         a: agentKey(opts.agent),
         exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 // 30 days
     });
-    const fromName = process.env.STILO_SENDER_NAME || 'Remy Leon';
-    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
-    const replyTo = process.env.STILO_REPLY_TO || fromEmail;
-    const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            from: fromName + ' <' + fromEmail + '>',
-            to: [opts.toEmail],
-            reply_to: replyTo,
-            subject: 'Quick confirm for our call, ' + (opts.firstName || 'there'),
-            html: buildConfirmEmailHtml({ ...opts, token: token })
-        })
+    // Gmail first, Resend fallback. Transactional mail to a booked prospect
+    // must not ride the same reputation as the cold campaign.
+    const { sendTransactional } = require('./_gmail_send');
+    const replyTo = process.env.STILO_REPLY_TO || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    const r = await sendTransactional({
+        to: opts.toEmail,
+        subject: 'Quick confirm for our call, ' + (opts.firstName || 'there'),
+        text: buildConfirmEmailText({ ...opts, token: token }),
+        replyTo: replyTo,
     });
-    const json = await r.json().catch(function () { return {}; });
-    return { status: r.status, id: json.id, error: r.ok ? null : (json.message || 'send_failed') };
+    return { status: r.status, id: r.id, error: r.err || null, via: r.via };
 }
 
 module.exports = {
     AGENTS, isEnabled, agentKey, landingUrl,
     signConfirmToken, verifyConfirmToken,
-    buildConfirmEmailHtml, sendConfirmEmail, baseUrl, escapeHtml
+    buildConfirmEmailText, sendConfirmEmail, baseUrl, escapeHtml
 };

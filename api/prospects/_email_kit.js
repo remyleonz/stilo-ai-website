@@ -215,7 +215,7 @@ async function getSenderIdentity(callerEmail) {
     const fallback = {
         name: process.env.STILO_SENDER_NAME || 'Remy Leon',
         phone: '(786) 876-8677',
-        replyTo: callerEmail || process.env.STILO_REPLY_TO || 'remy@stiloaipartners.com'
+        replyTo: callerEmail || process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com'
     };
     if (!callerEmail || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return fallback;
     try {

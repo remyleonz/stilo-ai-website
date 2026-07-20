@@ -62,7 +62,7 @@ async function sendConfirmationEmail(opts) {
     if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
     if (!opts.toEmail) return { skipped: 'no_lead_email' };
     const fromName = process.env.STILO_SENDER_NAME || 'Remy Leon';
-    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
+    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const replyTo = process.env.STILO_REPLY_TO || fromEmail;
     const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -92,7 +92,7 @@ async function sendInternalNotification(opts) {
         .filter(function (e, i, a) { return a.indexOf(e) === i; });
     const toEmail = toList[0];
     const fromName = process.env.STILO_SENDER_NAME || 'STILO AI Partners';
-    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remy@stiloaipartners.com';
+    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const whenStr = new Intl.DateTimeFormat('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
         timeZoneName: 'short', timeZone: 'America/New_York'

@@ -19,6 +19,12 @@
  */
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
+// Deliberately NOT a local sendSms. This file used to define its own, which
+// bypassed the _sms.js guardrail entirely: no duplicate-body check, no 24h rate
+// cap, no from-line fallback. A private copy of a shared safety mechanism is a
+// safety mechanism you do not have.
+const { sendSms, guardOutbound } = require('./_sms');
+const { sendTransactional } = require('./_gmail_send');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 const REMY_LINE = '+17868376639';
@@ -28,23 +34,16 @@ function fmtTime(iso) {
     if (!iso) return 'shortly';
     return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(new Date(iso));
 }
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+// (No esc() here any more: plain text only, nothing to escape.)
 
-async function sendEmail(to, subject, html) {
-    if (!process.env.RESEND_API_KEY || !to) return { skip: 'no_email_or_key' };
-    const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST', headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'Remy Leon <remyleon@stiloaipartners.com>', to: [to], reply_to: 'remyleon@stiloaipartners.com', subject: subject, html: html })
-    });
-    const j = await r.json().catch(function () { return {}; });
-    return { status: r.status, id: j.id, err: r.ok ? null : (j.message || 'fail') };
+// Plain text only, Gmail first. This is a "join now" nudge to someone who
+// booked a meeting; it has to land in the inbox, and a styled HTML card with a
+// blue button is exactly what gets it filed as Promotions. Same reasoning as
+// send-confirmations.js. See _gmail_send.js.
+async function sendEmail(to, subject, text) {
+    if (!to) return { skip: 'no_email' };
+    return await sendTransactional({ to: to, subject: subject, text: text });
 }
-// Deliberately NOT a local sendSms any more. This file used to define its own,
-// which meant it bypassed the _sms.js guardrail entirely -- no duplicate-body
-// check, no 24h rate cap, and no from-line fallback for lines that cannot send.
-// A private copy of a shared safety mechanism is a safety mechanism you do not
-// have. See api/prospects/_sms.js.
-const { sendSms, guardOutbound } = require('./_sms');
 
 module.exports = async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
@@ -97,18 +96,24 @@ module.exports = async function handler(req, res) {
         const repName = (rep && rep.display_name && rep.display_name.split(/\s+/)[0]) || 'Remy';
         const fromLine = (rep && rep.openphone_number) || REMY_LINE;
 
-        // No VSL, no tracking pixel: this is a transactional "join now" nudge, and
-        // a mail-scanner opening a pixel here would tell us nothing useful.
-        const joinBtn = meet
-            ? '<div style="text-align:center;margin:22px 0"><a href="' + esc(meet) + '" style="display:inline-block;background:#2563EB;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 26px;border-radius:8px">Join the meeting</a></div>'
-            + '<p style="color:#374151;font-size:13px;text-align:center;word-break:break-all">' + esc(meet) + '</p>'
-            : '<p>' + esc(repName) + ' will call you at the number on file.</p>';
-        const html = '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
-            + '<p>Hi ' + esc(first) + ',</p>'
-            + '<p>Quick reminder, your meeting with STILO is at <strong>' + esc(when) + '</strong>, about 15 minutes from now.</p>'
-            + joinBtn
-            + '<p style="color:#374151;font-size:13px">Running late or need to move it? Just reply here.</p>'
-            + '<p>See you shortly,<br/>' + esc(repName) + '<br/>STILO AI Partners</p></div>';
+        // Plain text. No button, no card. The Meet link has to be the plainest
+        // thing in the message so it survives every client.
+        const joinLine = meet
+            ? ['Join here:', meet]
+            : [repName + ' will call you at the number on file.'];
+        const body = [
+            'Hi ' + first + ',',
+            '',
+            'Quick reminder, your meeting with STILO is at ' + when + ', about 15 minutes from now.',
+            '',
+        ].concat(joinLine).concat([
+            '',
+            'Running late or need to move it? Just reply here.',
+            '',
+            'See you shortly,',
+            repName,
+            'STILO AI Partners',
+        ]).join('\n');
         const sms = meet
             ? 'Hi ' + first + ', ' + repName + ' from STILO. Our meeting is at ' + when + ', about 15 min out. Join here: ' + meet
             : 'Hi ' + first + ', ' + repName + ' from STILO. Our meeting is at ' + when + ', about 15 min out. I\'ll call you then.';
@@ -117,12 +122,12 @@ module.exports = async function handler(req, res) {
 
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
         if (email) {
-            const eg = await guardOutbound(ld.id, 'email', html, 'Your STILO meeting starts in ~15 minutes');
+            const eg = await guardOutbound(ld.id, 'email', body, 'Your STILO meeting starts in ~15 minutes');
             if (!eg.ok) {
                 console.error('[send-meeting-reminders] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
                 er = { skip: eg.reason, blocked: true };
             } else {
-                er = await sendEmail(email, 'Your STILO meeting starts in ~15 minutes', html);
+                er = await sendEmail(email, 'Your STILO meeting starts in ~15 minutes', body);
             }
         }
         if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
