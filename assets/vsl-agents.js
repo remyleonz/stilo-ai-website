@@ -78,9 +78,12 @@
         var options = VSL_AGENTS.map(function (a) {
             return '<option value="' + a.slug + '"' + (a.slug === current ? ' selected' : '') + '>' + a.name + '</option>';
         }).join('');
+        // onChange lets the caller refresh anything that depends on the agent
+        // (the confirmation-email preview embeds an agent-specific VSL link).
+        var onChange = o.onChange ? ' onchange="' + o.onChange + '"' : '';
         return '<label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;'
             + 'letter-spacing:0.06em;color:var(--text-secondary);margin:12px 0 5px;">Agent we\'re pitching</label>'
-            + '<select id="' + selectId + '" style="width:100%;padding:9px 11px;background:var(--bg-input);'
+            + '<select id="' + selectId + '"' + onChange + ' style="width:100%;padding:9px 11px;background:var(--bg-input);'
             + 'border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:13px;cursor:pointer;">'
             + options + '</select>'
             + '<div style="font-size:11px;color:' + labelColor + ';margin-top:4px;">'

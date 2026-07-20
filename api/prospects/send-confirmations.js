@@ -14,6 +14,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { signLead } = require('../public/_token');
 const { sendSms, guardOutbound } = require('./_sms');
 const { sendTransactional } = require('./_gmail_send');
+const { buildConfirmation } = require('./_confirmation_email');
 const { firstName: safeFirstName, greet } = require('./_names');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
@@ -120,7 +121,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,address,owner_name,owner_email,email,owner_phone,phone,pitch_agent,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,meeting_booked_at')
+        .select('id,name,address,owner_name,owner_email,email,owner_phone,phone,pitch_agent,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,meeting_booked_at,confirmation_email_subject,confirmation_email_body')
         .is('meeting_confirmation_sent_at', null)
         .not('meeting_booked_at', 'is', null)
         .gt('meeting_scheduled_at', nowIso);
@@ -148,9 +149,20 @@ module.exports = async function handler(req, res) {
         // the older derived guess and is only the fallback. Reading it first is
         // what made the confirmation email able to pitch a different agent than
         // the rep sold.
-        const slug = slugFor(ld.pitch_agent || ld.matched_product_name);
-        const token = signLead(ld.id);
-        const link = BASE + '/agents/' + slug + '?lid=' + ld.id + '&t=' + token + '&confirm=1';
+        // ONE source for this copy: _confirmation_email.js, shared with the
+        // booking modal's editable preview. If this file built its own version,
+        // the rep would approve one email and the prospect would get another.
+        const built = buildConfirmation({ lead: ld, repName: repName });
+        const slug = built.slug;
+        const link = built.link;
+
+        // A rep can edit the email in the booking modal. If they did, send THEIR
+        // words, not the template. Storing the override and then ignoring it
+        // would make the preview a lie.
+        const subject = ld.confirmation_email_subject || built.subject;
+        const body = ld.confirmation_email_body || built.body;
+        const edited = !!(ld.confirmation_email_subject || ld.confirmation_email_body);
+
         // Email keeps the softer 'Hi there' fallback; the SMS must not use it,
         // so we carry a strict version that is null when the name is untrustworthy.
         const first = firstName(ld.owner_name);
@@ -158,31 +170,7 @@ module.exports = async function handler(req, res) {
         const when = fmtWhen(ld.meeting_scheduled_at);
         const email = ld.owner_email || ld.email || null;
         const phone = ld.owner_phone || ld.phone || null;
-        const rep = roster[String(ld.meeting_booked_by_sdr || '').toLowerCase()] || null;
-        const repName = (rep && rep.display_name) || 'Remy';
-        // The SMS signs off with the rep's FIRST name only, the way they'd
-        // introduce themselves on the phone. display_name holds the full name.
-        const repFirst = firstName(repName);
-        const fromLine = (rep && rep.openphone_number) || REMY_LINE;
 
-        // Plain text, written the way a person types an email. No pixel (the
-        // open-tracking signal is not worth the spam score, and image blocking
-        // made it undercount anyway), no button, no card. The bare link is the
-        // only thing that has to survive.
-        const body = [
-            'Hi ' + first + ',',
-            '',
-            'You are on the calendar for ' + when + '.',
-            '',
-            'Confirm you are still good here, and you will see your details plus a short video on what we are building for you:',
-            link,
-            '',
-            'Cannot make it? Just reply and we will find a better time.',
-            '',
-            'See you then,',
-            repName,
-            'STILO AI Partners',
-        ].join('\n');
         // Step 1 of the nurture SMS sequence. Deliberately carries NO link: it
         // points at the email so the prospect has to open it, which is what puts
         // them on the VSL page where the confirm button lives. The rep's first
@@ -204,18 +192,8 @@ module.exports = async function handler(req, res) {
             + 'As I mentioned, I just emailed you a short video that explains the implementation we talked about in detail. '
             + 'Give it a watch ASAP, so you can confirm your meeting on that page. The link\'s in your email.';
 
-        // Subject carries the meeting date. Two reasons: it reads better in a
-        // crowded inbox, and it makes a REBOOKING a genuinely different subject.
-        // The 24h duplicate guard keys on subject, so a fixed string made a
-        // legitimate second meeting look like a resend loop and silently blocked
-        // it — which happened to Hugo Garcia on 2026-07-20: he got the SMS
-        // saying "I just emailed you" while the email itself was suppressed.
-        const subject = 'You are booked, quick confirm for ' + new Intl.DateTimeFormat('en-US', {
-            weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York'
-        }).format(new Date(ld.meeting_scheduled_at));
-
         if (dry) {
-            results.push({ id: ld.id, slug: slug, to_email: email, to_phone: phone, when: when, sms_preview: sms, subject: subject });
+            results.push({ id: ld.id, slug: slug, to_email: email, to_phone: phone, when: when, sms_preview: sms, subject: subject, rep_edited: edited });
             continue;
         }
 

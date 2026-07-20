@@ -2090,6 +2090,7 @@
     <script src="/assets/cold-call-script.js"></script>
     <script src="/assets/nurture-stepper.js"></script>
     <script src="/assets/vsl-agents.js"></script>
+    <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script>
         /* ===========================================================
@@ -7863,11 +7864,13 @@
                       // Without it every booking silently defaulted to
                       // receptionist, so the confirmation VSL could pitch
                       // something the rep never mentioned.
-                      + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('prospectBookAgent', d) : '')
+                      + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('prospectBookAgent', d, { onChange: 'refreshConfirmationPreview()' }) : '')
                       + '<div id="prospectBookingSlots"></div>'
                       + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
                         + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
                         + '<input id="prospectBookManual" type="datetime-local" onchange="setManualBookSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;">'
+                      // The exact confirmation email, editable, below the date/time.
+                      + (window.CONFIRMATION_PREVIEW ? CONFIRMATION_PREVIEW.html('prospectConfirmPreview') : '')
                       + '</div>'
                       + '</div>')
                 + (mode === 'emailable'
@@ -8121,12 +8124,31 @@
         // one) vs a reschedule (move the current one). Reset every time the picker
         // is opened from either button, so it never leaks between leads.
         var bookingIsFollowup = false;
+        // Keeps the editable confirmation-email preview in step with the slot and
+        // the agent dropdown. The VSL link in the body is agent-specific, so
+        // switching agent has to re-fetch or the rep approves the wrong link.
+        function refreshConfirmationPreview(force) {
+            if (!window.CONFIRMATION_PREVIEW || bookingState.leadId == null) return;
+            CONFIRMATION_PREVIEW.configure({ escape: escapeAdminHtml, fetchJson: prospectFetchJSON });
+            CONFIRMATION_PREVIEW.load({
+                leadId: bookingState.leadId,
+                agent: window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.readSelect('prospectBookAgent') : null,
+                whenIso: bookingState.selectedIso || null,
+                force: force === true
+            });
+        }
         function openBookingPicker(leadId, msgText) {
             if (typeof selectProspectOutcome === 'function') selectProspectOutcome('booked_meeting');
             var sel = document.getElementById('prospectOutcome');
             if (sel) sel.value = 'booked_meeting';
             onOutcomeChange();
+            // The confirmation preview needs to know which lead it is drafting for.
+            bookingState.leadId = leadId;
+            if (window.CONFIRMATION_PREVIEW) CONFIRMATION_PREVIEW.clear();
             loadBookingSlots();
+            // Draft it immediately so the rep can read it while picking a slot;
+            // it re-renders with the real time once one is chosen.
+            refreshConfirmationPreview(true);
             var picker = document.getElementById('prospectBookingPicker');
             if (picker) picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
             var msg = document.getElementById('prospectFormMsg');
@@ -8199,7 +8221,7 @@
         // ─── Booking slot picker (Google Calendar free/busy) ───────────────────
         // Two-step UI: day cards first, then time slots for the selected day.
         // Old all-days-x-all-hours grid was too cluttered.
-        var bookingState = { slots: [], selectedIso: null, expandedDay: null, configured: null, weekOffset: 0 };
+        var bookingState = { slots: [], selectedIso: null, expandedDay: null, configured: null, weekOffset: 0, leadId: null };
 
         // Page the slot picker forward/back a week at a time (from= offset on the
         // availability endpoint), so meetings can be booked further out than the
@@ -8225,6 +8247,7 @@
                 msg.style.color = 'var(--blue)';
                 msg.textContent = 'Manual time: ' + new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET. Click Book + send invite.';
             }
+            refreshConfirmationPreview();
         }
 
         async function loadBookingSlots() {
@@ -8363,6 +8386,7 @@
                 var t = new Date(iso).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
                 msgEl.textContent = 'Slot selected: ' + t + ' ET. Click "Book + send invite" to confirm.';
             }
+            refreshConfirmationPreview();
         }
 
         /* ===== LEAD NOTES (autosave) =====
@@ -8579,6 +8603,9 @@
                     // wrong one.
                     var pickedAgent = window.VSL_AGENT_PICKER && VSL_AGENT_PICKER.readSelect('prospectBookAgent');
                     if (pickedAgent) bookBody.agent = pickedAgent;
+                    // If the rep edited the confirmation email, send THEIR version.
+                    // Returns {} when untouched so the lead keeps following the template.
+                    if (window.CONFIRMATION_PREVIEW) Object.assign(bookBody, CONFIRMATION_PREVIEW.readEdits());
                     // Follow-up keeps the prior meeting in history; reschedule moves it.
                     if (bookingIsFollowup) bookBody.is_followup = true;
                     await prospectFetchJSON('/api/prospects/book-meeting', {

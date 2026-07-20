@@ -362,6 +362,26 @@ module.exports = async function handler(req, res) {
             // Save the email the rep captured on the call so the lead has it going forward.
             if (typedEmail && !lead.owner_email) updateRow.owner_email = typedEmail;
 
+            // The booking modal previews the confirmation email and lets the rep
+            // edit it. Persist an edit so send-confirmations.js sends THEIR words
+            // rather than the template. Sending the template after showing them
+            // an editable box would make the preview a lie.
+            //
+            // Only store a real change: if the text still matches the generated
+            // default, keep the columns NULL so future edits to the template
+            // still reach this lead instead of being frozen at today's wording.
+            if (typeof body.confirmation_subject === 'string' || typeof body.confirmation_body === 'string') {
+                const { buildConfirmation } = require('./_confirmation_email');
+                const def = buildConfirmation({
+                    lead: lead, agent: body.agent || null, whenIso: startIso,
+                    repName: (bookedByName || 'Remy').split(/\s+/)[0],
+                });
+                const subj = typeof body.confirmation_subject === 'string' ? body.confirmation_subject.trim() : null;
+                const bod = typeof body.confirmation_body === 'string' ? body.confirmation_body.trim() : null;
+                updateRow.confirmation_email_subject = (subj && subj !== def.subject) ? subj.slice(0, 500) : null;
+                updateRow.confirmation_email_body = (bod && bod !== def.body) ? bod.slice(0, 20000) : null;
+            }
+
             // RESET THE PER-MEETING NURTURE STAMPS WHEN THE MEETING MOVES.
             //
             // Every nurture cron is idempotent on a stamp and eligible only when

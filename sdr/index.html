@@ -12,6 +12,7 @@
     <script src="/assets/cold-call-script.js"></script>
     <script src="/assets/nurture-stepper.js"></script>
     <script src="/assets/vsl-agents.js"></script>
+    <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <style>
         :root {
@@ -2616,12 +2617,14 @@
                 // Which agent the rep actually sold on the call. Same picker the
                 // admin drawer uses (assets/vsl-agents.js) so the two dashboards
                 // cannot drift — the booking markup is otherwise duplicated.
-                + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('sdrBookingAgent', r, { helperColor: 'var(--text-tertiary)' }) : '')
+                + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('sdrBookingAgent', r, { helperColor: 'var(--text-tertiary)', onChange: 'refreshConfirmationPreview()' }) : '')
                 + '<div id="sdrBookingSlots"></div>'
                 + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
                   + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
                   + '<input id="sdrBookManual" type="datetime-local" onchange="setManualBookSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">'
                 + '</div>'
+                // The exact confirmation email, editable, below the date/time.
+                + (window.CONFIRMATION_PREVIEW ? CONFIRMATION_PREVIEW.html('sdrConfirmPreview') : '')
                 + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
                 + '<button id="sdrBookBtn" disabled onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'
                 + '</div>'
@@ -2842,7 +2845,14 @@
             var host = document.getElementById('sdrBookingPicker');
             if (host) host.style.display = 'block';
             if (host) host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // The confirmation preview needs to know which lead it is drafting for.
+            if (typeof bookingState === 'undefined' || !bookingState) bookingState = { slots: [], selectedIso: null, expandedDay: null };
+            bookingState.leadId = leadId;
+            if (window.CONFIRMATION_PREVIEW) CONFIRMATION_PREVIEW.clear();
             loadBookingSlots();
+            // Draft it immediately so the rep can read it while picking a slot;
+            // it re-renders with the real time once one is chosen.
+            refreshConfirmationPreview(true);
         }
 
         // Page the slot picker forward/back a week at a time (from= offset on the
@@ -2859,6 +2869,7 @@
         // (book-meeting accepts any when_iso).
         // The datetime-local value is the rep's local time (ET for the Miami team).
         function setManualBookSlot(val) {
+            // (preview refresh happens at the end of this function)
             if (!val) return;
             var iso = new Date(val).toISOString();
             if (typeof bookingState === 'undefined' || !bookingState) bookingState = { slots: [], selectedIso: null, expandedDay: null };
@@ -2869,6 +2880,7 @@
                 msg.style.color = 'var(--blue)';
                 msg.textContent = new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET selected. Enter the email and tap Book.';
             }
+            refreshConfirmationPreview();
         }
 
         async function loadBookingSlots() {
@@ -2876,7 +2888,8 @@
             if (!host) return;
             host.innerHTML = '<div style="padding:14px;color:var(--text-tertiary);font-size:12px;">Loading available times…</div>';
             var _wo = (bookingState && bookingState.weekOffset) || 0;
-            bookingState = { slots: [], selectedIso: null, expandedDay: null, weekOffset: _wo };
+            var _lid = (bookingState && bookingState.leadId) != null ? bookingState.leadId : null;
+            bookingState = { slots: [], selectedIso: null, expandedDay: null, weekOffset: _wo, leadId: _lid };
             setBookBtnEnabled(false);
             try {
                 var data = await fetchJSON('/api/prospects/calendar-availability?days=7&from=' + (_wo * 7));
@@ -2962,6 +2975,7 @@
                 msg.style.color = 'var(--blue)';
                 msg.textContent = new Date(iso).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET selected.';
             }
+            refreshConfirmationPreview();
         }
 
         function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim()); }
@@ -2980,6 +2994,20 @@
             b.disabled = !on;
             b.style.opacity = on ? '1' : '0.5';
             b.style.cursor = on ? 'pointer' : 'not-allowed';
+        }
+
+        // Keeps the editable confirmation-email preview in step with the slot
+        // and the agent dropdown. The VSL link in the body is agent-specific, so
+        // switching agent has to re-fetch or the rep approves the wrong link.
+        function refreshConfirmationPreview(force) {
+            if (!window.CONFIRMATION_PREVIEW || !bookingState || bookingState.leadId == null) return;
+            CONFIRMATION_PREVIEW.configure({ escape: escapeHtml, fetchJson: fetchJSON });
+            CONFIRMATION_PREVIEW.load({
+                leadId: bookingState.leadId,
+                agent: window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.readSelect('sdrBookingAgent') : null,
+                whenIso: bookingState.selectedIso || null,
+                force: force === true
+            });
         }
 
         async function confirmBooking(leadId) {
@@ -3004,6 +3032,9 @@
                 // Omit when absent so the server keeps its own default.
                 var sdrAgent = window.VSL_AGENT_PICKER && VSL_AGENT_PICKER.readSelect('sdrBookingAgent');
                 if (sdrAgent) sdrBookBody.agent = sdrAgent;
+                // If the rep edited the confirmation email, send THEIR version.
+                // Returns {} when untouched so the lead keeps following the template.
+                if (window.CONFIRMATION_PREVIEW) Object.assign(sdrBookBody, CONFIRMATION_PREVIEW.readEdits());
                 await fetchJSON('/api/prospects/book-meeting', {
                     method: 'POST',
                     body: JSON.stringify(sdrBookBody)
