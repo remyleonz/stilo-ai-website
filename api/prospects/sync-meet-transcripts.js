@@ -144,6 +144,26 @@ module.exports = async function handler(req, res) {
                 .filter(function (v, i, a) { return v && a.indexOf(v) === i; });
             const durSec = durationOf(record) ? Math.round(durationOf(record) / 1000) : null;
 
+            // SOLO-HOST GUARD. A conference record exists even when the prospect
+            // no-shows, and Meet keeps transcribing whatever the host says in the
+            // empty room. Caught live on 2026-07-20: Guillermo no-showed, Remy
+            // waited in the room and phoned a DIFFERENT prospect (Chaim) from his
+            // cell, and Meet captured that call. Storing it would have filed one
+            // prospect's conversation onto another prospect's lead — wrong
+            // record, wrong person, and a confidentiality problem the moment
+            // anyone reads it back.
+            //
+            // A meeting needs at least two participants to be a meeting. One
+            // participant is a room someone sat in.
+            if (attendees.length < 2) {
+                results.push({
+                    id: ld.id, record: record.name, skip: 'solo_host_no_prospect',
+                    attendees: attendees, chars: text.length,
+                    note: 'Only one participant — prospect never joined. Not stored: whatever was said is not this lead\'s meeting.'
+                });
+                continue;
+            }
+
             if (dry) {
                 results.push({
                     id: ld.id, record: record.name, would_store: true,
