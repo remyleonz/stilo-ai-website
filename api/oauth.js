@@ -59,7 +59,12 @@ const PROVIDERS = {
   'gmail': {
     auth_url: 'https://accounts.google.com/o/oauth2/v2/auth',
     token_url: 'https://oauth2.googleapis.com/token',
-    scopes: ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.compose'],
+    // gmail.send ONLY. It is the narrowest Gmail scope there is: it can send a
+    // message and nothing else, it cannot read the mailbox. gmail.compose was
+    // also requested here but adds draft create/read, which nothing uses --
+    // api/prospects/_gmail_send.js only sends. Asking for less makes the consent
+    // screen honest and keeps the grant out of Google's restricted-scope review.
+    scopes: ['https://www.googleapis.com/auth/gmail.send'],
     client_id_env: 'GOOGLE_OAUTH_CLIENT_ID',
     client_secret_env: 'GOOGLE_OAUTH_CLIENT_SECRET',
     config_key: 'gmail_oauth',
