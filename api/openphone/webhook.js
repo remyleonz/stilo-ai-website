@@ -158,55 +158,67 @@ async function findOrStubLead(sb, phone) {
     return created.id;
 }
 
-// Most-recent REAL lead this line was on in the last hour. Recovers a callback
-// from a number we don't have on file: the prospect is almost always calling
-// back the line that just dialed them. Skips our own "Unknown caller" stubs so a
-// callback never chains onto another junk lead.
-async function recentRealLeadForLine(sb, ourLine) {
-    if (!ourLine) return null;
-    const sinceISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+// Recover a callback from a number we do not have on file, WITHOUT guessing.
+//
+// The prospect calls back from a mobile that is not on the lead record. The only
+// honest signal is that WE previously spoke to that same counterparty number, so
+// look the number itself up in call history. Keyed on the CALLER, never on our
+// own line.
+//
+// What this replaced: a "most recent real lead this LINE touched in the last
+// hour" fallback. That pinned every stranger who rang a rep's Quo line onto
+// whatever lead the rep happened to be dialling. It put 16 unrelated inbound
+// calls onto 11 leads between 2026-07-02 and 07-21 — six of them onto Dale's
+// Tires, whose real outcome it then overwrote with missed_inbound plus a phantom
+// 1-hour callback SLA. It also self-perpetuated: each bogus inbound refreshed
+// the window, re-electing the same seed lead indefinitely.
+async function leadForCounterpartyHistory(sb, counter) {
+    if (!counter) return null;
     try {
         const { data: rows } = await sb
             .from('lead_calls')
             .select('lead_id, called_at')
-            .or('from_number.eq.' + ourLine + ',to_number.eq.' + ourLine)
+            .or('from_number.eq.' + counter + ',to_number.eq.' + counter)
             .not('lead_id', 'is', null)
-            .gte('called_at', sinceISO)
             .order('called_at', { ascending: false })
-            .limit(20);
+            .limit(10);
         const ids = Array.from(new Set((rows || []).map(function (r) { return r.lead_id; })));
         if (!ids.length) return null;
         const { data: leads } = await sb.from('leads').select('id, name').in('id', ids);
         const nameById = new Map((leads || []).map(function (l) { return [l.id, l.name]; }));
+        // Prefer a real lead over one of our own "Unknown caller" stubs so a
+        // callback never chains onto another junk lead.
         for (const r of (rows || [])) {
             const nm = nameById.get(r.lead_id) || '';
             if (nm && !/^Unknown caller/i.test(nm)) return r.lead_id;
         }
+        return rows[0].lead_id;
     } catch (e) {
-        console.warn('[openphone/webhook] callback recovery failed', e.message || e);
+        console.warn('[openphone/webhook] counterparty history lookup failed', e.message || e);
     }
     return null;
 }
 
 // Resolve a call to a lead, robust to direction mislabeling. The counterparty is
-// the number that ISN'T one of OUR lines. Order: (1) phone-match the real
-// counterparty, (2) callback recovery on our line, (3) stub with the PROSPECT
-// number — never our own line, which used to create the "Unknown caller
-// (+our-line)" bucket that swallowed every real callback.
+// the number that ISN'T one of OUR lines.
+//
+// Returns { leadId, resolvedBy } where resolvedBy is 'phone' | 'history' |
+// 'stub' | null. Callers need that: a lead resolved by anything other than an
+// actual phone match must NOT have its sales outcome overwritten by a stranger's
+// inbound ring.
 async function resolveCounterpartyLead(sb, ourLines, counterparty, fromN, toN) {
     let counter = counterparty ? normalizePhone(counterparty) : null;
     if (!counter || ourLines.has(counter)) {
         counter = [fromN, toN].find(function (n) { return n && !ourLines.has(n); }) || counter;
     }
-    const ourLine = [fromN, toN].find(function (n) { return n && ourLines.has(n); }) || null;
     if (counter && !ourLines.has(counter)) {
         const id = await matchLeadByPhone(sb, counter);
-        if (id) return id;
+        if (id) return { leadId: id, resolvedBy: 'phone' };
+        const hist = await leadForCounterpartyHistory(sb, counter);
+        if (hist) return { leadId: hist, resolvedBy: 'history' };
+        return { leadId: await findOrStubLead(sb, counter), resolvedBy: 'stub' };
     }
-    const recovered = await recentRealLeadForLine(sb, ourLine);
-    if (recovered) return recovered;
-    if (counter && !ourLines.has(counter)) return await findOrStubLead(sb, counter);
-    return null;
+    return { leadId: null, resolvedBy: null };
 }
 
 async function upsertCall(sb, fields) {
@@ -469,6 +481,10 @@ module.exports = async function handler(req, res) {
         .maybeSingle();
 
     let leadId = existingRow && existingRow.lead_id;
+    // HOW the lead was resolved, at handler scope because the leads-table write
+    // near the end of this function gates on it. Declaring it inside the
+    // resolution block below leaves it out of scope there and every webhook 500s.
+    let resolvedBy = leadId ? 'existing_row' : null;
     if (!leadId) {
         // Resolution order:
         //  1. metadata.lead_id / prospect_id (when an admin-side flow eventually triggers a call)
@@ -501,8 +517,10 @@ module.exports = async function handler(req, res) {
             const m = String(externalId).match(/^stilo_(?:lead|prospect)_(\d+)$/);
             if (m) leadId = Number(m[1]) || null;
         }
+        if (leadId) resolvedBy = 'explicit';   // metadata / externalId tag
         if (!leadId) {
-            leadId = await resolveCounterpartyLead(sb, ourLines, counterparty, baseFields.from_number, baseFields.to_number);
+            const r = await resolveCounterpartyLead(sb, ourLines, counterparty, baseFields.from_number, baseFields.to_number);
+            leadId = r.leadId; resolvedBy = r.resolvedBy;
         }
         // Last-resort: Quo summary events don't ship from/to numbers, so when
         // a summary lands first (or is the only event we get) we previously
@@ -524,7 +542,8 @@ module.exports = async function handler(req, res) {
                     const apiDur = deriveDurationSeconds(fc);
                     if (apiDur != null) baseFields.duration_seconds = apiDur;
                     if (fcCounterparty || baseFields.from_number || baseFields.to_number) {
-                        leadId = await resolveCounterpartyLead(sb, ourLines, fcCounterparty, baseFields.from_number, baseFields.to_number);
+                        const r2 = await resolveCounterpartyLead(sb, ourLines, fcCounterparty, baseFields.from_number, baseFields.to_number);
+                        leadId = r2.leadId; resolvedBy = r2.resolvedBy;
                     }
                     if (leadId) {
                         console.log('[openphone/webhook] recovered orphan lead via Quo API lookup', { call_id: openphoneCallId, lead_id: leadId, duration: apiDur });
@@ -712,7 +731,26 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        if (baseFields.outcome && callRow.lead_id) {
+        // DO NOT let a stranger's inbound ring overwrite a lead's sales outcome.
+        //
+        // Between 2026-07-02 and 07-21 unknown inbound callers were pinned to
+        // whatever lead the rep's line touched last, and this block then stamped
+        // that lead with missed_inbound plus a phantom 1-hour callback SLA. Six
+        // landed on Dale's Tires alone, masking its real outcome.
+        //
+        // An inbound call may only stamp the lead when the CALLER's number
+        // actually matched that lead ('phone'), or the lead came from an explicit
+        // metadata/externalId tag. A 'history' or 'stub' resolution still files
+        // the CALL against the lead (useful context) but must not rewrite the
+        // pipeline state. Outbound is always safe: the rep chose who to dial.
+        const inboundCall = isInbound(baseFields.direction);
+        const mayStampLead = !inboundCall || resolvedBy === 'phone' || resolvedBy === 'explicit';
+        if (baseFields.outcome && callRow.lead_id && !mayStampLead) {
+            console.log('[openphone/webhook] inbound from an unmatched number; filing the call but NOT stamping the lead', {
+                call_id: openphoneCallId, lead_id: callRow.lead_id, resolved_by: resolvedBy, from: baseFields.from_number
+            });
+        }
+        if (baseFields.outcome && callRow.lead_id && mayStampLead) {
             // David's leads table tracks last_called_at + last_called_outcome
             // + call_attempts + next_action_due_at directly on the row.
             const updates = {
