@@ -426,6 +426,35 @@ module.exports = async function handler(req, res) {
             if (upd.error) persistError = upd.error.message;
         } catch (e) { persistError = String(e.message || e); }
 
+        // SEND THE CONFIRMATION NOW, not on the next cron tick.
+        //
+        // The whole point: the rep is still on the phone and can say "check your
+        // email, it just landed." A 5-minute cron delay meant the prospect got it
+        // after the call ended, when nobody was there to walk them to it. Setting
+        // CONFIRM_DELAY_MIN=0 would NOT have fixed that -- the cron only ticks
+        // every 5 minutes, so zero delay still means up to 5 minutes late.
+        //
+        // Same sendConfirmationForLead() the cron calls, so the two can never
+        // drift. Best effort: a booking must never fail because an email did.
+        // If this throws or the send fails, meeting_confirmation_sent_at stays
+        // NULL and the cron retries within 5 minutes -- the failure mode is
+        // "slightly late", not "never sent".
+        let confirmation = null;
+        try {
+            const { sendConfirmationForLead, CONFIRM_LEAD_COLS } = require('./_send_confirmation');
+            // Own client: the pubSb above is const-scoped inside an earlier try
+            // block and is NOT visible here.
+            const pubForConfirm = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+            const { data: fresh } = await sb.from('leads').select(CONFIRM_LEAD_COLS).eq('id', leadId).maybeSingle();
+            // Re-read rather than reusing `lead`: the row was just updated with
+            // the new meeting time, the rep's agent pick and any edited email,
+            // and the confirmation has to reflect all three.
+            if (fresh) confirmation = await sendConfirmationForLead(sb, pubForConfirm, fresh, {});
+        } catch (e) {
+            console.error('[book-meeting] inline confirmation failed for lead=' + leadId + ', cron will retry:', (e && e.message) || e);
+            confirmation = { error: (e && e.message) || String(e) };
+        }
+
         // Mirror the call into prospecting.lead_calls so it shows in call
         // history + "Calls Today". Best-effort; never block the booking.
         try {
@@ -440,6 +469,7 @@ module.exports = async function handler(req, res) {
             ok: true, lead_id: leadId,
             event_id: evJson.id, event_link: evJson.htmlLink, meet_link: meetLink,
             email: emailResult,
+            confirmation: confirmation,
             persisted: !persistError, persist_error: persistError
         });
     } catch (e) {
