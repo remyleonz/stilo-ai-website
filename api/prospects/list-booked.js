@@ -16,6 +16,10 @@ const SELECT_COLS = [
     'meeting_event_id', 'meeting_event_link', 'meeting_meet_link',
     'meeting_scheduled_at', 'meeting_duration_min', 'meeting_booked_by_sdr',
     'nurture_stage',
+    // Which agent the meeting was booked for. The Booked tab shows this so a
+    // rep walking into a call knows what they are selling without opening the
+    // lead. matched_product_name is the older derived fallback.
+    'pitch_agent', 'matched_product_name',
     // Drives the "needs a triage call" flag on the callback calendar: a meeting
     // the prospect never confirmed is the one the rep has to phone.
     'meeting_confirmed_at', 'meeting_confirmation_sent_at',

@@ -1575,7 +1575,7 @@
                         html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
                             + '<td><strong>' + escapeHtml(r.business_name || r.name || ('Lead ' + r.id)) + '</strong></td>'
                             + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
-                            + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
+                            + '<td style="white-space:nowrap;">' + escapeHtml(leadPhone(r) || '—') + '</td>'
                             + '<td>' + escapeHtml(r.niche || '—') + '</td>'
                             + '<td style="white-space:nowrap;">' + escapeHtml(by) + '</td>'
                             + '<td style="color:var(--text-tertiary);font-size:12px;">' + escapeHtml(sh.note || '') + '</td>'
@@ -1634,6 +1634,8 @@
                     STATE.cbRows = rows;
                     try { var _bk = await fetchJSON('/api/prospects/list-booked?limit=200'); STATE.cbMeetings = (_bk && (_bk.results || _bk.leads)) || []; } catch (_) { STATE.cbMeetings = []; }
                     html = '<div id="cbCalHost">' + callbackCalendarHtml() + '</div>';
+                } else if (sub === 'booked') {
+                    html = bookedLeadTableHtml(rows);
                 } else {
                     html = standardLeadTableHtml(rows);
                 }
@@ -1664,7 +1666,7 @@
                     + '<td style="white-space:nowrap;color:' + (overdue ? 'var(--red)' : 'var(--text-primary)') + ';font-weight:' + (overdue ? '700' : '500') + ';">' + escapeHtml(due ? fmtET(due) : '—') + (overdue ? ' (overdue)' : '') + '</td>'
                     + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
                     + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
-                    + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
+                    + '<td style="white-space:nowrap;">' + escapeHtml(leadPhone(r) || '—') + '</td>'
                     + '<td>' + escapeHtml(r.niche || '—') + '</td>'
                     + '<td style="white-space:nowrap;">' + fmtET(r.last_called_at) + '</td>'
                     + '</tr>';
@@ -1840,6 +1842,52 @@
             return cbToolbar() + body;
         }
 
+        // The agent a meeting was booked for. pitch_agent is free text from
+        // David's script parse ("AI Receptionist", "Outbound Agent", "LCR"), so
+        // normalise it through the shared picker to the canonical product name
+        // rather than printing whatever prose happens to be stored.
+        function bookedAgentName(r) {
+            var raw = (r && (r.pitch_agent || r.matched_product_name)) || '';
+            if (!raw) return '—';
+            if (window.VSL_AGENT_PICKER) {
+                var slug = VSL_AGENT_PICKER.agentSlug(raw);
+                if (slug) {
+                    var hit = VSL_AGENT_PICKER.AGENTS.filter(function (a) { return a.slug === slug; })[0];
+                    if (hit) return hit.name;
+                }
+            }
+            return raw;
+        }
+
+        // Booked tab table. Deliberately NOT the standard columns: a rep opening
+        // this list is about to walk into a meeting, so what matters is WHEN it
+        // is and WHAT they are selling. Niche, tier and last-touch are noise here
+        // — the meeting date already tells them everything last-touch would.
+        function bookedLeadTableHtml(rows) {
+            STATE.currentRows = rows || [];
+            var now = Date.now();
+            var html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Agent</th><th>Meeting</th></tr></thead><tbody>';
+            (rows || []).slice(0, 200).forEach(function (r) {
+                var ms = tsToMs(r.meeting_scheduled_at);
+                var past = ms != null && ms < now;
+                var when = ms == null ? '—'
+                    : new Date(ms).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                // Past meetings are dimmed so the upcoming block reads as the
+                // live list rather than blending into history.
+                html += '<tr data-lastts="' + (ms == null ? '' : ms) + '" onclick="openLeadDrawer(' + (r.id || 'null') + ')"'
+                    + (past ? ' style="opacity:0.55;"' : '') + '>'
+                    + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
+                    + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
+                    + '<td style="white-space:nowrap;">' + escapeHtml(leadPhone(r) || '—') + '</td>'
+                    + '<td style="white-space:nowrap;">' + escapeHtml(bookedAgentName(r)) + '</td>'
+                    + '<td style="white-space:nowrap;' + (past ? '' : 'color:var(--text-primary);font-weight:600;') + '">' + escapeHtml(when)
+                      + (past ? ' <span style="color:var(--text-tertiary);font-weight:400;">· past</span>' : '')
+                    + '</td>'
+                    + '</tr>';
+            });
+            return html + '</tbody></table>';
+        }
+
         // Standard lead table (Business / Owner / Phone / Niche / Tier / Last
         // touch). Shared by the subtab lists and the search results.
         function standardLeadTableHtml(rows) {
@@ -1859,7 +1907,7 @@
                 html += '<tr data-lastts="' + (ms == null ? '' : ms) + '" onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
                     + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
                     + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
-                    + '<td style="white-space:nowrap;">' + escapeHtml(r.owner_phone || '—') + '</td>'
+                    + '<td style="white-space:nowrap;">' + escapeHtml(leadPhone(r) || '—') + '</td>'
                     + '<td>' + escapeHtml(r.niche || '—') + '</td>'
                     + '<td>' + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '—') + '</td>'
                     + '<td style="white-space:nowrap;">' + fmtET(lastRaw) + '</td>'
@@ -2442,7 +2490,12 @@
             if (d.length === 11 && d[0] === '1') return '+' + d;
             return d ? '+' + d : '';
         }
-        function leadPhone(r) { return r.owner_phone_e164 || r.owner_phone || r.phone || ''; }
+        // The one phone accessor. Every lead LIST used to render r.owner_phone
+        // alone, which showed a dash on rows whose lead panel clearly displayed a
+        // number — most leads carry only the business `phone`. This helper always
+        // had the right fallback chain; the tables simply were not using it.
+        // Returns '' when there is nothing, so call sites add their own '—'.
+        function leadPhone(r) { return (r && (r.owner_phone_e164 || r.owner_phone || r.phone)) || ''; }
 
         // Pull a clean one-liner about the business out of business_profile JSON
         // (David stores a `summary`/`description`). Falls back to null so we can
