@@ -96,15 +96,29 @@ module.exports = async function handler(req, res) {
         const byLead = {};
         (data || []).forEach(function (m) {
             if (m.lead_id == null) return;
-            byLead[m.lead_id] = byLead[m.lead_id] || { n: 0, bodies: {} };
+            byLead[m.lead_id] = byLead[m.lead_id] || { n: 0, bodies: {}, lastDupAt: null };
             byLead[m.lead_id].n++;
             const k = (m.channel || '') + '|' + (m.channel === 'email' ? (m.subject || '') : (m.body_preview || ''));
             byLead[m.lead_id].bodies[k] = (byLead[m.lead_id].bodies[k] || 0) + 1;
+            // Remember when the most recent duplicate landed. A 24h window keeps
+            // reporting an incident for a full day AFTER it is fixed, which is
+            // how a resolved loop looked like a live one the next morning and
+            // got blamed for that day's no-shows.
+            if (byLead[m.lead_id].bodies[k] > 1) {
+                const t = new Date(m.sent_at).getTime();
+                if (!byLead[m.lead_id].lastDupAt || t > byLead[m.lead_id].lastDupAt) byLead[m.lead_id].lastDupAt = t;
+            }
         });
+        // Only alert while the incident is still LIVE. A duplicate whose last
+        // occurrence is older than this window has already been dealt with, and
+        // re-reporting it every hour for a day trains people to ignore the alert.
+        const STALE_AFTER_MIN = Number(process.env.HEALTH_DUP_STALE_MIN || 90);
+        const staleCutoff = Date.now() - STALE_AFTER_MIN * 60 * 1000;
         const bad = Object.keys(byLead).filter(function (id) {
             const x = byLead[id];
             const maxRepeat = Math.max.apply(null, Object.keys(x.bodies).map(function (k) { return x.bodies[k]; }).concat([0]));
-            return x.n > MAX_MSGS_PER_LEAD_24H || maxRepeat > 1;
+            if (maxRepeat > 1) return x.lastDupAt != null && x.lastDupAt >= staleCutoff;
+            return x.n > MAX_MSGS_PER_LEAD_24H;
         });
         if (bad.length) {
             const ids = bad.map(Number);
@@ -119,6 +133,9 @@ module.exports = async function handler(req, res) {
                     title: (nameOf[id] || ('Lead ' + id)) + ' got ' + x.n + ' outbound messages in 24h'
                         + (maxRepeat > 1 ? ' (same message ×' + maxRepeat + ')' : ''),
                     detail: 'Lead ' + id + ' · https://stiloaipartners.com/admin/#leads · '
+                        + (x.lastDupAt
+                            ? 'Most recent duplicate: ' + new Date(x.lastDupAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET. '
+                            : '')
                         + 'A repeat of the SAME message is always a bug. Check the idempotency stamp on whichever cron sent it.'
                 });
             });
