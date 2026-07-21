@@ -97,6 +97,22 @@ module.exports = async function handler(req, res) {
         });
     }
 
+    // WHO IS INTERNAL. The no-show guard has to distinguish "two of our people
+    // sat in an empty room" from "a real meeting", and a bare participant COUNT
+    // cannot: on 2026-07-21 Alejandro and David waited 26 minutes for a prospect
+    // who never joined, and the count-only guard happily filed their private
+    // conversation onto Dale's Tires as a client meeting.
+    const internal = new Set(['remy leon', 'david coira']);
+    try {
+        const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+        const { data: sdrs } = await pub.from('sdr_users').select('display_name');
+        (sdrs || []).forEach(function (u) {
+            if (u && u.display_name) internal.add(String(u.display_name).toLowerCase().trim());
+        });
+    } catch (e) {
+        console.error('[sync-meet-transcripts] sdr_users roster unavailable, falling back to the built-in internal list:', (e && e.message) || e);
+    }
+
     const results = [];
     for (const ld of (leads || [])) {
         const code = meetingCodeFromLink(ld.meeting_meet_link);
@@ -144,22 +160,26 @@ module.exports = async function handler(req, res) {
                 .filter(function (v, i, a) { return v && a.indexOf(v) === i; });
             const durSec = durationOf(record) ? Math.round(durationOf(record) / 1000) : null;
 
-            // SOLO-HOST GUARD. A conference record exists even when the prospect
-            // no-shows, and Meet keeps transcribing whatever the host says in the
-            // empty room. Caught live on 2026-07-20: Guillermo no-showed, Remy
-            // waited in the room and phoned a DIFFERENT prospect (Chaim) from his
-            // cell, and Meet captured that call. Storing it would have filed one
-            // prospect's conversation onto another prospect's lead — wrong
-            // record, wrong person, and a confidentiality problem the moment
-            // anyone reads it back.
+            // NO-SHOW GUARD. A conference record exists even when the prospect
+            // never joins, and Meet keeps transcribing whatever is said in the
+            // room. Storing that files OUR conversation onto THEIR lead.
             //
-            // A meeting needs at least two participants to be a meeting. One
-            // participant is a room someone sat in.
-            if (attendees.length < 2) {
+            // Requiring >= 2 participants was not enough. On 2026-07-21 two STILO
+            // employees waited 26 minutes for a no-show, rehearsed the pitch and
+            // talked candidly, and that landed on Dale's Tires as if it were a
+            // client meeting. The real test is whether anyone EXTERNAL was in the
+            // room, so match participants against the sdr_users roster.
+            //
+            // Unknown names are treated as external on purpose: filing a real
+            // meeting is recoverable, silently dropping one is not.
+            const externals = attendees.filter(function (n) {
+                return !internal.has(String(n).toLowerCase().trim());
+            });
+            if (!externals.length) {
                 results.push({
-                    id: ld.id, record: record.name, skip: 'solo_host_no_prospect',
+                    id: ld.id, record: record.name, skip: 'no_prospect_joined',
                     attendees: attendees, chars: text.length,
-                    note: 'Only one participant — prospect never joined. Not stored: whatever was said is not this lead\'s meeting.'
+                    note: 'Everyone in the room was STILO. Prospect never joined, so this is a no-show, not a meeting. Not stored.'
                 });
                 continue;
             }
