@@ -8,6 +8,12 @@
  *
  * Idempotent via prospecting.leads.meeting_reminder_sent_at.
  *
+ * ALSO reminds the closers: the same tick emails Remy + David (Resend) with the
+ * lead, the admin deep link, and the Meet link, idempotent via its own stamp
+ * (closer_reminder_sent_at). Added after 2026-07-24, when lead 22413 (Maxwell
+ * Bossis) showed up to his Meet and no STILO closer joined: the prospect got a
+ * reminder, the team got nothing.
+ *
  * WHY A WINDOW, NOT AN EXACT TIME: the cron ticks every 5 minutes, so a meeting
  * never lines up exactly with T-15. We fire once when the meeting is inside the
  * next LEAD_MIN..0 minutes and hasn't been reminded yet. With LEAD_MIN=18 a 10:00
@@ -28,6 +34,7 @@ const { sendTransactional } = require('./_gmail_send');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 const REMY_LINE = '+17868376639';
+const CLOSER_EMAILS = ['remyleon11@gmail.com', 'davidcoira@stiloaipartners.com'];
 
 function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
 function fmtTime(iso) {
@@ -43,6 +50,23 @@ function fmtTime(iso) {
 async function sendEmail(to, subject, text) {
     if (!to) return { skip: 'no_email' };
     return await sendTransactional({ to: to, subject: subject, text: text });
+}
+
+// Internal mail goes through Resend directly (same pattern as health-alerts.js),
+// not _gmail_send: that helper is tuned for prospect deliverability and its
+// suppression checks make no sense for our own inboxes.
+async function sendCloserEmail(subject, text) {
+    if (!process.env.RESEND_API_KEY) return { skip: 'resend_not_configured' };
+    const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            from: 'STILO Meetings <remyleon@stiloaipartners.com>',
+            to: CLOSER_EMAILS, subject: subject, text: text
+        })
+    });
+    const j = await r.json().catch(function () { return {}; });
+    return r.ok ? { id: j.id } : { err: j.message || ('resend_' + r.status) };
 }
 
 module.exports = async function handler(req, res) {
@@ -172,5 +196,71 @@ module.exports = async function handler(req, res) {
         }
         results.push({ id: ld.id, when: when, sent: (emailOk || smsOk), email: er, sms: sr });
     }
-    return res.status(200).json({ ok: true, dry: dry, lead_min: LEAD_MIN, found: results.length, results: results });
+
+    // ------------------------------------------------------------------
+    // Closer half: same window, but eligibility and idempotency live on a
+    // SEPARATE query and a SEPARATE stamp (closer_reminder_sent_at). Two
+    // reasons:
+    //  - the prospect send and the closer send succeed or fail on their own;
+    //    a shared stamp would let one side's success swallow the other side's
+    //    failure forever.
+    //  - a separate query keeps this half's errors (including a not-yet-applied
+    //    migration) from taking the prospect reminders above down with it.
+    // The stamp UPDATE carries the stamp ALONE (2026-07-20 postmortem: a stamp
+    // sharing an UPDATE with a constraint-checked column doesn't get written
+    // when that column fails, and an unwritten stamp on a 5-minute cron is a
+    // resend loop).
+    // ------------------------------------------------------------------
+    const closerResults = [];
+    let closerError = null;
+    let cq = sb.from('leads')
+        .select('id,name,owner_name,meeting_scheduled_at,meeting_meet_link,meeting_event_link')
+        .is('closer_reminder_sent_at', null)
+        .not('meeting_scheduled_at', 'is', null);
+    if (explicitIds.length) {
+        cq = cq.in('id', explicitIds);
+    } else {
+        cq = cq.gte('meeting_scheduled_at', floorIso).lte('meeting_scheduled_at', soonIso);
+    }
+    const { data: closerLeads, error: cErr } = await cq.order('meeting_scheduled_at', { ascending: true }).limit(50);
+    if (cErr) {
+        console.error('[send-meeting-reminders] closer query failed (prospect reminders unaffected):', cErr.message);
+        closerError = cErr.message;
+    }
+    for (const ld of (closerLeads || [])) {
+        const when = fmtTime(ld.meeting_scheduled_at);
+        const meet = ld.meeting_meet_link || ld.meeting_event_link || '';
+        const adminLink = BASE + '/admin/#lead=' + ld.id;
+        const subject = 'Meeting in ~15 min: ' + (ld.name || 'lead ' + ld.id) + ' at ' + when;
+        const text = [
+            (ld.name || 'Lead ' + ld.id) + ' is on the calendar at ' + when + ', about 15 minutes from now.',
+            '',
+            'Contact: ' + (ld.owner_name || 'unknown'),
+            meet ? 'Join the Meet: ' + meet : 'No Meet link on file, check the lead for how this call happens.',
+            'Lead in admin: ' + adminLink,
+            '',
+            'Automated T-15 closer reminder. The prospect gets their own nudge on the same tick.',
+        ].join('\n');
+
+        if (dry) { closerResults.push({ id: ld.id, when: when, to: CLOSER_EMAILS, subject: subject }); continue; }
+
+        const cr = await sendCloserEmail(subject, text);
+        const closerOk = cr && !cr.skip && !cr.err;
+        if (closerOk) {
+            const { error: stampErr } = await sb.from('leads')
+                .update({ closer_reminder_sent_at: new Date().toISOString() }).eq('id', ld.id);
+            if (stampErr) {
+                console.error('[send-meeting-reminders] CLOSER STAMP FAILED lead=' + ld.id + ', will resend next tick:', stampErr.message);
+                closerResults.push({ id: ld.id, sent: true, stamp_failed: true, detail: stampErr.message });
+                continue;
+            }
+        }
+        closerResults.push({ id: ld.id, when: when, sent: closerOk, email: cr });
+    }
+
+    return res.status(200).json({
+        ok: true, dry: dry, lead_min: LEAD_MIN,
+        found: results.length, results: results,
+        closers: { found: closerResults.length, results: closerResults, error: closerError },
+    });
 };

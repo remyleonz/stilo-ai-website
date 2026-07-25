@@ -404,6 +404,7 @@ module.exports = async function handler(req, res) {
                 updateRow.meeting_confirmation_sent_at = null;
                 updateRow.meeting_confirmed_at = null;
                 updateRow.meeting_reminder_sent_at = null;
+                updateRow.closer_reminder_sent_at = null;
                 updateRow.vsl_followup_sms_sent_at = null;
                 updateRow.day_before_sms_sent_at = null;
                 updateRow.nurture_stage = 'booked';
