@@ -8733,34 +8733,49 @@
            defaults pulled from the lead drawer; admin tweaks fees +
            picks payment method + clicks Close.
            ============================================================ */
-        var AGENT_CATALOG_CACHE = null;
-        async function getAgentCatalog() {
-            if (AGENT_CATALOG_CACHE) return AGENT_CATALOG_CACHE;
+        var DEAL_CATALOG_CACHE = null;
+        async function getDealCatalog() {
+            if (DEAL_CATALOG_CACHE) return DEAL_CATALOG_CACHE;
             try {
                 var { data: { session } } = await sb.auth.getSession();
-                var res = await fetch('/api/agents-meta', { headers: { 'Authorization': 'Bearer ' + (session && session.access_token || '') } });
+                var res = await fetch('/api/admin/deals?catalog=1', { headers: { 'Authorization': 'Bearer ' + (session && session.access_token || '') } });
                 if (!res.ok) return [];
                 var data = await res.json();
-                AGENT_CATALOG_CACHE = data.agents || [];
-                return AGENT_CATALOG_CACHE;
+                DEAL_CATALOG_CACHE = data.catalog || [];
+                return DEAL_CATALOG_CACHE;
             } catch (e) { return []; }
         }
 
         async function openCloseDealModal(leadJsonStr) {
             var lead = {};
             try { lead = JSON.parse(leadJsonStr); } catch (_) {}
-            var agents = await getAgentCatalog();
+            var catalog = await getDealCatalog();
 
-            var agentsHtml = agents.filter(function (a) { return a.purchaseMode === 'self_serve'; }).map(function (a) {
-                var monthly = a.monthlyFeeCents ? '$' + (a.monthlyFeeCents/100).toLocaleString() + '/mo' : '';
-                var setup = a.setupFeeCents ? '$' + (a.setupFeeCents/100).toLocaleString() : '';
-                return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);">'
-                    + '<input type="checkbox" name="agent_code" value="' + escapeAdminHtml(a.id) + '" '
-                    + 'data-setup="' + (a.setupFeeCents || 0) + '" data-monthly="' + (a.monthlyFeeCents || 0) + '" '
-                    + 'onchange="recomputeDealTotals()" style="margin:0;">'
-                    + '<div style="flex:1;"><div style="font-weight:700;color:var(--text-primary);font-size:13px;">' + escapeAdminHtml(a.label || a.id.toUpperCase()) + '</div>'
-                    + '<div style="font-size:11px;color:var(--text-tertiary);">' + setup + (setup && monthly ? ' · ' : '') + monthly + '</div></div>'
-                    + '</label>';
+            // The cart: one card per agent. Click to add it to the deal; the
+            // card expands with editable install + monthly prices (defaults
+            // from the catalog) so every deal can be priced on the spot.
+            var agentsHtml = catalog.map(function (a) {
+                var inst = Math.round((a.install_cents || 0) / 100);
+                var mo = Math.round((a.monthly_cents || 0) / 100);
+                return '<div class="deal-cart-item" id="cart_' + a.code + '" data-code="' + a.code + '" style="border:1px solid var(--border-subtle);border-radius:10px;background:var(--bg-card);overflow:hidden;">'
+                    + '<div onclick="toggleCartAgent(\'' + a.code + '\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;">'
+                        + '<div class="cart-check" style="width:18px;height:18px;border-radius:5px;border:2px solid var(--border-medium);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;flex-shrink:0;"></div>'
+                        + '<div style="flex:1;min-width:0;"><div style="font-weight:700;color:var(--text-primary);font-size:13px;">' + escapeAdminHtml(a.name) + '</div>'
+                        + '<div class="cart-sub" style="font-size:11px;color:var(--text-tertiary);">'
+                            + (inst ? '$' + inst.toLocaleString() + ' install' : '')
+                            + (inst && mo ? ' · ' : '')
+                            + (mo ? '$' + mo.toLocaleString() + '/mo' : (inst ? '' : 'custom pricing'))
+                        + '</div></div>'
+                    + '</div>'
+                    + '<div class="cart-prices" style="display:none;padding:0 12px 12px 40px;gap:10px;">'
+                        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                        + '<div><label style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;"><input type="checkbox" class="cart-inc-install" checked onchange="recomputeDealTotals()" style="margin:0;">Install ($)</label>'
+                            + '<input type="number" class="cart-install" min="0" step="50" value="' + inst + '" oninput="recomputeDealTotals()" onclick="event.stopPropagation()" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
+                        + '<div><label style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;"><input type="checkbox" class="cart-inc-monthly" ' + (mo || !inst ? 'checked' : '') + ' onchange="recomputeDealTotals()" style="margin:0;">Monthly ($/mo)</label>'
+                            + '<input type="number" class="cart-monthly" min="0" step="50" value="' + mo + '" oninput="recomputeDealTotals()" onclick="event.stopPropagation()" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
+                        + '</div>'
+                    + '</div>'
+                + '</div>';
             }).join('');
 
             // Resolve owning SDR from lead.assigned_to → render disabled badge so admin
@@ -8780,7 +8795,7 @@
                 + '<form id="closeDealForm" onsubmit="return submitCloseDeal(event)" style="padding:0 4px;">'
                 + '<input type="hidden" name="source_lead_id" value="' + (lead.id || '') + '">'
                 + '<h2 style="margin:0 0 6px 0;font-size:20px;font-weight:800;letter-spacing:-0.02em;">Close Deal: ' + escapeAdminHtml(lead.business_name || 'New deal') + '</h2>'
-                + '<p style="margin:0 0 18px 0;color:var(--text-secondary);font-size:13px;">Creates the deal, generates a proposal PDF, sends payment link. SDR commission locks at payment.</p>'
+                + '<p style="margin:0 0 18px 0;color:var(--text-secondary);font-size:13px;">Pick the agents, adjust prices if needed. Deposit invoice (50% of install) goes out now; the rest and the monthly are billed when you mark the build finished.</p>'
 
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">'
                   + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Business name</label>'
@@ -8793,25 +8808,19 @@
                     + '<input name="contact_phone" value="' + escapeAdminHtml(lead.contact_phone || '') + '" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;"></div>'
                 + '</div>'
 
-                + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Agents (check all that apply)</label>'
+                + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Agents · click to add, prices are editable</label>'
                   + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' + agentsHtml + '</div></div>'
 
-                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">'
-                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Upfront fee ($)</label>'
-                    + '<input name="upfront_fee" id="dealUpfront" type="number" min="0" value="0" step="50" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
-                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Monthly retainer ($)</label>'
-                    + '<input name="monthly_retainer" id="dealMonthly" type="number" min="0" value="0" step="50" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;font-family:var(--font-mono);"></div>'
+                + '<div id="dealTotalsStrip" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">'
+                  + '<div style="padding:10px 12px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.3);border-radius:9px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Due now · 50% deposit</div><div id="dealTotalDeposit" style="font-family:var(--font-mono);font-weight:800;font-size:18px;color:var(--text-primary);margin-top:2px;">$0</div></div>'
+                  + '<div style="padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:9px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">On build completion</div><div id="dealTotalFinal" style="font-family:var(--font-mono);font-weight:800;font-size:18px;color:var(--text-primary);margin-top:2px;">$0</div></div>'
+                  + '<div style="padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:9px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Monthly · starts build + 14d</div><div id="dealTotalMonthly" style="font-family:var(--font-mono);font-weight:800;font-size:18px;color:var(--text-primary);margin-top:2px;">$0/mo</div></div>'
                 + '</div>'
 
                 + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">SDR credit</label>'
                   + '<select name="sdr_id" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">' + sdrOptions + '</select></div>'
 
-                + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Payment method</label>'
-                  + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
-                    + '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);font-size:12px;"><input type="radio" name="payment_method" value="stripe_checkout" checked> Stripe checkout link</label>'
-                    + '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);font-size:12px;"><input type="radio" name="payment_method" value="stripe_invoice"> Stripe invoice (email)</label>'
-                    + '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:var(--bg-card);font-size:12px;"><input type="radio" name="payment_method" value="manual"> Manual (wire / check)</label>'
-                  + '</div></div>'
+                + '<div style="margin-bottom:14px;"><label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" name="manual_billing" style="margin:0;"> Manual billing (wire / check / Zelle) — create the deal without Stripe invoices</label></div>'
 
                 + '<div style="margin-bottom:18px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Internal notes</label>'
                   + '<textarea name="notes" rows="2" placeholder="Optional context..." style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;resize:vertical;"></textarea></div>'
@@ -8849,16 +8858,50 @@
             if (o) o.style.display = 'none';
         }
 
-        function recomputeDealTotals() {
-            var form = document.getElementById('closeDealForm');
-            if (!form) return;
-            var setup = 0, monthly = 0;
-            form.querySelectorAll('input[name="agent_code"]:checked').forEach(function (el) {
-                setup   += parseInt(el.dataset.setup || 0, 10);
-                monthly += parseInt(el.dataset.monthly || 0, 10);
+        function toggleCartAgent(code) {
+            var card = document.getElementById('cart_' + code);
+            if (!card) return;
+            var on = card.dataset.selected === '1';
+            card.dataset.selected = on ? '' : '1';
+            var check = card.querySelector('.cart-check');
+            var prices = card.querySelector('.cart-prices');
+            if (on) {
+                check.style.background = 'transparent'; check.style.borderColor = 'var(--border-medium)'; check.textContent = '';
+                card.style.borderColor = 'var(--border-subtle)';
+                prices.style.display = 'none';
+            } else {
+                check.style.background = 'var(--blue)'; check.style.borderColor = 'var(--blue)'; check.textContent = '✓';
+                card.style.borderColor = 'rgba(37,99,235,0.5)';
+                prices.style.display = 'block';
+            }
+            recomputeDealTotals();
+        }
+
+        // Read the cart into line items: only selected agents, only the fee
+        // components whose checkbox is on, at whatever price the admin typed.
+        function readCartLineItems() {
+            var items = [];
+            document.querySelectorAll('.deal-cart-item').forEach(function (card) {
+                if (card.dataset.selected !== '1') return;
+                var incInstall = card.querySelector('.cart-inc-install').checked;
+                var incMonthly = card.querySelector('.cart-inc-monthly').checked;
+                var install = incInstall ? Math.round(parseFloat(card.querySelector('.cart-install').value || 0) * 100) : 0;
+                var monthly = incMonthly ? Math.round(parseFloat(card.querySelector('.cart-monthly').value || 0) * 100) : 0;
+                if (install <= 0 && monthly <= 0) return;
+                items.push({ code: card.dataset.code, install_cents: install, monthly_cents: monthly });
             });
-            form.querySelector('[name="upfront_fee"]').value = Math.round(setup / 100);
-            form.querySelector('[name="monthly_retainer"]').value = Math.round(monthly / 100);
+            return items;
+        }
+
+        function recomputeDealTotals() {
+            var items = readCartLineItems();
+            var install = items.reduce(function (s, i) { return s + i.install_cents; }, 0);
+            var monthly = items.reduce(function (s, i) { return s + i.monthly_cents; }, 0);
+            var deposit = items.reduce(function (s, i) { return s + Math.floor(i.install_cents / 2); }, 0);
+            var el;
+            if ((el = document.getElementById('dealTotalDeposit'))) el.textContent = '$' + Math.round(deposit / 100).toLocaleString();
+            if ((el = document.getElementById('dealTotalFinal'))) el.textContent = '$' + Math.round((install - deposit) / 100).toLocaleString();
+            if ((el = document.getElementById('dealTotalMonthly'))) el.textContent = '$' + Math.round(monthly / 100).toLocaleString() + '/mo';
         }
 
         async function submitCloseDeal(event) {
@@ -8871,28 +8914,34 @@
             msg.textContent = '';
             msg.style.color = 'var(--text-secondary)';
 
-            var agentCodes = Array.from(form.querySelectorAll('input[name="agent_code"]:checked')).map(function (el) { return el.value; });
-            if (agentCodes.length === 0) {
-                msg.textContent = 'Pick at least one agent.';
+            var lineItems = readCartLineItems();
+            if (lineItems.length === 0) {
+                msg.textContent = 'Add at least one agent to the cart (with a non-zero price).';
                 msg.style.color = 'var(--red)';
                 btn.disabled = false; btn.textContent = 'Close Deal →';
                 return false;
             }
 
             var fd = new FormData(form);
+            var manual = !!fd.get('manual_billing');
             var payload = {
                 source_lead_id: fd.get('source_lead_id') ? Number(fd.get('source_lead_id')) : null,
                 business_name: fd.get('business_name'),
                 contact_name: fd.get('contact_name'),
                 contact_email: fd.get('contact_email'),
                 contact_phone: fd.get('contact_phone'),
-                agent_codes: agentCodes,
-                upfront_fee_cents: Math.round(parseFloat(fd.get('upfront_fee') || 0) * 100),
-                monthly_retainer_cents: Math.round(parseFloat(fd.get('monthly_retainer') || 0) * 100),
                 sdr_id: fd.get('sdr_id') || null,
-                payment_method: fd.get('payment_method'),
                 notes: fd.get('notes')
             };
+            if (manual) {
+                // Manual billing: record the deal + amounts, no Stripe.
+                payload.agent_codes = lineItems.map(function (i) { return i.code; });
+                payload.upfront_fee_cents = lineItems.reduce(function (s, i) { return s + i.install_cents; }, 0);
+                payload.monthly_retainer_cents = lineItems.reduce(function (s, i) { return s + i.monthly_cents; }, 0);
+                payload.payment_method = 'manual';
+            } else {
+                payload.line_items = lineItems;
+            }
 
             try {
                 var { data: { session } } = await sb.auth.getSession();
@@ -8909,7 +8958,7 @@
                     return false;
                 }
                 msg.style.color = 'var(--green,#10b981)';
-                msg.innerHTML = '✓ Deal created. ' + (data.payment_link ? '<a href="' + data.payment_link + '" target="_blank" style="color:var(--blue);">Copy payment link</a> · ' : '')
+                msg.innerHTML = '✓ Deal created. ' + (data.payment_link ? '<a href="' + data.payment_link + '" target="_blank" style="color:var(--blue);">Deposit invoice (emailed to client)</a> · ' : '')
                     + (data.proposal_url ? '<a href="' + data.proposal_url + '" target="_blank" style="color:var(--blue);">View PDF</a> · ' : '')
                     + '<button type="button" onclick="sendProposalEmail(\'' + data.deal.id + '\')" style="background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;">Email it to ' + escapeAdminHtml(data.deal.contact_email) + '</button>';
                 btn.textContent = 'Done';
@@ -9369,7 +9418,12 @@
                     + '<th style="padding:10px;"></th>'
                     + '</tr></thead><tbody>'
                     + deals.map(function (d) {
-                        var stageColor = { PROPOSAL_SENT: '#2563eb', INVOICE_SENT: '#60a5fa', PAID: '#22c55e', ONBOARDING: '#60a5fa', LIVE: '#22c55e', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280' }[d.stage] || '#6b7280';
+                        var stageColor = { PROPOSAL_SENT: '#2563eb', INVOICE_SENT: '#60a5fa', PAID: '#22c55e', ONBOARDING: '#60a5fa', BUILD_DONE: '#a78bfa', LIVE: '#22c55e', CHURNED: '#ef4444', CLOSED_LOST: '#6b7280' }[d.stage] || '#6b7280';
+                        // Build finished: available once the deal is in the phased
+                        // flow (has line_items) and hasn't been completed yet.
+                        var buildBtn = (d.line_items && !d.build_completed_at)
+                            ? '<button onclick="event.stopPropagation();markBuildComplete(\'' + d.id + '\')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;margin-right:6px;">Build finished</button>'
+                            : '';
                         return '<tr style="border-top:1px solid var(--border-subtle);cursor:pointer;" onclick="openDealDetail(\'' + d.id + '\')">'
                             + '<td style="padding:10px;"><strong>' + escapeAdminHtml(d.business_name) + '</strong><br><span style="color:var(--text-tertiary);font-size:11px;">' + escapeAdminHtml(d.contact_email) + '</span></td>'
                             + '<td style="padding:10px;">' + (d.sdr_users ? escapeAdminHtml(d.sdr_users.display_name) : '<span style="color:var(--text-muted);">—</span>') + '</td>'
@@ -9377,7 +9431,7 @@
                             + '<td style="padding:10px;text-align:right;font-family:var(--font-mono);">$' + (d.upfront_fee_cents/100).toLocaleString() + '</td>'
                             + '<td style="padding:10px;text-align:right;font-family:var(--font-mono);">$' + (d.monthly_retainer_cents/100).toLocaleString() + '/mo</td>'
                             + '<td style="padding:10px;font-size:12px;color:var(--text-secondary);">' + (d.closed_at ? new Date(d.closed_at).toLocaleDateString() : '—') + '</td>'
-                            + '<td style="padding:10px;text-align:right;">' + (d.stage === 'INVOICE_SENT' || d.stage === 'PROPOSAL_SENT' ? '<button onclick="event.stopPropagation();markDealPaid(\'' + d.id + '\')" style="padding:5px 10px;background:var(--green,#10b981);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;">Mark paid</button>' : '') + '</td>'
+                            + '<td style="padding:10px;text-align:right;white-space:nowrap;">' + buildBtn + (d.stage === 'INVOICE_SENT' || d.stage === 'PROPOSAL_SENT' ? '<button onclick="event.stopPropagation();markDealPaid(\'' + d.id + '\')" style="padding:5px 10px;background:var(--green,#10b981);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;">Mark paid</button>' : '') + '</td>'
                             + '</tr>';
                     }).join('') + '</tbody></table>';
             } catch (e) {
@@ -9398,6 +9452,25 @@
                 var data = await res.json();
                 if (res.ok) { alert('Deal marked paid. Client provisioned: ' + data.client_id); loadDealsPage(); }
                 else alert('Failed: ' + (data.error || 'unknown'));
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        async function markBuildComplete(dealId) {
+            if (!confirm('Mark this build finished?\n\nThis sends the final 50% setup invoice now and starts monthly billing in exactly 14 days. It cannot be undone.')) return;
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/admin/deals/build-complete', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deal_id: dealId })
+                });
+                var data = await res.json();
+                if (res.ok) {
+                    alert('Done.'
+                        + (data.final_invoice_url ? '\nFinal 50% invoice emailed to the client.' : '\nNo install balance was due.')
+                        + (data.monthly_starts_at ? '\nMonthly billing starts ' + new Date(data.monthly_starts_at).toLocaleDateString() + '.' : ''));
+                    loadDealsPage();
+                } else alert('Failed: ' + (data.error || 'unknown') + (data.detail ? '\n' + data.detail : ''));
             } catch (e) { alert('Failed: ' + e.message); }
         }
 

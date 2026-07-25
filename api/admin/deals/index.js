@@ -26,6 +26,7 @@
  */
 const { assertAdmin, readJsonBody, logEvent, methodNotAllowed } = require('./_shared');
 const { buildProposalPdf, uploadProposal } = require('./_pdf');
+const { ensureStripeProduct, normalizeLineItems } = require('./_catalog');
 
 let stripeClient = null;
 function getStripe() {
@@ -94,8 +95,76 @@ async function createStripeCheckout(sb, deal) {
     return session.url;
 }
 
+/**
+ * Find or create the Stripe customer for a deal.
+ */
+async function ensureCustomer(stripe, deal) {
+    const existing = await stripe.customers.list({ email: deal.contact_email, limit: 1 });
+    if (existing.data.length) return existing.data[0];
+    return stripe.customers.create({
+        email: deal.contact_email,
+        name: deal.contact_name || deal.business_name,
+        metadata: { business_name: deal.business_name, deal_id: deal.id }
+    });
+}
+
+/**
+ * Phased billing, step 1 of 3: the setup deposit invoice.
+ * 50% of every agent's install fee, due on receipt, emailed by Stripe.
+ * Step 2 (remaining 50%) and step 3 (monthly, starting build+14d) happen in
+ * build-complete.js when the admin marks the build finished.
+ */
+async function createDepositInvoice(sb, deal, userId) {
+    const stripe = getStripe();
+    if (!stripe) throw new Error('stripe_not_configured');
+
+    const installItems = (deal.line_items || []).filter(function (i) { return i.install_cents > 0; });
+    if (!installItems.length) return null; // monthly-only deal: nothing due until build completion
+
+    const customer = await ensureCustomer(stripe, deal);
+    const invoice = await stripe.invoices.create({
+        customer: customer.id,
+        collection_method: 'send_invoice',
+        days_until_due: 7,
+        description: 'Setup deposit: 50% to begin your build. The remaining 50% is invoiced when the build is finished, and monthly service billing starts two weeks after that.',
+        metadata: { deal_id: deal.id, phase: 'deposit', business_name: deal.business_name }
+    });
+    for (const item of installItems) {
+        const productId = await ensureStripeProduct(stripe, item.code);
+        const half = Math.floor(item.install_cents / 2);
+        await stripe.invoiceItems.create({
+            customer: customer.id, invoice: invoice.id,
+            price_data: { currency: 'usd', product: productId, unit_amount: half },
+            description: item.name + ' setup deposit (50% of $' + (item.install_cents / 100).toLocaleString('en-US') + ')'
+        });
+    }
+    const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
+    await stripe.invoices.sendInvoice(finalized.id);
+
+    await sb.from('deals').update({
+        stripe_deposit_invoice_id: finalized.id,
+        stripe_invoice_id: finalized.id, // legacy field: latest invoice, keeps mark-paid working
+        stripe_customer_id: customer.id,
+        invoice_sent_at: new Date().toISOString(),
+        stage: 'INVOICE_SENT'
+    }).eq('id', deal.id);
+
+    await logEvent(sb, deal.id, 'invoice_sent', {
+        body: 'Deposit invoice sent: $' + (installItems.reduce(function (s, i) { return s + Math.floor(i.install_cents / 2); }, 0) / 100).toLocaleString('en-US')
+            + ' (50% of setup) to ' + deal.contact_email,
+        actorUserId: userId
+    });
+    return finalized.hosted_invoice_url;
+}
+
 async function handleList(sb, req, res) {
     const q = req.query || {};
+    // The Close Deal cart pulls its agent list + default prices from here so
+    // the server-side catalog stays the single source of truth.
+    if (String(q.catalog || '') === '1') {
+        const { DEAL_CATALOG } = require('./_catalog');
+        return res.status(200).json({ catalog: DEAL_CATALOG });
+    }
     let qb = sb.from('deals')
         .select(`
             *,
@@ -113,6 +182,19 @@ async function handleList(sb, req, res) {
 
 async function handleCreate(sb, userId, req, res) {
     const body = await readJsonBody(req);
+
+    // New cart flow: line_items with per-deal prices replaces
+    // agent_codes + flat fees. Totals are derived, never trusted from input.
+    let lineItems = null;
+    if (body.line_items) {
+        const norm = normalizeLineItems(body.line_items);
+        if (norm.error) return res.status(400).json({ error: norm.error, code: norm.code });
+        lineItems = norm.items;
+        body.agent_codes = lineItems.map(function (i) { return i.code; });
+        body.upfront_fee_cents = lineItems.reduce(function (s, i) { return s + i.install_cents; }, 0);
+        body.monthly_retainer_cents = lineItems.reduce(function (s, i) { return s + i.monthly_cents; }, 0);
+        body.payment_method = 'phased_invoice';
+    }
 
     // Required fields
     const required = ['business_name', 'contact_email', 'agent_codes', 'payment_method'];
@@ -156,6 +238,7 @@ async function handleCreate(sb, userId, req, res) {
         closed_by: userId,
         stage: 'PROPOSAL_SENT'
     };
+    if (lineItems) dealPayload.line_items = lineItems;
 
     const { data: deal, error: insErr } = await sb.from('deals')
         .insert(dealPayload)
@@ -165,7 +248,17 @@ async function handleCreate(sb, userId, req, res) {
 
     // Stripe checkout link (skip for manual)
     let paymentLink = null;
-    if (body.payment_method === 'stripe_checkout') {
+    if (body.payment_method === 'phased_invoice') {
+        try {
+            paymentLink = await createDepositInvoice(sb, deal, userId);
+        } catch (e) {
+            console.error('[close-deal] deposit invoice failed', e);
+            await logEvent(sb, deal.id, 'warning', {
+                body: 'Deposit invoice creation failed: ' + e.message,
+                actorUserId: userId
+            });
+        }
+    } else if (body.payment_method === 'stripe_checkout') {
         try {
             paymentLink = await createStripeCheckout(sb, deal);
         } catch (e) {

@@ -68,6 +68,9 @@ module.exports = async function handleWebhook(req, res) {
       case 'checkout.session.completed':
         await handleCheckoutComplete(event.data.object);
         break;
+      case 'invoice.paid':
+        await handleInvoicePaid(event.data.object);
+        break;
       case 'customer.subscription.updated':
         await handleSubscriptionUpdate(event.data.object);
         break;
@@ -145,6 +148,66 @@ async function findDealForSession(supabase, session) {
   }
 
   return { deal: null, matchedBy: null };
+}
+
+/**
+ * Phased-billing invoices from the Close Deal cart flow.
+ * metadata.phase tells us which payment this is:
+ *   deposit — 50% of setup paid → build starts → provision the client,
+ *             dashboard, onboarding, and SDR commission (provisionFromDeal
+ *             is idempotent, safe on Stripe's replays).
+ *   final   — remaining 50% paid after build completion → stamp it.
+ *   (subscription cycle invoices carry no phase metadata; matched by
+ *   subscription id and logged so the deal timeline shows every payment.)
+ */
+async function handleInvoicePaid(invoice) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const md = invoice.metadata || {};
+  const nowIso = new Date().toISOString();
+
+  if (md.deal_id && md.phase === 'deposit') {
+    const { data: deal } = await supabase.from('deals').select('*').eq('id', md.deal_id).maybeSingle();
+    if (!deal) { console.error('[stripe-webhook] deposit paid but deal %s not found', md.deal_id); return; }
+    if (deal.deposit_paid_at) { console.log('[stripe-webhook] deposit for deal %s already processed', deal.id); return; }
+
+    await supabase.from('deals').update({ deposit_paid_at: nowIso, updated_at: nowIso }).eq('id', deal.id);
+    try {
+      const { provisionFromDeal } = require('./admin/deals/mark-paid');
+      await provisionFromDeal(supabase, deal, nowIso);
+    } catch (e) {
+      console.error('[stripe-webhook] provisioning after deposit failed:', e);
+    }
+    await supabase.from('deal_events').insert({
+      deal_id: deal.id, event_type: 'payment_received',
+      body: 'Setup deposit paid: $' + ((invoice.amount_paid || 0) / 100).toLocaleString('en-US') + '. Build is a go.',
+      actor_role: 'system'
+    });
+    return;
+  }
+
+  if (md.deal_id && md.phase === 'final') {
+    await supabase.from('deals').update({ final_paid_at: nowIso, updated_at: nowIso }).eq('id', md.deal_id);
+    await supabase.from('deal_events').insert({
+      deal_id: md.deal_id, event_type: 'payment_received',
+      body: 'Final setup payment received: $' + ((invoice.amount_paid || 0) / 100).toLocaleString('en-US') + '.',
+      actor_role: 'system'
+    });
+    return;
+  }
+
+  // Subscription cycle invoice → find the deal by subscription id and log it.
+  const subId = invoice.subscription || (invoice.parent && invoice.parent.subscription_details && invoice.parent.subscription_details.subscription) || null;
+  if (subId) {
+    const { data: deal } = await supabase.from('deals').select('id').eq('stripe_subscription_id', subId).maybeSingle();
+    if (deal) {
+      await supabase.from('deal_events').insert({
+        deal_id: deal.id, event_type: 'payment_received',
+        body: 'Monthly payment received: $' + ((invoice.amount_paid || 0) / 100).toLocaleString('en-US') + '.',
+        actor_role: 'system'
+      });
+    }
+  }
 }
 
 async function handleCheckoutComplete(session) {
