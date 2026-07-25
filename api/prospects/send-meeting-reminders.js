@@ -34,7 +34,7 @@ const { sendTransactional } = require('./_gmail_send');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 const REMY_LINE = '+17868376639';
-const CLOSER_EMAILS = ['remyleon11@gmail.com', 'davidcoira@stiloaipartners.com'];
+const CLOSER_EMAILS = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
 
 function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
 function fmtTime(iso) {
