@@ -139,8 +139,9 @@ async function createDepositInvoice(sb, deal, userId) {
         });
     }
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
-    await stripe.invoices.sendInvoice(finalized.id);
-
+    // Note: no stripe.invoices.sendInvoice here. The confirm-send screen in the
+    // admin owns client communication (the closer's own Gmail + optional SMS),
+    // so Stripe's generic invoice email would be a duplicate from a cold sender.
     await sb.from('deals').update({
         stripe_deposit_invoice_id: finalized.id,
         stripe_invoice_id: finalized.id, // legacy field: latest invoice, keeps mark-paid working
@@ -150,11 +151,11 @@ async function createDepositInvoice(sb, deal, userId) {
     }).eq('id', deal.id);
 
     await logEvent(sb, deal.id, 'invoice_sent', {
-        body: 'Deposit invoice sent: $' + (installItems.reduce(function (s, i) { return s + Math.floor(i.install_cents / 2); }, 0) / 100).toLocaleString('en-US')
-            + ' (50% of setup) to ' + deal.contact_email,
+        body: 'Deposit invoice created: $' + (installItems.reduce(function (s, i) { return s + Math.floor(i.install_cents / 2); }, 0) / 100).toLocaleString('en-US')
+            + ' (50% of setup). Awaiting email/SMS to ' + deal.contact_email + ' from the confirm-send screen.',
         actorUserId: userId
     });
-    return finalized.hosted_invoice_url;
+    return { url: finalized.hosted_invoice_url, pdf: finalized.invoice_pdf, id: finalized.id };
 }
 
 async function handleList(sb, req, res) {
@@ -248,9 +249,11 @@ async function handleCreate(sb, userId, req, res) {
 
     // Stripe checkout link (skip for manual)
     let paymentLink = null;
+    let invoicePdf = null;
     if (body.payment_method === 'phased_invoice') {
         try {
-            paymentLink = await createDepositInvoice(sb, deal, userId);
+            const inv = await createDepositInvoice(sb, deal, userId);
+            if (inv) { paymentLink = inv.url; invoicePdf = inv.pdf; }
         } catch (e) {
             console.error('[close-deal] deposit invoice failed', e);
             await logEvent(sb, deal.id, 'warning', {
@@ -368,7 +371,8 @@ async function handleCreate(sb, userId, req, res) {
     return res.status(200).json({
         deal: full,
         proposal_url: proposalUrl,
-        payment_link: paymentLink
+        payment_link: paymentLink,
+        invoice_pdf: invoicePdf
     });
 }
 

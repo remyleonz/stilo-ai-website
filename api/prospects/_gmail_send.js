@@ -141,4 +141,4 @@ async function sendTransactional(opts) {
     return await sendViaResend(opts);
 }
 
-module.exports = { sendTransactional, sendViaGmail, sendViaResend, GMAIL_REAUTH_URL, SENDER_EMAIL, SENDER_NAME };
+module.exports = { sendTransactional, sendViaGmail, sendViaResend, gmailAccessToken, GMAIL_REAUTH_URL, SENDER_EMAIL, SENDER_NAME };

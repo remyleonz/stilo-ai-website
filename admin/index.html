@@ -8957,17 +8957,150 @@
                     btn.disabled = false; btn.textContent = 'Close Deal →';
                     return false;
                 }
-                msg.style.color = 'var(--green,#10b981)';
-                msg.innerHTML = '✓ Deal created. ' + (data.payment_link ? '<a href="' + data.payment_link + '" target="_blank" style="color:var(--blue);">Deposit invoice (emailed to client)</a> · ' : '')
-                    + (data.proposal_url ? '<a href="' + data.proposal_url + '" target="_blank" style="color:var(--blue);">View PDF</a> · ' : '')
-                    + '<button type="button" onclick="sendProposalEmail(\'' + data.deal.id + '\')" style="background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;">Email it to ' + escapeAdminHtml(data.deal.contact_email) + '</button>';
-                btn.textContent = 'Done';
+                if (manual || !data.payment_link) {
+                    msg.style.color = 'var(--green,#10b981)';
+                    msg.innerHTML = '✓ Deal created (manual billing).' + (data.proposal_url ? ' <a href="' + data.proposal_url + '" target="_blank" style="color:var(--blue);">Proposal PDF</a>' : '');
+                    btn.textContent = 'Done';
+                } else {
+                    renderInvoiceSendPanel(data, lineItems);
+                }
             } catch (e) {
                 msg.textContent = 'Network error: ' + e.message;
                 msg.style.color = 'var(--red)';
                 btn.disabled = false; btn.textContent = 'Close Deal →';
             }
             return false;
+        }
+
+        /* ============================================================
+           Confirm-send screen: after the deposit invoice is created, the
+           closer reviews everything (PDF, payment link, editable client
+           contact + email text + optional SMS) BEFORE anything reaches
+           the client. Email sends from the logged-in admin's own
+           Workspace mailbox (no footer: Workspace signatures cover it).
+           ============================================================ */
+        function renderInvoiceSendPanel(data, lineItems) {
+            var d = data.deal;
+            var install = lineItems.reduce(function (s, i) { return s + i.install_cents; }, 0);
+            var deposit = lineItems.reduce(function (s, i) { return s + Math.floor(i.install_cents / 2); }, 0);
+            var monthly = lineItems.reduce(function (s, i) { return s + i.monthly_cents; }, 0);
+            var catalog = DEAL_CATALOG_CACHE || [];
+            var names = lineItems.map(function (i) {
+                var c = catalog.find(function (a) { return a.code === i.code; });
+                return c ? c.name : i.code;
+            });
+            var firstName = (d.contact_name || '').trim().split(/\s+/)[0] || 'there';
+            var fmt = function (c) { return '$' + Math.round(c / 100).toLocaleString(); };
+
+            var defaultSubject = 'Your STILO agreement + deposit invoice, ' + (d.business_name || '');
+            var defaultBody = 'Hi ' + firstName + ',\n\n'
+                + 'Great speaking with you. Here is everything we agreed, in writing.\n\n'
+                + 'What we are building for ' + (d.business_name || 'you') + ': ' + names.join(', ') + '.\n\n'
+                + 'The deposit to start the build is ' + fmt(deposit) + ' (50% of setup). The invoice is attached, or you can pay online here:\n'
+                + data.payment_link + '\n\n'
+                + 'The remaining ' + fmt(install - deposit) + ' is billed when your build is finished'
+                + (monthly ? ', and your monthly service (' + fmt(monthly) + '/mo) starts two weeks after that.' : '.') + '\n\n'
+                + 'Any questions on the fine print, just reply here or call me.';
+            var defaultSms = 'Hi ' + firstName + ', just emailed over your STILO agreement and the deposit invoice for ' + fmt(deposit) + '. You can pay online any time here: ' + data.payment_link;
+
+            var form = document.getElementById('closeDealForm');
+            form.innerHTML = ''
+                + '<h2 style="margin:0 0 6px 0;font-size:20px;font-weight:800;letter-spacing:-0.02em;">Review before it reaches the client</h2>'
+                + '<p style="margin:0 0 16px 0;color:var(--text-secondary);font-size:13px;">Deal created. Nothing has been sent yet. The email goes out from YOUR Workspace mailbox (your Workspace signature is added automatically, so there is no footer here).</p>'
+
+                + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'
+                  + '<a href="' + data.payment_link + '" target="_blank" style="padding:8px 12px;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.35);border-radius:8px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:none;">Payment link ↗</a>'
+                  + (data.invoice_pdf ? '<a href="' + data.invoice_pdf + '" target="_blank" style="padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:12px;font-weight:700;text-decoration:none;">Invoice PDF (will be attached) ↗</a>' : '')
+                  + (data.proposal_url ? '<a href="' + data.proposal_url + '" target="_blank" style="padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:12px;font-weight:700;text-decoration:none;">Proposal PDF ↗</a>' : '')
+                + '</div>'
+
+                + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">'
+                  + '<div><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Client email</label><input id="invTo" value="' + escapeAdminHtml(d.contact_email || '') + '" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;"></div>'
+                  + '<div><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Client name</label><input id="invName" value="' + escapeAdminHtml(d.contact_name || '') + '" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;"></div>'
+                  + '<div><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Client phone</label><input id="invPhone" value="' + escapeAdminHtml(d.contact_phone || '') + '" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;"></div>'
+                + '</div>'
+
+                + '<div style="margin-bottom:10px;"><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Subject</label><input id="invSubject" value="' + escapeAdminHtml(defaultSubject) + '" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;"></div>'
+                + '<div style="margin-bottom:12px;"><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Email body (edit freely)</label><textarea id="invBody" rows="10" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;line-height:1.5;resize:vertical;">' + escapeAdminHtml(defaultBody) + '</textarea></div>'
+
+                + '<div style="margin-bottom:8px;"><label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="invSmsToggle" ' + (d.contact_phone ? 'checked' : '') + ' style="margin:0;"> Also text the payment link from my line</label></div>'
+                + '<div style="margin-bottom:14px;"><textarea id="invSmsBody" rows="3" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;line-height:1.5;resize:vertical;">' + escapeAdminHtml(defaultSms) + '</textarea></div>'
+
+                + '<div id="invMsg" style="margin-bottom:12px;font-size:12px;color:var(--text-secondary);min-height:18px;"></div>'
+                + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+                  + '<button type="button" onclick="invoiceEmailAction(\'' + d.id + '\',\'mark_manual\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">I emailed it myself, mark as sent</button>'
+                  + '<div style="display:flex;gap:8px;">'
+                    + '<button type="button" onclick="closeCloseDealModal()" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;">Later</button>'
+                    + '<button type="button" id="invSendBtn" onclick="invoiceEmailAction(\'' + d.id + '\',\'send\')" style="padding:10px 22px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:700;cursor:pointer;">Send email' + (d.contact_phone ? ' + SMS' : '') + ' →</button>'
+                  + '</div>'
+                + '</div>';
+            form.onsubmit = function (e) { e.preventDefault(); return false; };
+        }
+
+        async function invoiceEmailAction(dealId, action) {
+            var msg = document.getElementById('invMsg');
+            var btn = document.getElementById('invSendBtn');
+            if (btn) { btn.disabled = true; btn.textContent = action === 'send' ? 'Sending…' : btn.textContent; }
+            msg.style.color = 'var(--text-secondary)';
+            msg.textContent = action === 'send' ? 'Sending from your mailbox…' : 'Marking…';
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var payload = {
+                    deal_id: dealId, action: action,
+                    to: document.getElementById('invTo').value.trim(),
+                    name: document.getElementById('invName').value.trim(),
+                    phone: document.getElementById('invPhone').value.trim(),
+                    subject: document.getElementById('invSubject').value,
+                    body: document.getElementById('invBody').value,
+                    send_sms: document.getElementById('invSmsToggle').checked,
+                    sms_body: document.getElementById('invSmsBody').value
+                };
+                var res = await fetch('/api/admin/deals/send-invoice-email', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json();
+                if (res.status === 428) {
+                    // This admin has never connected their mailbox: one-click fix.
+                    msg.style.color = 'var(--orange,#f97316)';
+                    msg.innerHTML = 'Your Google Workspace mailbox is not connected yet. '
+                        + '<button type="button" onclick="connectInvoiceGmail()" style="background:var(--blue);border:none;border-radius:6px;color:white;font-size:12px;font-weight:700;cursor:pointer;padding:6px 12px;margin-left:6px;">Connect Google</button>'
+                        + '<span style="color:var(--text-tertiary);"> then hit Send again.</span>';
+                    if (btn) { btn.disabled = false; btn.textContent = 'Send email →'; }
+                    return;
+                }
+                if (!res.ok) {
+                    msg.style.color = 'var(--red)';
+                    msg.textContent = 'Failed: ' + (data.error || 'unknown') + (data.detail ? ' — ' + data.detail : '');
+                    if (btn) { btn.disabled = false; btn.textContent = 'Send email →'; }
+                    return;
+                }
+                msg.style.color = 'var(--green,#10b981)';
+                if (action === 'mark_manual') {
+                    msg.textContent = '✓ Marked as emailed manually. Closing…';
+                } else {
+                    msg.textContent = '✓ Sent from ' + (data.via || 'your mailbox').replace('gmail:', '')
+                        + (data.sms && !data.sms.err && !data.sms.skip ? ' + SMS delivered.' : (payload.send_sms && data.sms ? ' (SMS: ' + (data.sms.err || data.sms.skip) + ')' : '.'));
+                }
+                setTimeout(closeCloseDealModal, 2200);
+            } catch (e) {
+                msg.style.color = 'var(--red)';
+                msg.textContent = 'Network error: ' + e.message;
+                if (btn) { btn.disabled = false; btn.textContent = 'Send email →'; }
+            }
+        }
+
+        async function connectInvoiceGmail() {
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var res = await fetch('/api/oauth?provider=gmail&action=start&personal=1&mode=json', {
+                    headers: { 'Authorization': 'Bearer ' + session.access_token }
+                });
+                var data = await res.json();
+                if (data.url) window.open(data.url, '_blank', 'width=560,height=720');
+                else alert('Could not start Google connect: ' + (data.error || 'unknown'));
+            } catch (e) { alert('Could not start Google connect: ' + e.message); }
         }
 
         async function sendProposalEmail(dealId) {

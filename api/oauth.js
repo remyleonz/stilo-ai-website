@@ -226,7 +226,17 @@ module.exports = async function handler(req, res) {
     }
     const aid = url.searchParams.get('aid');
 
-    const state = signState({ aid: aid, uid: userId, provider: provider, ts: Date.now() });
+    // personal=1: a per-USER grant (e.g. David connecting his own Workspace
+    // mailbox so invoice emails send as him). Stored under 'gmail:<email>'
+    // instead of the shared row, so it can never clobber the STILO-owned
+    // 'gmail' token that confirmations send from. Rides the same registered
+    // redirect URI: the flag travels in the signed state, not the URL.
+    const personal = url.searchParams.get('personal') === '1';
+    if (personal && !userId) {
+      return res.status(401).json({ error: 'personal_grant_requires_auth', hint: 'Call with your Supabase Bearer token and mode=json, then open the returned url.' });
+    }
+
+    const state = signState({ aid: aid, uid: userId, provider: provider, personal: personal || undefined, ts: Date.now() });
     const redirect = getRedirectUri(req, provider);
     const params = new URLSearchParams({
       client_id: clientId,
@@ -237,8 +247,14 @@ module.exports = async function handler(req, res) {
       access_type: 'offline',
       prompt: 'consent',
     });
+    const authUrl = cfg.auth_url + '?' + params.toString();
+    // mode=json lets an authenticated fetch retrieve the URL (a 302 can't carry
+    // the Bearer header through window.open).
+    if (url.searchParams.get('mode') === 'json') {
+      return res.status(200).json({ url: authUrl });
+    }
     res.statusCode = 302;
-    res.setHeader('Location', cfg.auth_url + '?' + params.toString());
+    res.setHeader('Location', authUrl);
     return res.end();
   }
 
@@ -272,6 +288,34 @@ module.exports = async function handler(req, res) {
       }
     } catch (e) {
       return closeWindowHtml(res, 'Token exchange failed: ' + e.message);
+    }
+
+    if (state.personal && state.uid) {
+      // Per-user grant: resolve the STILO account email and store the token
+      // under 'gmail:<email>'. apikey-only fetch because sb_secret keys break
+      // supabase-js auth.admin Bearer calls.
+      if (!tokenJson.refresh_token) {
+        return closeWindowHtml(res, 'Connected, but Google did not return a refresh token. Revoke STILO access at myaccount.google.com/permissions, then try again.');
+      }
+      try {
+        const ur = await fetch(process.env.SUPABASE_URL + '/auth/v1/admin/users/' + state.uid, {
+          headers: { apikey: process.env.SUPABASE_SERVICE_KEY }
+        });
+        const uj = await ur.json();
+        const email = uj && uj.email;
+        if (!email) return closeWindowHtml(res, 'Could not resolve your STILO account. Try again.');
+        const sb = admin();
+        await sb.from('oauth_tokens').upsert({
+          provider: provider + ':' + email.toLowerCase(),
+          refresh_token: tokenJson.refresh_token,
+          access_token: tokenJson.access_token || null,
+          scope: tokenJson.scope || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'provider' });
+        return closeWindowHtml(res, 'Connected. Invoice emails will now send from ' + email + '.');
+      } catch (e) {
+        return closeWindowHtml(res, 'Could not save the connection: ' + e.message);
+      }
     }
 
     if (state.aid) {

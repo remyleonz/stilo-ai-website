@@ -102,7 +102,7 @@
 
   /* ===== FOOTER (ported from marketing site) ===== */
   footer{padding:80px 0 40px;background:var(--bg-void);border-top:1px solid var(--stroke)}
-  .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:48px;margin-bottom:48px}
+  .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
   .footer-brand .flogo{font-family:var(--font-display);font-weight:700;font-size:1rem;letter-spacing:.04em;text-transform:uppercase;color:var(--fg)}
   .footer-brand p{font-size:.9rem;max-width:40ch;margin-top:18px;color:var(--fg-2)}
   .footer-col h4{font-family:var(--font-mono);font-size:.75rem;text-transform:uppercase;letter-spacing:.14em;color:var(--fg-3);margin-bottom:18px;font-weight:500}
@@ -213,11 +213,20 @@
       <div class="footer-col">
         <h4>Explore</h4>
         <ul>
-          <li><a href="/#agents">The agents</a></li>
           <li><a href="/#industries">Use cases</a></li>
           <li><a href="/#process">Our process</a></li>
           <li><a href="/#why-us">Why STILO</a></li>
           <li><a class="js-book">Talk to a partner</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Other Agents</h4>
+        <ul>
+          <li><a class="x-agent" href="/agents/receptionist">AI Receptionist</a></li>
+          <li><a class="x-agent" href="/agents/lead-reply">Outbound Lead Reply</a></li>
+          <li><a class="x-agent" href="/agents/b2bleadgen">B2B Lead Generation</a></li>
+          <li><a class="x-agent" href="/agents/website">Website</a></li>
+          <li><a class="x-agent" href="/agents/sales-agent">AI Sales</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -319,5 +328,11 @@ function startVsl(btn){var w=btn.parentNode,id=btn.getAttribute("data-loom"),age
 (function(){try{var a=document.querySelector(".vsl-play"),agent=a?a.getAttribute("data-agent"):null;var q=new URLSearchParams(location.search),lid=q.get("lid"),flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic");fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}})();
 </script>
 <script src="/agents/_confirm.js"></script>
+<script>
+/* Cross-sell links keep the prospect identified: carry lid + t onto the
+   other agent pages so booking works there too (never carry confirm=1). */
+(function(){var p=new URLSearchParams(location.search),lid=p.get('lid'),t=p.get('t');if(!lid)return;
+document.querySelectorAll('a.x-agent').forEach(function(a){var u=new URL(a.getAttribute('href'),location.origin);u.searchParams.set('lid',lid);if(t)u.searchParams.set('t',t);a.setAttribute('href',u.pathname+u.search);});})();
+</script>
 </body>
 </html>
