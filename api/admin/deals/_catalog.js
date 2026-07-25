@@ -41,12 +41,15 @@ async function ensureStripeProduct(stripe, code) {
     const def = BY_CODE[code];
     if (!def) throw new Error('unknown_agent_code: ' + code);
 
+    // Legacy install+monthly product pairs can share one agent_code (both kept
+    // active so old env-priced checkouts keep working). Pick the OLDEST match
+    // so every deal's line items always land on the same product.
     const found = await stripe.products.search({
         query: "active:'true' AND metadata['agent_code']:'" + code + "'",
-        limit: 1
+        limit: 10
     });
     if (found.data.length) {
-        const p = found.data[0];
+        const p = found.data.slice().sort(function (a, b) { return a.created - b.created; })[0];
         if (p.name !== def.name) {
             await stripe.products.update(p.id, { name: def.name });
         }

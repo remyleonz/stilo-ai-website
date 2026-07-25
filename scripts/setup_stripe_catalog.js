@@ -59,15 +59,16 @@ async function main() {
         }
     }
 
-    // Pass 2: dedupe per agent_code (keep oldest), then create the missing ones.
+    // Pass 2: create products for agents that have none. Duplicates (a legacy
+    // Installation + Monthly product pair sharing one agent) are NOT archived:
+    // their price IDs are still wired into the legacy self-serve checkout via
+    // STRIPE_PRICE_* env vars, and archiving a product makes its prices
+    // unusable for new checkouts. Same clean name on both is harmless; the
+    // Close Deal flow picks the oldest tagged product deterministically.
     for (const a of DEAL_CATALOG) {
-        const matches = products.filter(function (p) { return p.metadata && p.metadata.agent_code === a.code; })
-            .sort(function (x, y) { return x.created - y.created; });
+        const matches = products.filter(function (p) { return p.metadata && p.metadata.agent_code === a.code; });
         if (matches.length > 1) {
-            for (const extra of matches.slice(1)) {
-                console.log('archive duplicate: "' + extra.name + '" [' + extra.id + ']');
-                if (!dry) await stripe.products.update(extra.id, { active: false });
-            }
+            console.log('note: ' + matches.length + ' products share agent_code=' + a.code + ' (legacy install+monthly pair). Left active on purpose.');
         }
         if (!matches.length) {
             console.log('create: "' + a.name + '" (agent_code=' + a.code + ')');
