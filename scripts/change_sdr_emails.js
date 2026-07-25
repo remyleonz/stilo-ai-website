@@ -33,6 +33,21 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) { console.error('Missing SUPABASE_UR
 const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 const sbLeads = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });
 
+// GoTrue rejects new-format sb_secret_ keys sent as "Authorization: Bearer",
+// so auth admin calls go straight to the REST API with an apikey-only header.
+async function authAdmin(method, pathname, body) {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1${pathname}`, {
+        method,
+        headers: { apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(json.msg || json.message || json.error_description || `auth admin ${method} ${pathname} failed (${res.status})`);
+    }
+    return json;
+}
+
 // sdr_key -> new email
 const CHANGES = {
     luke:      'huronfire5@gmail.com',
@@ -54,8 +69,9 @@ async function main() {
 
         // 1. auth.users email (auto-confirm => no email sent to the SDR)
         if (s.auth_user_id) {
-            const { error: authErr } = await sb.auth.admin.updateUserById(s.auth_user_id, { email: newEmail, email_confirm: true });
-            if (authErr) { report.push({ sdr: s.sdr_key, status: 'auth_update_failed', error: authErr.message }); continue; }
+            try {
+                await authAdmin('PUT', `/admin/users/${s.auth_user_id}`, { email: newEmail, email_confirm: true });
+            } catch (authErr) { report.push({ sdr: s.sdr_key, status: 'auth_update_failed', error: authErr.message }); continue; }
         }
         // 2. public.sdr_users.email
         const { error: rowErr } = await sb.from('sdr_users').update({ email: newEmail, updated_at: new Date().toISOString() }).eq('id', s.id);

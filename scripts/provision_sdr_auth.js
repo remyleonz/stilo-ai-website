@@ -48,6 +48,21 @@ const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false }
 });
 
+// GoTrue rejects new-format sb_secret_ keys sent as "Authorization: Bearer",
+// so auth admin calls go straight to the REST API with an apikey-only header.
+async function authAdmin(method, pathname, body) {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1${pathname}`, {
+        method,
+        headers: { apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(json.msg || json.message || json.error_description || `auth admin ${method} ${pathname} failed (${res.status})`);
+    }
+    return json;
+}
+
 function genTempPassword() {
     // 20-char alpha-num, easy to read aloud once on a Loom for the new hire.
     return crypto.randomBytes(15).toString('base64')
@@ -72,10 +87,13 @@ async function main() {
         }
 
         // Check if the auth user already exists (e.g. they signed up via /auth.html)
-        const { data: existing } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const existingUser = existing && existing.users && existing.users.find(
-            u => u.email && u.email.toLowerCase() === sdr.email.toLowerCase()
-        );
+        let existingUser = null;
+        try {
+            const existing = await authAdmin('GET', '/admin/users?page=1&per_page=1000');
+            existingUser = (existing.users || []).find(
+                u => u.email && u.email.toLowerCase() === sdr.email.toLowerCase()
+            ) || null;
+        } catch (_) { /* fall through to create, same as the old ignored list error */ }
 
         let userId;
         let tempPassword = null;
@@ -84,21 +102,23 @@ async function main() {
             userId = existingUser.id;
         } else {
             tempPassword = genTempPassword();
-            const { data: created, error: createErr } = await sb.auth.admin.createUser({
-                email: sdr.email,
-                password: tempPassword,
-                email_confirm: true,
-                user_metadata: {
-                    display_name: sdr.display_name,
-                    sdr_key: sdr.sdr_key
-                },
-                app_metadata: { role: 'sdr' }
-            });
-            if (createErr) {
+            let created;
+            try {
+                created = await authAdmin('POST', '/admin/users', {
+                    email: sdr.email,
+                    password: tempPassword,
+                    email_confirm: true,
+                    user_metadata: {
+                        display_name: sdr.display_name,
+                        sdr_key: sdr.sdr_key
+                    },
+                    app_metadata: { role: 'sdr' }
+                });
+            } catch (createErr) {
                 results.push({ sdr_key: sdr.sdr_key, email: sdr.email, status: 'error', error: createErr.message });
                 continue;
             }
-            userId = created.user.id;
+            userId = created.id;
         }
 
         // Link sdr_users.auth_user_id
