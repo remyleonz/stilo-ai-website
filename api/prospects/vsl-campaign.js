@@ -50,6 +50,7 @@ const REPS = [
     'aleb1027@gmail.com',
     'huronfire5@gmail.com',
     'ayesjorge911@gmail.com',
+    'georgegutierrez446@gmail.com',
     'remyleon@stiloaipartners.com',
 ];
 // Excluded outright, not sorted last. See the header note.

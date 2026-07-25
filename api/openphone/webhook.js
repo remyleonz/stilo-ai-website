@@ -452,6 +452,7 @@ module.exports = async function handler(req, res) {
         // a company alias — logged_by is matched against sdr_users downstream.
         // Ale's Quo seat + login are both aleb1027@gmail.com.
         'USHJZZYPss': 'aleb1027@gmail.com',                  // Alejandro Barrios
+        'USPZ6AB3Lg': 'georgegutierrez446@gmail.com',        // George Gutierrez (hired 2026-07-24)
         'USsSwYdBtK': 'davidcoira@stiloaipartners.com'        // David Coira (legacy id)
     };
 
@@ -464,8 +465,11 @@ module.exports = async function handler(req, res) {
     // them out of round-robin lead assignment and the commission leaderboard.
     const OWNER_LINE_TO_EMAIL = {
         '+17868376639': 'remyleon@stiloaipartners.com',  // (786) 837-6639 — Remy Leon
-        '+17865742922': 'davidcoira@stiloaipartners.com', // (786) 574-2922 — David Coira
-        '+17547075311': 'davidcoira@stiloaipartners.com'  // (754) 707-5311 — David Coira (new Quo line)
+        '+17865742922': 'davidcoira@stiloaipartners.com'  // (786) 574-2922 — David Coira
+        // (754) 707-5311 was briefly David's, reassigned to George Gutierrez
+        // 2026-07-25. His line resolves via sdr_users.openphone_number like
+        // every other rep, so it must NOT sit here (owner entries seed the
+        // line map and would shadow him if his row ever went inactive).
     };
     const metadataLoggedBy = (call.metadata && call.metadata.logged_by) || null;
     if (metadataLoggedBy) {
