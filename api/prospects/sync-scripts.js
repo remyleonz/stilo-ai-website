@@ -59,6 +59,24 @@ function agentFromScript(md) {
     const m = String(md || '').match(/(?:PRODUCT TO PITCH|Meeting product)[^\r\n]*?:\**\s*([A-Za-z][^\r\n*(]*)/i);
     return m ? canonAgent(m[1]) : null;
 }
+// "Ask for: <name>" in David's current script format; returns a plausible
+// person name or null. The slot is polluted upstream (our own owner_name junk
+// feeds his generator: "Personal Lines" became "Ask for: Personal"), so this
+// filter is deliberately strict: short, alphabetic, not a role word, not an
+// insurance line type, not a placeholder, not a fragment of the business name.
+const NAME_JUNK = /^(the )?(owner|manager|office|front desk|reception(ist)?|personal( lines)?|commercial( lines)?|dwelling|high|life|auto|home|general|business|billing|claims|sales|service|info|contact|program|staff|team|unknown|none|n\/?a|tbd|john doe|jane doe)$/i;
+function realNameFromScript(md, businessName) {
+    const m = String(md || '').match(/Ask for:\**\s*([^\r\n·|(]+)/i);
+    if (!m) return null;
+    const v = m[1].replace(/[*`]/g, '').trim().replace(/[.,;:]+$/, '');
+    if (v.length < 2 || v.length > 40) return null;
+    if (NAME_JUNK.test(v)) return null;
+    if (/owner|desk|manager|line|dept|team|doe\b|hello|verify|confirm|guess|no name/i.test(v)) return null;
+    if (!/^[A-Za-zÀ-ÿ'.-]+( [A-Za-zÀ-ÿ'.-]+){0,3}$/.test(v)) return null;
+    const bl = String(businessName || '').toLowerCase(), sl = v.toLowerCase();
+    if (bl.startsWith(sl) || bl.includes(' ' + sl)) return null;
+    return v;
+}
 // Fetch a lead's script (GCS listing, else our generated fallback) and return
 // David's stated agent, or null. Best-effort: any failure yields null.
 async function pitchAgentForLead(token, name) {
@@ -71,17 +89,27 @@ async function pitchAgentForLead(token, name) {
 
 // David's manifest maps business_name/lead_id -> script filename. A lead counts
 // as scripted if its name or slug is in there. Mirrors backfill_script_flag.js.
+// Also returns slug -> filename so the refresh pass below can detect re-pushes.
 async function loadManifestSlugs(token) {
     const raw = await cc.readObject(token, 'cold-call/manifest.json');
     const man = JSON.parse(raw);
     const scripts = Array.isArray(man) ? man : (man.scripts || []);
     const slugs = new Set();
+    const fileBySlug = {};
     for (const e of scripts) {
         if (!e) continue;
-        if (e.business_name) slugs.add(cc.slugify(e.business_name));
-        if (e.lead_id) slugs.add(String(e.lead_id).replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase());
+        if (e.business_name) {
+            const s = cc.slugify(e.business_name);
+            slugs.add(s);
+            if (e.filename && !fileBySlug[s]) fileBySlug[s] = e.filename;
+        }
+        if (e.lead_id) {
+            const s = String(e.lead_id).replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase();
+            slugs.add(s);
+            if (e.filename && !fileBySlug[s]) fileBySlug[s] = e.filename;
+        }
     }
-    return slugs;
+    return { slugs, fileBySlug };
 }
 
 async function listAll(bucket, folder, sb) {
@@ -111,8 +139,8 @@ module.exports = async function handler(req, res) {
     catch (e) { return res.status(503).json({ error: 'gcs_unavailable', detail: e.message }); }
 
     // --- the scripted universe: manifest + our generated fallbacks -----------
-    let scripted;
-    try { scripted = await loadManifestSlugs(token); }
+    let scripted, fileBySlug;
+    try { const man = await loadManifestSlugs(token); scripted = man.slugs; fileBySlug = man.fileBySlug; }
     catch (e) { return res.status(502).json({ error: 'manifest_read_failed', detail: e.message }); }
     for (const o of await listAll(GENERATED_BUCKET, '', sb)) {
         if (o.name.endsWith('.md')) scripted.add(o.name.replace(/\.md$/, '').toLowerCase());
@@ -132,7 +160,7 @@ module.exports = async function handler(req, res) {
     let from = 0;
     for (;;) {
         const { data, error } = await pro.from('leads')
-            .select('id,name,owner_phone,phone,assigned_to,has_cold_call_script').range(from, from + 999);
+            .select('id,name,owner_phone,phone,assigned_to,has_cold_call_script,pitch_agent,pitch_agent_file,owner_name').range(from, from + 999);
         if (error) return res.status(500).json({ error: 'leads_read_failed', detail: error.message });
         if (!data || !data.length) break;
         for (const l of data) {
@@ -161,12 +189,32 @@ module.exports = async function handler(req, res) {
         else if (!want && l.has_cold_call_script) toDisable.push(l.id);
     }
 
+    // --- re-sync pass: David re-pushed a script for an already-enabled lead --
+    // pitch_agent was historically written once, at enable time. David re-pushes
+    // scripts that CHANGE the meeting product (07-14/07-23 changed 345 leads),
+    // which left the dashboards' agent chip contradicting the script text under
+    // it. The manifest filename is the change signal: when it differs from the
+    // lead's stored pitch_agent_file, re-read that script and refresh the agent
+    // (and owner_name, when the script names a real person and the lead has
+    // none). Capped per run to stay inside maxDuration; hourly runs converge.
+    const REFRESH_CAP = 150;
+    const needsRefresh = [];
+    for (const slug in bySlug) {
+        const l = bySlug[slug];
+        const file = fileBySlug[slug];
+        if (!file) continue; // listing-only lead: the enable path handles it
+        if (!l.has_cold_call_script && !targetCallable.has(l.id)) continue;
+        if (l.pitch_agent_file === file) continue;
+        needsRefresh.push({ lead: l, file: file });
+    }
+
     if (dry) {
         return res.status(200).json({
             ok: true, dry: true, prune: prune,
             briefed: briefed.size, scripted: scripted.size,
             target_callable: targetCallable.size, awaiting: awaiting.length,
             would_enable: toEnable.length,
+            would_refresh: needsRefresh.length,
             would_disable: prune ? toDisable.length : 0,
             stale_not_pruned: prune ? 0 : toDisable.length,
         });
@@ -189,8 +237,27 @@ module.exports = async function handler(req, res) {
     for (const id of toEnable) {
         const lead = idToLead[id];
         if (!lead) continue;
+        // Manifest-listed leads are handled by the refresh pass below (which
+        // also stamps pitch_agent_file); only listing-only leads need this path.
+        if (fileBySlug[cc.slugify(lead.name)]) continue;
         const agent = await pitchAgentForLead(token, lead.name);
         if (agent) { const { error } = await pro.from('leads').update({ pitch_agent: agent }).eq('id', id); if (!error) agented++; }
+    }
+    // The re-push refresh pass (see needsRefresh above).
+    let refreshed = 0, renamed = 0;
+    for (const item of needsRefresh.slice(0, REFRESH_CAP)) {
+        try {
+            const md = await cc.readObject(token, 'cold-call/' + item.file);
+            const agent = agentFromScript(md);
+            const patch = { pitch_agent_file: item.file };
+            if (agent) patch.pitch_agent = agent;
+            const person = realNameFromScript(md, item.lead.name);
+            if (person && !(item.lead.owner_name && String(item.lead.owner_name).trim())) {
+                patch.owner_name = person; renamed++;
+            }
+            const { error } = await pro.from('leads').update(patch).eq('id', item.lead.id);
+            if (!error) refreshed++;
+        } catch (_) { /* transient read failure: retried next run */ }
     }
     // Only prune when explicitly asked. The default cron path never disables.
     if (prune) {
@@ -214,6 +281,8 @@ module.exports = async function handler(req, res) {
         briefed: briefed.size, scripted: scripted.size,
         target_callable: targetCallable.size,
         enabled: enabled, agented: agented, disabled: disabled,
+        refreshed: refreshed, renamed: renamed,
+        refresh_backlog: Math.max(0, needsRefresh.length - REFRESH_CAP),
         stale_left: prune ? 0 : toDisable.length,
         awaiting: awaitingDedup.length,
     });
