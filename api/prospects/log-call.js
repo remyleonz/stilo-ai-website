@@ -160,7 +160,12 @@ module.exports = async function handler(req, res) {
             if (callbackAt && (body.outcome === 'callback_requested' || body.outcome === 'interested_followup')) {
                 update.next_action_type = 'callback';
                 update.next_action_due_at = callbackAt;
-            } else if (['booked_meeting', 'do_not_call', 'dnc_request', 'not_interested', 'owner_uninterested', 'wrong_number'].includes(body.outcome)) {
+            } else if (body.outcome !== 'callback_requested' && body.outcome !== 'interested_followup') {
+                // Any other human-logged outcome clears the callback slot:
+                // terminal outcomes end the thread, and attempt outcomes
+                // (voicemail / no_answer / answered) mean the scheduled callback
+                // was just acted on. Only an explicit callback outcome with a
+                // time may (re)enter the Callbacks tab.
                 update.next_action_type = null;
                 update.next_action_due_at = null;
             }

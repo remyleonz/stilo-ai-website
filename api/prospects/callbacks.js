@@ -42,9 +42,14 @@ module.exports = async function handler(req, res) {
     // callbacks calendar already plots them as a separate layer sourced from
     // /api/prospects/list-booked (STATE.cbMeetings in the dashboard). Adding them
     // here would draw every meeting twice on the calendar.
+    // A scheduled callback only counts when a HUMAN put it there. Machine
+    // outcomes (voicemail / no_answer / missed_inbound from the Quo webhook or
+    // David's backend) must never surface here even if something re-stamps
+    // next_action_type — that was the bug where every unanswered dial showed up
+    // as a due-today callback. Keep in sync with list-callbacks.js.
     let q = sb.from('leads')
         .select('*')
-        .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
+        .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
         .or('do_not_call.is.null,do_not_call.eq.false');
     if (sdrEmail) q = q.eq('assigned_to', sdrEmail);
 

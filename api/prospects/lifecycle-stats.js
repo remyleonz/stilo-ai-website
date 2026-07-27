@@ -100,12 +100,14 @@ async function localStats(sdrEmail) {
             callable(C()).eq('prospect_tier', 'warm'),
             callable(C()).eq('prospect_tier', 'cool'),
             scope(C()).or('last_called_outcome.in.(' + OUT_OF_PIPELINE.join(',') + '),and(call_attempts.gte.3,last_called_outcome.is.null)'),
-            scope(C()).or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
+            // Same human-scheduled-only filter as callbacks.js / list-callbacks.js
+            scope(C()).or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
                 .or('do_not_call.is.null,do_not_call.eq.false'),
             scope(C()).eq('last_called_outcome', 'booked_meeting'),
             scope(C()).gte('last_called_at', startOfDay.toISOString()),
             scope(C()).eq('last_called_outcome', 'booked_meeting').gte('last_called_at', startOfWeek.toISOString()),
-            scope(C()).eq('next_action_type', 'callback').lte('next_action_due_at', endOfDay.toISOString()),
+            scope(C()).eq('next_action_type', 'callback').lte('next_action_due_at', endOfDay.toISOString())
+                .or('last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)'),
             callable(C())
         ]);
 
@@ -133,11 +135,12 @@ async function localStats(sdrEmail) {
                 callableNoScope(Cu()).eq('prospect_tier', 'warm'),
                 callableNoScope(Cu()).eq('prospect_tier', 'cool'),
                 Cu().or('last_called_outcome.in.(' + OUT_OF_PIPELINE.join(',') + '),and(call_attempts.gte.3,last_called_outcome.is.null)'),
-                Cu().or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)').or('do_not_call.is.null,do_not_call.eq.false'),
+                Cu().or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))').or('do_not_call.is.null,do_not_call.eq.false'),
                 Cu().eq('last_called_outcome', 'booked_meeting'),
                 Cu().gte('last_called_at', startOfDay.toISOString()),
                 Cu().eq('last_called_outcome', 'booked_meeting').gte('last_called_at', startOfWeek.toISOString()),
-                Cu().eq('next_action_type', 'callback').lte('next_action_due_at', endOfDay.toISOString()),
+                Cu().eq('next_action_type', 'callback').lte('next_action_due_at', endOfDay.toISOString())
+                    .or('last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)'),
                 callableNoScope(Cu())
             ]);
             // If even the unscoped retries failed, bail to upstream fallback.

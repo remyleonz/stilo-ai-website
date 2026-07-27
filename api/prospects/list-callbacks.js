@@ -55,9 +55,13 @@ module.exports = async function handler(req, res) {
         // NOTE: booked meetings are NOT merged in here. The callbacks calendar
         // plots them as a separate layer from /api/prospects/list-booked, so
         // adding them would double-draw every meeting.
+        // Human-scheduled callbacks only — same filter as callbacks.js. A bare
+        // next_action_type='callback' doesn't qualify when the last outcome was
+        // a machine one (voicemail / no_answer / missed_inbound): those stamps
+        // came from auto-retry scheduling, not a rep promising a callback.
         let q = sb.from('leads')
             .select(SELECT_COLS)
-            .or('next_action_type.eq.callback,last_called_outcome.in.(callback_requested,interested_followup)')
+            .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
             .neq('do_not_call', true);
         if (assignedTo) q = q.eq('assigned_to', assignedTo);
         if (dueToday) {

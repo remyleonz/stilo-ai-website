@@ -763,13 +763,12 @@ module.exports = async function handler(req, res) {
                 call_attempts: 1, // backend will increment via its own logic; use 1 as a floor
                 updated_at: new Date().toISOString()
             };
-            if (baseFields.outcome === 'missed_inbound') {
-                updates.next_action_type = 'callback';
-                updates.next_action_due_at = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-            } else if (baseFields.outcome === 'voicemail' || baseFields.outcome === 'no_answer') {
-                updates.next_action_type = 'callback';
-                updates.next_action_due_at = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
-            }
+            // No auto-scheduled callbacks. This block used to stamp
+            // next_action_type='callback' (+1h for missed_inbound, +4h for
+            // voicemail/no_answer), which dumped every unanswered dial into the
+            // Callbacks tab as due-today. The tab is human-scheduled only: a
+            // lead enters it when the rep logs callback_requested /
+            // interested_followup with a time, or uses "Add to callback list".
             await sb.from('leads').update(updates).eq('id', callRow.lead_id);
         }
 
