@@ -96,17 +96,22 @@ async function loadManifestSlugs(token) {
     const scripts = Array.isArray(man) ? man : (man.scripts || []);
     const slugs = new Set();
     const fileBySlug = {};
+    // David's manifest can hold DUPLICATE entries for one lead (e.g. a 07-21
+    // and a 07-23 script). cold-call-script.js builds its lookup maps with
+    // plain assignment, so the LAST entry wins and that is the file the
+    // dashboards serve. Mirror that exactly here: last-wins, never first-wins,
+    // or the refresh pass parses a different file than the one on screen.
     for (const e of scripts) {
         if (!e) continue;
         if (e.business_name) {
             const s = cc.slugify(e.business_name);
             slugs.add(s);
-            if (e.filename && !fileBySlug[s]) fileBySlug[s] = e.filename;
+            if (e.filename) fileBySlug[s] = e.filename;
         }
         if (e.lead_id) {
             const s = String(e.lead_id).replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase();
             slugs.add(s);
-            if (e.filename && !fileBySlug[s]) fileBySlug[s] = e.filename;
+            if (e.filename) fileBySlug[s] = e.filename;
         }
     }
     return { slugs, fileBySlug };
