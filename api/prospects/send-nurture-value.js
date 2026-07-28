@@ -87,7 +87,7 @@ module.exports = async function handler(req, res) {
 
     for (const touch of due) {
         const { data: lead } = await sb.from('leads')
-            .select('id,name,owner_name,owner_email,email,meeting_at,do_not_call,meeting_booked_by_sdr,owner_phone_e164,owner_phone,phone,last_called_outcome')
+            .select('id,name,owner_name,owner_email,email,meeting_scheduled_at,do_not_call,meeting_booked_by_sdr,owner_phone_e164,owner_phone,phone,last_called_outcome')
             .eq('id', touch.lead_id).maybeSingle();
 
         const skip = function (reason) {
@@ -102,12 +102,12 @@ module.exports = async function handler(req, res) {
         if (!lead) { skip('lead_missing'); continue; }
         if (lead.do_not_call) { skip('do_not_call'); continue; }
         // The meeting moved or was cleared after this touch was planned.
-        if (!lead.meeting_at) { skip('meeting_cancelled'); continue; }
-        if (new Date(lead.meeting_at).toISOString() !== new Date(touch.meeting_at).toISOString()) {
+        if (!lead.meeting_scheduled_at) { skip('meeting_cancelled'); continue; }
+        if (new Date(lead.meeting_scheduled_at).toISOString() !== new Date(touch.meeting_at).toISOString()) {
             skip('meeting_rescheduled'); continue;
         }
         // The meeting already happened; a "before our call" note now is noise.
-        if (new Date(lead.meeting_at) < now) { skip('meeting_already_passed'); continue; }
+        if (new Date(lead.meeting_scheduled_at) < now) { skip('meeting_already_passed'); continue; }
 
         let senderName = 'Remy';
         try {

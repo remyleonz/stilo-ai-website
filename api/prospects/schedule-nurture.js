@@ -12,6 +12,11 @@
  * Hooking one door means the other two silently produce meetings with no
  * nurture. This claims any meeting, however it arrived.
  *
+ * COLUMN NAME: the lead's scheduled time is leads.meeting_scheduled_at. There is no
+ * leads.meeting_at; an earlier version of this file read that and would have 500'd on
+ * every cron tick, silently meaning the value sequence never fired for anyone.
+ * nurture_touches.meeting_at IS ours and is deliberately named differently.
+ *
  * REBOOKINGS: the plan is keyed on (lead_id, step_key, channel, meeting_at). A
  * rebooked meeting has a different meeting_at, so it gets a fresh sequence
  * rather than inheriting the old one's spent stamps. That inheritance is
@@ -58,10 +63,10 @@ module.exports = async function handler(req, res) {
     const horizon = new Date(now.getTime() + LOOKAHEAD_DAYS * 86400000);
 
     let lq = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,niche,category,address,pitch_agent,meeting_at,meeting_booked_by_sdr,do_not_call,owner_phone_e164,owner_phone,phone')
-        .not('meeting_at', 'is', null)
-        .gte('meeting_at', now.toISOString())
-        .lte('meeting_at', horizon.toISOString());
+        .select('id,name,owner_name,owner_email,email,niche,category,address,pitch_agent,meeting_scheduled_at,meeting_booked_by_sdr,do_not_call,owner_phone_e164,owner_phone,phone')
+        .not('meeting_scheduled_at', 'is', null)
+        .gte('meeting_scheduled_at', now.toISOString())
+        .lte('meeting_scheduled_at', horizon.toISOString());
     if (onlyLead != null) lq = lq.eq('id', onlyLead);
 
     const { data: leads, error } = await lq.limit(200);
@@ -73,7 +78,7 @@ module.exports = async function handler(req, res) {
         report.considered++;
         if (lead.do_not_call) { report.skipped.do_not_call = (report.skipped.do_not_call || 0) + 1; continue; }
 
-        const meetingIso = new Date(lead.meeting_at).toISOString();
+        const meetingIso = new Date(lead.meeting_scheduled_at).toISOString();
 
         // Cancel anything still pending for a DIFFERENT meeting time on this
         // lead. That is the rebooking case: the meeting moved, so the old plan
@@ -96,7 +101,7 @@ module.exports = async function handler(req, res) {
             continue;
         }
 
-        const schedule = nv.buildSchedule(lead.meeting_at, { now: now });
+        const schedule = nv.buildSchedule(lead.meeting_scheduled_at, { now: now });
         if (!schedule.length) {
             report.skipped.too_close_to_meeting = (report.skipped.too_close_to_meeting || 0) + 1;
             continue;
