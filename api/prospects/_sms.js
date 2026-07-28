@@ -4,9 +4,16 @@
  *
  * Texts go out from the booking rep's own Quo line so the prospect sees a reply
  * from the person who called them. But not every email in public.sdr_users maps
- * to a line that can actually SEND. David's +17865742922 is an owner line that
- * lives under Remy's Quo seat for attribution only, and OpenPhone rejects it as
- * a from-number with 404 "Phone number not found when getting by number".
+ * to a line that can actually SEND. David's old +17865742922 was an owner line
+ * that lived under Remy's Quo seat for attribution only, and OpenPhone rejected
+ * it as a from-number with 404 "Phone number not found when getting by number".
+ *
+ * That specific case is fixed at the source as of 2026-07-28: David moved to a
+ * real provisioned line (+17547075311) and 786-574-2922 was retired from the
+ * account. The fallback below stays anyway, because the failure it catches is
+ * structural, not about one number. Any rep whose sdr_users row drifts from the
+ * Quo account hits the same 404, and dropping the message is worse than sending
+ * it from a line that works.
  *
  * That surfaced on a real send: HG Accounting's confirmation email went out but
  * the text silently failed, because meeting_booked_by_sdr was David (he rebooked

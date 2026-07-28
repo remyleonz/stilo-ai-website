@@ -18,6 +18,7 @@
  */
 
 const { verifySignature, readRawBody, serviceClient, publicClient, normalizePhone, openphoneFetch } = require('./_shared');
+const outboundReplies = require('../prospects/_outbound_reply');
 
 // Quo ships TWO direction vocabularies depending on the event:
 //   call.completed                      -> 'incoming' / 'outgoing'
@@ -388,7 +389,26 @@ module.exports = async function handler(req, res) {
         try {
             const { error: msgErr } = await sb.from('lead_messages').insert(messageRow);
             if (msgErr && msgErr.code !== '23505') throw msgErr; // ignore dup-on-key collisions
-            return res.status(200).json({ ok: true, channel: 'sms', lead_id: mLeadId });
+
+            // Outbound campaign reply handling runs INLINE, not on a cron. The
+            // campaign promises a callback inside ~4 minutes, and a 5-minute
+            // poller would spend most of that budget just noticing. This moves
+            // the target to 'replied', starts the callback clock, and emails the
+            // assigned rep. Opt-outs are handled here too and are terminal.
+            //
+            // Wrapped so a failure can never 500 the webhook: Quo retries any
+            // non-2xx, and a retry loop would re-insert messages and re-alert.
+            let outboundReply = null;
+            if (direction === 'inbound') {
+                try {
+                    outboundReply = await outboundReplies.handleInboundSms(
+                        messageRow.from_address, messageRow.to_address, body
+                    );
+                } catch (e) {
+                    console.error('[openphone/webhook] outbound reply handling failed', e);
+                }
+            }
+            return res.status(200).json({ ok: true, channel: 'sms', lead_id: mLeadId, outbound: outboundReply });
         } catch (e) {
             console.error('[openphone/webhook] message insert failed', e);
             return res.status(202).json({ ok: true, error: e.message });
@@ -463,13 +483,29 @@ module.exports = async function handler(req, res) {
     // themselves and let the phone-line block below override the userId guess.
     // Attribution-only on purpose: owners are NOT in sdr_users, so this keeps
     // them out of round-robin lead assignment and the commission leaderboard.
+    // THIS MAP IS HISTORICAL, NOT CURRENT STATE. Entries are keyed by the line a
+    // call actually came from, so a retired number must stay here forever: a
+    // resync (openphone/resync-all.js) replays old calls through this exact code
+    // path, and dropping a retired line would re-attribute every historical call
+    // made from it to nobody. Only ever ADD here; never delete.
+    //
+    // Current lines live in public.sdr_users.openphone_number and are layered on
+    // top of this map below, so a rep who changes numbers is handled by the DB
+    // update alone. Both owners now have sdr_users rows, so their CURRENT lines
+    // resolve from the DB too.
     const OWNER_LINE_TO_EMAIL = {
-        '+17868376639': 'remyleon@stiloaipartners.com',  // (786) 837-6639 — Remy Leon
-        '+17865742922': 'davidcoira@stiloaipartners.com'  // (786) 574-2922 — David Coira
-        // (754) 707-5311 was briefly David's, reassigned to George Gutierrez
-        // 2026-07-25. His line resolves via sdr_users.openphone_number like
-        // every other rep, so it must NOT sit here (owner entries seed the
-        // line map and would shadow him if his row ever went inactive).
+        '+17868376639': 'remyleon@stiloaipartners.com',  // (786) 837-6639 — Remy Leon, current
+        // (786) 574-2922 — David's original owner line. RETIRED from the Quo
+        // account 2026-07-28 when he moved to (754) 707-5311. Kept so his ~2
+        // months of calls from it stay attributed on any resync. Safe to keep
+        // permanently precisely because a retired number can never be reassigned
+        // to another rep.
+        '+17865742922': 'davidcoira@stiloaipartners.com'
+        // (754) 707-5311 and (305) 614-7430 are deliberately absent. They have
+        // changed hands once already (754 went David -> George 2026-07-25 ->
+        // David 2026-07-28), so hardcoding either would guarantee a wrong answer
+        // after the next swap. Both resolve from sdr_users, which is the one
+        // place a reassignment gets recorded.
     };
     const metadataLoggedBy = (call.metadata && call.metadata.logged_by) || null;
     if (metadataLoggedBy) {

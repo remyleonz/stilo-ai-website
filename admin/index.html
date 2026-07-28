@@ -1305,6 +1305,13 @@
                     Agents
                     <span id="pendingReviewBadge" style="display:none;margin-left:auto;background:#3b82f6;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;" title="Pending Review submissions"></span>
                 </button>
+                <button class="nav-item" data-page="outbound" onclick="switchPage('outbound')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/>
+                    </svg>
+                    Outbound
+                    <span id="outboundReplyBadge" style="display:none;margin-left:auto;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;" title="Replies awaiting a callback"></span>
+                </button>
                 <!-- Sales — single nav item that lands on Pipeline by default, with
                      a sub-tab strip rendered at the top of #page-pipeline /
                      #page-deals / #page-activity that lets users jump between
@@ -1766,6 +1773,40 @@
                 <!-- Quiz Leads: inbound from the marketing site quiz (public.quiz_submissions). -->
                 <div id="prospectTableQuizLeads" class="prospect-table-host" style="display:none;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
                     <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Quiz Leads will load when you open this tab.</div>
+                </div>
+            </div>
+
+            <!-- Outbound tab: SMS campaign board.
+                 Columns are the target state machine, not a mood: a card only
+                 moves to Replied when a real inbound SMS arrives, and only to
+                 Booked/Dead when a human says so. The Replied column is the
+                 one that matters, so it carries a live countdown to the
+                 callback SLA and sorts overdue-first. -->
+            <div class="page-content" id="page-outbound" style="display:none;">
+                <div id="obLockBanner" style="display:none;margin:0 0 16px;padding:12px 16px;border-radius:10px;font-size:0.86rem;line-height:1.5;"></div>
+
+                <div class="stilo-page-header-row" style="gap:12px;flex-wrap:wrap;align-items:center;">
+                    <select id="obCampaignSelect" onchange="obLoadBoard()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);min-width:220px;">
+                        <option value="">Loading campaigns...</option>
+                    </select>
+                    <select id="obRepFilter" onchange="obLoadBoard()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);">
+                        <option value="">All reps</option>
+                    </select>
+                    <button onclick="obLoadBoard()" style="padding:9px 16px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;cursor:pointer;">Refresh</button>
+                    <span id="obPacing" style="margin-left:auto;font-size:0.8rem;color:var(--text-muted);"></span>
+                </div>
+
+                <div id="obStatStrip" style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px;"></div>
+
+                <!-- Flex row with a fixed column width and its own horizontal
+                     scroll, NOT an auto-fit grid. auto-fit reflows the last
+                     column onto a second row as soon as the viewport can't fit
+                     all five (it did exactly that at 1280px, dropping "Dead"
+                     underneath "Queued"), and a kanban with a wrapped column
+                     reads as a broken page. Columns now stay on one line and
+                     the board scrolls sideways instead of the page. -->
+                <div id="obBoard" style="display:flex;gap:14px;align-items:flex-start;overflow-x:auto;padding-bottom:8px;">
+                    <div style="color:var(--text-muted);font-size:0.9rem;">Loading board...</div>
                 </div>
             </div>
 
@@ -2343,7 +2384,7 @@
         // Set of valid pages — used by switchPage() and by the hash-based
         // routing on initial load. Add new tabs here so the URL refresh
         // behavior picks them up automatically.
-        var VALID_PAGES = ['dashboard','clients','prospecting','agents','review','revenue','team','pipeline','deals','activity','support','settings'];
+        var VALID_PAGES = ['dashboard','clients','prospecting','outbound','agents','review','revenue','team','pipeline','deals','activity','support','settings'];
 
         function switchPage(page, opts) {
             opts = opts || {};
@@ -2376,6 +2417,7 @@
                 dashboard: 'Dashboard',
                 clients: 'Clients',
                 prospecting: 'Leads',
+                outbound: 'Outbound',
                 sales: 'Sales',
                 agents: 'Agents',
                 revenue: 'Revenue',
@@ -2417,6 +2459,7 @@
             else if (page === 'support') adminLoadSupportThreads();
             else if (page === 'settings') loadSettings();
             else if (page === 'prospecting') { loadProspectingPage(); loadAbResults(); }
+            else if (page === 'outbound') obInitPage();
 
             // Close sidebar on mobile after selection
             closeSidebar();
@@ -6162,6 +6205,264 @@
            per template arm. Stays honest about sample size: shows a "gathering
            data" note until each arm clears the minimum, only then names a leader. */
         var abLoadedOnce = false;
+        /* ===========================================================
+           Outbound SMS campaign board
+           ===========================================================
+           The countdown is driven by seconds_remaining sent from the server,
+           decremented locally by a 1s interval. Deliberately not computed from
+           callback_due_at in the browser: a laptop that slept, a clock that
+           drifted, or a tab left open overnight all produce a confidently wrong
+           timer, and this is the one number the campaign is built around. The
+           server value is the truth; the interval is just cosmetic motion
+           between refreshes.
+        */
+        var OB_STAGES = [
+            { key: 'queued',   label: 'Queued',      color: '#6B7280' },
+            { key: 'sent',     label: 'Sent',        color: '#2563EB' },
+            { key: 'replied',  label: 'Replied',     color: '#F59E0B' },
+            { key: 'booked',   label: 'Call Booked', color: '#10B981' },
+            { key: 'dead',     label: 'Dead',        color: '#4B5563' }
+        ];
+        var obBoardData = null;
+        var obTicker = null;
+
+        function obEsc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function obFmtCountdown(sec) {
+            if (sec == null) return '';
+            var neg = sec < 0;
+            var a = Math.abs(sec);
+            var m = Math.floor(a / 60), s = a % 60;
+            return (neg ? '+' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        async function obInitPage() {
+            var sel = document.getElementById('obCampaignSelect');
+            try {
+                var d = await prospectFetchJSON('/api/prospects/outbound-campaign', { method: 'GET' });
+                var list = d.campaigns || [];
+                if (!list.length) {
+                    sel.innerHTML = '<option value="">No campaigns yet</option>';
+                    document.getElementById('obBoard').innerHTML =
+                        '<div style="color:var(--text-muted);font-size:0.92rem;line-height:1.6;max-width:520px;">'
+                        + 'No campaign yet. Create one, enqueue an audience, generate the messages, review them, then start it.'
+                        + '</div>';
+                    obRenderLockBanner(d.send_enabled_env, null);
+                    return;
+                }
+                var prev = sel.value;
+                sel.innerHTML = list.map(function (c) {
+                    var n = (c.counts && c.counts.total) || 0;
+                    return '<option value="' + c.id + '">' + obEsc(c.name) + ' · ' + c.status + ' · ' + n + ' targets</option>';
+                }).join('');
+                if (prev && list.some(function (c) { return String(c.id) === prev; })) sel.value = prev;
+                await obLoadBoard();
+            } catch (e) {
+                sel.innerHTML = '<option value="">Failed to load</option>';
+                document.getElementById('obBoard').innerHTML =
+                    '<div style="color:var(--red,#ef4444);font-size:0.9rem;">Could not load campaigns: ' + obEsc(e.message || e) + '</div>';
+            }
+        }
+
+        function obRenderLockBanner(envEnabled, campaign) {
+            var el = document.getElementById('obLockBanner');
+            if (!el) return;
+            var running = campaign && campaign.status === 'running';
+            if (running && envEnabled) {
+                el.style.display = 'block';
+                el.style.background = 'rgba(16,185,129,.10)';
+                el.style.border = '1px solid rgba(16,185,129,.35)';
+                el.style.color = '#10B981';
+                el.innerHTML = '<strong>Live.</strong> This campaign is running and sending is enabled. Messages go out on the drip schedule inside the send window.';
+                return;
+            }
+            el.style.display = 'block';
+            el.style.background = 'rgba(245,158,11,.10)';
+            el.style.border = '1px solid rgba(245,158,11,.35)';
+            el.style.color = '#F59E0B';
+            var why = [];
+            if (!envEnabled) why.push('the <code>OUTBOUND_SEND_ENABLED</code> environment lock is closed');
+            if (campaign && campaign.status !== 'running') why.push('the campaign is <strong>' + obEsc(campaign.status) + '</strong>');
+            el.innerHTML = '<strong>Nothing is sending.</strong> ' + (why.length ? why.join(' and ') : 'No running campaign') + '. '
+                + 'You can enqueue, generate, and review every message safely in this state.';
+        }
+
+        async function obLoadBoard() {
+            var sel = document.getElementById('obCampaignSelect');
+            var id = sel && sel.value;
+            if (!id) return;
+            var rep = document.getElementById('obRepFilter');
+            var url = '/api/prospects/outbound-board?campaign_id=' + encodeURIComponent(id)
+                + (rep && rep.value ? '&rep=' + encodeURIComponent(rep.value) : '');
+            try {
+                var d = await prospectFetchJSON(url, { method: 'GET' });
+                obBoardData = d;
+                obRenderLockBanner(d.send_enabled_env, d.campaign);
+                obRenderStats(d);
+                obRenderBoard(d);
+                obPopulateRepFilter(d);
+                obStartTicker();
+                obUpdateNavBadge(d);
+            } catch (e) {
+                document.getElementById('obBoard').innerHTML =
+                    '<div style="color:var(--red,#ef4444);font-size:0.9rem;">Board failed to load: ' + obEsc(e.message || e) + '</div>';
+            }
+        }
+
+        function obPopulateRepFilter(d) {
+            var sel = document.getElementById('obRepFilter');
+            if (!sel || !d.is_admin) { if (sel) sel.style.display = d.is_admin ? '' : 'none'; return; }
+            var seen = {};
+            Object.keys(d.stages || {}).forEach(function (k) {
+                (d.stages[k] || []).forEach(function (c) { if (c.assigned_to) seen[c.assigned_to] = 1; });
+            });
+            var prev = sel.value;
+            sel.innerHTML = '<option value="">All reps</option>'
+                + Object.keys(seen).sort().map(function (e) { return '<option value="' + obEsc(e) + '">' + obEsc(e) + '</option>'; }).join('');
+            if (prev) sel.value = prev;
+        }
+
+        function obRenderStats(d) {
+            var strip = document.getElementById('obStatStrip');
+            var c = d.counts || {};
+            var replied = (d.stages.replied || []).filter(function (x) { return !x.called_back_at; }).length;
+            var overdue = (d.stages.replied || []).filter(function (x) { return x.overdue && !x.called_back_at; }).length;
+            var tiles = [
+                { label: 'Awaiting callback', value: replied, color: overdue ? '#ef4444' : '#F59E0B' },
+                { label: 'Overdue', value: overdue, color: overdue ? '#ef4444' : 'var(--text-muted)' },
+                { label: 'Sent today', value: d.sent_today_total || 0, color: 'var(--text-primary)' },
+                { label: 'Queued', value: c.queued || 0, color: 'var(--text-muted)' },
+                { label: 'Booked', value: c.booked || 0, color: '#10B981' },
+                { label: 'Opted out', value: c.opted_out || 0, color: 'var(--text-muted)' }
+            ];
+            strip.innerHTML = tiles.map(function (t) {
+                // box-sizing must be explicit: these tiles inherit content-box,
+                // so a 130px basis actually measured 160px once padding and
+                // border were added, and two of them no longer fit a 375px
+                // screen. Every stat then took its own row and pushed the board
+                // below the fold on a phone.
+                return '<div style="box-sizing:border-box;flex:1 1 118px;min-width:104px;background:var(--bg-card,rgba(255,255,255,.03));border:1px solid var(--border-subtle);border-radius:10px;padding:12px 14px;">'
+                    + '<div style="font-size:1.5rem;font-weight:700;line-height:1.1;color:' + t.color + ';">' + t.value + '</div>'
+                    + '<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-top:4px;">' + t.label + '</div>'
+                    + '</div>';
+            }).join('');
+
+            var pacing = document.getElementById('obPacing');
+            if (pacing) {
+                var w = d.window || {};
+                var lines = d.sent_today_by_line || {};
+                var perLine = Object.keys(lines).map(function (k) { return '…' + k.slice(-4) + ' ' + lines[k]; }).join('   ');
+                pacing.textContent = (w.open ? 'Send window open' : 'Send window closed')
+                    + (perLine ? '  ·  sent today per line:   ' + perLine : '');
+            }
+        }
+
+        function obRenderBoard(d) {
+            var board = document.getElementById('obBoard');
+            board.innerHTML = OB_STAGES.map(function (st) {
+                var cards = (d.stages[st.key] || []).slice();
+                if (st.key === 'replied') {
+                    // Overdue first, then soonest-due. The rep should never have
+                    // to scan for the one that is late.
+                    cards.sort(function (a, b) {
+                        if (!!a.called_back_at !== !!b.called_back_at) return a.called_back_at ? 1 : -1;
+                        return (a.seconds_remaining == null ? 1e9 : a.seconds_remaining)
+                             - (b.seconds_remaining == null ? 1e9 : b.seconds_remaining);
+                    });
+                }
+                return '<div style="box-sizing:border-box;flex:0 0 282px;max-height:calc(100vh - 300px);overflow-y:auto;background:var(--bg-card,rgba(255,255,255,.02));border:1px solid var(--border-subtle);border-radius:12px;padding:12px;">'
+                    + '<div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;">'
+                    + '<span style="width:8px;height:8px;border-radius:50%;background:' + st.color + ';"></span>'
+                    + '<span style="font-weight:700;font-size:0.85rem;">' + st.label + '</span>'
+                    + '<span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted);">' + cards.length + '</span>'
+                    + '</div>'
+                    + (cards.length
+                        ? cards.slice(0, 60).map(obCard).join('')
+                        : '<div style="font-size:0.78rem;color:var(--text-muted);padding:6px 2px;">Empty</div>')
+                    + (cards.length > 60 ? '<div style="font-size:0.75rem;color:var(--text-muted);padding:6px 2px;">+' + (cards.length - 60) + ' more</div>' : '')
+                    + '</div>';
+            }).join('');
+        }
+
+        function obCard(c) {
+            var isReplied = c.stage === 'replied';
+            var waiting = isReplied && !c.called_back_at;
+            var border = waiting ? (c.overdue ? '#ef4444' : '#F59E0B') : 'var(--border-subtle)';
+            var out = ['<div style="background:var(--bg-input,rgba(255,255,255,.03));border:1px solid ' + border + ';border-radius:9px;padding:10px 11px;margin:0 0 8px;">'];
+
+            out.push('<div style="font-weight:650;font-size:0.83rem;line-height:1.3;">' + obEsc(c.business || ('Lead ' + c.lead_id)) + '</div>');
+            var meta = [c.owner_name, c.niche].filter(Boolean).join(' · ');
+            if (meta) out.push('<div style="font-size:0.73rem;color:var(--text-muted);margin-top:2px;">' + obEsc(meta) + '</div>');
+            if (c.pitch_agent) out.push('<div style="font-size:0.7rem;color:#2563EB;margin-top:3px;">' + obEsc(c.pitch_agent) + '</div>');
+
+            if (waiting) {
+                out.push('<div id="ob-cd-' + c.id + '" data-sec="' + (c.seconds_remaining == null ? '' : c.seconds_remaining) + '" '
+                    + 'style="margin:8px 0 6px;font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums;color:' + (c.overdue ? '#ef4444' : '#F59E0B') + ';">'
+                    + obFmtCountdown(c.seconds_remaining) + (c.overdue ? ' overdue' : ' left') + '</div>');
+            }
+
+            if (c.first_reply_body) {
+                out.push('<div style="margin:7px 0;padding:7px 9px;background:rgba(245,158,11,.08);border-left:2px solid #F59E0B;border-radius:4px;font-size:0.78rem;line-height:1.45;">'
+                    + obEsc(String(c.first_reply_body).slice(0, 220)) + '</div>');
+            } else if (c.step1_body) {
+                out.push('<div style="margin:7px 0;font-size:0.75rem;color:var(--text-muted);line-height:1.45;">'
+                    + obEsc(String(c.step1_body).slice(0, 150)) + '</div>');
+            }
+
+            if (c.last_error) {
+                out.push('<div style="font-size:0.7rem;color:#ef4444;margin:4px 0;">' + obEsc(c.last_error) + '</div>');
+            }
+
+            var btn = 'padding:5px 9px;border-radius:6px;border:1px solid var(--border-subtle);background:transparent;color:inherit;font-size:0.72rem;cursor:pointer;';
+            out.push('<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">');
+            if (c.tel_link) out.push('<a href="' + c.tel_link + '" style="' + btn + 'text-decoration:none;background:#2563EB;border-color:#2563EB;color:#fff;font-weight:600;">Call</a>');
+            if (waiting) out.push('<button onclick="obAct(' + c.id + ',\'called_back\')" style="' + btn + '">Called</button>');
+            if (c.stage !== 'booked') out.push('<button onclick="obAct(' + c.id + ',\'booked\')" style="' + btn + '">Booked</button>');
+            if (c.stage !== 'dead') out.push('<button onclick="obAct(' + c.id + ',\'dead\')" style="' + btn + '">Dead</button>');
+            out.push('</div></div>');
+            return out.join('');
+        }
+
+        async function obAct(targetId, action) {
+            try {
+                await prospectFetchJSON('/api/prospects/outbound-target', {
+                    method: 'POST',
+                    body: JSON.stringify({ target_id: targetId, action: action })
+                });
+                await obLoadBoard();
+            } catch (e) {
+                alert('Action failed: ' + (e.message || e));
+            }
+        }
+
+        function obStartTicker() {
+            if (obTicker) clearInterval(obTicker);
+            obTicker = setInterval(function () {
+                // Stop burning cycles when the tab isn't showing.
+                var page = document.getElementById('page-outbound');
+                if (!page || page.style.display === 'none') { clearInterval(obTicker); obTicker = null; return; }
+                document.querySelectorAll('[id^="ob-cd-"]').forEach(function (el) {
+                    var raw = el.getAttribute('data-sec');
+                    if (raw === '' || raw == null) return;
+                    var sec = Number(raw) - 1;
+                    el.setAttribute('data-sec', String(sec));
+                    var over = sec < 0;
+                    el.style.color = over ? '#ef4444' : '#F59E0B';
+                    el.textContent = obFmtCountdown(sec) + (over ? ' overdue' : ' left');
+                });
+            }, 1000);
+        }
+
+        function obUpdateNavBadge(d) {
+            var badge = document.getElementById('outboundReplyBadge');
+            if (!badge) return;
+            var waiting = (d.stages && d.stages.replied || []).filter(function (x) { return !x.called_back_at; }).length;
+            badge.textContent = waiting;
+            badge.style.display = waiting ? '' : 'none';
+        }
+
         async function loadAbResults() {
             var box = document.getElementById('abResults');
             var hint = document.getElementById('abPanelHint');

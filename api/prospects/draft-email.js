@@ -125,7 +125,7 @@ module.exports = async function handler(req, res) {
     // a non-existent column makes PostgREST 400 and surfaced to the SDR/admin as
     // "Could not draft: lead_read_failed". Use category as the niche signal.
     const { data: lead, error } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,category,address,deep_research_json,prospect_reasoning,matched_product_name')
+        .select('id,name,owner_name,owner_email,email,category,address,deep_research_json,prospect_reasoning,matched_product_name,pitch_agent')
         .eq('id', id).maybeSingle();
     if (error) return res.status(500).json({ error: 'lead_read_failed', detail: error.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
@@ -134,17 +134,45 @@ module.exports = async function handler(req, res) {
     const niche = lead.category || '';
     const fName = kit.firstName(lead.owner_name);
     // Pitch the agent we're ACTUALLY selling this lead. Priority:
-    //   1. body.agent  — composer dropdown override (rep picked it)
-    //   2. the agent the cold-call SCRIPT names (David's brief "Pitch: <agent>") —
-    //      the human pick the rep reads off the screen. This can DIFFER from the
-    //      scoring engine (e.g. brief says Website Builder, engine says LCR), and
-    //      the script wins because that's what the rep pitched.
-    //   3. prospect_reasoning ("product=...") then niche.
-    // Only hit GCS for the script when there's no explicit dropdown override.
+    //   1. body.agent      — composer dropdown override (rep picked it)
+    //   2. leads.pitch_agent — THE source of truth, and the exact field the lead
+    //      panel's agent chip renders (admin/index.html psResolveAgentName).
+    //   3. live re-parse of David's brief from GCS
+    //   4. prospect_reasoning ("product=...") then niche
+    //
+    // WHY pitch_agent MOVED TO THE TOP (2026-07-28): this endpoint used to skip
+    // it entirely — it wasn't even in the select above — and led with a live GCS
+    // re-parse whose every failure was swallowed by a bare `catch(_)`. So any
+    // transient GCS hiccup, expired token, or brief whose wording the parser
+    // didn't match silently dropped the email through to prospect_reasoning,
+    // which is the SCORING ENGINE's guess, not David's decision. The visible
+    // symptom was a lead panel showing "Website Builder" while the email
+    // composer defaulted to "LCR" for the same lead: two different sources, one
+    // of them failing quietly. pitch_agent is written by sync-scripts.js from
+    // the same brief and refreshed when David re-pushes, so leading with it
+    // makes the email agree with the screen by construction.
+    //
+    // The live parse is KEPT as a fallback because it reads patterns
+    // agentFromScript() doesn't ("Top solutions", "likely fit", "Recommended
+    // STILO agent"), so it still rescues leads whose brief never populated
+    // pitch_agent. It just no longer overrides a known-good answer.
     let scriptAgentName = null;
-    if (!body.agent) {
-        try { scriptAgentName = await scriptAgent.getScriptAgentName(lead.name); }
-        catch (_) { scriptAgentName = null; }
+    let agentSource = null;
+    if (body.agent) {
+        agentSource = 'composer_override';
+    } else if (lead.pitch_agent) {
+        scriptAgentName = lead.pitch_agent;
+        agentSource = 'pitch_agent';
+    } else {
+        try {
+            scriptAgentName = await scriptAgent.getScriptAgentName(lead.name);
+            if (scriptAgentName) agentSource = 'script_reparse';
+        } catch (e) {
+            // Deliberately NOT silent. A swallowed failure here is exactly how
+            // the wrong agent shipped in an email with nobody noticing.
+            console.error('[draft-email] script re-parse failed for lead ' + id + ': ' + (e && e.message));
+        }
+        if (!scriptAgentName) agentSource = 'reasoning_or_niche_fallback';
     }
     const playbook = kit.pickPlaybookForLead({
         agentKey: body.agent,
@@ -184,6 +212,11 @@ module.exports = async function handler(req, res) {
         variant_label: kit.variantLabel(variant),
         agent: playbook.agent,
         agent_key: kit.playbookKey(playbook),
+        // Which rung of the priority ladder actually decided the agent. Surfaced
+        // so a "why is this pitching LCR?" question is answerable from the
+        // response instead of by reading code. 'reasoning_or_niche_fallback'
+        // means we had no brief-backed answer at all for this lead.
+        agent_source: agentSource,
         // All 8 sellable STILO agents (matches service_offerings.md). A rep can
         // pick any of these to re-draft if the call turned toward a different one.
         agents: [

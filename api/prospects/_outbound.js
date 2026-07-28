@@ -1,0 +1,282 @@
+/**
+ * api/prospects/_outbound.js
+ *
+ * Shared engine for the Outbound SMS campaign: line resolution, send-window
+ * math, per-line pacing, and per-lead message generation.
+ *
+ * ---------------------------------------------------------------------------
+ * THE TWO LOCKS
+ *
+ * Nothing sends unless BOTH are open:
+ *   1. campaign.status === 'running'
+ *   2. process.env.OUTBOUND_SEND_ENABLED === 'true'
+ *
+ * Both default closed. Enqueueing a campaign, generating every message, and
+ * previewing the whole board are all safe with the locks shut, which is the
+ * point: you should be able to build and inspect an entire campaign the night
+ * before without any chance of a message leaving.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY PER-LINE CAPS ARE THE ONES THAT MATTER
+ *
+ * Carriers score reputation per sending number, not per account. 500 messages
+ * spread across six lines is six lines doing ~83. 500 down one line is a
+ * number that gets filtered by lunchtime and takes the rep's real conversations
+ * with it. daily_cap is the campaign's budget; per_line_daily_cap is the thing
+ * that actually protects the phone system, so the worker enforces it per line
+ * per calendar day in the campaign's timezone.
+ */
+
+const { createClient } = require('@supabase/supabase-js');
+const { normalizePhone } = require('../openphone/_shared');
+const scrub = require('./_scrub');
+
+const SEND_ENABLED = String(process.env.OUTBOUND_SEND_ENABLED || '').toLowerCase() === 'true';
+
+// Authored defaults. These identify the sender, because that is the only kind
+// of opener this file ships with. A campaign row can override all three via
+// step*_guidance, and whatever is in that column is what the generator follows.
+const DEFAULT_GUIDANCE = {
+    1: [
+        'Goal: get a reply. Nothing else.',
+        'This person already spoke with us on the phone once, so reference that lightly.',
+        'Say who you are by first name and where you are from.',
+        'Ask ONE short question they can answer in a few words.',
+        'Do not pitch, do not list features, do not mention price.',
+        'Two sentences maximum. Lowercase, texting register, no marketing voice.'
+    ].join('\n'),
+    2: [
+        'They replied. Goal: state the offer plainly and find out if they want volume.',
+        'One sentence on what we do for businesses like theirs, in their language, not ours.',
+        'Then ask whether they could handle more of the specific work they do.',
+        'No price. No feature list. Three sentences maximum.'
+    ].join('\n'),
+    3: [
+        'Goal: get permission for a call in the next few minutes.',
+        'Be direct, ask if it is okay to call from this number shortly.',
+        'One or two sentences.'
+    ].join('\n')
+};
+
+function serviceClient() {
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false }, db: { schema: 'prospecting' },
+    });
+}
+function publicClient() {
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false },
+    });
+}
+
+/**
+ * email -> { line, display_name, first_name } for every active rep.
+ *
+ * Read fresh rather than cached: David and George swapped numbers twice in four
+ * days, and a cached map is how a rep's texts start going out from someone
+ * else's number.
+ */
+async function loadReps() {
+    const pub = publicClient();
+    const { data, error } = await pub.from('sdr_users')
+        .select('email, display_name, openphone_number')
+        .eq('active', true).not('openphone_number', 'is', null);
+    if (error) throw new Error('sdr_users read failed: ' + error.message);
+    const byEmail = {};
+    for (const r of (data || [])) {
+        const line = normalizePhone(r.openphone_number);
+        if (!line) continue;
+        byEmail[r.email] = {
+            line: line,
+            display_name: r.display_name || '',
+            first_name: String(r.display_name || '').trim().split(/\s+/)[0] || 'me',
+        };
+    }
+    return byEmail;
+}
+
+// ---------------------------------------------------------------------------
+// Send window. Computed in the campaign's timezone, not the server's, because
+// Vercel runs UTC and a 09:00-19:00 window read in UTC texts people at 4am.
+// ---------------------------------------------------------------------------
+function localParts(now, timezone) {
+    const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone, hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+    });
+    const p = {};
+    for (const part of fmt.formatToParts(now)) p[part.type] = part.value;
+    return {
+        ymd: p.year + '-' + p.month + '-' + p.day,
+        minutes: Number(p.hour) * 60 + Number(p.minute),
+    };
+}
+function hhmmToMinutes(t) {
+    const m = String(t || '').match(/^(\d{1,2}):(\d{2})/);
+    return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
+}
+function windowState(campaign, now) {
+    const tz = campaign.timezone || 'America/New_York';
+    const { ymd, minutes } = localParts(now || new Date(), tz);
+    const start = hhmmToMinutes(campaign.send_window_start);
+    const end = hhmmToMinutes(campaign.send_window_end);
+    return { localDate: ymd, localMinutes: minutes, open: minutes >= start && minutes < end, start: start, end: end };
+}
+
+/**
+ * How many messages each line has already sent today, for this campaign.
+ * Counted off the step*_sent_at stamps rather than a counter column, so it stays
+ * correct after a manual DB edit, a resume, or a re-run.
+ */
+async function sentTodayByLine(sb, campaign, now) {
+    const tz = campaign.timezone || 'America/New_York';
+    const today = localParts(now || new Date(), tz).ymd;
+    const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
+    const { data, error } = await sb.from('outbound_targets')
+        .select('from_line, step1_sent_at, step2_sent_at, step3_sent_at')
+        .eq('campaign_id', campaign.id)
+        .or('step1_sent_at.gte.' + since + ',step2_sent_at.gte.' + since + ',step3_sent_at.gte.' + since);
+    if (error) throw new Error('pacing read failed: ' + error.message);
+    const counts = {};
+    for (const r of (data || [])) {
+        for (const stamp of [r.step1_sent_at, r.step2_sent_at, r.step3_sent_at]) {
+            if (!stamp) continue;
+            if (localParts(new Date(stamp), tz).ymd !== today) continue;
+            counts[r.from_line] = (counts[r.from_line] || 0) + 1;
+        }
+    }
+    return counts;
+}
+
+// ---------------------------------------------------------------------------
+// Message generation
+// ---------------------------------------------------------------------------
+function firstNameOf(full) {
+    const f = String(full || '').trim().split(/\s+/)[0];
+    if (!f || /^(owner|the|practice|office|manager|front|personal|commercial)$/i.test(f)) return '';
+    return f;
+}
+
+function leadFacts(lead) {
+    const bits = [];
+    if (lead.name) bits.push('Business: ' + lead.name);
+    const who = firstNameOf(lead.owner_name);
+    if (who) bits.push('Owner first name: ' + who);
+    if (lead.niche || lead.category) bits.push('Industry: ' + (lead.niche || lead.category));
+    if (lead.address) bits.push('Location: ' + lead.address);
+    if (lead.pitch_agent) bits.push('What we would sell them: ' + lead.pitch_agent);
+    if (lead.last_called_outcome) bits.push('Outcome of our last call with them: ' + lead.last_called_outcome);
+    if (lead.website) bits.push('They already have a website: ' + lead.website);
+    return bits.join('\n');
+}
+
+/**
+ * Deterministic fallback used when Gemini is unavailable or returns junk.
+ * Deliberately plain: a boring message that sends beats a clever one that
+ * doesn't, and a silent generation failure that emits an empty string would
+ * text someone a blank message.
+ */
+function fallbackBody(lead, step, sender) {
+    const who = firstNameOf(lead.owner_name);
+    const hi = who ? 'hey ' + who : 'hey';
+    const biz = lead.name || 'your business';
+    if (step === 1) return hi + ', ' + sender.first_name + ' here from stilo, we spoke a little while back about ' + biz + '. still worth a quick chat?';
+    if (step === 2) return 'appreciate you getting back. short version: we build and run the AI that brings local businesses more booked work, and we handle the setup. could you take on more work right now if it came in?';
+    return 'perfect. ok if i give you a quick call from this number in a few minutes?';
+}
+
+async function geminiSms(prompt) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return null;
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
+    const controller = new AbortController();
+    const timer = setTimeout(function () { controller.abort(); }, 9000);
+    try {
+        const r = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.8, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } },
+            }),
+        });
+        clearTimeout(timer);
+        if (!r.ok) return null;
+        const j = await r.json();
+        const t = j && j.candidates && j.candidates[0] && j.candidates[0].content
+            && j.candidates[0].content.parts && j.candidates[0].content.parts[0]
+            && j.candidates[0].content.parts[0].text;
+        if (!t || t.trim().length < 8) return null;
+        return t.trim().replace(/^["']|["']$/g, '');
+    } catch (_) {
+        clearTimeout(timer);
+        return null;
+    }
+}
+
+/**
+ * Generate one personalized message for one lead at one step.
+ *
+ * The campaign's step guidance is passed through as the authoring brief. The
+ * lead's own record supplies the personalization. Length is hard-capped at 320
+ * chars: past that a carrier splits it into multiple segments, which costs more
+ * and reads as bulk.
+ */
+async function generateStepBody(lead, campaign, step, sender) {
+    const guidance = (campaign['step' + step + '_guidance'] || '').trim() || DEFAULT_GUIDANCE[step];
+    const prompt = [
+        'Write ONE outbound SMS. Output only the message text, nothing else.',
+        '',
+        'Who is sending: ' + sender.first_name + ' at STILO AI Partners, a small Miami team.',
+        '',
+        'About the recipient:',
+        leadFacts(lead),
+        '',
+        'What this message must do:',
+        guidance,
+        '',
+        'Hard rules:',
+        '- Under 320 characters. Shorter is better.',
+        '- No em dashes anywhere. Use commas or periods.',
+        '- No exclamation points.',
+        '- Never use: leverage, utilize, streamline, seamless, robust, cutting-edge, innovative, holistic, elevate, unlock.',
+        '- Do not write a signature, a company footer, or a link unless told to.',
+        '- Sound like a person typing on a phone, not a brochure.',
+        '',
+        'Write the message now.',
+    ].join('\n');
+
+    const out = await geminiSms(prompt);
+    let body = out || fallbackBody(lead, step, sender);
+    body = body.replace(/—|–/g, ',').replace(/!/g, '.').trim();
+    if (body.length > 320) body = body.slice(0, 317).replace(/\s+\S*$/, '') + '...';
+    return { body: body, generated: !!out };
+}
+
+/**
+ * Final pre-send gate for a single target. Everything that could make this send
+ * wrong, checked in one place immediately before the API call.
+ */
+function preSendCheck(campaign, target, lead) {
+    if (!SEND_ENABLED) return { ok: false, reason: 'send_disabled_env' };
+    if (campaign.status !== 'running') return { ok: false, reason: 'campaign_' + campaign.status };
+    if (!target.from_line) return { ok: false, reason: 'no_from_line' };
+    if (!target.to_phone) return { ok: false, reason: 'no_to_phone' };
+    if (['blocked', 'opted_out', 'dead', 'booked'].includes(target.stage)) {
+        return { ok: false, reason: 'stage_' + target.stage };
+    }
+    if (lead && lead.do_not_call) return { ok: false, reason: 'do_not_call' };
+    const s = scrub.assertScrubbedForSms(lead, target.to_phone);
+    if (!s.ok) return { ok: false, reason: s.reason };
+    return { ok: true };
+}
+
+module.exports = {
+    SEND_ENABLED, DEFAULT_GUIDANCE,
+    serviceClient, publicClient, loadReps,
+    windowState, localParts, sentTodayByLine,
+    generateStepBody, fallbackBody, firstNameOf, leadFacts,
+    preSendCheck,
+};

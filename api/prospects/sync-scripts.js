@@ -31,8 +31,18 @@
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const cc = require('./cold-call-script'); // reuse getAccessToken/readObject/slugify
+const scrub = require('./_scrub');
 
 module.exports.maxDuration = 60;
+
+// Litigator/DNC scrub budget per run. Each lookup is a network round trip, so
+// this is bounded by maxDuration, not by taste. The pass is self-healing rather
+// than incremental: it targets every scripted lead that still has no verdict,
+// not just the ones enabled this run, so anything that hit the cap (or failed
+// against a flaky provider) is retried on the next hourly tick until the
+// backlog is zero. scripts/backfill_litigator_scrub.js exists to clear a large
+// historical backlog faster than hourly convergence would.
+const SCRUB_CAP = Number(process.env.SCRUB_CAP_PER_RUN || 60);
 
 const BRIEFS_BUCKET = 'cold-call-briefs';
 const BRIEF_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rl', 'dc'];
@@ -272,6 +282,46 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // --- litigator / DNC scrub gate -----------------------------------------
+    // Every lead David makes dial-ready gets screened before a rep can touch
+    // it. A match sets do_not_call = true inside scrubLead(), and do_not_call is
+    // already honored by callable.js and both owner queues, so a blocked lead
+    // vanishes from every dialing surface without a new filter anywhere.
+    //
+    // Deliberately runs AFTER the enable pass so it sees this push's leads, and
+    // deliberately queries by verdict rather than by "enabled this run" so a
+    // capped or provider-failed lead is retried until it has an answer.
+    //
+    // Never fails the request: a scrub outage must not stop David's pushes from
+    // landing. Unscrubbed leads simply keep scrub_status null, stay ineligible
+    // for SMS (which requires an explicit 'clear'), and get picked up next hour.
+    const scrubStats = { checked: 0, clear: 0, blocked: 0, error: 0, pending: 0 };
+    let scrubBacklog = 0;
+    try {
+        const { data: toScrub, count } = await pro.from('leads')
+            .select('id,name,owner_phone_e164,owner_phone,phone', { count: 'exact' })
+            .eq('has_cold_call_script', true)
+            .or('owner_phone_e164.not.is.null,owner_phone.not.is.null,phone.not.is.null')
+            // The null case must be spelled out: `scrub_status <> 'clear'` is
+            // NULL for a never-scrubbed lead, which would silently exclude
+            // exactly the rows this pass exists to find.
+            .or('scrub_status.is.null,scrub_status.eq.pending,scrub_status.eq.error')
+            .order('id', { ascending: true })
+            .limit(SCRUB_CAP);
+
+        for (const lead of (toScrub || [])) {
+            const r = await scrub.scrubLead(pro, lead, 'sync-scripts');
+            scrubStats.checked++;
+            scrubStats[r.status] = (scrubStats[r.status] || 0) + 1;
+            if (r.status === 'blocked') {
+                console.warn('[scrub] BLOCKED lead=' + lead.id + ' "' + (lead.name || '') + '" reason=' + r.reason);
+            }
+        }
+        scrubBacklog = Math.max(0, (count || 0) - scrubStats.checked);
+    } catch (e) {
+        console.error('[scrub] pass failed (non-fatal): ' + (e && e.message));
+    }
+
     // Refresh the awaiting-script snapshot (PK on lead_id; owner folders appended
     // last so they win a collision, matching the backfill's dedupe).
     const seen = new Set(), awaitingDedup = [];
@@ -290,5 +340,7 @@ module.exports = async function handler(req, res) {
         refresh_backlog: Math.max(0, needsRefresh.length - REFRESH_CAP),
         stale_left: prune ? 0 : toDisable.length,
         awaiting: awaitingDedup.length,
+        scrub: scrubStats,
+        scrub_backlog: scrubBacklog,
     });
 };

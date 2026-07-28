@@ -89,6 +89,18 @@
     {
       "path": "/api/prospects/enable-meet-transcription",
       "schedule": "50 * * * *"
+    },
+    {
+      "path": "/api/prospects/outbound-tick",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/prospects/schedule-nurture",
+      "schedule": "5,35 * * * *"
+    },
+    {
+      "path": "/api/prospects/send-nurture-value",
+      "schedule": "*/15 * * * *"
     }
   ],
   "headers": []
