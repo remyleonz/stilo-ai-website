@@ -24,7 +24,11 @@ function isJunk(v) { return !v || /^(unknown|none|n\/?a|tbd)$/i.test(v); }
 function resolveScriptAgentName(md) {
     const src = String(md || '');
 
-    let m = src.match(/PRODUCT TO PITCH[^\r\n]*?:\**\s*([A-Za-z][^\r\n*]*)/i);
+    // Kept in lockstep with agentFromScript() in sync-scripts.js. The
+    // "Product (...)" form is David's newest heading; leaving it out here made
+    // this module silently fall through to prospect_reasoning on 2026-07
+    // scripts, which is the scoring engine's guess rather than his decision.
+    let m = src.match(/(?:PRODUCT TO PITCH|Meeting product|Product\s*\([^)\r\n]*\))[^\r\n]*?:\**\s*([A-Za-z][^\r\n*|]*)/i);
     if (m) { const v = cleanAgent(m[1]); if (!isJunk(v)) return v; }
 
     const sec = src.match(/#{1,6}\s*Recommended STILO agent\s*\r?\n([\s\S]*?)(?=\r?\n#{1,6}\s|$)/i);

@@ -65,8 +65,26 @@ function canonAgent(name) {
     if (/custom\s+(automation|workflow)|\bflux\b/.test(v)) return 'Custom Automations';
     return null;
 }
+// David names the pitched product under THREE different headings depending on
+// which generation of his generator wrote the script:
+//   **PRODUCT TO PITCH:** X
+//   **Meeting product:** X
+//   **Product (named ONCE, in the close):** X          <- newest, 2026-07 scripts
+//   **Product (pitched at the 15-min meeting...):** X
+//
+// The third form was missing here, and the omission was silent in the worst
+// way: pitch_agent had already been set from an OLDER script for those leads,
+// so nothing looked broken, but the re-push refresh pass could no longer read
+// the current file and the stored agent froze forever. The dashboard chip and
+// the follow-up email then kept selling a product David had since changed his
+// mind about. Measured drift before this fix was ~3% of scripted leads.
+//
+// The parenthetical is matched loosely because the wording inside it varies per
+// script; only the leading word "Product" and the colon are load-bearing.
 function agentFromScript(md) {
-    const m = String(md || '').match(/(?:PRODUCT TO PITCH|Meeting product)[^\r\n]*?:\**\s*([A-Za-z][^\r\n*(]*)/i);
+    const m = String(md || '').match(
+        /(?:PRODUCT TO PITCH|Meeting product|Product\s*\([^)\r\n]*\))[^\r\n]*?:\**\s*([A-Za-z][^\r\n*(|]*)/i
+    );
     return m ? canonAgent(m[1]) : null;
 }
 // "Ask for: <name>" in David's current script format; returns a plausible
