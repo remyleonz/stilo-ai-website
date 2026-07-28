@@ -32,18 +32,39 @@
  * emails set up the money conversation; they never pre-empt it.
  */
 
+// ---------------------------------------------------------------------------
+// SOURCING RULE FOR EVERYTHING IN THIS OBJECT
+//
+// A benchmark goes in `benchmark` ONLY if it can be attributed to a named,
+// checkable source, and the attribution ships inside the sentence so the
+// prospect can look it up. `sourceNote` records the provenance and, where it
+// matters, the weakness, so nobody later mistakes a thin number for a strong
+// one. Where there is no credible published figure, `benchmark` is qualitative
+// and states no number at all.
+//
+// This is the nurture-side version of the rule that every number in the money
+// math has to be one the prospect said out loud. A stat that gets checked and
+// found thin costs more credibility than saying nothing.
+// ---------------------------------------------------------------------------
 const AGENT_FACTS = {
     receptionist: {
         label: 'AI Receptionist',
         how: 'It answers on the first ring, in English or Spanish, holds a real conversation, qualifies the caller, books straight into your calendar, and writes the whole call up in your dashboard.',
-        benchmark: 'Industry studies put missed-call rates at local service businesses around 62% outside staffed hours. The typical caller does not leave a voicemail, they dial the next name on the list.',
+        // The ubiquitous "62% of business calls go unanswered" traces to ONE
+        // 30-day study of 85 businesses (411 Locals, January 2016). A decade
+        // old, tiny sample, and other measurements land anywhere from 28% to
+        // 60%. It is not a number to build a pitch on, so this states the range
+        // and the uncertainty instead of quoting a false precision.
+        benchmark: 'Published estimates of how many calls to small businesses go unanswered range widely, roughly a quarter to well over half, depending on the industry and the time of day. Nobody has a tight number, which is exactly why the only figure worth trusting is the one from your own phone records.',
+        sourceNote: 'The 62% figure widely quoted online comes from a single 30-day study of 85 businesses by 411 Locals, Jan 2016. Too thin to quote as fact. CallRail has published a materially lower average.',
         proof: 'The thing to measure is not calls answered, it is booked jobs from calls that used to go to voicemail.',
         objection: 'The usual worry is that it will sound like a robot and annoy people. Fair. That is why the demo on our call is a live phone call, not a slide.',
     },
     lead_response: {
         label: 'Outbound Lead Response agent',
         how: 'The moment a lead hits your form or ad, it replies by text and email and places a callback, qualifies them, and pushes them to book. Minutes, not hours.',
-        benchmark: 'The widely cited Harvard Business Review study on lead response found that contacting a lead within an hour makes qualifying them dramatically more likely than waiting even a few hours. First to call usually wins the job.',
+        benchmark: 'Harvard Business Review published research in March 2011, "The Short Life of Online Sales Leads", showing that firms contacting a web lead within an hour were far more likely to qualify it than those who waited even a few hours longer. Whoever calls back first usually wins the job.',
+        sourceNote: 'Oldroyd, McElheran and Elkington, Harvard Business Review 89(3), March 2011. Real, named, checkable.',
         proof: 'The number that moves is the share of inbound leads that turn into a booked appointment.',
         objection: 'Most people ask whether it will annoy the lead. It is one text and one call, the same thing your best rep would do if they were free.',
     },
@@ -64,7 +85,8 @@ const AGENT_FACTS = {
     website: {
         label: 'Website',
         how: 'A fast, modern site built around one job: turning a visitor into a booked appointment. Obvious book-now button, click to call, the trust signals buyers actually look for.',
-        benchmark: 'Google has published that most mobile visitors abandon a page that takes more than about three seconds to load. A site can look fine and still leak most of the people who land on it.',
+        benchmark: 'Google\'s own mobile speed research found that 53% of mobile site visits get abandoned when a page takes longer than three seconds to load. A site can look completely fine and still leak half the people who land on it.',
+        sourceNote: 'Google / SOASTA, "The Need for Mobile Speed", 2016. Real and still the standard citation.',
         proof: 'The measure is booked appointments from the site, not traffic and not how it looks.',
         objection: 'If you already have a site, the question is not whether it exists, it is whether it books anyone. That is what we would look at together.',
     },
@@ -320,6 +342,30 @@ async function generateTouch(stepKey, lead, sender) {
     const who = firstNameOf(lead.owner_name);
     const niche = lead.niche || lead.category || 'their industry';
 
+    // Each touch is handed ONLY the facts its own slot owns.
+    //
+    // The first version passed the whole facts object into every prompt, and the
+    // model dutifully used all of it every time: a four-email sequence quoted
+    // the same benchmark four times and pre-handled the same objection in three
+    // of them. Across a sequence that reads worse than any single email reads
+    // well, and it wastes the one slot that was supposed to carry the objection.
+    // Scoping the inputs is what makes six touches feel like six messages
+    // instead of one message rewritten six ways.
+    const FACT_SCOPE = {
+        how_it_works:        ['how', 'proof'],
+        the_numbers:         ['benchmark', 'proof'],
+        use_case:            ['how'],
+        quick_thought:       ['proof'],
+        objection_prehandle: ['objection'],
+        what_to_expect:      [],
+    };
+    const allowed = FACT_SCOPE[stepKey] || ['how'];
+    const factLines = [];
+    if (allowed.includes('how')) factLines.push('How it works: ' + facts.how);
+    if (allowed.includes('benchmark')) factLines.push('The one benchmark you may cite, WITH its attribution: ' + facts.benchmark);
+    if (allowed.includes('proof')) factLines.push('How success is measured: ' + facts.proof);
+    if (allowed.includes('objection')) factLines.push('The objection to address: ' + facts.objection);
+
     const prompt = [
         touch.channel === 'sms'
             ? 'Write ONE text message. Output only the message text.'
@@ -332,13 +378,15 @@ async function generateTouch(stepKey, lead, sender) {
         'They already booked a meeting with us. This is a value touch before that meeting, not a pitch and not a reminder.',
         '',
         'The product we are selling them: ' + facts.label,
-        'How it works: ' + facts.how,
-        'Relevant benchmark: ' + facts.benchmark,
-        'How success is measured: ' + facts.proof,
-        'Most common objection: ' + facts.objection,
+        factLines.join('\n'),
         '',
         'What this specific message must do:',
         touch.brief,
+        '',
+        'This is ONE message in a sequence of six. The other messages cover the '
+            + 'other angles, so stay strictly inside the brief above. Do not quote a '
+            + 'statistic unless one was given to you here, and do not raise or answer '
+            + 'objections unless that is this message\'s job.',
         '',
         'Hard rules:',
         '- Write for THIS industry. Use their vocabulary and their actual daily situation.',
