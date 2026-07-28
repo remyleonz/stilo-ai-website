@@ -71,7 +71,8 @@ const AGENT_FACTS = {
     reactivation: {
         label: 'Lost Customer Reactivation agent',
         how: 'It reads your customer list, finds the people who quietly stopped coming back, and works them with personalized email and text until they rebook.',
-        benchmark: 'Selling to an existing customer is consistently cheaper than acquiring a new one. These are people who already chose you once, so there is no trust to build from scratch.',
+        benchmark: 'Fred Reichheld\'s research at Bain, published in Harvard Business Review, found that a 5% lift in customer retention raises profit by 25% to 95% depending on the industry, and that acquiring a new customer costs five to twenty-five times more than keeping one you already have. The odds of selling to an existing customer run around 60-70%, against 5-20% for a brand new prospect.',
+        sourceNote: 'Frederick Reichheld / Bain & Company; see HBR "The Value of Keeping the Right Customers" (2014). Named, checkable, and the single strongest benchmark in this file.',
         proof: 'This is the fastest one to prove, because the list already exists. You can see the revenue inside a few weeks.',
         objection: 'The common question is whether old customers will find it annoying. They opted in with you once, and the message is an offer, not a newsletter.',
     },
@@ -93,7 +94,8 @@ const AGENT_FACTS = {
     seo: {
         label: 'AI SEO agent',
         how: 'It gets you cited in AI answers. Schema, content, and citations built so ChatGPT, Gemini, and Google AI Overviews name you when someone asks who the best in your area is.',
-        benchmark: 'AI assistants increasingly answer local buying questions directly and name only a handful of businesses. If you are not in that shortlist, you are invisible at the exact moment somebody is deciding who to call.',
+        benchmark: 'Whitespark\'s 2026 research found AI Overviews now appear on about 68% of local searches, and only around 40% of the citations inside them point at an actual local business, with the rest going to directories and publishers. Separately, brands that do get cited see roughly 120% more organic clicks per impression than uncited brands on the same query, while overall organic click-through on AI Overview queries has fallen sharply.',
+        sourceNote: 'Whitespark local AI Overviews study, 2026; AI Overview prevalence ~48% of all tracked queries as of Feb 2026, up from ~31% a year earlier. Multiple trackers agree on direction; exact figures vary by methodology, so cite as "about".',
         proof: 'Measured on whether you actually get named, which we can test live on the call.',
         objection: 'Most people ask how this differs from normal SEO. Normal SEO fights for a link position. This fights to be the answer.',
     },
@@ -134,17 +136,34 @@ const TOUCHES = {
     how_it_works: {
         channel: 'email',
         subjectHint: 'how it actually works',
-        brief: 'Explain in plain language how the agent works end to end. No jargon, no feature list. The reader should be able to describe it to a partner afterwards. Close by saying you will show it live on the call.',
+        brief: [
+            'Explain, in real depth, how the agent works end to end. This is the long one.',
+            'Structure it: what happens first, what happens next, what the prospect sees, what their customer sees, and what lands in their hands afterwards.',
+            'Name the specific mechanics for THEIR industry, not generic ones.',
+            'Include one short paragraph on what it does NOT do, because honest limits make the rest believable.',
+            'No jargon, no bullet-point feature list. The reader should be able to explain it to a business partner afterwards.',
+            'Close by saying you will show it running live on the call.',
+        ].join(' '),
     },
     the_numbers: {
         channel: 'email',
         subjectHint: 'what the numbers usually look like',
-        brief: 'Give the published benchmark for this problem and explain how to think about ROI. Be explicit that these are industry benchmarks, not their numbers, and that you will work out their actual numbers together on the call. Do NOT estimate their revenue, traffic, or job value.',
+        brief: [
+            'Give the published benchmark WITH the attribution you were handed, then spend most of the email teaching them how to think about the economics for their own business.',
+            'Walk through the arithmetic structure without filling in their figures: what to multiply by what, and which of their own numbers they would need to look up.',
+            'Be explicit that the benchmark is an industry figure and not theirs, and that you will work out their real numbers together on the call.',
+            'Do NOT estimate their revenue, traffic, job value, call volume, or customer count. Not even a range. Not even as an example.',
+        ].join(' '),
     },
     use_case: {
         channel: 'email',
         subjectHint: 'a business like yours',
-        brief: 'Describe how a business in their industry would use this day to day, concretely, hour by hour. Written as a scenario, not a case study, and never claim a named client or a specific result we have not produced.',
+        brief: [
+            'Write a detailed day-in-the-life scenario for a business in their exact industry.',
+            'Walk the clock: morning, midday, evening, after hours. Show what the agent does at each point and what the owner notices, or deliberately does not notice because it was handled.',
+            'Use the real vocabulary of their trade, the real objects and moments of their day.',
+            'Written as an illustrative scenario, never as a case study, and never claim a named client or a specific result we have not produced.',
+        ].join(' '),
     },
     quick_thought: {
         channel: 'sms',
@@ -396,12 +415,14 @@ async function generateTouch(stepKey, lead, sender) {
         '- No exclamation points.',
         '- Never use: leverage, utilize, streamline, seamless, robust, cutting-edge, innovative, holistic, elevate, unlock, delve.',
         '- Use contractions. Vary sentence length. Sound like a sharp person, not a brochure.',
-        touch.channel === 'sms' ? '- Under 250 characters.' : '- Under 180 words. Short paragraphs.',
+        touch.channel === 'sms'
+            ? '- Under 250 characters.'
+            : '- 350 to 500 words. Short paragraphs, two or three sentences each. This is meant to be a genuinely useful read, not a note. Do not pad: if you run out of substance before 350 words, add another concrete detail about their industry rather than another adjective.',
         '',
         'Write it now.',
     ].filter(Boolean).join('\n');
 
-    const generated = await geminiWrite(prompt, touch.channel === 'sms' ? 200 : 600);
+    const generated = await geminiWrite(prompt, touch.channel === 'sms' ? 200 : 1400);
     const fb = fallbackContent(stepKey, lead, facts, senderName);
 
     let body = generated || fb.body;
