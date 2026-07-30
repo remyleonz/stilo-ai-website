@@ -64,8 +64,14 @@ async function connectedLeadIds(sb) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-    const gate = await assertAdminOrSdr(req, res);
-    if (!gate.ok) return;
+    // Same auth shape as sync-scripts.js and outbound-tick.js: a Vercel cron /
+    // operator bearer OR an admin JWT. Without the bearer path these endpoints
+    // can only be driven from a logged-in browser, which makes scripted setup
+    // and recovery impossible.
+    const authHeader = req.headers.authorization || '';
+    const cronOk = !!process.env.CRON_SECRET && authHeader === 'Bearer ' + process.env.CRON_SECRET;
+    let gate = { ok: true, email: 'cron@stiloaipartners.com' };
+    if (!cronOk) { gate = await assertAdminOrSdr(req, res); if (!gate.ok) return; }
 
     const body = await readJsonBody(req);
     const campaignId = safeNumberId(body.campaign_id);
