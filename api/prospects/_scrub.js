@@ -119,24 +119,64 @@ function mapBlacklistAlliance(json) {
     return { verdict: 'unknown', flags: json };
 }
 
-// IPQualityScore. Response schema is publicly documented and stable.
+/**
+ * IPQualityScore, calibrated for B2B on 2026-07-29.
+ *
+ * READ THIS BEFORE CHANGING THE THRESHOLDS. The obvious mapping (block on
+ * do_not_call, block on fraud_score >= 85) was measured against 12 real leads we
+ * had already spoken to and would have blocked 6 of the 8 valid numbers,
+ * including Randy Lindgren, who is a paying client. Two reasons:
+ *
+ *   1. IPQS `do_not_call` reflects the FEDERAL DNC REGISTRY. That registry
+ *      protects residential subscribers, and business-to-business calls are
+ *      largely exempt from it. A B2B lead sitting on the DNC list is normal and
+ *      is not a reason to refuse to contact a business. We record it, we do not
+ *      block on it.
+ *   2. `fraud_score` is driven hard by line type. Ordinary small-business VOIP
+ *      lines score 85 by default. Blocking at 85 blocks the VOIP half of the
+ *      small-business world, which is most of our ICP.
+ *
+ * ALSO IMPORTANT: IPQS IS NOT A LITIGATOR DATABASE. It answers "is this number
+ * real, active, and abusive", not "does this person sue people for a living".
+ * Serial-plaintiff lists are a separate paid product (Blacklist Alliance,
+ * DNC.com). Do not let the presence of this integration create the impression
+ * that litigator screening is solved. It is not.
+ *
+ * What we actually block on is narrow and defensible:
+ *   - recent_abuse: a real abuse-report signal against that number
+ *   - valid === false: the number does not exist, so it cannot be texted
+ *   - active === false: disconnected line
+ * Everything else is 'clear' with the raw signals kept in scrub_flags for later
+ * analysis if the calibration ever needs revisiting.
+ */
 function mapIpqs(json) {
     if (!json || typeof json !== 'object') return { verdict: 'unknown', flags: { raw: json } };
-    if (json.success !== true) return { verdict: 'unknown', flags: json };
+
+    // "Invalid/nonexistent phone number" comes back as success:false with a
+    // message. That is a real, useful answer about the number, not an API
+    // failure, so it must not be reported as 'unknown' (which would retry
+    // forever and burn the free-tier quota on numbers that will never resolve).
+    if (json.success !== true) {
+        if (/invalid|nonexistent|not a valid/i.test(String(json.message || ''))) {
+            return { verdict: 'blocked', reason: 'invalid_number', flags: { message: json.message } };
+        }
+        return { verdict: 'unknown', flags: json };
+    }
 
     const flags = {
         fraud_score: json.fraud_score,
         recent_abuse: json.recent_abuse,
         risky: json.risky,
-        do_not_call: json.do_not_call,
+        do_not_call: json.do_not_call,   // recorded, deliberately NOT blocked on
         line_type: json.line_type,
         active: json.active,
         valid: json.valid,
+        carrier: json.carrier,
     };
 
-    if (json.do_not_call === true) return { verdict: 'blocked', reason: 'dnc_listed', flags };
+    if (json.valid === false) return { verdict: 'blocked', reason: 'invalid_number', flags };
+    if (json.active === false) return { verdict: 'blocked', reason: 'inactive_number', flags };
     if (json.recent_abuse === true) return { verdict: 'blocked', reason: 'recent_abuse', flags };
-    if (Number(json.fraud_score) >= 85) return { verdict: 'blocked', reason: 'high_risk_score', flags };
 
     return { verdict: 'clear', flags };
 }

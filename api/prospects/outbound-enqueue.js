@@ -25,6 +25,19 @@
  * The scrub gate is the reason this can return far fewer rows than you expect.
  * That is working as designed: an unscrubbed lead is an unanswered question,
  * and ?dry=1 tells you exactly how many were held back and why.
+ *
+ * SCRUB EXEMPTION (campaign.scrub_exempt_prior_contact):
+ * When set, a lead with a >=20s connected call on record may enqueue and send
+ * without scrub_status='clear'. The reasoning is that the scrub protects against
+ * serial TCPA plaintiffs, and anyone in this pool inclined to sue had a cause of
+ * action from the phone call, which happened before the campaign existed. A text
+ * to them is follow-up, not cold approach.
+ *
+ * Two things it does NOT do, on purpose:
+ *   - it never exempts a cold lead, because prior_contact will be false
+ *   - it never overrides do_not_call or a confirmed scrub_status='blocked'
+ * The waiver is stamped per target (prior_contact), so "which messages went out
+ * without a scrub" is answerable with one query years later.
  */
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { normalizePhone } = require('../openphone/_shared');
@@ -71,8 +84,12 @@ module.exports = async function handler(req, res) {
     try { reps = await ob.loadReps(); }
     catch (e) { return res.status(502).json({ error: 'reps_read_failed', detail: e.message }); }
 
+    // Needed for the warm audience AND for the prior-contact scrub exemption,
+    // which can apply to any audience. Computing it only for 'warm' would make
+    // an exempt 'dialed' campaign silently stamp prior_contact=false on every
+    // target and then hold them all back as unscrubbed.
     let connected = null;
-    if (audience === 'warm') {
+    if (audience === 'warm' || campaign.scrub_exempt_prior_contact === true) {
         try { connected = await connectedLeadIds(sb); }
         catch (e) { return res.status(500).json({ error: 'calls_read_failed', detail: e.message }); }
     }
@@ -83,6 +100,7 @@ module.exports = async function handler(req, res) {
         no_phone: 0, do_not_call: 0, already_booked: 0, bad_outcome: 0,
         not_scrubbed: 0, scrub_blocked: 0, scrub_phone_mismatch: 0,
         no_rep_line: 0, not_in_audience: 0, already_in_campaign: 0,
+        scrub_waived_prior_contact: 0,
     };
 
     const { data: existing } = await sb.from('outbound_targets')
@@ -114,9 +132,21 @@ module.exports = async function handler(req, res) {
             const to = normalizePhone(l.owner_phone_e164 || l.owner_phone || l.phone || '');
             if (!to) { held.no_phone++; continue; }
 
+            // A confirmed litigator match is never enqueued, exemption or not.
             if (l.scrub_status === 'blocked') { held.scrub_blocked++; continue; }
-            if (l.scrub_status !== 'clear') { held.not_scrubbed++; continue; }
-            if (l.scrub_phone && l.scrub_phone !== to) { held.scrub_phone_mismatch++; continue; }
+
+            // prior_contact is the ONLY basis on which the scrub gate may be
+            // waived, and it is stamped per target so the waiver stays auditable
+            // long after the campaign settings change.
+            const priorContact = connected ? connected.has(l.id) : false;
+            const exempt = campaign.scrub_exempt_prior_contact === true && priorContact;
+
+            if (!exempt) {
+                if (l.scrub_status !== 'clear') { held.not_scrubbed++; continue; }
+                if (l.scrub_phone && l.scrub_phone !== to) { held.scrub_phone_mismatch++; continue; }
+            } else {
+                held.scrub_waived_prior_contact = (held.scrub_waived_prior_contact || 0) + 1;
+            }
 
             const rep = reps[l.assigned_to];
             if (!rep) { held.no_rep_line++; continue; }
@@ -129,6 +159,8 @@ module.exports = async function handler(req, res) {
                 to_phone: to,
                 stage: 'queued',
                 step: 0,
+                prior_contact: priorContact,
+                prior_call_at: l.last_called_at || null,
             });
         }
         if (rows.length >= limit || data.length < 1000) break;

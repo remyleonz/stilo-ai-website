@@ -267,9 +267,24 @@ function preSendCheck(campaign, target, lead) {
     if (['blocked', 'opted_out', 'dead', 'booked'].includes(target.stage)) {
         return { ok: false, reason: 'stage_' + target.stage };
     }
+
+    // do_not_call is NEVER waivable. It carries actual opt-outs, DNC requests,
+    // and confirmed scrub blocks, and no campaign setting may override it.
     if (lead && lead.do_not_call) return { ok: false, reason: 'do_not_call' };
+
+    // A confirmed litigator match is also never waivable. The exemption below
+    // covers "we have no scrub answer", not "the scrub said no".
+    if (lead && lead.scrub_status === 'blocked') return { ok: false, reason: 'scrub_blocked' };
+
     const s = scrub.assertScrubbedForSms(lead, target.to_phone);
-    if (!s.ok) return { ok: false, reason: s.reason };
+    if (!s.ok) {
+        // Both conditions required: the campaign opted in AND this specific
+        // target has a real prior phone conversation on record. A cold lead can
+        // never satisfy the second, so an exempt campaign still cannot cold-text.
+        const exempt = campaign.scrub_exempt_prior_contact === true && target.prior_contact === true;
+        if (!exempt) return { ok: false, reason: s.reason };
+        return { ok: true, waived: s.reason };
+    }
     return { ok: true };
 }
 
