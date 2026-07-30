@@ -223,11 +223,25 @@ const BANNED = [
     { re: /\bstilo\b/i, why: 'names_company' },
     { re: /https?:\/\//i, why: 'contains_link' },
 ];
-function validateBody(text) {
+function validateBody(text, senderFirstName) {
     const t = String(text || '').trim();
     if (t.length < 15) return { ok: false, why: 'too_short' };
     if (t.length > 320) return { ok: false, why: 'too_long' };
     for (const b of BANNED) if (b.re.test(t)) return { ok: false, why: b.why };
+
+    // The sender MUST identify themselves. Without this the model drops its own
+    // name whenever the lead has no owner_name, producing "hey, have we spoken
+    // before or am i misremembering? i think you run Miller CPA" — an anonymous
+    // text asking a stranger to place you, which is the exact ambiguous-identity
+    // pattern this campaign refuses to send. 8 of 581 came out that way.
+    //
+    // Matched on a 3-char prefix so a legitimate short form passes: Alejandro
+    // Barrios signs "ale here", which is his actual name, not a violation.
+    if (senderFirstName) {
+        const n = String(senderFirstName).toLowerCase();
+        const stem = n.slice(0, 3);
+        if (stem && !t.toLowerCase().includes(stem)) return { ok: false, why: 'sender_not_named' };
+    }
     return { ok: true };
 }
 
@@ -362,7 +376,7 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         const out = await geminiSms(attempt === 0 ? prompt : prompt + '\n\nYour previous attempt broke a hard rule. Re-read the hard rules and try again.');
         if (!out) continue;
         let cleaned = out.replace(/—|–/g, ',').replace(/!/g, '.').trim();
-        const v = validateBody(cleaned);
+        const v = validateBody(cleaned, sender && sender.first_name);
         if (v.ok) { body = cleaned; generated = true; }
         else rejected = v.why;
     }
@@ -410,6 +424,6 @@ module.exports = {
     SEND_ENABLED, DEFAULT_GUIDANCE, DEFAULT_GUIDANCE_B,
     serviceClient, publicClient, loadReps,
     windowState, localParts, sentTodayByLine,
-    generateStepBody, fallbackBody, firstNameOf, leadFacts,
+    generateStepBody, fallbackBody, firstNameOf, leadFacts, validateBody, plainAgent,
     preSendCheck,
 };
