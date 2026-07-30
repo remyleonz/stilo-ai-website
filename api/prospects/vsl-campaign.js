@@ -273,7 +273,7 @@ module.exports = async function handler(req, res) {
     }
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,address,matched_product_name,stage,assigned_to')
+        .select('id,name,owner_name,owner_email,email,address,matched_product_name,stage,assigned_to,email_verify_status,email_verify_address')
         .not('stage', 'in', '("MEETING_BOOKED","CLOSED_LOST","CLIENT","DNC")')
         .is('meeting_booked_at', null);
     if (audience === 'warm') q = q.in('id', warmIds);
@@ -303,7 +303,7 @@ module.exports = async function handler(req, res) {
         (sdrs || []).forEach(function (s) { if (s.email) roster[s.email.toLowerCase()] = s.display_name; });
     } catch (_) { /* copy falls back to "someone on my team" */ }
 
-    const skipped = { role_inbox: 0, no_email: 0, already_sent: 0, bounced: 0, suppressed: 0, dupe_inbox: 0 };
+    const skipped = { role_inbox: 0, no_email: 0, already_sent: 0, bounced: 0, suppressed: 0, dupe_inbox: 0, dead_domain: 0, unverified: 0 };
     const seen = new Set();
     const pool = [];
     for (const l of (leads || [])) {
@@ -312,6 +312,25 @@ module.exports = async function handler(req, res) {
         const em = (l.owner_email || l.email || '').trim();
         if (!em || em.indexOf('@') === -1) { skipped.no_email++; continue; }
         const low = em.toLowerCase();
+
+        // DEAD DOMAIN GATE (added 2026-07-29). This is the one that was missing,
+        // and it was the whole bounce problem: a sweep of all 3,190 addresses
+        // found 485 (14.6%) on domains with NO MX record, against an observed
+        // bounce rate of 14.9%. A domain with no mail server cannot receive mail,
+        // so every one of those sends was a guaranteed hard bounce degrading the
+        // sending domain. Detected by scripts/verify_lead_emails.js using DNS
+        // only, no paid verifier.
+        //
+        // The verdict is trusted only when it was computed for THIS address. If
+        // owner_email has been edited since, email_verify_address no longer
+        // matches and the lead is skipped as unverified rather than assumed good,
+        // because a stale "deliverable" is exactly how a bad address slips back
+        // into a bulk run.
+        if (l.email_verify_status === 'dead_domain') { skipped.dead_domain++; continue; }
+        if (!l.email_verify_status || (l.email_verify_address && l.email_verify_address !== low)) {
+            skipped.unverified++; continue;
+        }
+
         if (ROLE_RE.test(em)) { skipped.role_inbox++; continue; }
         if (bouncedAddrs.has(low)) { skipped.bounced++; continue; }
         if (suppressed.has(low)) { skipped.suppressed++; continue; }
