@@ -190,6 +190,47 @@ function firstNameOf(full) {
     return f;
 }
 
+/**
+ * Internal product codename -> what a prospect would actually recognise.
+ * "LCR" means nothing to a dentist. "winning back past patients" does.
+ */
+function plainAgent(pitchAgent) {
+    const v = String(pitchAgent || '').toLowerCase();
+    if (/receptionist|echo/.test(v)) return 'answering the calls you miss after hours';
+    if (/lcr|reactivat|lost customer|revive/.test(v)) return 'winning back customers who stopped coming';
+    if (/outbound|lead reply|lead response|ignite/.test(v)) return 'calling new enquiries back faster';
+    if (/lead gen|scout|generator/.test(v)) return 'finding new customers for you';
+    if (/website|forge/.test(v)) return 'your website turning visitors into booked jobs';
+    if (/seo|geo|signal/.test(v)) return 'getting found when people search';
+    if (/ontology|oracle/.test(v)) return 'reporting on your numbers';
+    return 'the AI side of your business';
+}
+
+/**
+ * Reject generated copy that would embarrass us or ruin the experiment.
+ *
+ * The model follows a brief most of the time, which is exactly the problem: a
+ * 10% violation rate across 274 sends is 27 bad texts to real business owners,
+ * and if the violations cluster in one arm they also silently confound the A/B.
+ * Measured on the first batch: arm A named the company in 29% of messages and
+ * arm B in 4%, so the two arms differed on framing AND on company naming, and
+ * any result would have been uninterpretable. A prompt cannot guarantee this.
+ * A check can.
+ */
+const BANNED = [
+    { re: /\b(hey|hi|hello)\s+(name|there,\s*name)\b|\[name\]|\bfirst_?name\b/i, why: 'placeholder_name' },
+    { re: /\b(lcr|gmb|vsl|echo|ignite|revive|scout|forge|signal|oracle|flux)\b/i, why: 'internal_jargon' },
+    { re: /\bstilo\b/i, why: 'names_company' },
+    { re: /https?:\/\//i, why: 'contains_link' },
+];
+function validateBody(text) {
+    const t = String(text || '').trim();
+    if (t.length < 15) return { ok: false, why: 'too_short' };
+    if (t.length > 320) return { ok: false, why: 'too_long' };
+    for (const b of BANNED) if (b.re.test(t)) return { ok: false, why: b.why };
+    return { ok: true };
+}
+
 function leadFacts(lead) {
     const bits = [];
     if (lead.name) bits.push('Business: ' + lead.name);
@@ -197,7 +238,10 @@ function leadFacts(lead) {
     if (who) bits.push('Owner first name: ' + who);
     if (lead.niche || lead.category) bits.push('Industry: ' + (lead.niche || lead.category));
     if (lead.address) bits.push('Location: ' + lead.address);
-    if (lead.pitch_agent) bits.push('What we would sell them: ' + lead.pitch_agent);
+    // Translate the internal codename into plain language. Feeding the raw value
+    // in leaked "LCR" and "GMB" straight into 13 of 120 generated texts, which
+    // reads as gibberish to a prospect who has never heard our product names.
+    if (lead.pitch_agent) bits.push('The topic we discussed (describe in PLAIN WORDS, never by this name): ' + plainAgent(lead.pitch_agent));
     if (lead.last_called_outcome) bits.push('Outcome of our last call with them: ' + lead.last_called_outcome);
     if (lead.website) bits.push('They already have a website: ' + lead.website);
     return bits.join('\n');
@@ -282,17 +326,34 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         '- No em dashes anywhere. Use commas or periods.',
         '- No exclamation points.',
         '- Never use: leverage, utilize, streamline, seamless, robust, cutting-edge, innovative, holistic, elevate, unlock.',
-        '- Do not write a signature, a company footer, or a link unless told to.',
+        '- Do not write a signature, a company footer, or a link.',
+        '- NEVER write the company name "STILO". Give your first name only.',
+        '- NEVER write internal product names: LCR, GMB, VSL, ECHO, IGNITE, REVIVE,',
+        '  SCOUT, FORGE, SIGNAL, ORACLE, FLUX. Describe the topic in plain words.',
+        '- If you do not know their first name, do NOT write the word "name".',
+        '  Just open with "hey" and no name at all.',
         '- Sound like a person typing on a phone, not a brochure.',
         '',
         'Write the message now.',
     ].join('\n');
 
-    const out = await geminiSms(prompt);
-    let body = out || fallbackBody(lead, step, sender);
-    body = body.replace(/—|–/g, ',').replace(/!/g, '.').trim();
-    if (body.length > 320) body = body.slice(0, 317).replace(/\s+\S*$/, '') + '...';
-    return { body: body, generated: !!out };
+    // Generate, validate, retry once, then fall back. The retry is cheap and
+    // catches most one-off violations; the deterministic fallback guarantees we
+    // never emit a message that failed the check.
+    let body = null, generated = false, rejected = null;
+    for (let attempt = 0; attempt < 2 && !body; attempt++) {
+        const out = await geminiSms(attempt === 0 ? prompt : prompt + '\n\nYour previous attempt broke a hard rule. Re-read the hard rules and try again.');
+        if (!out) continue;
+        let cleaned = out.replace(/—|–/g, ',').replace(/!/g, '.').trim();
+        const v = validateBody(cleaned);
+        if (v.ok) { body = cleaned; generated = true; }
+        else rejected = v.why;
+    }
+    if (!body) {
+        body = fallbackBody(lead, step, sender).replace(/—|–/g, ',').replace(/!/g, '.').trim();
+        if (body.length > 320) body = body.slice(0, 317).replace(/\s+\S*$/, '') + '...';
+    }
+    return { body: body, generated: generated, rejected: rejected };
 }
 
 /**
