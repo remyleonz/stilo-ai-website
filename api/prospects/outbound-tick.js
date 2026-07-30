@@ -43,6 +43,11 @@ module.exports.maxDuration = 60;
 // from emptying the queue in a single invocation.
 const MAX_PER_TICK = Number(process.env.OUTBOUND_MAX_PER_TICK || 40);
 
+// Abort the tick after this many consecutive send failures. Set just above the
+// number of active lines so a single bad line cannot trip it, but a provider
+// outage stops the run almost immediately.
+const MAX_CONSECUTIVE_FAILURES = Number(process.env.OUTBOUND_MAX_CONSECUTIVE_FAILURES || 8);
+
 module.exports = async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
     const cronOk = !!process.env.CRON_SECRET && authHeader === 'Bearer ' + process.env.CRON_SECRET;
@@ -110,6 +115,10 @@ module.exports = async function handler(req, res) {
 
         const results = { sent: 0, skipped: {}, errors: [] };
         const usedLineThisTick = new Set();
+        // Consecutive send failures across the whole campaign this tick. A
+        // provider outage or a rate-limit must abort the run, not be retried
+        // against every remaining target.
+        let consecutiveFailures = 0;
 
         for (const t of (due || [])) {
             if (totalSent >= MAX_PER_TICK) break;
@@ -156,6 +165,14 @@ module.exports = async function handler(req, res) {
                 continue;
             }
 
+            // Mark the line consumed BEFORE evaluating the result. This used to
+            // live in the success branch only, so a failed send left the line
+            // unmarked, the loop advanced to the next target on the SAME line,
+            // and one transient error cascaded through the entire queue: 540
+            // attempts in 309 seconds, which is what triggered the provider's
+            // rate limiter. One attempt per line per tick, pass or fail.
+            usedLineThisTick.add(line);
+
             const r = await sendSms(line, t.to_phone, bodyText, { leadId: t.lead_id });
             const ok = r && r.status >= 200 && r.status < 300;
             const patch = { updated_at: new Date().toISOString() };
@@ -168,13 +185,24 @@ module.exports = async function handler(req, res) {
                 totalSent++;
                 perLine[line] = (perLine[line] || 0) + 1;
                 lastSendByLine[line] = Date.now();
-                usedLineThisTick.add(line);
+                consecutiveFailures = 0;
             } else {
                 patch.last_error = (r && (r.err || r.skip)) || 'send_failed';
                 if (r && r.blocked) patch.stage = 'blocked';
                 results.errors.push({ target: t.id, error: patch.last_error });
+                consecutiveFailures++;
             }
             await sb.from('outbound_targets').update(patch).eq('id', t.id);
+
+            // Circuit breaker. If every line in turn is failing, the provider is
+            // down, rate-limiting, or the credentials are wrong. Continuing
+            // converts one outage into hundreds of failed calls and gets the
+            // account throttled harder. Stop and let the next tick retry.
+            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                results.aborted = 'circuit_breaker_' + consecutiveFailures + '_consecutive_failures';
+                console.error('[outbound] circuit breaker tripped on campaign ' + campaign.id);
+                break;
+            }
         }
 
         report.push({
