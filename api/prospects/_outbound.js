@@ -58,6 +58,38 @@ const DEFAULT_GUIDANCE = {
     ].join('\n')
 };
 
+/**
+ * Arm B of the opener test.
+ *
+ * Both arms use Cameron England's mechanics: two sentences, lowercase, texting
+ * register, one low-commitment question, no pitch and no company name. They
+ * differ on ONE variable, which is the whole point of an A/B test:
+ *
+ *   A asserts the prior call   -> "we spoke a while back about X"
+ *   B invites them to place us -> "have we spoken before or am I misremembering?"
+ *
+ * B is Cameron's highest-rated pattern ("Have we spoken before or am I just
+ * missing it"), and it works because an uncertain question is reflexively
+ * answered where a statement can be ignored. Critically, for THIS audience it is
+ * also literally true: every target has a 20s+ call on record, so the question
+ * is honest rather than a pretext. That is the difference between running his
+ * mechanics and running his fake-customer framing.
+ *
+ * Do NOT vary anything else between the arms. Changing length, whether the
+ * sender is named, or whether a link is included at the same time makes the
+ * result uninterpretable.
+ */
+const DEFAULT_GUIDANCE_B = [
+    'Goal: get a reply. Nothing else.',
+    'This person had a real phone conversation with one of our reps weeks ago.',
+    'Open with genuine uncertainty that invites them to place you, e.g.',
+    '"have we spoken before or am i misremembering" then confirm what they do.',
+    'Give your first name. Do NOT name the company.',
+    'Ask ONE question they can answer in a few words.',
+    'Do not pitch, do not list features, do not mention price, no link.',
+    'Two sentences maximum. Lowercase, texting register, no marketing voice.'
+].join('\n');
+
 function serviceClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false }, db: { schema: 'prospecting' },
@@ -224,8 +256,16 @@ async function geminiSms(prompt) {
  * chars: past that a carrier splits it into multiple segments, which costs more
  * and reads as bulk.
  */
-async function generateStepBody(lead, campaign, step, sender) {
-    const guidance = (campaign['step' + step + '_guidance'] || '').trim() || DEFAULT_GUIDANCE[step];
+async function generateStepBody(lead, campaign, step, sender, variant) {
+    // Arm B only exists for step 1: the opener is what the test is about, and
+    // splitting later steps too would confound the result (you could no longer
+    // tell whether the opener or the pitch moved the number).
+    let guidance;
+    if (step === 1 && campaign.ab_enabled && variant === 'B') {
+        guidance = (campaign.step1_guidance_b || '').trim() || DEFAULT_GUIDANCE_B;
+    } else {
+        guidance = (campaign['step' + step + '_guidance'] || '').trim() || DEFAULT_GUIDANCE[step];
+    }
     const prompt = [
         'Write ONE outbound SMS. Output only the message text, nothing else.',
         '',
@@ -289,7 +329,7 @@ function preSendCheck(campaign, target, lead) {
 }
 
 module.exports = {
-    SEND_ENABLED, DEFAULT_GUIDANCE,
+    SEND_ENABLED, DEFAULT_GUIDANCE, DEFAULT_GUIDANCE_B,
     serviceClient, publicClient, loadReps,
     windowState, localParts, sentTodayByLine,
     generateStepBody, fallbackBody, firstNameOf, leadFacts,

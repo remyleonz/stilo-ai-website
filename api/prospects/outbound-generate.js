@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
 
     const bodyCol = 'step' + step + '_body';
     let q = sb.from('outbound_targets')
-        .select('id, lead_id, assigned_to, from_line, to_phone, stage, ' + bodyCol)
+        .select('id, lead_id, assigned_to, from_line, to_phone, stage, variant, ' + bodyCol)
         .eq('campaign_id', campaignId)
         .in('stage', step === 1 ? ['queued'] : ['sent', 'replied']);
     if (onlyTarget != null) q = q.eq('id', onlyTarget);
@@ -76,7 +76,7 @@ module.exports = async function handler(req, res) {
         if (!lead) { failed++; continue; }
         const rep = reps[t.assigned_to] || { first_name: 'me', line: t.from_line, display_name: '' };
         try {
-            const out = await ob.generateStepBody(lead, campaign, step, rep);
+            const out = await ob.generateStepBody(lead, campaign, step, rep, t.variant);
             const patch = { updated_at: new Date().toISOString() };
             patch[bodyCol] = out.body;
             const { error: uErr } = await sb.from('outbound_targets').update(patch).eq('id', t.id);
@@ -84,7 +84,7 @@ module.exports = async function handler(req, res) {
             generated++;
             if (out.generated) modelWritten++; else fellBack++;
             if (samples.length < 8) {
-                samples.push({ target_id: t.id, business: lead.name, to: t.to_phone, from: t.from_line, body: out.body });
+                samples.push({ target_id: t.id, arm: t.variant || '-', business: lead.name, to: t.to_phone, from: t.from_line, body: out.body });
             }
         } catch (e) {
             failed++;

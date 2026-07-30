@@ -161,6 +161,13 @@ module.exports = async function handler(req, res) {
                 step: 0,
                 prior_contact: priorContact,
                 prior_call_at: l.last_called_at || null,
+                // Assigned ONCE, here, and never recomputed. Deriving the arm at
+                // send time (lead_id % 2) would silently re-randomise everyone if
+                // the rule were ever edited, retroactively corrupting results
+                // already collected. Parity of the lead id is a fine randomiser
+                // because ids are assigned by ingest order, which is unrelated to
+                // anything the opener could influence.
+                variant: campaign.ab_enabled ? (l.id % 2 === 0 ? 'A' : 'B') : null,
             });
         }
         if (rows.length >= limit || data.length < 1000) break;
