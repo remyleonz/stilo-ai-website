@@ -253,11 +253,28 @@ function leadFacts(lead) {
  * doesn't, and a silent generation failure that emits an empty string would
  * text someone a blank message.
  */
-function fallbackBody(lead, step, sender) {
+/**
+ * Deterministic fallback, used when the model fails validation twice.
+ *
+ * MUST ITSELF PASS validateBody(). An earlier version opened with
+ * "<name> here from stilo", so every rejected message fell back onto copy that
+ * broke the very rule that rejected it. Because fallbacks are not evenly
+ * distributed across arms, that also reintroduced the A/B confound: 3 of 3
+ * fallbacks landed in arm A, so arm A named the company 27% of the time and arm
+ * B never did. A fallback that violates the rules is worse than no fallback,
+ * because it looks like it worked.
+ */
+function fallbackBody(lead, step, sender, variant) {
     const who = firstNameOf(lead.owner_name);
     const hi = who ? 'hey ' + who : 'hey';
-    const biz = lead.name || 'your business';
-    if (step === 1) return hi + ', ' + sender.first_name + ' here from stilo, we spoke a little while back about ' + biz + '. still worth a quick chat?';
+    const topic = lead.pitch_agent ? plainAgent(lead.pitch_agent) : 'your business';
+    if (step === 1) {
+        // Fallback must match the arm it is standing in for, or it silently
+        // contaminates the experiment with the other arm's framing.
+        return variant === 'B'
+            ? hi + ', ' + sender.first_name + ' here. have we spoken before or am i misremembering? was about ' + topic + '.'
+            : hi + ', ' + sender.first_name + ' here. we spoke a little while back about ' + topic + '. still worth a quick chat?';
+    }
     if (step === 2) return 'appreciate you getting back. short version: we build and run the AI that brings local businesses more booked work, and we handle the setup. could you take on more work right now if it came in?';
     return 'perfect. ok if i give you a quick call from this number in a few minutes?';
 }
@@ -350,7 +367,7 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         else rejected = v.why;
     }
     if (!body) {
-        body = fallbackBody(lead, step, sender).replace(/—|–/g, ',').replace(/!/g, '.').trim();
+        body = fallbackBody(lead, step, sender, variant).replace(/—|–/g, ',').replace(/!/g, '.').trim();
         if (body.length > 320) body = body.slice(0, 317).replace(/\s+\S*$/, '') + '...';
     }
     return { body: body, generated: generated, rejected: rejected };
