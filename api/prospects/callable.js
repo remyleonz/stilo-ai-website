@@ -13,6 +13,24 @@ const { createClient } = require('@supabase/supabase-js');
 // admin sees from his backend.
 const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
 
+// The board shows ONLY leads briefed under the offer we currently sell.
+//
+// The 2026-08 pivot moved us from selling AI agents to selling booked qualified
+// meetings. ~1,900 leads on the boards were still carrying agent pitches
+// (AI Receptionist, Website Builder, LCR, Outbound Agent, Lead Generator) from
+// briefs written before the pivot. A rep opening one of those got a script for a
+// product we no longer sell, which is worse than an empty row: they'd pitch it.
+//
+// Filtering on pitch_agent rather than on a niche list is deliberate. It is the
+// field David actually sets per brief, so it self-maintains: anything he briefs
+// under the new offer appears automatically, and a legacy-niche business he
+// chooses to brief under the new offer (23 of them today) correctly stays. A
+// hardcoded niche allowlist would need editing every time the test moves.
+//
+// To retire this offer later, change the value. To show everything again during
+// a transition, set CALLABLE_OFFER=* in the environment.
+const CURRENT_OFFER = process.env.CALLABLE_OFFER || 'Booked Meetings';
+
 async function callableFromSupabase(opts) {
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false },
@@ -36,6 +54,9 @@ async function callableFromSupabase(opts) {
         .not('pitch_agent', 'is', null)
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false');
+
+    // Current-offer gate (see CURRENT_OFFER above). '*' disables it.
+    if (CURRENT_OFFER !== '*') q = q.eq('pitch_agent', CURRENT_OFFER);
 
     if (opts.assignedTo) q = q.eq('assigned_to', opts.assignedTo);
     // Tier filter must match what the dashboard DISPLAYS: brief_tier first
