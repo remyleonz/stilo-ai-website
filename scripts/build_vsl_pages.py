@@ -34,7 +34,7 @@ NICHES = [
     dict(
         slug="commercial-cleaning", name="Commercial Cleaning",
         loom="2558bfb9c4fc419db9bbcb0e44d933c0", thumb="c33dc748e42cb3dd",
-        h1="You could be running twice<br>the buildings you have now.",
+        h1="More buildings under contract,<br>booked onto your calendar for you.",
         title="Commercial Cleaning: More Buildings on Contract - STILO AI Partners",
         desc="We find every building in your area that fits, work them across email, phone and text, "
              "and put the people who sign the janitorial contract on your calendar. Watch the walkthrough.",
@@ -46,7 +46,7 @@ NICHES = [
     dict(
         slug="commercial-roofing", name="Commercial Roofing",
         loom="f3cc25a09e9c41c5b259feab0a409b28", thumb="1ac9f32398727c10",
-        h1="The roofs worth having are won<br>a year before the leak.",
+        h1="Commercial re-roofs on your calendar,<br>booked before it turns into a bid war.",
         title="Commercial Roofing: Get in Before the Bid - STILO AI Partners",
         desc="We find the building owners whose roofs are at end of life, work them across email, phone "
              "and text, and put them on your calendar before it turns into a three-way bid.",
@@ -58,7 +58,7 @@ NICHES = [
     dict(
         slug="staffing", name="Staffing",
         loom="501bdda7a0304e3b8534223489c34392", thumb="83a960ae7a2510c8",
-        h1="Your recruiters could be filling<br>twice what you hand them.",
+        h1="New client accounts on your calendar,<br>booked while your team keeps recruiting.",
         title="Staffing: More Client Accounts on the Calendar - STILO AI Partners",
         desc="We find the employers who are actively hiring the roles you fill, work them across email, "
              "phone and text, and put the hiring authority on your calendar.",
@@ -70,7 +70,7 @@ NICHES = [
     dict(
         slug="freight", name="Freight",
         loom="55a25c927eec46f7a91e756f18eae0e7", thumb="70a401efcc32f10e",
-        h1="Every load off a board was<br>marked up before you saw it.",
+        h1="Direct shipper accounts on your calendar,<br>booked off the load boards for good.",
         title="Freight: Direct Shipper Accounts - STILO AI Partners",
         desc="We find the shippers running your lanes, work them across email, phone and text, and put "
              "the person who picks carriers on your calendar.",
@@ -82,7 +82,7 @@ NICHES = [
     dict(
         slug="industrial-supplies", name="Industrial Supplies & Equipment",
         loom="e55a0424e276441cbaf973fa2817ac75", thumb="b3fb48c17d54dc82",
-        h1="By the time the RFQ lands,<br>you've already lost it.",
+        h1="In the room before the spec is written,<br>on meetings booked for you.",
         title="Industrial Supplies & Equipment: In Before the Spec - STILO AI Partners",
         desc="We find the plants running your equipment class, work them across email, phone and text, "
              "and get you in the conversation before the spec is written.",
@@ -192,9 +192,7 @@ def build_confirmation(tpl):
     hero = (
         '<section class="hero">\n'
         '  <div class="container">\n'
-        '    <h1>Before we talk.</h1>\n'
-        '    <p class="hero-sub" style="max-width:62ch;margin:0 auto 20px;text-align:center;color:#b9b4a8;font-size:17px;line-height:1.55">So nothing on our call is a surprise: who I am, what we '
-        'actually do, how we charge, and exactly what happens when we speak.</p>\n'
+        '    <h1>You are booked.<br>Here is who you are meeting.</h1>\n'
         '    <div class="videowrap">\n'
         '      <video controls playsinline preload="metadata" poster="/assets/vsl/confirmation-poster.jpg" '
         'style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000" '
@@ -243,10 +241,16 @@ def build_confirmation(tpl):
 
     s = s.replace('src="/agents/_confirm.js"', 'src="/vsl/_confirm.js"')
     # The Loom player is unused here; keep a stub so the shared event call resolves.
+    # Page-view and play must both be attributed to the confirmation page. The
+    # inherited view tracker reads data-agent off .vsl-play, which does not exist
+    # here (a plain <video> replaced it), so it was posting agent:null.
+    s = s.replace('var a=document.querySelector(".vsl-play"),agent=a?a.getAttribute("data-agent"):null;',
+                  'var agent="confirmation";', 1)
     s = s.replace("function startVsl(btn){",
-                  "function vslEvent(ev){try{fetch('/api/public/vsl-event',{method:'POST',"
+                  "function vslEvent(ev){try{var q=new URLSearchParams(location.search);"
+                  "fetch('/api/public/vsl-event',{method:'POST',"
                   "headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,"
-                  "agent:'confirmation',flow:'confirm',path:location.pathname})});}catch(e){}}\n"
+                  "agent:'confirmation',lid:q.get('lid'),flow:'confirm',path:location.pathname})});}catch(e){}}\n"
                   "function startVsl(btn){", 1)
     return s
 

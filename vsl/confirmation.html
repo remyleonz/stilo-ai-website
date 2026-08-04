@@ -153,8 +153,7 @@
 <!-- HERO -->
 <section class="hero">
   <div class="container">
-    <h1>Before we talk.</h1>
-    <p class="hero-sub" style="max-width:62ch;margin:0 auto 20px;text-align:center;color:#b9b4a8;font-size:17px;line-height:1.55">So nothing on our call is a surprise: who I am, what we actually do, how we charge, and exactly what happens when we speak.</p>
+    <h1>You are booked.<br>Here is who you are meeting.</h1>
     <div class="videowrap">
       <video controls playsinline preload="metadata" poster="/assets/vsl/confirmation-poster.jpg" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000" onplay="vslEvent('play')">
         <source src="https://zsrskphpvgautfgklgxf.supabase.co/storage/v1/object/public/public-video/confirmation-vsl.mp4" type="video/mp4">
@@ -321,9 +320,9 @@
 })();
 </script>
 <script>
-function vslEvent(ev){try{fetch('/api/public/vsl-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,agent:'confirmation',flow:'confirm',path:location.pathname})});}catch(e){}}
+function vslEvent(ev){try{var q=new URLSearchParams(location.search);fetch('/api/public/vsl-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,agent:'confirmation',lid:q.get('lid'),flow:'confirm',path:location.pathname})});}catch(e){}}
 function startVsl(btn){var w=btn.parentNode,id=btn.getAttribute("data-loom"),agent=btn.getAttribute("data-agent");var q=new URLSearchParams(location.search),lid=q.get("lid"),flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic");w.innerHTML='<iframe src="https://www.loom.com/embed/'+id+'?autoplay=1&hide_owner=true&hide_share=true&hide_title=true" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>';try{if(window.va)window.va("event",{name:"vsl_play",agent:agent});}catch(e){}try{fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"play",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}}
-(function(){try{var a=document.querySelector(".vsl-play"),agent=a?a.getAttribute("data-agent"):null;var q=new URLSearchParams(location.search),lid=q.get("lid"),flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic");fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}})();
+(function(){try{var agent="confirmation";var q=new URLSearchParams(location.search),lid=q.get("lid"),flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic");fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}})();
 </script>
 <script src="/vsl/_confirm.js"></script>
 <script>
