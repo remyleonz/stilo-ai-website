@@ -305,3 +305,5 @@ function gateToCurrentOffer(q) {
 }
 
 module.exports.normalizeLead = normalizeLead;
+module.exports.CURRENT_OFFER = CURRENT_OFFER;
+module.exports.gateToCurrentOffer = gateToCurrentOffer;
