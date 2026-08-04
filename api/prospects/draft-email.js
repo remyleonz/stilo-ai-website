@@ -129,7 +129,7 @@ module.exports = async function handler(req, res) {
     // a non-existent column makes PostgREST 400 and surfaced to the SDR/admin as
     // "Could not draft: lead_read_failed". Use category as the niche signal.
     const { data: lead, error } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,category,address,deep_research_json,prospect_reasoning,matched_product_name,pitch_agent')
+        .select('id,name,owner_name,owner_email,email,niche,category,address,deep_research_json,prospect_reasoning,matched_product_name,pitch_agent')
         .eq('id', id).maybeSingle();
     if (error) return res.status(500).json({ error: 'lead_read_failed', detail: error.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
@@ -203,14 +203,26 @@ module.exports = async function handler(req, res) {
         ? VSL_BASE + '/vsl/' + slug + '?lid=' + id + '&t=' + signLead(id)
         : kit.CALENDAR_LINK;
     const source = slug ? 'vsl_template' : 'calendar_fallback';
-    let draft = 'Hi ' + (fName || 'there') + ',\n\n'
-        + 'Thanks for taking the call. Here is a short video that walks through exactly how we get '
-        + business + ' more meetings with the kind of customer you actually want:\n'
-        + vslLink + '\n\n'
-        + 'Short version: we find every company in your area that fits, we research them, and our team '
-        + 'works them across email, phone and text until the ones who are actually in the market end up '
-        + 'on your calendar. You only pay for the meetings that show up.\n\n'
-        + 'If it looks worth 15 minutes, you can grab a time right from that page. Any questions, just reply.\n';
+    // Two different emails. Promising "here is a short video" and then linking a
+    // calendar is worse than not mentioning video at all, so the no-niche branch
+    // is written separately rather than swapping the URL inside one template.
+    let draft = slug
+        ? 'Hi ' + (fName || 'there') + ',\n\n'
+            + 'Thanks for taking the call. Here is a short video that walks through exactly how we get '
+            + business + ' more meetings with the kind of customer you actually want:\n'
+            + vslLink + '\n\n'
+            + 'Short version: we find every company in your area that fits, we research them, and our team '
+            + 'works them across email, phone and text until the ones who are actually in the market end up '
+            + 'on your calendar. You only pay for the meetings that show up.\n\n'
+            + 'If it looks worth 15 minutes, you can grab a time right from that page. Any questions, just reply.\n'
+        : 'Hi ' + (fName || 'there') + ',\n\n'
+            + 'Thanks for taking the call. Quick version of what we do for ' + business + ': we find every '
+            + 'company in your area that fits the customer you actually want, we research them, and our team '
+            + 'works them across email, phone and text until the ones who are in the market end up on your '
+            + 'calendar. You only pay for the meetings that show up.\n\n'
+            + 'If that is worth 15 minutes, you can grab a time here:\n'
+            + vslLink + '\n\n'
+            + 'Any questions, just reply.\n';
     draft = kit.sanitizeCopy(draft);
 
     const subject = 'Quick look for ' + business;

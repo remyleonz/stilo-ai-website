@@ -34,7 +34,7 @@ module.exports = async function handler(req, res) {
     const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 
     const { data: lead, error } = await sb.from('leads')
-        .select('id,name,address,owner_name,owner_email,email,pitch_agent,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,confirmation_email_subject,confirmation_email_body')
+        .select('id,name,address,owner_name,owner_email,email,niche,category,pitch_agent,matched_product_name,meeting_scheduled_at,meeting_booked_by_sdr,confirmation_email_subject,confirmation_email_body')
         .eq('id', leadId).maybeSingle();
     if (error) return res.status(500).json({ error: 'read_failed', detail: error.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
