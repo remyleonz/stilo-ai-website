@@ -70,14 +70,19 @@ async function loadManifest() {
     return { count: scripts.length, has: nm => { const ln = String(nm || '').trim().toLowerCase(); return names.has(ln) || slugs.has(slugify(nm)); } };
 }
 
-// rep-a = Luke, rep-b = Alejandro, rep-c = Jack. (Corrected 2026-06-01 after two
-// swaps: rep-a -> Luke, rep-c -> Jack.) 2026-06-08: David added owner folders
-// dc = David Coira, rl = Remy Leon. Owner folders are processed LAST so they win
-// the handful of leads David placed in both an owner and his own folder.
+// rep-a = Luke, rep-b = Alejandro, rep-c = Jorge, rep-d = George.
+// 2026-06-08: David added owner folders dc = David Coira, rl = Remy Leon. Owner
+// folders are processed LAST so they win the handful of leads David placed in
+// both an owner and his own folder.
+// 2026-08-04: rep-c was still pointing at Jack Maguire, who was terminated
+// 2026-07-13; Jorge Ayes inherited the folder. This file would have reassigned
+// live leads to a deactivated account. rep-d (George, hired 2026-07-24) was
+// missing entirely. Keep this in sync with prospecting.reconcile_brief_assignments().
 const REP_EMAIL = {
     'rep-a': 'huronfire5@gmail.com',
     'rep-b': 'aleb1027@gmail.com',
-    'rep-c': 'jacksonmaguire0@gmail.com',
+    'rep-c': 'ayesjorge911@gmail.com',
+    'rep-d': 'georgegutierrez446@gmail.com',
     'dc':    'davidcoira@stiloaipartners.com',
     'rl':    'remyleon@stiloaipartners.com'
 };

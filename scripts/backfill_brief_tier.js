@@ -30,7 +30,7 @@ const BUCKET = 'cold-call-briefs';
 // that when a lead is briefed in both a rep folder and an owner folder, the
 // owner's tier wins (matching backfill_script_flag.js's owner-last assignment).
 // Without dc/rl here, every owner-assigned scripted lead showed up untiered.
-const FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'dc', 'rl'];
+const FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'dc', 'rl'];
 
 function slugify(input) {
     if (!input) return '';

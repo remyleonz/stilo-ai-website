@@ -49,6 +49,17 @@ function isEnabled() {
     return process.env.VSL_FLOW_ENABLED === 'true';
 }
 
+// The 2026-08 pivot sells booked qualified meetings, not an agent. Leads briefed
+// under the new offer carry pitch_agent='Booked Meetings', which matches no slug
+// here, so agentKey() would quietly resolve it to DEFAULT_AGENT and mail a
+// commercial roofer the retired AI Receptionist VSL. isBookedMeetings() lets the
+// send path skip instead of sending the wrong product. Remove this once the
+// Pipeline System VSL page exists at /agents/pipeline-system and is added to
+// AGENTS above.
+function isBookedMeetings(a) {
+    return /booked meeting|qualified meeting|pipeline system/i.test(String(a || ''));
+}
+
 function agentKey(a) {
     const k = String(a || '').toLowerCase().trim();
     if (AGENTS[k]) return k;
@@ -154,6 +165,10 @@ async function sendConfirmEmail(opts) {
     // opts: { toEmail, firstName, businessName, whenIso, agent, leadId }
     if (!isEnabled()) return { skipped: 'vsl_flow_disabled' };
     if (!opts.toEmail) return { skipped: 'no_lead_email' };
+    // No VSL page exists for the new offer yet. Sending nothing beats sending a
+    // booked roofing prospect the retired AI Receptionist video, which is what
+    // agentKey()'s DEFAULT_AGENT fallback would otherwise do.
+    if (isBookedMeetings(opts.agent)) return { skipped: 'no_vsl_for_booked_meetings' };
     const token = signConfirmToken({
         lead: opts.leadId,
         a: agentKey(opts.agent),
@@ -173,6 +188,7 @@ async function sendConfirmEmail(opts) {
 }
 
 module.exports = {
+    isBookedMeetings,
     AGENTS, isEnabled, agentKey, landingUrl,
     signConfirmToken, verifyConfirmToken,
     buildConfirmEmailText, sendConfirmEmail, baseUrl, escapeHtml

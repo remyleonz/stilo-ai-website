@@ -45,7 +45,12 @@ module.exports.maxDuration = 60;
 const SCRUB_CAP = Number(process.env.SCRUB_CAP_PER_RUN || 60);
 
 const BRIEFS_BUCKET = 'cold-call-briefs';
-const BRIEF_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rl', 'dc'];
+// rep-d added 2026-08-04: George Gutierrez was hired 2026-07-24 and David pushed
+// his first 178 briefs on 2026-08-03 into a folder no code knew existed. Every
+// consumer of this bucket had a hardcoded folder list, so his leads were never
+// flagged, never assigned, and never rendered a script. When a rep is hired,
+// grep for 'rep-c' and add the new folder to every hit.
+const BRIEF_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'rl', 'dc'];
 const GENERATED_BUCKET = 'cold-call-scripts-generated';
 
 // The agent David states in a script, mapped to a canonical name. Kept in sync
@@ -63,6 +68,12 @@ function canonAgent(name) {
     if (/ontology|\boracle\b/.test(v)) return 'Ontology';
     if (/sales coach|sales agent|\bpitch\b/.test(v)) return 'AI Sales Agent';
     if (/custom\s+(automation|workflow)|\bflux\b/.test(v)) return 'Custom Automations';
+    // The 2026-08 pivot: we sell booked qualified meetings, not agents. David's
+    // new briefs name the product as "Booked Meetings" under a **Primary:**
+    // heading. Without this the value canonicalized to null, pitch_agent stayed
+    // null, and callable.js filtered every new-niche lead out of every queue.
+    // That is what put 554 briefed, scripted, dialable leads on nobody's board.
+    if (/booked meeting|qualified meeting|pipeline system/.test(v)) return 'Booked Meetings';
     return null;
 }
 // David names the pitched product under THREE different headings depending on
@@ -81,11 +92,26 @@ function canonAgent(name) {
 //
 // The parenthetical is matched loosely because the wording inside it varies per
 // script; only the leading word "Product" and the colon are load-bearing.
+//
+// 2026-08-04: a FIFTH form arrived with the sales-agency pivot. The new briefs
+// drop the "Product"/"Meeting product" heading entirely and state it as:
+//   ## Recommendation
+//   - **Primary:** Booked Meetings
+//   - **Secondary (fallback):** Lead Generator
+// Only **Primary:** is read. Taking Secondary too would put a fallback product
+// on the board as if David had chosen it. "Primary" is matched with a word
+// boundary so it cannot collide with a future "Primary contact:" style field.
 function agentFromScript(md) {
-    const m = String(md || '').match(
+    const s = String(md || '');
+    const m = s.match(
         /(?:PRODUCT TO PITCH|Meeting product|Product\s*\([^)\r\n]*\))[^\r\n]*?:\**\s*([A-Za-z][^\r\n*(|]*)/i
     );
-    return m ? canonAgent(m[1]) : null;
+    if (m) {
+        const a = canonAgent(m[1]);
+        if (a) return a;
+    }
+    const p = s.match(/^\s*[-*]?\s*\**Primary\**\s*:\**\s*([A-Za-z][^\r\n*(|]*)/im);
+    return p ? canonAgent(p[1]) : null;
 }
 // "Ask for: <name>" in David's current script format; returns a plausible
 // person name or null. The slot is polluted upstream (our own owner_name junk
