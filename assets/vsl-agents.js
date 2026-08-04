@@ -61,9 +61,9 @@
         // Loose match, because David words some niches slightly differently.
         if (/clean|janitor/.test(s)) return 'commercial-cleaning';
         if (/roof/.test(s)) return 'commercial-roofing';
-        if (/staff|recruit|employment|temp agency|talent/.test(s)) return 'staffing';
-        if (/freight|truck|logistic|carrier|3pl/.test(s)) return 'freight';
-        if (/equipment|forklift|industrial|suppl|material handling/.test(s)) return 'industrial-supplies';
+        if (/staff|recruit|employment|temp agency|talent|nursing agency/.test(s)) return 'staffing';
+        if (/freight|truck|logistic|carrier|3pl|shipping/.test(s)) return 'freight';
+        if (/equipment|forklift|industrial|suppl|material handling|crane/.test(s)) return 'industrial-supplies';
         return null;
     }
 

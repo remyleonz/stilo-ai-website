@@ -82,8 +82,20 @@ function isBookedMeetings(a) {
 
 function agentKey(a) {
     const k = String(a || '').toLowerCase().trim();
+    if (!k) return DEFAULT_AGENT;
     if (AGENTS[k]) return k;
     if (ALIASES[k]) return ALIASES[k];
+    // Loose match. David's niche values have a long tail ("Farm equipment
+    // supplier", "Hydraulic equipment supplier", "Crane rental agency", ...) that
+    // an exact alias table will never keep up with. This MUST stay identical to
+    // nicheSlug() in assets/vsl-agents.js: when the client resolves a niche the
+    // server cannot, the rep sees a video selected in the dropdown and the
+    // prospect receives no link at all.
+    if (/clean|janitor/.test(k)) return 'commercial-cleaning';
+    if (/roof/.test(k)) return 'commercial-roofing';
+    if (/staff|recruit|employment|temp agency|talent|nursing agency/.test(k)) return 'staffing';
+    if (/freight|truck|logistic|carrier|3pl|shipping/.test(k)) return 'freight';
+    if (/equipment|forklift|industrial|suppl|material handling|crane/.test(k)) return 'industrial-supplies';
     return DEFAULT_AGENT;   // null. Callers MUST handle it; see sendConfirmEmail.
 }
 
