@@ -12,7 +12,7 @@
  * SDR scoping: SDR callers are force-scoped to their own email; admins may
  * pass ?assigned_to=<sdr_key|email>.
  */
-const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
@@ -51,6 +51,12 @@ module.exports = async function handler(req, res) {
         .select('*')
         .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
         .or('do_not_call.is.null,do_not_call.eq.false');
+    // All 128 callbacks on the boards at the pivot were legacy agent pitches and
+    // every one was overdue (Jun 3 - Jul 29), so none was a live promise to a
+    // prospect. Dialing one would have opened a script for a retired product.
+    // Hidden, not deleted: history, call logs and commissions are untouched, and
+    // they return the moment David re-briefs them under the current offer.
+    q = gateToCurrentOffer(q);
     if (sdrEmail) q = q.eq('assigned_to', sdrEmail);
 
     const { data, error } = await q

@@ -294,4 +294,14 @@ module.exports.readJsonBody = readJsonBody;
 module.exports.methodNotAllowed = methodNotAllowed;
 module.exports.safeNumberId = safeNumberId;
 module.exports.startOfDayET = startOfDayET;
+
+// The offer we currently sell. Boards and callback queues both gate on it so a
+// rep can never open a script for a retired product. Env-overridable;
+// CALLABLE_OFFER=* disables the gate everywhere at once.
+// Set 2026-08-04 with the sales-agency pivot. See api/prospects/callable.js.
+const CURRENT_OFFER = process.env.CALLABLE_OFFER || 'Booked Meetings';
+function gateToCurrentOffer(q) {
+    return CURRENT_OFFER === '*' ? q : q.eq('pitch_agent', CURRENT_OFFER);
+}
+
 module.exports.normalizeLead = normalizeLead;

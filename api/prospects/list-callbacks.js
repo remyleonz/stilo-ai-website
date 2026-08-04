@@ -62,6 +62,7 @@ module.exports = async function handler(req, res) {
         let q = sb.from('leads')
             .select(SELECT_COLS)
             .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
+            .eq('pitch_agent', require('./_shared').CURRENT_OFFER)
             .neq('do_not_call', true);
         if (assignedTo) q = q.eq('assigned_to', assignedTo);
         if (dueToday) {
