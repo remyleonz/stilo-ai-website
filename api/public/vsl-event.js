@@ -3,7 +3,7 @@
  *   POST { event:'view'|'play'|'confirm_open'|'confirm'|..., agent?, lid?, path?, flow? }
  *   GET  ?event=email_open&lid=&agent=&flow=  -> logs + returns a 1x1 gif (email pixel)
  *
- * `flow` splits the two campaigns that share the /agents/<slug> pages:
+ * `flow` splits the two campaigns that share the /vsl/<slug> pages:
  *   'campaign' = cold VSL blast (vsl-campaign.js), 'confirm' = post-booking
  *   confirmation (send-confirmations.js), 'organic' = neither.
  * Without it both funnels collapse into one meaningless pile. See
@@ -28,7 +28,7 @@ async function record(fields, ua) {
     // the totals. The slug is always in the path, so fall back to it.
     let agent = fields.agent ? String(fields.agent).slice(0, 40) : null;
     if (!agent && path) {
-        const m = /^\/agents\/([a-z0-9-]+)/.exec(path);
+        const m = /^\/(?:vsl|agents)\/([a-z0-9-]+)/.exec(path);
         if (m) agent = m[1];
     }
     // 'confirm' and 'confirm_open' can only come from confirm mode regardless of

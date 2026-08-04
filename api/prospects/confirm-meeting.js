@@ -14,7 +14,7 @@
  * practice no real prospect can reach this until the flow is switched on.
  */
 const { createClient } = require('@supabase/supabase-js');
-const { verifyConfirmToken, agentKey, landingUrl } = require('./_vsl');
+const { verifyConfirmToken, agentKey, landingUrl, confirmationUrl } = require('./_vsl');
 
 module.exports = async function handler(req, res) {
     const token = (req.query && req.query.token) || '';
@@ -22,7 +22,10 @@ module.exports = async function handler(req, res) {
 
     // Even on a bad/expired token, land them somewhere sensible.
     if (!payload) {
-        res.writeHead(302, { Location: landingUrl('receptionist') });
+        // Bad or expired token: the confirmation page is niche-independent, so it
+        // is always a safe landing. landingUrl('receptionist') used to send them
+        // to a product page we retired.
+        res.writeHead(302, { Location: confirmationUrl() });
         return res.end();
     }
 
@@ -73,6 +76,10 @@ module.exports = async function handler(req, res) {
         console.error('[confirm-meeting] threw for lead=' + leadId + ':', (e && e.message) || e);
     }
 
-    res.writeHead(302, { Location: landingUrl(agent, leadId) });
+    // Confirming lands them on the confirmation VSL: who I am, how we charge, and
+    // what happens on the call. That is the whole point of the second video, and
+    // it is the same for every niche. Their niche VSL was the FIRST touch, before
+    // they booked; re-showing it here would just replay what they already watched.
+    res.writeHead(302, { Location: confirmationUrl(leadId) });
     return res.end();
 };

@@ -78,14 +78,10 @@ const PITCH = {
 // vercel.json). Anything that used to route there falls through to receptionist
 // rather than mailing a prospect a link that bounces them to the homepage.
 function slugFor(name) {
-    const s = String(name || '').toLowerCase();
-    if (/recept/.test(s)) return 'receptionist';
-    if (/reactiv|lcr|lost customer/.test(s)) return 'reactivation';
-    if (/lead reply|lead response|outbound|instant lead/.test(s)) return 'lead-reply';
-    if (/lead gen|b2b|prospect|scout/.test(s)) return 'b2bleadgen';
-    if (/website|web build/.test(s)) return 'website';
-    if (/sales coach|coach|sales agent|pitch/.test(s)) return 'sales-agent';
-    return 'receptionist';
+    // Delegates to _vsl.js so the campaign, the confirmation email and the
+    // dashboards can never disagree about which video a niche maps to. Returns
+    // null when the niche is unknown; callers must skip rather than guess.
+    return require('./_vsl').agentKey(name);
 }
 
 // owner_name is scraped and only ~70% real names. The rest is cities
@@ -344,9 +340,16 @@ module.exports = async function handler(req, res) {
     // Deterministic 50/50 split on lead id: a re-run can't reshuffle an arm.
     const buildFor = function (item) {
         const l = item.lead;
-        const slug = slugFor(l.matched_product_name);
-        const link = BASE + '/agents/' + slug + '?lid=' + l.id + '&t=' + signLead(l.id);
+        // 2026-08 pivot: the video is chosen by the prospect's INDUSTRY, not by
+        // the product we once matched them to. slugFor now resolves niche via
+        // _vsl.js agentKey and returns null when it cannot, in which case this
+        // lead is skipped rather than mailed the wrong niche's video.
+        const slug = slugFor(l.niche || l.category || l.matched_product_name);
+        const link = slug
+            ? BASE + '/vsl/' + slug + '?lid=' + l.id + '&t=' + signLead(l.id)
+            : null;
         const arm = (l.id % 2 === 0) ? 'A' : 'B';
+        if (!slug) return null;   // no niche resolved: never guess a video
         const built = audience === 'warm'
             ? (arm === 'A' ? warmEmailA(l, slug, link, item.rep) : warmEmailB(l, slug, link, item.rep))
             : warmEmailA(l, slug, link, item.rep);
@@ -360,8 +363,10 @@ module.exports = async function handler(req, res) {
             would_send: batch.length,
             skipped: skipped,
             arm_split: { A: batch.filter(b => b.lead.id % 2 === 0).length, B: batch.filter(b => b.lead.id % 2 !== 0).length },
+            // buildFor returns null when the lead's niche cannot be resolved.
             sample: batch.slice(0, 4).map(function (b) {
                 const e = buildFor(b);
+                if (!e) return { id: b.lead.id, to: b.email, skipped: 'no_niche' };
                 return { id: b.lead.id, to: b.email, slug: e.slug, arm: e.arm, subject: e.subject, text: e.text };
             }),
         });
@@ -371,6 +376,7 @@ module.exports = async function handler(req, res) {
     for (const item of batch) {
         const l = item.lead;
         const e = buildFor(item);
+        if (!e) { skipped.no_niche = (skipped.no_niche || 0) + 1; continue; }
         const r = await sendEmail(item.email, e.subject, e.text);
 
         if (r.ok) {

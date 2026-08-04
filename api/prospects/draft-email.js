@@ -18,11 +18,16 @@ const kit = require('./_email_kit');
 const scriptAgent = require('./_script_agent');
 const { signLead } = require('../public/_token');
 
-// Interested Lead Flow: the follow-up email links to the agent's VSL landing
-// page (attributed) instead of a generic calendar link. Map the playbook key
-// (from _email_kit) to the /agents/<slug> VSL page.
+// Interested Lead Flow: the follow-up email links to the prospect's NICHE VSL
+// landing page (attributed) instead of a generic calendar link.
+//
+// 2026-08 pivot: which video they get is decided by their INDUSTRY, not by which
+// agent we picked for them, because we only sell one thing now. agentKey() in
+// _vsl.js resolves leads.niche / category to one of the five /vsl/<slug> pages
+// and returns null when it cannot, in which case we fall back to the calendar
+// link rather than mail a roofer the cleaning video.
 const VSL_BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
-const VSL_SLUG = { receptionist: 'receptionist', lead_response: 'lead-reply', reactivation: 'reactivation', lead_gen: 'prospecting', website: 'website', seo: 'ai-seo', growth: 'ontology', custom: 'sales-agent' };
+const { agentKey: nicheKey, AGENTS: VSL_NICHES } = require('./_vsl');
 
 function leadsClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -57,7 +62,7 @@ async function geminiDraft(ctx) {
     const key = process.env.GEMINI_API_KEY;
     if (!key) return null;
     const prompt = [
-        "You are an SDR at STILO AI Partners, a Miami agency that builds and runs AI agents for local businesses.",
+        "You are an SDR at STILO AI Partners, a Miami sales agency. We book qualified meetings with buyers onto our clients' calendars. We do NOT sell software or AI agents.",
         "Write a SHORT cold-call follow-up email to a prospect we just called. They were busy or asked us to email them.",
         "",
         "PROSPECT:",
@@ -66,15 +71,14 @@ async function geminiDraft(ctx) {
         "- Industry: " + (ctx.niche || 'local business'),
         ctx.hook ? "- What we noticed: " + ctx.hook : "",
         "",
-        "LEAD WITH THIS AGENT: " + ctx.agent,
-        "WHAT IT DOES: " + ctx.oneLiner,
+        "WHAT WE SELL: qualified meetings with their ideal customer, booked onto their calendar. Setup fee, a flat fee per qualified meeting, and a share of what they close. No retainer.",
         "THE PAIN TO NAME: " + ctx.pain,
         "",
         "RULES:",
         "- 120 to 190 words. Plain text only, no markdown, no subject line in the body.",
         "- Open by referencing that we called " + ctx.business + " today.",
-        "- Name the pain in plain language, then introduce the agent at a high level. Do NOT list features or prices.",
-        "- One short line on who we are: a small Miami team that designs, builds, and runs the agent for them, ROI usually inside 30 days, no long contract.",
+        "- Name the pain in plain language, then say what we do in one line. Do NOT mention AI, agents, software, or prices.",
+        "- One short line on who we are: a small Miami sales team that finds their buyers and books the meetings, paid on meetings that actually show up, no retainer.",
         "- End the message with this exact line on its own, then the URL on its own line:",
         "  If it's worth a closer look, grab a 15-minute call with us here:",
         "  " + kit.CALENDAR_LINK,
@@ -191,13 +195,22 @@ module.exports = async function handler(req, res) {
     // to the agent's VSL page. The link is attributed (?lid&t) so a booking off
     // the page ties straight to this lead. The agent switcher (body.agent) still
     // decides which VSL. Reps can switch and re-draft as before.
-    const slug = VSL_SLUG[kit.playbookKey(playbook)] || 'receptionist';
-    const vslLink = VSL_BASE + '/agents/' + slug + '?lid=' + id + '&t=' + signLead(id);
-    const source = 'vsl_template';
+    // The rep can override the niche from the modal dropdown (body.agent keeps
+    // its name for wire compatibility with both dashboards); otherwise it comes
+    // off the lead.
+    const slug = nicheKey(body.agent) || nicheKey(lead.niche) || nicheKey(lead.category);
+    const vslLink = slug
+        ? VSL_BASE + '/vsl/' + slug + '?lid=' + id + '&t=' + signLead(id)
+        : kit.CALENDAR_LINK;
+    const source = slug ? 'vsl_template' : 'calendar_fallback';
     let draft = 'Hi ' + (fName || 'there') + ',\n\n'
-        + 'Thanks for the call. Here is a quick 2-minute look at how the ' + playbook.agent + ' would work for ' + business + ':\n'
+        + 'Thanks for taking the call. Here is a short video that walks through exactly how we get '
+        + business + ' more meetings with the kind of customer you actually want:\n'
         + vslLink + '\n\n'
-        + 'If it looks like a fit, you can grab a 15-minute call with us right from that page. Any questions, just reply.\n';
+        + 'Short version: we find every company in your area that fits, we research them, and our team '
+        + 'works them across email, phone and text until the ones who are actually in the market end up '
+        + 'on your calendar. You only pay for the meetings that show up.\n\n'
+        + 'If it looks worth 15 minutes, you can grab a time right from that page. Any questions, just reply.\n';
     draft = kit.sanitizeCopy(draft);
 
     const subject = 'Quick look for ' + business;
@@ -217,18 +230,13 @@ module.exports = async function handler(req, res) {
         // response instead of by reading code. 'reasoning_or_niche_fallback'
         // means we had no brief-backed answer at all for this lead.
         agent_source: agentSource,
-        // All 8 sellable STILO agents (matches service_offerings.md). A rep can
-        // pick any of these to re-draft if the call turned toward a different one.
-        agents: [
-            { key: 'receptionist', label: 'Receptionist' },
-            { key: 'lead_response', label: 'Outbound Lead Response' },
-            { key: 'reactivation', label: 'Lost Customer Reactivation' },
-            { key: 'lead_gen', label: 'B2B Lead Generator' },
-            { key: 'website', label: 'Website' },
-            { key: 'seo', label: 'AI SEO' },
-            { key: 'growth', label: 'Ontology' },
-            { key: 'custom', label: 'Custom Automations' }
-        ],
+        // The five niches, for the dropdown in the email modal. This used to list
+        // the 8 sellable agents; since the pivot there is one offer, so the only
+        // thing left to choose is which industry video they get.
+        agents: VSL_NICHES ? Object.keys(VSL_NICHES).map(function (k) {
+            return { key: k, label: VSL_NICHES[k].name };
+        }) : [],
+        niche_slug: slug,
         sender: { name: sender.name, phone: sender.phone, footer: kit.footerText(sender) },
         source: source
     });

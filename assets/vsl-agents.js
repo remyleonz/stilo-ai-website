@@ -1,70 +1,77 @@
 /**
- * Shared VSL agent picker for the booking flow — /admin/ AND /sdr/.
+ * Shared VSL NICHE picker for the booking flow — /admin/ AND /sdr/.
  *
  * ONE renderer for both dashboards, same rule as assets/cold-call-script.js:
  * the booking markup is otherwise hand-duplicated in each file, which is how
  * the two dashboards drift apart. Do NOT re-inline this.
  *
- * WHY THIS EXISTS: the rep picks which agent they actually sold on the call.
- * Before this, that choice did not exist — book-meeting.js defaulted every
- * booking to 'receptionist' via agentKey(undefined), and send-confirmations.js
- * separately re-derived a slug from the stale matched_product_name column. So
- * the confirmation email could pitch a different agent than the rep sold.
+ * 2026-08 PIVOT: this used to pick which AGENT we were pitching (receptionist,
+ * lead-reply, reactivation, ...). We sell one offer now, booked qualified
+ * meetings, so there is no per-lead product choice left to make. What the rep
+ * picks instead is the prospect's INDUSTRY, which decides which of the five
+ * niche VSLs the confirmation email and landing page use.
  *
- * SLUGS MUST MATCH api/prospects/_vsl.js AGENTS. That file is the server-side
- * source of truth and normalizes anything it receives through agentKey(), so a
- * drift here cannot produce an invalid value — it would just silently fall back
- * to receptionist, which is exactly the bug this replaces. Keep them in sync.
+ * The default is derived from the lead itself (leads.niche, then category), so
+ * the rep normally changes nothing. The dropdown exists for when David's niche
+ * value is missing or wrong.
  *
- * Deliberately NOT the 8-key list used by the email composer's #ecAgent
- * dropdown (receptionist / lead_response / lead_gen / seo / growth / custom).
- * Those keys are a different vocabulary, and three of them have no VSL page at
- * all — seo and growth were retired 2026-07-15. Offering an agent whose VSL
- * redirects to the homepage would send a prospect to a dead link.
+ * SLUGS MUST MATCH api/prospects/_vsl.js AGENTS and sites/stilo-ai/vsl/*.html.
+ * _vsl.js normalizes anything it receives through agentKey(), and since the
+ * pivot an unrecognized value resolves to NULL rather than silently falling back
+ * to a product page. A drift here means no VSL is sent, not the wrong one.
+ *
+ * The global stays named VSL_AGENT_PICKER so both dashboards keep working
+ * without a coordinated edit; VSL_NICHE_PICKER is an alias.
  */
 (function (global) {
     'use strict';
 
-    var VSL_AGENTS = [
-        { slug: 'receptionist', name: 'Receptionist' },
-        { slug: 'lead-reply', name: 'Outbound Lead Reply' },
-        { slug: 'reactivation', name: 'Lost Customer Reactivation' },
-        { slug: 'b2bleadgen', name: 'B2B Lead Generator' },
-        { slug: 'website', name: 'Website' },
-        { slug: 'sales-agent', name: 'Sales Coach' }
+    var VSL_NICHES = [
+        { slug: 'commercial-cleaning', name: 'Commercial Cleaning' },
+        { slug: 'commercial-roofing', name: 'Commercial Roofing' },
+        { slug: 'staffing', name: 'Staffing' },
+        { slug: 'freight', name: 'Freight' },
+        { slug: 'industrial-supplies', name: 'Industrial Supplies & Equipment' }
     ];
 
-    // Free text on the lead (pitch_agent from David's script parse, or
-    // matched_product_name) into a canonical slug. Mirrors _vsl.js ALIASES plus
-    // the prose forms David actually writes.
+    // David's leads.niche / category strings, lowercased, to a niche slug.
+    // Mirrors ALIASES in api/prospects/_vsl.js. Keep them in sync.
     var ALIASES = {
-        echo: 'receptionist', ignite: 'lead-reply', revive: 'reactivation',
-        lcr: 'reactivation', scout: 'b2bleadgen', prospecting: 'b2bleadgen',
-        forge: 'website', pitch: 'sales-agent', sales: 'sales-agent', web: 'website',
-        lead_response: 'lead-reply', lead_gen: 'b2bleadgen'
+        'janitorial service': 'commercial-cleaning', 'cleaning service': 'commercial-cleaning',
+        'house cleaning service': 'commercial-cleaning', 'janitorial equipment supplier': 'commercial-cleaning',
+        'commercial cleaning': 'commercial-cleaning', 'cleaning': 'commercial-cleaning',
+        'roofing contractor': 'commercial-roofing', 'roofing supply store': 'commercial-roofing',
+        'commercial roofing': 'commercial-roofing', 'roofing': 'commercial-roofing', 'roofer': 'commercial-roofing',
+        'employment agency': 'staffing', 'temp agency': 'staffing', 'recruiter': 'staffing',
+        'executive search firm': 'staffing', 'staffing agency': 'staffing',
+        'trucking company': 'freight', 'freight forwarding service': 'freight',
+        'logistics service': 'freight', 'logistics': 'freight', 'carrier': 'freight',
+        'forklift dealer': 'industrial-supplies', 'industrial equipment supplier': 'industrial-supplies',
+        'construction equipment supplier': 'industrial-supplies', 'equipment supplier': 'industrial-supplies',
+        'material handling equipment supplier': 'industrial-supplies', 'crane service': 'industrial-supplies',
+        'forklift rental service': 'industrial-supplies', 'industrial equipment': 'industrial-supplies',
+        'supplies': 'industrial-supplies', 'equipment': 'industrial-supplies'
     };
 
-    function agentSlug(raw) {
+    function nicheSlug(raw) {
         var s = String(raw || '').toLowerCase().trim();
         if (!s) return null;
-        for (var i = 0; i < VSL_AGENTS.length; i++) if (VSL_AGENTS[i].slug === s) return s;
+        for (var i = 0; i < VSL_NICHES.length; i++) if (VSL_NICHES[i].slug === s) return s;
         if (ALIASES[s]) return ALIASES[s];
-        // Prose match, because pitch_agent holds things like "AI Receptionist",
-        // "Website Builder", "Outbound Agent", "Lead Generator", "LCR".
-        if (/recept/.test(s)) return 'receptionist';
-        if (/reactiv|lost customer|lcr/.test(s)) return 'reactivation';
-        if (/lead reply|lead response|outbound/.test(s)) return 'lead-reply';
-        if (/lead gen|b2b|prospect/.test(s)) return 'b2bleadgen';
-        if (/website|web build/.test(s)) return 'website';
-        if (/sales coach|sales agent|coach/.test(s)) return 'sales-agent';
+        // Loose match, because David words some niches slightly differently.
+        if (/clean|janitor/.test(s)) return 'commercial-cleaning';
+        if (/roof/.test(s)) return 'commercial-roofing';
+        if (/staff|recruit|employment|temp agency|talent/.test(s)) return 'staffing';
+        if (/freight|truck|logistic|carrier|3pl/.test(s)) return 'freight';
+        if (/equipment|forklift|industrial|suppl|material handling/.test(s)) return 'industrial-supplies';
         return null;
     }
 
-    // Best guess for the pre-selected option. pitch_agent first — it is the
-    // single source of truth for which agent a lead pitches.
+    // Pre-selected option, read straight off the lead. niche is David's field and
+    // is the source of truth; category is the older Google-Places string.
     function defaultSlugFor(lead) {
         var d = lead || {};
-        return agentSlug(d.pitch_agent) || agentSlug(d.matched_product_name) || 'receptionist';
+        return nicheSlug(d.niche) || nicheSlug(d.category) || null;
     }
 
     /**
@@ -75,34 +82,43 @@
         var o = opts || {};
         var current = defaultSlugFor(lead);
         var labelColor = o.helperColor || 'var(--text-muted)';
-        var options = VSL_AGENTS.map(function (a) {
+        // Explicit blank option so a rep can SEE when we could not work the niche
+        // out, rather than a wrong one sitting there pre-selected.
+        var options = '<option value=""' + (current ? '' : ' selected') + '>'
+            + (current ? 'Do not send a video' : 'Select the industry...') + '</option>';
+        options += VSL_NICHES.map(function (a) {
             return '<option value="' + a.slug + '"' + (a.slug === current ? ' selected' : '') + '>' + a.name + '</option>';
         }).join('');
-        // onChange lets the caller refresh anything that depends on the agent
-        // (the confirmation-email preview embeds an agent-specific VSL link).
+        // onChange lets the caller refresh anything that depends on the niche
+        // (the confirmation-email preview embeds the niche VSL link).
         var onChange = o.onChange ? ' onchange="' + o.onChange + '"' : '';
         return '<label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;'
-            + 'letter-spacing:0.06em;color:var(--text-secondary);margin:12px 0 5px;">Agent we\'re pitching</label>'
+            + 'letter-spacing:0.06em;color:var(--text-secondary);margin:12px 0 5px;">Their industry</label>'
             + '<select id="' + selectId + '"' + onChange + ' style="width:100%;padding:9px 11px;background:var(--bg-input);'
             + 'border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:13px;cursor:pointer;">'
             + options + '</select>'
             + '<div style="font-size:11px;color:' + labelColor + ';margin-top:4px;">'
-            + 'Sets the VSL in the confirmation email and what the prospect sees on the landing page.</div>';
+            + 'Picks which of the five videos they get. Set from the lead automatically, '
+            + 'only change it if that is wrong.</div>';
     }
 
-    // Read the picker. Returns null when absent so callers can omit the field
-    // and let the server keep its own default rather than sending a wrong one.
+    // Read the picker. Returns null when absent or blank so callers omit the
+    // field and the server keeps its own resolution rather than a wrong one.
     function readSelect(selectId) {
         var el = (typeof document !== 'undefined') && document.getElementById(selectId);
         var v = el && el.value;
-        return agentSlug(v) || null;
+        return nicheSlug(v) || null;
     }
 
-    global.VSL_AGENT_PICKER = {
-        AGENTS: VSL_AGENTS,
-        agentSlug: agentSlug,
+    var api = {
+        AGENTS: VSL_NICHES,     // legacy key; both dashboards still read it
+        NICHES: VSL_NICHES,
+        agentSlug: nicheSlug,   // legacy name
+        nicheSlug: nicheSlug,
         defaultSlugFor: defaultSlugFor,
         selectHtml: selectHtml,
         readSelect: readSelect
     };
+    global.VSL_AGENT_PICKER = api;
+    global.VSL_NICHE_PICKER = api;
 })(typeof window !== 'undefined' ? window : this);

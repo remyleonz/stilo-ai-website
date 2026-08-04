@@ -45,8 +45,38 @@
     },
     {
       "source": "/agents/prospecting",
-      "destination": "/agents/b2bleadgen",
-      "permanent": true
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/agents/receptionist",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/agents/lead-reply",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/agents/reactivation",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/agents/b2bleadgen",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/agents/website",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/agents/sales-agent",
+      "destination": "/",
+      "permanent": false
     }
   ],
   "crons": [

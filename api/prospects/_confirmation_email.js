@@ -16,18 +16,14 @@ const { signLead } = require('../public/_token');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 
-// ai-seo and ontology were retired 2026-07-15 (redirected in vercel.json).
-// Anything that used to route there falls through to receptionist rather than
-// mailing a prospect a link that bounces them to the homepage.
+// 2026-08 pivot: the confirmation email no longer links to a per-agent page. A
+// booked prospect goes to /vsl/confirmation, which is the same for everyone:
+// who Remy is, how we charge, and what happens on the call. Their NICHE video was
+// the first touch, before they booked. slugFor is kept only so the older callers
+// that still ask for a slug keep resolving; it now returns a niche via _vsl.js.
+const { agentKey } = require('./_vsl');
 function slugFor(name) {
-    const s = String(name || '').toLowerCase();
-    if (/recept/.test(s)) return 'receptionist';
-    if (/reactiv|lcr|lost customer/.test(s)) return 'reactivation';
-    if (/lead reply|lead response|outbound|instant lead/.test(s)) return 'lead-reply';
-    if (/lead gen|b2b|prospect|scout/.test(s)) return 'b2bleadgen';
-    if (/website|web build/.test(s)) return 'website';
-    if (/sales coach|coach|sales agent|pitch/.test(s)) return 'sales-agent';
-    return 'receptionist';
+    return agentKey(name);   // null when the niche cannot be determined
 }
 
 function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
@@ -60,22 +56,25 @@ function buildSubject(whenIso) {
  */
 function buildConfirmation(opts) {
     const ld = (opts && opts.lead) || {};
-    // Explicit agent (the rep's live dropdown choice) beats the stored value.
-    const slug = slugFor(opts.agent || ld.pitch_agent || ld.matched_product_name);
+    // The rep's live dropdown choice beats the lead's stored niche. Used only to
+    // report which niche was resolved; the confirmation link itself is shared.
+    const slug = slugFor(opts.agent || ld.niche || ld.category);
     const whenIso = opts.whenIso || ld.meeting_scheduled_at || null;
     const first = firstName(ld.owner_name);
     const when = fmtWhen(whenIso);
     const repName = opts.repName || 'Remy';
     const to = ld.owner_email || ld.email || null;
 
-    const link = BASE + '/agents/' + slug + '?lid=' + ld.id + '&t=' + signLead(ld.id) + '&confirm=1';
+    const link = BASE + '/vsl/confirmation?lid=' + ld.id + '&t=' + signLead(ld.id) + '&confirm=1';
 
     const body = [
         'Hi ' + first + ',',
         '',
         'You are on the calendar for ' + when + '.',
         '',
-        'Confirm you are still good here, and you will see your details plus a short video on what we are building for you:',
+        'Confirm you are still good here. The same page has a short video of ' + repName
+            + ' running through how we charge, what happens on the call, and who you are actually '
+            + 'dealing with, so we can skip all that and use the time on your business:',
         link,
         '',
         'Cannot make it? Just reply and we will find a better time.',

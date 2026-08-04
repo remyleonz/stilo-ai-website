@@ -24,15 +24,23 @@ const crypto = require('crypto');
 // redirected to / in vercel.json. Their old aliases (signal/oracle/seo) now
 // resolve to the default so no email can link to a retired page. To bring one
 // back: re-add it here, drop its redirect, and give it a Loom + poster.
+// The five niche VSL landing pages under /vsl/<slug>.html. Slugs must match
+// sites/stilo-ai/vsl/ and scripts/build_vsl_pages.py.
+//
+// 2026-08 pivot: these replaced the eight per-AGENT pages. We sell one offer now
+// (booked qualified meetings), so the page a prospect sees is chosen by their
+// INDUSTRY, not by which product we picked for them. The old /agents/* slugs are
+// redirected in vercel.json so links already sitting in inboxes still resolve.
 const AGENTS = {
-    'receptionist': { name: 'Receptionist' },
-    'lead-reply':   { name: 'Outbound Lead Reply' },
-    'reactivation': { name: 'Lost Customer Reactivation' },
-    'b2bleadgen':   { name: 'B2B Lead Generator' },
-    'website':      { name: 'Website' },
-    'sales-agent':  { name: 'Sales Coach' }
+    'commercial-cleaning':  { name: 'Commercial Cleaning' },
+    'commercial-roofing':   { name: 'Commercial Roofing' },
+    'staffing':             { name: 'Staffing' },
+    'freight':              { name: 'Freight' },
+    'industrial-supplies':  { name: 'Industrial Supplies & Equipment' }
 };
-const DEFAULT_AGENT = 'receptionist';
+// No safe default. Sending a roofer the cleaning video is worse than sending
+// nothing, so callers that cannot resolve a niche must skip (see sendConfirmEmail).
+const DEFAULT_AGENT = null;
 
 // Accept a few friendly aliases (dashboard codenames / product ids) so the SDR
 // or lead.matched_product can pass whatever it has and still resolve a slug.
@@ -40,9 +48,21 @@ const DEFAULT_AGENT = 'receptionist';
 // alias: emails already in inboxes carry /agents/prospecting links, and vercel.json
 // redirects the page, but anything resolving the slug in code still needs it.
 const ALIASES = {
-    echo: 'receptionist', ignite: 'lead-reply', revive: 'reactivation', lcr: 'reactivation',
-    scout: 'b2bleadgen', prospecting: 'b2bleadgen', forge: 'website',
-    pitch: 'sales-agent', sales: 'sales-agent', web: 'website'
+    // David's leads.niche / category values, lowercased.
+    'janitorial service': 'commercial-cleaning', 'cleaning service': 'commercial-cleaning',
+    'house cleaning service': 'commercial-cleaning', 'janitorial equipment supplier': 'commercial-cleaning',
+    'commercial cleaning': 'commercial-cleaning', 'cleaning': 'commercial-cleaning',
+    'roofing contractor': 'commercial-roofing', 'roofing supply store': 'commercial-roofing',
+    'commercial roofing': 'commercial-roofing', 'roofing': 'commercial-roofing', 'roofer': 'commercial-roofing',
+    'employment agency': 'staffing', 'temp agency': 'staffing', 'recruiter': 'staffing',
+    'executive search firm': 'staffing', 'staffing agency': 'staffing',
+    'trucking company': 'freight', 'freight forwarding service': 'freight',
+    'logistics service': 'freight', 'logistics': 'freight', 'carrier': 'freight',
+    'forklift dealer': 'industrial-supplies', 'industrial equipment supplier': 'industrial-supplies',
+    'construction equipment supplier': 'industrial-supplies', 'equipment supplier': 'industrial-supplies',
+    'material handling equipment supplier': 'industrial-supplies', 'crane service': 'industrial-supplies',
+    'forklift rental service': 'industrial-supplies', 'industrial equipment': 'industrial-supplies',
+    'supplies': 'industrial-supplies', 'equipment': 'industrial-supplies'
 };
 
 function isEnabled() {
@@ -64,7 +84,14 @@ function agentKey(a) {
     const k = String(a || '').toLowerCase().trim();
     if (AGENTS[k]) return k;
     if (ALIASES[k]) return ALIASES[k];
-    return DEFAULT_AGENT;
+    return DEFAULT_AGENT;   // null. Callers MUST handle it; see sendConfirmEmail.
+}
+
+// Resolve a lead to its niche page. leads.niche is the value David sets; category
+// is the older Google-Places string. Try both before giving up.
+function nicheForLead(lead) {
+    const d = lead || {};
+    return agentKey(d.niche) || agentKey(d.category) || null;
 }
 
 function baseUrl() {
@@ -72,7 +99,9 @@ function baseUrl() {
 }
 
 function landingUrl(slug, leadId) {
-    var url = baseUrl() + '/agents/' + agentKey(slug);
+    var slugKey = agentKey(slug);
+    if (!slugKey) return baseUrl() + '/';   // never guess a niche
+    var url = baseUrl() + '/vsl/' + slugKey;
     // When we know the lead, sign an attribution token onto the link so a
     // booking from the landing-page slot picker writes straight to that lead
     // (auto-appears in the admin dashboard, no fuzzy matching). Best-effort.
@@ -81,6 +110,17 @@ function landingUrl(slug, leadId) {
             var t = require('../public/_token').signLead(leadId);
             if (t) url += '?lid=' + encodeURIComponent(leadId) + '&t=' + encodeURIComponent(t);
         } catch (e) { /* attribution is a nice-to-have; never break the redirect */ }
+    }
+    return url;
+}
+
+function confirmationUrl(leadId) {
+    var url = baseUrl() + '/vsl/confirmation';
+    if (leadId != null) {
+        try {
+            var t = require('../public/_token').signLead(leadId);
+            if (t) url += '?lid=' + encodeURIComponent(leadId) + '&t=' + encodeURIComponent(t);
+        } catch (e) { /* attribution is a nice-to-have */ }
     }
     return url;
 }
@@ -142,16 +182,18 @@ function buildConfirmEmailText(opts) {
     const whenStr = opts.whenIso ? fmt.format(new Date(opts.whenIso)) : 'the time we set';
     const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
     const confirmUrl = baseUrl() + '/api/prospects/confirm-meeting?token=' + encodeURIComponent(opts.token);
-    const a = AGENTS[agentKey(opts.agent)];
     return [
         'Hi ' + (opts.firstName || 'there') + ',',
         '',
-        'Great talking with you. I have us down for ' + whenStr + ' to walk through how the '
-            + a.name + ' agent would work for ' + (opts.businessName || 'your business') + '.',
+        'Good talking with you. I have us down for ' + whenStr + '.',
         '',
-        'One quick thing so I know you are still good for it. Confirm here, and the same page '
-            + 'pulls up a short walkthrough of exactly what I will show you on the call:',
+        'One quick thing so I know you are still good for it. Confirm here, and the same page has a '
+            + 'short video of me running through exactly what happens on the call, how we charge, and '
+            + 'who you are actually dealing with:',
         confirmUrl,
+        '',
+        'Worth three minutes before we talk. It means we can skip the background and spend our time on '
+            + (opts.businessName || 'your business') + '.',
         '',
         'Cannot make it anymore? Just reply and we will find a better time.',
         '',
@@ -165,13 +207,13 @@ async function sendConfirmEmail(opts) {
     // opts: { toEmail, firstName, businessName, whenIso, agent, leadId }
     if (!isEnabled()) return { skipped: 'vsl_flow_disabled' };
     if (!opts.toEmail) return { skipped: 'no_lead_email' };
-    // No VSL page exists for the new offer yet. Sending nothing beats sending a
-    // booked roofing prospect the retired AI Receptionist video, which is what
-    // agentKey()'s DEFAULT_AGENT fallback would otherwise do.
-    if (isBookedMeetings(opts.agent)) return { skipped: 'no_vsl_for_booked_meetings' };
+    // The confirmation video is the same for every prospect (who I am / how we
+    // charge / what happens on the call), so unlike the niche VSLs it never needs
+    // a niche to resolve. The old guard that skipped 'Booked Meetings' is gone
+    // because /vsl/confirmation now exists.
     const token = signConfirmToken({
         lead: opts.leadId,
-        a: agentKey(opts.agent),
+        a: agentKey(opts.agent) || 'confirmation',
         exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 // 30 days
     });
     // Gmail first, Resend fallback. Transactional mail to a booked prospect
@@ -188,7 +230,7 @@ async function sendConfirmEmail(opts) {
 }
 
 module.exports = {
-    isBookedMeetings,
+    isBookedMeetings, nicheForLead, confirmationUrl,
     AGENTS, isEnabled, agentKey, landingUrl,
     signConfirmToken, verifyConfirmToken,
     buildConfirmEmailText, sendConfirmEmail, baseUrl, escapeHtml
