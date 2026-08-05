@@ -126,8 +126,9 @@ function landingUrl(slug, leadId) {
     return url;
 }
 
-function confirmationUrl(leadId) {
-    var url = baseUrl() + '/vsl/confirmation';
+// Post-confirm page: the 3-minute objection handler. Niche-independent.
+function preMeetingUrl(leadId) {
+    var url = baseUrl() + '/vsl/pre-meeting';
     if (leadId != null) {
         try {
             var t = require('../public/_token').signLead(leadId);
@@ -135,6 +136,27 @@ function confirmationUrl(leadId) {
         } catch (e) { /* attribution is a nice-to-have */ }
     }
     return url;
+}
+
+// The link in the confirmation email. Their NICHE demo with the confirm flow
+// switched on, so the video that makes them want the meeting is the thing they
+// see when we ask them to confirm it. Falls back to the pre-meeting page when we
+// cannot resolve a niche, because sending the wrong industry's video is worse
+// than sending the generic one.
+function confirmUrlFor(lead, leadId) {
+    var slug = nicheForLead(lead);
+    var id = leadId != null ? leadId : (lead && lead.id);
+    var base = slug ? (baseUrl() + '/vsl/' + slug) : (baseUrl() + '/vsl/pre-meeting');
+    var qs = [];
+    if (id != null) {
+        qs.push('lid=' + encodeURIComponent(id));
+        try {
+            var t = require('../public/_token').signLead(id);
+            if (t) qs.push('t=' + encodeURIComponent(t));
+        } catch (e) { /* attribution is a nice-to-have */ }
+    }
+    qs.push('confirm=1');
+    return base + '?' + qs.join('&');
 }
 
 // ---- signed confirm token (HMAC, verify without a DB round-trip) ----
@@ -242,7 +264,7 @@ async function sendConfirmEmail(opts) {
 }
 
 module.exports = {
-    isBookedMeetings, nicheForLead, confirmationUrl,
+    isBookedMeetings, nicheForLead, preMeetingUrl, confirmUrlFor,
     AGENTS, isEnabled, agentKey, landingUrl,
     signConfirmToken, verifyConfirmToken,
     buildConfirmEmailText, sendConfirmEmail, baseUrl, escapeHtml

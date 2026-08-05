@@ -21,7 +21,7 @@ const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').repl
 // who Remy is, how we charge, and what happens on the call. Their NICHE video was
 // the first touch, before they booked. slugFor is kept only so the older callers
 // that still ask for a slug keep resolving; it now returns a niche via _vsl.js.
-const { agentKey } = require('./_vsl');
+const { agentKey, confirmUrlFor } = require('./_vsl');
 function slugFor(name) {
     return agentKey(name);   // null when the niche cannot be determined
 }
@@ -65,16 +65,19 @@ function buildConfirmation(opts) {
     const repName = opts.repName || 'Remy';
     const to = ld.owner_email || ld.email || null;
 
-    const link = BASE + '/vsl/confirmation?lid=' + ld.id + '&t=' + signLead(ld.id) + '&confirm=1';
+    // Their NICHE demo, with the confirm flow on. The 6-minute video is what
+    // makes them want the meeting; asking them to confirm on a page that only
+    // talks about pricing gave them no reason to show up (65% show rate).
+    const link = confirmUrlFor(opts.agent ? { niche: opts.agent } : ld, ld.id);
 
     const body = [
         'Hi ' + first + ',',
         '',
         'You are on the calendar for ' + when + '.',
         '',
-        'Confirm you are still good here. The same page has a short video of ' + repName
-            + ' running through how we charge, what happens on the call, and who you are actually '
-            + 'dealing with, so we can skip all that and use the time on your business:',
+        'Confirm you are still good here. Same page has a short walkthrough of exactly how we '
+            + 'fill a calendar for a business like ' + (ld.name || 'yours') + ', so you can see what '
+            + 'we will actually be talking about:',
         link,
         '',
         'Cannot make it? Just reply and we will find a better time.',

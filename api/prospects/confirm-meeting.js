@@ -14,7 +14,7 @@
  * practice no real prospect can reach this until the flow is switched on.
  */
 const { createClient } = require('@supabase/supabase-js');
-const { verifyConfirmToken, agentKey, landingUrl, confirmationUrl } = require('./_vsl');
+const { verifyConfirmToken, agentKey, landingUrl, preMeetingUrl } = require('./_vsl');
 
 module.exports = async function handler(req, res) {
     const token = (req.query && req.query.token) || '';
@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
         // Bad or expired token: the confirmation page is niche-independent, so it
         // is always a safe landing. landingUrl('receptionist') used to send them
         // to a product page we retired.
-        res.writeHead(302, { Location: confirmationUrl() });
+        res.writeHead(302, { Location: preMeetingUrl() });
         return res.end();
     }
 

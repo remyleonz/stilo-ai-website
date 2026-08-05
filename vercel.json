@@ -77,6 +77,11 @@
       "source": "/agents/sales-agent",
       "destination": "/",
       "permanent": false
+    },
+    {
+      "source": "/vsl/confirmation",
+      "destination": "/vsl/pre-meeting",
+      "permanent": false
     }
   ],
   "crons": [

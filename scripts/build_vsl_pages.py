@@ -4,7 +4,14 @@ build_vsl_pages.py — generate the niche VSL landing pages and the confirmation
 
     python3 scripts/build_vsl_pages.py
 
-Writes sites/stilo-ai/vsl/<slug>.html for each niche, plus vsl/confirmation.html.
+Writes sites/stilo-ai/vsl/<slug>.html for each niche, plus vsl/pre-meeting.html.
+
+SEQUENCE (changed 2026-08-05). A prospect who books off a cold call used to get
+ONLY the 3-minute "who I am / how we charge" video and never saw the demo, so
+nothing made them WANT the meeting. Show rate was 65%. Now:
+  confirmation email -> /vsl/<niche>?confirm=1   the 6-min demo + Confirm button
+  after they confirm -> /vsl/pre-meeting          the 3-min objection-handler
+Desire first, doubt-killing second.
 
 WHY GENERATED. The old /agents/*.html were eight hand-maintained 32KB files that
 each carried their own copy of the CSS, footer, booking modal and player. They
@@ -192,7 +199,7 @@ def build_confirmation(tpl):
     hero = (
         '<section class="hero">\n'
         '  <div class="container">\n'
-        '    <h1>You are booked.<br>Here is who you are meeting.</h1>\n'
+        '    <h1>You are confirmed.<br>Here is who you are meeting.</h1>\n'
         '    <div class="videowrap">\n'
         '      <video controls playsinline preload="metadata" poster="/assets/vsl/confirmation-poster.jpg" '
         'style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000" '
@@ -203,8 +210,8 @@ def build_confirmation(tpl):
         '      </video>\n'
         '    </div>\n'
         '    <div class="ctaband">\n'
-        '      <h2>Confirm you are good for our meeting</h2>\n'
-        '      <a class="btn-primary js-book">Confirm My Meeting</a>\n'
+        '      <h2>See you on the call</h2>\n'
+        '      <a class="btn-primary js-book" href="#faq">Questions before we talk</a>\n'
         '    </div>\n'
         '  </div>\n'
         '</section>'
@@ -263,7 +270,7 @@ def main():
         p = os.path.join(OUTDIR, n["slug"] + ".html")
         open(p, "w").write(build_page(tpl, n))
         made.append(p)
-    p = os.path.join(OUTDIR, "confirmation.html")
+    p = os.path.join(OUTDIR, "pre-meeting.html")
     open(p, "w").write(build_confirmation(tpl))
     made.append(p)
     for m in made:
