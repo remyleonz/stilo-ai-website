@@ -131,6 +131,11 @@ module.exports = async function handler(req, res) {
             if (touch.channel === 'email') {
                 const to = lead.owner_email || lead.email;
                 if (!to) { skip('no_email'); continue; }
+                // Pre-send gate. This cron had no bounce, suppression or MX check
+                // of any kind; it mails booked prospects, so a bounce here also
+                // burns the address that sends their meeting confirmation.
+                const gate = await require('./_email_guard').canSend({ email: to, leadId: lead.id });
+                if (!gate.ok) { skip('blocked_' + gate.reason); continue; }
                 const r = await sendEmail(to, touch.subject, touch.body, senderName);
                 if (r.skipped) { skip(r.skipped); continue; }
                 if (r.error) throw new Error(r.error);
