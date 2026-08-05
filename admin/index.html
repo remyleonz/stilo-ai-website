@@ -1242,6 +1242,7 @@
             }
         }
     </style>
+<style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
 </head>
 <body>
     <!-- ============================================================
@@ -1523,23 +1524,23 @@
             </div>
 
             <!-- EMAIL COMPOSER MODAL (shared by prospect drawer + Shared tab) -->
-            <div id="emailComposerModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.62);align-items:flex-start;justify-content:center;padding:34px 20px;overflow-y:auto;">
-                <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;max-width:620px;width:100%;padding:24px 26px;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+            <div id="emailComposerModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(4,4,8,0.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);align-items:flex-start;justify-content:center;padding:44px 20px;overflow-y:auto;">
+                <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:20px;max-width:640px;width:100%;padding:30px 32px 26px;box-shadow:0 40px 90px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04) inset;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                        <div style="font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:-0.01em;">Email this lead</div>
+                        <div style="font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-0.02em;">Email this lead</div>
                         <button onclick="closeEmailComposer()" aria-label="Close" style="background:none;border:none;color:var(--text-muted);font-size:24px;line-height:1;cursor:pointer;">&times;</button>
                     </div>
                     <div id="emailComposerStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Drafting…</div>
-                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Agent we're pitching</label>
-                        <select id="ecAgent" onchange="redraftEmail()" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></select>
-                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Auto-picked from the cold-call script. Switch it to re-draft for a different agent.</div></div>
-                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">To</label>
-                        <input id="ecTo" type="email" placeholder="client@email.com" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></div>
-                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Subject</label>
-                        <input id="ecSubject" type="text" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></div>
-                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Message</label>
-                        <textarea id="ecBody" rows="13" style="width:100%;padding:12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;line-height:1.55;resize:vertical;"></textarea></div>
-                    <div style="background:var(--bg-input);border:1px dashed var(--border-medium);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Their industry</label>
+                        <select id="ecAgent" onchange="redraftEmail()" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></select>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Set from the lead. This picks which of the five videos they get.</div></div>
+                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">To</label>
+                        <input id="ecTo" type="email" placeholder="client@email.com" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></div>
+                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Subject</label>
+                        <input id="ecSubject" type="text" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></div>
+                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Message</label>
+                        <textarea id="ecBody" rows="13" style="width:100%;padding:14px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;line-height:1.6;resize:vertical;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></textarea></div>
+                    <div style="background:transparent;border:1px solid var(--border-subtle);border-radius:12px;padding:13px 15px;margin-bottom:18px;opacity:.75;">
                         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Signature added automatically</div>
                         <div id="ecFooter" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;line-height:1.5;"></div>
                     </div>
@@ -1559,11 +1560,11 @@
                         <div style="font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:-0.01em;">Add meeting transcript</div>
                         <button onclick="closeAddMeeting()" aria-label="Close" style="background:none;border:none;color:var(--text-tertiary);font-size:24px;line-height:1;cursor:pointer;">&times;</button>
                     </div>
-                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Title</label>
-                        <input id="amTitle" type="text" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></div>
-                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Summary / notes (optional)</label>
-                        <textarea id="amSummary" rows="4" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;line-height:1.5;resize:vertical;"></textarea></div>
-                    <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Full transcript (paste from Tactiq)</label>
+                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Title</label>
+                        <input id="amTitle" type="text" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></div>
+                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Summary / notes (optional)</label>
+                        <textarea id="amSummary" rows="4" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;line-height:1.5;resize:vertical;"></textarea></div>
+                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Full transcript (paste from Tactiq)</label>
                         <textarea id="amTranscript" rows="10" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;line-height:1.5;resize:vertical;"></textarea></div>
                     <div id="amMsg" style="font-size:12px;color:var(--text-muted);min-height:16px;margin-bottom:8px;"></div>
                     <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -1949,6 +1950,16 @@
                     </div>
                     <div id="teamFunnelPanel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
                         <div class="stilo-empty" style="padding:14px;">Loading funnel…</div>
+                    </div>
+                </section>
+
+                <section class="stilo-section" id="teamClosersSection">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">CLOSERS</h3>
+                        <span class="stilo-section-count" id="teamClosersNote"></span>
+                    </div>
+                    <div id="teamClosersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;">
+                        <div class="stilo-empty">Loading closers…</div>
                     </div>
                 </section>
 
@@ -4344,7 +4355,10 @@
             var rk = teamRange;
             var label = TEAM_RANGE_LABEL[rk] || 'Today';
 
-            grid.innerHTML = teamData.map(function (x) {
+            // Closers (0% commission owners) render in the CLOSERS section above.
+            // Leaving them here showed Remy and David as SDRs with 0 dials.
+            var sdrsOnly = teamData.filter(function (x) { return Number(x.sdr.commission_pct) > 0; });
+            grid.innerHTML = sdrsOnly.map(function (x) {
                 var sdr = x.sdr;
                 var p = x.perf || {};
                 var e = x.earn || {};
@@ -4393,14 +4407,93 @@
                     + '</div>';
             }).join('');
 
-            var totalDials = teamData.reduce(function (acc, x) { return acc + ((x.perf.dials && x.perf.dials[rk]) || 0); }, 0);
-            var totalMeetings = teamData.reduce(function (acc, x) { return acc + ((x.perf.meetings_booked && x.perf.meetings_booked[rk]) || 0); }, 0);
-            var totalMrr = teamData.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.mrr_closed_cents) || 0); }, 0);
-            var totalOwed = teamData.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.commission_pending_cents) || 0); }, 0);
+            var totalDials = sdrsOnly.reduce(function (acc, x) { return acc + ((x.perf.dials && x.perf.dials[rk]) || 0); }, 0);
+            var totalMeetings = sdrsOnly.reduce(function (acc, x) { return acc + ((x.perf.meetings_booked && x.perf.meetings_booked[rk]) || 0); }, 0);
+            var totalMrr = sdrsOnly.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.mrr_closed_cents) || 0); }, 0);
+            var totalOwed = sdrsOnly.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.commission_pending_cents) || 0); }, 0);
             // Hero strip removed; stash the agency MRR + commission totals so the
             // Company Performance band can render them as tiles.
             teamAgencyMrrCents = totalMrr;
             teamAgencyOwedCents = totalOwed;
+        }
+
+        /* ── CLOSERS ──────────────────────────────────────────────────────────
+           Remy and David are not SDRs. Dial count is not their job; what happens
+           once a meeting is on the calendar is. Attribution limits are printed in
+           the header rather than hidden, because the meeting record has no closer
+           field and a guessed split would invent a close rate. */
+        var closerData = null;
+        async function loadClosers() {
+            var grid = document.getElementById('teamClosersGrid');
+            if (!grid) return;
+            try {
+                var headers = await prospectAuthHeaders();
+                closerData = await fetch('/api/sdr/closer-analytics', { headers: headers }).then(function (r) { return r.json(); });
+                renderClosers();
+            } catch (e) {
+                grid.innerHTML = '<div class="stilo-empty">Could not load closers: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+        function closerStat(label, value, tone) {
+            var color = tone === 'good' ? 'var(--green,#3fbf8f)' : tone === 'warn' ? 'var(--orange,#f59e0b)' : 'var(--text-primary)';
+            return '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.08em;">' + label + '</div>'
+                + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;color:' + color + ';">' + value + '</div></div>';
+        }
+        function renderClosers() {
+            var grid = document.getElementById('teamClosersGrid');
+            var note = document.getElementById('teamClosersNote');
+            if (!grid || !closerData) return;
+            if (note) note.textContent = closerData.attribution_note || '';
+            var rows = closerData.closers || [];
+            if (!rows.length) { grid.innerHTML = '<div class="stilo-empty">No closers on the roster.</div>'; return; }
+
+            grid.innerHTML = rows.map(function (x) {
+                var c = x.closer, b = x.stats, r = x.rates;
+                var color = c.avatar_color || '#2563EB';
+                var pipeline = b.upcoming;
+                var recent = (x.recent || []).slice(0, 5).map(function (m) {
+                    var oc = (m.outcome || '').split(/[.\u2014]/)[0].slice(0, 34) || 'no outcome logged';
+                    var tone = /won|closed_won/i.test(oc) ? 'var(--green,#3fbf8f)'
+                             : /lost/i.test(oc) ? 'var(--red,#f87171)'
+                             : /no_show/i.test(oc) ? 'var(--orange,#f59e0b)' : 'var(--text-tertiary)';
+                    var d = m.occurred_at ? new Date(m.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
+                        + '<span style="color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;">' + escapeAdminHtml(m.business) + '</span>'
+                        + '<span style="color:' + tone + ';white-space:nowrap;">' + escapeAdminHtml(oc) + ' &middot; ' + d + '</span>'
+                        + '</div>';
+                }).join('') || '<div style="font-size:12px;color:var(--text-tertiary);padding-top:8px;border-top:1px solid var(--border-subtle);">No attributed meetings yet.</div>';
+
+                return ''
+                + '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.18);border-radius:14px;padding:20px;">'
+                  + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">'
+                    + '<div style="width:42px;height:42px;border-radius:50%;background:' + color + ';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;">' + escapeAdminHtml(c.initials || '?') + '</div>'
+                    + '<div style="flex:1;">'
+                      + '<div style="font-size:15px;font-weight:600;">' + escapeAdminHtml(c.display_name) + '</div>'
+                      + '<div style="font-size:11px;color:var(--text-tertiary);">Closer &middot; ' + escapeAdminHtml(c.email) + '</div>'
+                    + '</div>'
+                  + '</div>'
+                  + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">'
+                    + closerStat('Meetings held', b.meetings_held)
+                    + closerStat('Show rate', r.show_rate_pct + '%', r.show_rate_pct >= 70 ? 'good' : 'warn')
+                    + closerStat('Closed won', b.won, b.won ? 'good' : null)
+                    + closerStat('Close rate', r.close_rate_pct + '%', r.close_rate_pct >= 20 ? 'good' : 'warn')
+                  + '</div>'
+                  + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);margin-bottom:12px;font-size:12px;">'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Upcoming</div><div style="font-weight:700;">' + pipeline + '</div></div>'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">No-shows</div><div style="font-weight:700;color:' + (b.no_shows ? 'var(--orange,#f59e0b)' : 'inherit') + ';">' + b.no_shows + '</div></div>'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Still open</div><div style="font-weight:700;">' + (b.open + b.awaiting_outcome) + '</div></div>'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Avg meeting</div><div style="font-weight:700;">' + r.avg_meeting_min + 'm</div></div>'
+                  + '</div>'
+                  + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;font-size:12px;">'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Lost</div><div style="font-weight:700;">' + b.lost + '</div></div>'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Self-booked</div><div style="font-weight:700;">' + b.booked_by_them + '</div></div>'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Own dials</div><div style="font-weight:700;">' + b.dials + '</div></div>'
+                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Revenue</div><div style="font-weight:700;">' + formatMoneyCents(b.revenue_cents) + '</div></div>'
+                  + '</div>'
+                  + '<div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Last meetings</div>'
+                  + recent
+                + '</div>';
+            }).join('');
         }
 
         /* ── Company + niche analytics (one call: /api/sdr/team-analytics) ── */
@@ -4642,6 +4735,7 @@
                 // from one analytics call. Fetch alongside; don't block the grid.
                 try {
                     teamAnalytics = await fetch('/api/sdr/team-analytics', { headers }).then(r => r.json());
+                    loadClosers();   // owners render in their own CLOSERS section
                 } catch (_) { teamAnalytics = null; }
                 setTeamRange(teamRange); // highlights the active button and renders grid + KPIs
                 renderNicheTable();
@@ -6528,7 +6622,7 @@
             document.getElementById('ecAgent').innerHTML = '';
             var status = document.getElementById('emailComposerStatus');
             status.style.color = 'var(--text-muted)';
-            status.textContent = 'Drafting a personalized email with the AI sales agent…';
+            status.textContent = 'Writing the draft…';
             setEcSending(false);
             try {
                 var d = await prospectFetchJSON('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify({ id: leadId }) });
@@ -6537,7 +6631,10 @@
                 document.getElementById('ecSubject').value = d.subject || '';
                 document.getElementById('ecBody').value = d.body || '';
                 document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
-                status.textContent = 'Draft ready for the ' + (d.agent || 'recommended agent') + '. Edit anything, then send. Name, phone, booking link, and footer are added automatically.' + abSuffix(d);
+                status.textContent = (d.niche_slug
+                    ? 'Draft ready. It links their ' + nicheLabel(d) + ' video.'
+                    : 'Draft ready. We could not tell their industry, so this links the calendar instead of a video.')
+                    + ' Edit anything, then send. Name, phone and signature are added automatically.' + abSuffix(d);
                 if (!d.to_email) { var m = document.getElementById('ecMsg'); m.style.color = '#f59e0b'; m.textContent = 'No email on file. Type the prospect\'s email above.'; document.getElementById('ecTo').focus(); }
             } catch (e) { status.style.color = 'var(--red)'; status.textContent = 'Could not draft: ' + (e.message || 'unknown'); }
         }
@@ -6545,11 +6642,21 @@
             emailComposerVariant = d.variant || null;
             var sel = document.getElementById('ecAgent');
             if (!sel || !d.agents) return;
-            sel.innerHTML = d.agents.map(function (a) {
-                return '<option value="' + a.key + '"' + (a.key === d.agent_key ? ' selected' : '') + '>' + a.label + '</option>';
+            var none = '<option value=""' + (d.niche_slug ? '' : ' selected') + '>'
+                + (d.niche_slug ? 'No video, calendar link only' : 'Not sure yet, pick one') + '</option>';
+            sel.innerHTML = none + d.agents.map(function (a) {
+                // Match on niche_slug. agent_key is the retired playbook key and matches no
+                // niche, so the browser silently selected the FIRST option and the dropdown
+                // disagreed with the link in the body.
+                var cur = d.niche_slug || null;
+                return '<option value="' + a.key + '"' + (a.key === cur ? ' selected' : '') + '>' + a.label + '</option>';
             }).join('');
         }
-        function abSuffix(d) { return d && d.variant_label ? ' Running A/B template ' + d.variant_label + '.' : ''; }
+        function abSuffix(d) { return d && d.variant_label ? ' (A/B ' + d.variant_label + ')' : ''; }
+        function nicheLabel(d) {
+            var a = (d.agents || []).filter(function (x) { return x.key === d.niche_slug; })[0];
+            return a ? a.label : 'niche';
+        }
         async function redraftEmail() {
             if (!emailComposerLeadId) return;
             var sel = document.getElementById('ecAgent');
@@ -9322,7 +9429,7 @@
                 + '</div>'
 
                 + '<div style="margin-bottom:10px;"><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Subject</label><input id="invSubject" value="' + escapeAdminHtml(defaultSubject) + '" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;"></div>'
-                + '<div style="margin-bottom:12px;"><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Email body (edit freely)</label><textarea id="invBody" rows="10" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;line-height:1.5;resize:vertical;">' + escapeAdminHtml(defaultBody) + '</textarea></div>'
+                + '<div style="margin-bottom:16px;"><label style="display:block;font-size:10px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;">Email body (edit freely)</label><textarea id="invBody" rows="10" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;line-height:1.5;resize:vertical;">' + escapeAdminHtml(defaultBody) + '</textarea></div>'
 
                 + '<div style="margin-bottom:8px;"><label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="invSmsToggle" ' + (d.contact_phone ? 'checked' : '') + ' style="margin:0;"> Also text the payment link from my line</label></div>'
                 + '<div style="margin-bottom:14px;"><textarea id="invSmsBody" rows="3" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:inherit;font-size:12px;line-height:1.5;resize:vertical;">' + escapeAdminHtml(defaultSms) + '</textarea></div>'

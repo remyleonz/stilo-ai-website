@@ -608,6 +608,7 @@
         .money.big { font-size: 1.8rem; }
         .pct { color: var(--text-tertiary); font-size: 13px; font-weight: 500; }
     </style>
+<style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
 </head>
 <body>
     <!-- SIDEBAR -->
@@ -1029,32 +1030,32 @@
         <div id="leadDrawerOverlay" class="drawer-overlay" onclick="closeLeadDrawer()"></div>
 
         <!-- EMAIL COMPOSER MODAL -->
-        <div id="emailComposerModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.62);align-items:flex-start;justify-content:center;padding:34px 20px;overflow-y:auto;">
-            <div style="background:var(--bg-card);border:1px solid var(--border-medium);border-radius:14px;max-width:620px;width:100%;padding:24px 26px;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+        <div id="emailComposerModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(4,4,8,0.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);align-items:flex-start;justify-content:center;padding:44px 20px;overflow-y:auto;">
+            <div style="background:var(--bg-card);border:1px solid var(--border-medium);border-radius:20px;max-width:640px;width:100%;padding:30px 32px 26px;box-shadow:0 40px 90px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04) inset;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <div style="font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:-0.01em;">Email this lead</div>
+                    <div style="font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-0.02em;">Email this lead</div>
                     <button onclick="closeEmailComposer()" aria-label="Close" style="background:none;border:none;color:var(--text-tertiary);font-size:24px;line-height:1;cursor:pointer;">&times;</button>
                 </div>
                 <div id="emailComposerStatus" style="font-size:12px;color:var(--text-tertiary);margin-bottom:16px;line-height:1.5;">Drafting…</div>
 
-                <div style="margin-bottom:12px;">
-                    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Agent we're pitching</label>
-                    <select id="ecAgent" onchange="redraftEmail()" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></select>
-                    <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Auto-picked from the cold-call script. Switch it to re-draft for a different agent.</div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-tertiary);margin-bottom:7px;">Their industry</label>
+                    <select id="ecAgent" onchange="redraftEmail()" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></select>
+                    <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Set from the lead. This picks which of the five videos they get.</div>
                 </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">To</label>
-                    <input id="ecTo" type="email" placeholder="client@email.com" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-tertiary);margin-bottom:7px;">To</label>
+                    <input id="ecTo" type="email" placeholder="client@email.com" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;">
                 </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Subject</label>
-                    <input id="ecSubject" type="text" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-tertiary);margin-bottom:7px;">Subject</label>
+                    <input id="ecSubject" type="text" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;">
                 </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Message</label>
-                    <textarea id="ecBody" rows="13" style="width:100%;padding:12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;line-height:1.55;resize:vertical;"></textarea>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-tertiary);margin-bottom:7px;">Message</label>
+                    <textarea id="ecBody" rows="13" style="width:100%;padding:14px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;line-height:1.6;resize:vertical;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></textarea>
                 </div>
-                <div style="background:var(--bg-input);border:1px dashed var(--border-medium);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+                <div style="background:transparent;border:1px solid var(--border-subtle);border-radius:12px;padding:13px 15px;margin-bottom:18px;opacity:.75;">
                     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-tertiary);margin-bottom:5px;">Signature added automatically</div>
                     <div id="ecFooter" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;line-height:1.5;"></div>
                 </div>
@@ -1075,13 +1076,13 @@
                     <button onclick="closeSharePicker()" aria-label="Close" style="background:none;border:none;color:var(--text-tertiary);font-size:24px;line-height:1;cursor:pointer;">&times;</button>
                 </div>
                 <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:16px;line-height:1.5;">It lands on their "Shared with me" tab. They keep their own copy on their dashboard.</div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Send to</label>
-                    <select id="spRecipient" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;"></select>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-tertiary);margin-bottom:7px;">Send to</label>
+                    <select id="spRecipient" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></select>
                 </div>
                 <div style="margin-bottom:14px;">
-                    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:5px;">Note (optional)</label>
-                    <textarea id="spNote" rows="3" placeholder="e.g. Asked me to email them, can you take it from here?" style="width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;resize:vertical;"></textarea>
+                    <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-tertiary);margin-bottom:7px;">Note (optional)</label>
+                    <textarea id="spNote" rows="3" placeholder="e.g. Asked me to email them, can you take it from here?" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;resize:vertical;"></textarea>
                 </div>
                 <div id="spMsg" style="font-size:12px;min-height:16px;margin-bottom:10px;"></div>
                 <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -2129,7 +2130,7 @@
             document.getElementById('ecMsg').textContent = '';
             var status = document.getElementById('emailComposerStatus');
             status.style.color = 'var(--text-tertiary)';
-            status.textContent = 'Drafting a personalized email with the AI sales agent…';
+            status.textContent = 'Writing the draft…';
             document.getElementById('ecAgent').innerHTML = '';
             setEcSending(false);
             try {
@@ -2139,7 +2140,10 @@
                 document.getElementById('ecSubject').value = d.subject || '';
                 document.getElementById('ecBody').value = d.body || '';
                 document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
-                status.textContent = 'Draft ready for the ' + (d.agent || 'recommended agent') + '. Edit anything, then send. Your name, phone, the booking link, and footer are added automatically.' + abSuffix(d);
+                status.textContent = (d.niche_slug
+                    ? 'Draft ready. It links their ' + nicheLabel(d) + ' video.'
+                    : 'Draft ready. We could not tell their industry, so this links the calendar instead of a video.')
+                    + ' Edit anything, then send. Name, phone and signature are added automatically.' + abSuffix(d);
                 if (!d.to_email) {
                     var m = document.getElementById('ecMsg');
                     m.style.color = '#f59e0b';
@@ -2155,11 +2159,21 @@
             emailComposerVariant = d.variant || null;
             var sel = document.getElementById('ecAgent');
             if (!sel || !d.agents) return;
-            sel.innerHTML = d.agents.map(function (a) {
-                return '<option value="' + a.key + '"' + (a.key === d.agent_key ? ' selected' : '') + '>' + a.label + '</option>';
+            var none = '<option value=""' + (d.niche_slug ? '' : ' selected') + '>'
+                + (d.niche_slug ? 'No video, calendar link only' : 'Not sure yet, pick one') + '</option>';
+            sel.innerHTML = none + d.agents.map(function (a) {
+                // Match on niche_slug. agent_key is the retired playbook key and matches no
+                // niche, so the browser silently selected the FIRST option and the dropdown
+                // disagreed with the link in the body.
+                var cur = d.niche_slug || null;
+                return '<option value="' + a.key + '"' + (a.key === cur ? ' selected' : '') + '>' + a.label + '</option>';
             }).join('');
         }
-        function abSuffix(d) { return d && d.variant_label ? ' Running A/B template ' + d.variant_label + '.' : ''; }
+        function abSuffix(d) { return d && d.variant_label ? ' (A/B ' + d.variant_label + ')' : ''; }
+        function nicheLabel(d) {
+            var a = (d.agents || []).filter(function (x) { return x.key === d.niche_slug; })[0];
+            return a ? a.label : 'niche';
+        }
         async function redraftEmail() {
             if (!emailComposerLeadId) return;
             var sel = document.getElementById('ecAgent');
