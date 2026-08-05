@@ -190,7 +190,14 @@ module.exports = async function handler(req, res) {
                 subject: 'Your STILO meeting starts in ~15 minutes',
                 body_preview: 'T-15 reminder + Meet link for ' + when,
                 to_address: email, from_address: 'remyleon@stiloaipartners.com',
-                provider: 'resend', provider_message_id: er.id || null,
+                // Read the provider off the send result. This was hardcoded to
+                // 'resend' while sendEmail() routes through sendTransactional,
+                // which prefers Gmail. Every reminder since the Gmail grant
+                // (2026-07-21) actually went out through Workspace and was logged
+                // as Resend, which made it look like the T-15 reminder was riding
+                // the cold pipeline. It never was. Same pattern as
+                // _send_confirmation.js:177.
+                provider: (er && er.via) || 'resend', provider_message_id: er.id || null,
                 status: 'sent', variant: 'meeting_reminder', sent_at: new Date().toISOString(),
             });
         }
