@@ -33,7 +33,7 @@ CONFIRM_VIDEO = os.environ.get(
 NICHES = [
     dict(
         slug="commercial-cleaning", name="Commercial Cleaning",
-        loom="2558bfb9c4fc419db9bbcb0e44d933c0", thumb="c33dc748e42cb3dd",
+        loom="2558bfb9c4fc419db9bbcb0e44d933c0", thumb="5318064cdbcd3431",
         h1="More buildings under contract,<br>booked onto your calendar for you.",
         title="Commercial Cleaning: More Buildings on Contract - STILO AI Partners",
         desc="We find every building in your area that fits, work them across email, phone and text, "
