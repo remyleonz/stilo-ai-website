@@ -25,8 +25,12 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Terminal outcomes: a meeting that reached a decision, so it belongs in the
 // close-rate denominator. `needs_time` deliberately counts as still open.
-const WON = ['closed_won', 'won', 'closed'];
-const LOST = ['closed_lost', 'lost', 'not_interested'];
+// EXACT matches only, and LOST is tested first. A previous version had 'closed'
+// in WON and used startsWith, so 'closed_lost' matched as a WIN and the card
+// reported a 100% close rate against zero actual closes. Never prefix-match
+// outcome strings whose vocabulary shares a stem.
+const WON = ['closed_won', 'won'];
+const LOST = ['closed_lost', 'lost', 'not_interested', 'no'];
 const NOSHOW = ['no_show', 'noshow'];
 
 function pro() {
@@ -140,12 +144,12 @@ module.exports = async function handler(req, res) {
 
                 if (when && when > now) { b.upcoming++; continue; }
 
-                if (NOSHOW.some(x => oc === x)) { b.no_shows++; }
+                if (NOSHOW.indexOf(oc) !== -1) { b.no_shows++; }
                 else {
                     b.meetings_held++;
                     b.talk_sec += m.duration_seconds || 0;
-                    if (WON.some(x => oc.startsWith(x))) b.won++;
-                    else if (LOST.some(x => oc.startsWith(x))) b.lost++;
+                    if (LOST.indexOf(oc) !== -1) b.lost++;
+                    else if (WON.indexOf(oc) !== -1) b.won++;
                     else if (!oc) b.awaiting_outcome++;
                     else b.open++;   // interested / needs_time / free-text notes
                 }
