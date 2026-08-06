@@ -209,13 +209,39 @@ function formatPhone(raw) {
     return '(' + ten.slice(0, 3) + ') ' + ten.slice(3, 6) + '-' + ten.slice(6);
 }
 
-// Resolve who's sending — name + phone for the footer + a reply-to. SDRs are
-// in public.sdr_users; admins (Remy) fall back to the STILO defaults.
+// "Alejandro Barrios" → "alejandrobarrios@stiloaipartners.com".
+//
+// The rep who dialed a prospect should be the rep whose name is on the envelope.
+// Before this, every rep's mail left as remyleon@, so a prospect Alejandro had
+// called got an email from a stranger. Carlos at Link Hospitality said it out
+// loud on the 2026-07-31 call ("Remy? Remy Leon?") right after the invite hit.
+//
+// These are ALIASES on Remy's existing Workspace mailbox, not separate seats.
+// Resend sends as any address on the verified domain, but a prospect who hits
+// reply-all (ignoring Reply-To) mails the From address directly, so the alias
+// has to exist or that reply hard-bounces. Adding a rep to sdr_users WITHOUT
+// adding the alias in Workspace silently loses those replies.
+//
+// Accents and punctuation are stripped: a display_name like "José O'Brien"
+// must not produce an address the domain cannot route.
+function senderAddress(displayName) {
+    const local = String(displayName || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z]/g, '');
+    if (local.length < 4) return null;   // too mangled to be a real mailbox
+    return local + '@stiloaipartners.com';
+}
+
+// Resolve who's sending — name + phone for the footer, a reply-to, and the
+// envelope address. SDRs are in public.sdr_users; admins (Remy) fall back to
+// the STILO defaults.
 async function getSenderIdentity(callerEmail) {
+    const master = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const fallback = {
         name: process.env.STILO_SENDER_NAME || 'Remy Leon',
         phone: '(786) 876-8677',
-        replyTo: callerEmail || process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com'
+        replyTo: callerEmail || process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com',
+        fromEmail: master
     };
     if (!callerEmail || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return fallback;
     try {
@@ -228,7 +254,8 @@ async function getSenderIdentity(callerEmail) {
             return {
                 name: data.display_name,
                 phone: data.openphone_number ? formatPhone(data.openphone_number) : fallback.phone,
-                replyTo: data.email || callerEmail
+                replyTo: data.email || callerEmail,
+                fromEmail: senderAddress(data.display_name) || master
             };
         }
     } catch (_) { /* fall through to default */ }
