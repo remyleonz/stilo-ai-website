@@ -149,6 +149,35 @@
   .videowrap .vsl-orb{position:relative;z-index:1;width:82px;height:82px;border-radius:50%;background:rgba(255,255,255,.96);box-shadow:0 14px 46px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;transition:transform .2s}
   .videowrap .vsl-play:hover .vsl-orb{transform:scale(1.07)}
   .videowrap .vsl-orb::after{content:"";width:0;height:0;border-style:solid;border-width:15px 0 15px 25px;border-color:transparent transparent transparent #1E3A8A;margin-left:7px}
+
+  /* ===== pre-meeting: their real meeting, not another booking CTA ===== */
+  .mtg{width:min(920px,94vw);margin:34px auto 0;display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);
+    gap:0;border:1px solid var(--stroke-hi);border-radius:var(--radius-lg);overflow:hidden;
+    background:linear-gradient(168deg,#101018,#0A0B10 70%)}
+  .mtg-when{padding:30px 30px 32px;border-right:1px solid var(--stroke);display:flex;flex-direction:column}
+  .mtg-agenda{padding:30px 32px 32px}
+  .mtg-k{display:block;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--fg-3);margin-bottom:14px}
+  .mtg-when strong{font-family:var(--font-display);font-weight:600;font-size:clamp(1.3rem,2.3vw,1.72rem);
+    line-height:1.18;color:var(--fg);letter-spacing:.004em}
+  .mtg-sub{margin-top:10px;font-size:.94rem;color:var(--fg-2)}
+  .mtg-link{margin-top:auto;padding-top:20px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--accent-glow)}
+  .mtg-link:hover{color:#fff}
+  .mtg-agenda ol{margin:0;padding:0;list-style:none;counter-reset:ag}
+  .mtg-agenda li{counter-increment:ag;position:relative;padding:0 0 0 34px;margin-bottom:13px;
+    color:var(--fg-2);font-size:1rem;line-height:1.45}
+  .mtg-agenda li:last-of-type{margin-bottom:0}
+  .mtg-agenda li::before{content:counter(ag,decimal-leading-zero);position:absolute;left:0;top:2px;
+    font-family:var(--font-mono);font-size:.68rem;color:var(--accent-glow)}
+  .mtg-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--stroke);
+    color:var(--fg-3);font-size:.9rem;line-height:1.5}
+  @media(max-width:720px){
+    .mtg{grid-template-columns:1fr}
+    .mtg-when{border-right:0;border-bottom:1px solid var(--stroke);padding:24px 22px 26px}
+    .mtg-agenda{padding:24px 22px 26px}
+    .mtg-link{margin-top:18px;padding-top:0}
+  }
 </style>
 </head>
 <body>
@@ -160,9 +189,23 @@
     <div class="videowrap">
       <button type="button" class="vsl-play" style="background-image:url(https://cdn.loom.com/sessions/thumbnails/cd10f731ce3241a49fbae438a6f26183-f45f949535d5ad0a.jpg)" onclick="startVsl(this)" data-loom="cd10f731ce3241a49fbae438a6f26183" data-agent="confirmation" aria-label="Play the confirmation walkthrough"><span class="vsl-orb"></span></button>
     </div>
-    <div class="ctaband">
-      <h2>See you on the call</h2>
-      <a class="btn-primary js-book" href="#faq">Questions before we talk</a>
+    <div class="mtg" id="mtgCard">
+      <div class="mtg-when">
+        <span class="mtg-k" id="mtgKey">Your meeting</span>
+        <strong id="mtgWhen">Check your calendar invite</strong>
+        <span class="mtg-sub" id="mtgSub">15 minutes with Remy Leon, founder</span>
+        <a class="mtg-link" id="mtgLink" target="_blank" rel="noopener" hidden>Join on Google Meet</a>
+      </div>
+      <div class="mtg-agenda">
+        <span class="mtg-k">What we will cover</span>
+        <ol id="mtgAgenda">
+          <li>What one closed customer is actually worth to you</li>
+          <li>Who you are trying to get in front of, specifically</li>
+          <li>Whether your market has the density to hit a number</li>
+          <li>What your first 30 days would look like</li>
+        </ol>
+        <p class="mtg-foot">Nothing to prepare. If the numbers do not work in your market, I will tell you on the call.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -194,8 +237,7 @@
       </details>
         </div>
     <div class="faq-foot">
-      <p>Still have a question? The fastest way to get it answered is 15 minutes with a partner.</p>
-      <a class="btn-primary js-book">Book</a>
+      <p>Anything else you want covered? Reply to your confirmation email and I will have an answer ready on the call.</p>
     </div>
   </div>
 </section>
@@ -214,7 +256,7 @@
           <li><a href="/#industries">Use cases</a></li>
           <li><a href="/#process">Our process</a></li>
           <li><a href="/#why-us">Why STILO</a></li>
-          <li><a class="js-book">Talk to a partner</a></li>
+          <li><a href="mailto:stiloaiconsulting@gmail.com">Email us</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -230,7 +272,7 @@
       <div class="footer-col">
         <h4>Contact</h4>
         <ul>
-          <li><a class="js-book">Talk to a partner</a></li>
+          <li><a href="mailto:stiloaiconsulting@gmail.com">Email us</a></li>
           <li><a href="tel:+17868376639">(786) 837-6639</a></li>
           <li><a href="mailto:stiloaiconsulting@gmail.com">stiloaiconsulting@gmail.com</a></li>
           <li><span style="color:var(--fg-3)">Miami, FL</span></li>
@@ -329,6 +371,50 @@ function startVsl(btn){var w=btn.parentNode,id=btn.getAttribute("data-loom"),age
    other agent pages so booking works there too (never carry confirm=1). */
 (function(){var p=new URLSearchParams(location.search),lid=p.get('lid'),t=p.get('t');if(!lid)return;
 document.querySelectorAll('a.x-agent').forEach(function(a){var u=new URL(a.getAttribute('href'),location.origin);u.searchParams.set('lid',lid);if(t)u.searchParams.set('t',t);a.setAttribute('href',u.pathname+u.search);});})();
+</script>
+
+<script>
+/* Pre-meeting: fill in the prospect's real meeting. The page is reached from the
+   confirmation link, so lid+t are on the URL; without them we leave the static
+   copy in place rather than showing a wrong time. */
+(function(){
+  var q=new URLSearchParams(location.search), lid=q.get('lid'), t=q.get('t');
+  if(!lid||!t) return;
+  // leads.niche is free text off the source list ('Janitorial service',
+  // 'Employment agency', ...), not one of our five slugs, so match on keywords.
+  var NICHE=[
+    [/janitor|clean|custodial|maid/, 'the buildings in your service radius'],
+    [/roof/,                          'the building owners with a roof at end of life'],
+    [/staff|employ|recruit|temp|personnel/, 'the employers hiring in your specialty right now'],
+    [/freight|truck|logistic|carrier|haul/, 'the shippers running your lanes'],
+    [/equipment|industrial|supply|machin|tool/, 'the plants running your equipment class']
+  ];
+  function nicheLine(n){ n=String(n||'').toLowerCase();
+    for(var i=0;i<NICHE.length;i++){ if(NICHE[i][0].test(n)) return NICHE[i][1]; } return null; }
+  fetch('/api/public/meeting-details?lid='+encodeURIComponent(lid)+'&t='+encodeURIComponent(t))
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){
+      if(!d) return;
+      if(d.when_iso){
+        try{
+          var dt=new Date(d.when_iso);
+          document.getElementById('mtgWhen').textContent=
+            dt.toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET';
+        }catch(e){}
+      }
+      var mins=d.duration_min||15;
+      document.getElementById('mtgSub').textContent=mins+' minutes with Remy Leon, founder';
+      if(d.business){ document.getElementById('mtgKey').textContent='Your meeting \u00b7 '+d.business; }
+      var meet=d.meet_link||d.event_link;
+      if(meet){ var a=document.getElementById('mtgLink'); a.href=meet; a.hidden=false; }
+      var line=nicheLine(d.niche);
+      if(line){
+        var li=document.querySelectorAll('#mtgAgenda li')[1];
+        if(li) li.textContent='Which of '+line+' we would go after first';
+      }
+    })
+    .catch(function(){});
+})();
 </script>
 </body>
 </html>

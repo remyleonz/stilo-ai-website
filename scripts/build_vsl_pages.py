@@ -206,9 +206,24 @@ def build_confirmation(tpl):
         'data-agent="confirmation" aria-label="Play the confirmation walkthrough">'
         '<span class="vsl-orb"></span></button>\n'
         '    </div>\n'
-        '    <div class="ctaband">\n'
-        '      <h2>See you on the call</h2>\n'
-        '      <a class="btn-primary js-book" href="#faq">Questions before we talk</a>\n'
+        '    <div class="mtg" id="mtgCard">\n'
+        '      <div class="mtg-when">\n'
+        '        <span class="mtg-k" id="mtgKey">Your meeting</span>\n'
+        '        <strong id="mtgWhen">Check your calendar invite</strong>\n'
+        '        <span class="mtg-sub" id="mtgSub">15 minutes with Remy Leon, founder</span>\n'
+        '        <a class="mtg-link" id="mtgLink" target="_blank" rel="noopener" hidden>Join on Google Meet</a>\n'
+        '      </div>\n'
+        '      <div class="mtg-agenda">\n'
+        '        <span class="mtg-k">What we will cover</span>\n'
+        '        <ol id="mtgAgenda">\n'
+        '          <li>What one closed customer is actually worth to you</li>\n'
+        '          <li>Who you are trying to get in front of, specifically</li>\n'
+        '          <li>Whether your market has the density to hit a number</li>\n'
+        '          <li>What your first 30 days would look like</li>\n'
+        '        </ol>\n'
+        '        <p class="mtg-foot">Nothing to prepare. If the numbers do not work in your market, '
+        'I will tell you on the call.</p>\n'
+        '      </div>\n'
         '    </div>\n'
         '  </div>\n'
         '</section>'
@@ -243,6 +258,18 @@ def build_confirmation(tpl):
                lambda m: m.group(1) + "\n" + items + "\n    " + m.group(2).lstrip("\n"),
                s, count=1, flags=re.S)
 
+    s = s.replace('</style>', '\n  /* ===== pre-meeting: their real meeting, not another booking CTA ===== */\n  .mtg{width:min(920px,94vw);margin:34px auto 0;display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);\n    gap:0;border:1px solid var(--stroke-hi);border-radius:var(--radius-lg);overflow:hidden;\n    background:linear-gradient(168deg,#101018,#0A0B10 70%)}\n  .mtg-when{padding:30px 30px 32px;border-right:1px solid var(--stroke);display:flex;flex-direction:column}\n  .mtg-agenda{padding:30px 32px 32px}\n  .mtg-k{display:block;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;\n    color:var(--fg-3);margin-bottom:14px}\n  .mtg-when strong{font-family:var(--font-display);font-weight:600;font-size:clamp(1.3rem,2.3vw,1.72rem);\n    line-height:1.18;color:var(--fg);letter-spacing:.004em}\n  .mtg-sub{margin-top:10px;font-size:.94rem;color:var(--fg-2)}\n  .mtg-link{margin-top:auto;padding-top:20px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;\n    text-transform:uppercase;color:var(--accent-glow)}\n  .mtg-link:hover{color:#fff}\n  .mtg-agenda ol{margin:0;padding:0;list-style:none;counter-reset:ag}\n  .mtg-agenda li{counter-increment:ag;position:relative;padding:0 0 0 34px;margin-bottom:13px;\n    color:var(--fg-2);font-size:1rem;line-height:1.45}\n  .mtg-agenda li:last-of-type{margin-bottom:0}\n  .mtg-agenda li::before{content:counter(ag,decimal-leading-zero);position:absolute;left:0;top:2px;\n    font-family:var(--font-mono);font-size:.68rem;color:var(--accent-glow)}\n  .mtg-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--stroke);\n    color:var(--fg-3);font-size:.9rem;line-height:1.5}\n  @media(max-width:720px){\n    .mtg{grid-template-columns:1fr}\n    .mtg-when{border-right:0;border-bottom:1px solid var(--stroke);padding:24px 22px 26px}\n    .mtg-agenda{padding:24px 22px 26px}\n    .mtg-link{margin-top:18px;padding-top:0}\n  }\n' + '</style>', 1)
+    s = s.replace('</body>', "\n<script>\n/* Pre-meeting: fill in the prospect's real meeting. The page is reached from the\n   confirmation link, so lid+t are on the URL; without them we leave the static\n   copy in place rather than showing a wrong time. */\n(function(){\n  var q=new URLSearchParams(location.search), lid=q.get('lid'), t=q.get('t');\n  if(!lid||!t) return;\n  // leads.niche is free text off the source list ('Janitorial service',\n  // 'Employment agency', ...), not one of our five slugs, so match on keywords.\n  var NICHE=[\n    [/janitor|clean|custodial|maid/, 'the buildings in your service radius'],\n    [/roof/,                          'the building owners with a roof at end of life'],\n    [/staff|employ|recruit|temp|personnel/, 'the employers hiring in your specialty right now'],\n    [/freight|truck|logistic|carrier|haul/, 'the shippers running your lanes'],\n    [/equipment|industrial|supply|machin|tool/, 'the plants running your equipment class']\n  ];\n  function nicheLine(n){ n=String(n||'').toLowerCase();\n    for(var i=0;i<NICHE.length;i++){ if(NICHE[i][0].test(n)) return NICHE[i][1]; } return null; }\n  fetch('/api/public/meeting-details?lid='+encodeURIComponent(lid)+'&t='+encodeURIComponent(t))\n    .then(function(r){ return r.ok?r.json():null; })\n    .then(function(d){\n      if(!d) return;\n      if(d.when_iso){\n        try{\n          var dt=new Date(d.when_iso);\n          document.getElementById('mtgWhen').textContent=\n            dt.toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET';\n        }catch(e){}\n      }\n      var mins=d.duration_min||15;\n      document.getElementById('mtgSub').textContent=mins+' minutes with Remy Leon, founder';\n      if(d.business){ document.getElementById('mtgKey').textContent='Your meeting \\u00b7 '+d.business; }\n      var meet=d.meet_link||d.event_link;\n      if(meet){ var a=document.getElementById('mtgLink'); a.href=meet; a.hidden=false; }\n      var line=nicheLine(d.niche);\n      if(line){\n        var li=document.querySelectorAll('#mtgAgenda li')[1];\n        if(li) li.textContent='Which of '+line+' we would go after first';\n      }\n    })\n    .catch(function(){});\n})();\n</script>\n" + '</body>', 1)
+    # Nobody who has already booked should be offered a booking modal. The
+    # inherited FAQ foot and footer both carry .js-book, so on this page the
+    # foot becomes a reply prompt and the footer links become plain mailto.
+    s = s.replace(
+        '<p>Still have a question? The fastest way to get it answered is 15 minutes with a partner.</p>\n'
+        '      <a class="btn-primary js-book">Book</a>',
+        '<p>Anything else you want covered? Reply to your confirmation email and '
+        'I will have an answer ready on the call.</p>')
+    s = s.replace('<a class="js-book">Talk to a partner</a>',
+                  '<a href="mailto:stiloaiconsulting@gmail.com">Email us</a>')
     s = s.replace('src="/agents/_confirm.js"', 'src="/vsl/_confirm.js"')
     # This page IS the confirmation step, so every event is flow=confirm. The
     # inherited expression keys off ?confirm=1, which is only ever set on the
