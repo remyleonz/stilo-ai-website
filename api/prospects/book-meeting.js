@@ -58,25 +58,47 @@ function escapeHtml(s) {
     });
 }
 
+// Prospect-facing booking confirmation.
+//
+// MUST go through sendTransactional (Gmail first, Resend only as a fallback).
+// This used to POST straight to Resend, which put a BOOKED prospect's
+// confirmation on the exact same sending reputation as the cold campaign that
+// runs at 30-250/day. That is the failure the _gmail_send.js split exists to
+// prevent, and it silently bypassed it here: the reminders were insulated, the
+// confirmation itself was not. See _gmail_send.js for the full reasoning.
+//
+// Plain text, no HTML: sendTransactional sends text only, which is what keeps
+// these landing in Primary rather than Promotions.
 async function sendConfirmationEmail(opts) {
-    if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
     if (!opts.toEmail) return { skipped: 'no_lead_email' };
-    const fromName = process.env.STILO_SENDER_NAME || 'Remy Leon';
-    const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
-    const replyTo = process.env.STILO_REPLY_TO || fromEmail;
-    const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            from: fromName + ' <' + fromEmail + '>',
-            to: [opts.toEmail],
-            reply_to: replyTo,
-            subject: 'Confirmed: ' + (opts.businessName || 'STILO discovery call'),
-            html: buildEmailHtml(opts)
-        })
+    const { sendTransactional } = require('./_gmail_send');
+    const replyTo = process.env.STILO_REPLY_TO || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    const whenStr = opts.whenIso
+        ? new Intl.DateTimeFormat('en-US', {
+            weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric',
+            minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York'
+        }).format(new Date(opts.whenIso))
+        : '';
+    const text = [
+        'Hi ' + (opts.firstName || 'there') + ',',
+        '',
+        whenStr ? 'You are confirmed for ' + whenStr + '.' : 'Your call is confirmed.',
+        opts.meetLink ? '' : null,
+        opts.meetLink ? 'Google Meet: ' + opts.meetLink : null,
+        '',
+        'If anything comes up, just reply to this email and we will move it.',
+        '',
+        'Talk soon,',
+        process.env.STILO_SENDER_NAME || 'Remy Leon',
+        'STILO AI Partners'
+    ].filter(function (l) { return l !== null; }).join('\n');
+    const r = await sendTransactional({
+        to: opts.toEmail,
+        subject: 'Confirmed: ' + (opts.businessName || 'STILO discovery call'),
+        text: text,
+        replyTo: replyTo
     });
-    const json = await r.json().catch(function () { return {}; });
-    return { status: r.status, id: json.id, error: r.ok ? null : (json.message || 'send_failed') };
+    return { status: r.status, id: r.id, via: r.via, error: r.err || null, skipped: r.skip };
 }
 
 // Internal heads-up to the STILO inbox on every booking. Google never emails the

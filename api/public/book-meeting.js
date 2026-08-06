@@ -174,14 +174,30 @@ module.exports = async function handler(req, res) {
     const whenStr = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(startDate);
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
+    // Prospect confirmation goes through sendTransactional (Gmail first), NOT
+    // straight to Resend. A self-booker's confirmation must not ride the same
+    // sending reputation as the cold campaign. See _gmail_send.js. The internal
+    // heads-up below stays on Resend: it goes to us, so placement is irrelevant
+    // and the HTML summary is easier to scan.
     try {
-        await sendResend({
-            from: senderName + ' <' + fromEmail + '>', to: [email], reply_to: fromEmail,
+        const { sendTransactional } = require('../prospects/_gmail_send');
+        await sendTransactional({
+            to: email,
             subject: 'Confirmed: your STILO call, ' + whenStr,
-            html: '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
-                + '<p>Hi ' + esc(firstName(name)) + ',</p><p>You are booked for <strong>' + esc(whenStr) + '</strong>.</p>'
-                + (meetLink ? '<p>Google Meet: <a href="' + esc(meetLink) + '" style="color:#2563EB">' + esc(meetLink) + '</a></p>' : '')
-                + '<p>If anything comes up, just reply and we will move it.</p><p>Talk soon,<br/>' + esc(senderName) + '<br/>STILO AI Partners</p></div>'
+            replyTo: fromEmail,
+            text: [
+                'Hi ' + firstName(name) + ',',
+                '',
+                'You are booked for ' + whenStr + '.',
+                meetLink ? '' : null,
+                meetLink ? 'Google Meet: ' + meetLink : null,
+                '',
+                'If anything comes up, just reply and we will move it.',
+                '',
+                'Talk soon,',
+                senderName,
+                'STILO AI Partners'
+            ].filter(function (l) { return l !== null; }).join('\n')
         });
     } catch (_) { /* never block booking on email */ }
     try {
