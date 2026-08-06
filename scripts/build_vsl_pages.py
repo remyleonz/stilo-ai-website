@@ -267,7 +267,18 @@ def build_confirmation(tpl):
         '<p>Still have a question? The fastest way to get it answered is 15 minutes with a partner.</p>\n'
         '      <a class="btn-primary js-book">Book</a>',
         '<p>Anything else you want covered? Reply to your confirmation email and '
-        'I will have an answer ready on the call.</p>')
+        'I will have an answer ready on the call.</p>\n'
+        # The only booking affordance on the page, and deliberately the last
+        # thing on it: they already hold a slot, so this exists to MOVE it, not
+        # to sell a second meeting. A prospect who cannot find reschedule ghosts.
+        '      <p class="reschedule">Need a different time? '
+        '<a class="js-book">Pick a new slot</a></p>')
+    s = s.replace('</style>',
+        '  .faq-foot .reschedule{margin:30px 0 0;font-size:.95rem;color:var(--fg-3)}\n'
+        '  .faq-foot .reschedule a{color:var(--accent-glow);cursor:pointer;'
+        'border-bottom:1px solid transparent;transition:border-color .2s}\n'
+        '  .faq-foot .reschedule a:hover{border-bottom-color:var(--accent-glow)}\n'
+        '</style>', 1)
     s = s.replace('<a class="js-book">Talk to a partner</a>',
                   '<a href="mailto:stiloaiconsulting@gmail.com">Email us</a>')
     s = s.replace('src="/agents/_confirm.js"', 'src="/vsl/_confirm.js"')
