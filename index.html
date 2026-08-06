@@ -40,7 +40,7 @@
   --fg:#F4F1EA; --fg-2:#cfcabf; --fg-3:#8b877e; --fg-4:#5f5c56;
   --navy:#0A2E85; --navy-hover:#123A9E; --navy-l:#3B62D6; --navy-chip:rgba(59,98,214,0.16);
   --navy-line:rgba(59,98,214,0.30); --navy-dim:rgba(10,46,133,0.22);
-  --live:#34D399;
+  --live:#4E7FEE;
   --font-display:'Bodoni Moda',Georgia,serif;
   --font-body:'Barlow Semi Condensed',system-ui,sans-serif;
   --radius:16px; --radius-lg:20px;
@@ -147,13 +147,14 @@ nav.scrolled .nav-logo-img img{height:50px}
 
 /* heading row under the calendar */
 .hero-line{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap}
-.hero-line h1{font-size:clamp(1.45rem,2.95vw,2.65rem);text-transform:uppercase;letter-spacing:.012em;line-height:1.05;white-space:nowrap}
+.hero-line h1{font-size:clamp(1.45rem,2.95vw,2.65rem);text-transform:uppercase;letter-spacing:.012em;line-height:1.05;white-space:nowrap;text-wrap:balance}
+.hero-line h1 .brk{display:none}
 @media(max-width:1100px){.hero-line h1{white-space:normal}}
 
 /* =========================================================================
    WHAT WE DO · the demo carries it
    ========================================================================= */
-.wwd{padding:var(--sec) 0}
+.wwd{padding:var(--sec) 0 clamp(34px,3.6vw,48px)}
 .demo-shell{margin-top:clamp(44px,5vw,64px);width:min(1150px,100%);margin-left:auto;margin-right:auto;
   border-radius:var(--radius-lg);border:1px solid var(--stroke-hi);overflow:hidden;background:#0A0B10;
   box-shadow:0 70px 140px -60px rgba(0,0,0,.95),0 0 0 1px rgba(59,98,214,.08)}
@@ -162,12 +163,14 @@ nav.scrolled .nav-logo-img img{height:50px}
 @media(max-width:900px){
   .demo-shell iframe{width:950px;height:640px;transform-origin:top left}
 }
-.offer-line{margin:clamp(52px,6vw,76px) auto 0;text-align:center;
-  font-family:var(--font-display);font-optical-sizing:none;font-weight:700;font-size:clamp(1.9rem,3.4vw,3rem);line-height:1.18;letter-spacing:.004em}
+.offer-line{margin:clamp(52px,6vw,76px) auto 0;text-align:center;text-wrap:balance;
+  font-family:var(--font-display);font-optical-sizing:none;font-weight:700;font-size:clamp(1.9rem,3.4vw,3rem);line-height:1.16;letter-spacing:.004em}
+.offer-line .brk{display:none}
+@media(max-width:760px){.offer-line .brk{display:inline}}
 
 
 /* partners strip (ported from the previous site) */
-.partners{padding:clamp(64px,7vw,92px) 0 0;position:relative;overflow:hidden}
+.partners{padding:clamp(112px,12vw,170px) 0 0;position:relative;overflow:hidden}
 .partners-inner{display:flex;flex-direction:column;align-items:center;gap:30px;justify-content:center}
 .partners-label{font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.26em;color:var(--fg-3);text-align:center;white-space:nowrap}
 .partner-marquee{width:100%;display:flex;overflow:hidden;position:relative;
@@ -184,7 +187,7 @@ nav.scrolled .nav-logo-img img{height:50px}
 /* =========================================================================
    HOW IT WORKS · four steps
    ========================================================================= */
-.machine{padding:var(--sec) 0 calc(var(--sec) - 30px)}
+.machine{padding:clamp(26px,3vw,44px) 0 calc(var(--sec) - 30px)}
 .step{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(36px,5vw,80px);align-items:center;padding:clamp(46px,5.5vw,70px) 0;border-top:1px solid var(--stroke)}
 .step:first-of-type{border-top:0;margin-top:clamp(40px,5vw,64px);border-top:1px solid var(--stroke-hi)}
 .step:nth-child(even) .step-copy{order:2}
@@ -417,7 +420,8 @@ footer{padding:74px 0 38px;border-top:1px solid var(--stroke)}
   body{font-size:16px}
   .hero{min-height:0;padding:104px 0 44px}
   .hero-line{flex-direction:column;align-items:stretch;gap:22px}
-  .hero-line h1{white-space:normal;font-size:clamp(1.5rem,6.6vw,2rem)}
+  .hero-line h1{white-space:normal;font-size:clamp(1.46rem,6.3vw,1.95rem);line-height:1.07;letter-spacing:.006em}
+  .hero-line h1 .brk{display:inline}
   /* Full month stays, Google Calendar mobile style: dots instead of chips. */
   .gcal-days span{font-size:.5rem;letter-spacing:.04em;padding:7px 0 6px}
   .gcal-grid{grid-auto-rows:minmax(46px,auto)}
@@ -497,7 +501,7 @@ footer{padding:74px 0 38px;border-top:1px solid var(--stroke)}
     </div>
 
     <div class="hero-line">
-      <h1 class="rv rv-d1">Qualified meetings on your calendar</h1>
+      <h1 class="rv rv-d1">Qualified meetings <br class="brk">on your calendar</h1>
     </div>
 
   </div>
@@ -512,7 +516,7 @@ footer{padding:74px 0 38px;border-top:1px solid var(--stroke)}
       <iframe src="/demo/" title="The STILO pipeline, step by step" loading="lazy"></iframe>
     </div>
 
-    <p class="offer-line rv">We find your buyers, work them,<br>and book the ones ready to buy.</p>
+    <p class="offer-line rv">We find your buyers. <br class="brk">You take the meetings.</p>
 
     <div class="cta-row rv"><a class="btn" href="#start">Talk to a Partner</a></div>
 
