@@ -117,8 +117,8 @@ def faq(n):
          "the meeting and knows what it's about. If a meeting we book doesn't meet that standard it "
          "doesn't count, you're not billed for it, and we replace it free." % n["qualified"]),
         ("How do you charge?",
-         "Three pieces: a setup fee to build it, a flat fee for each qualified meeting that shows up, "
-         "and a share of what you actually close. No retainer, and no monthly invoice that arrives "
+         "Two pieces: a setup fee to build it, and a flat fee for each qualified meeting that shows up. "
+         "No retainer, and no monthly invoice that arrives "
          "whether it worked or not. The exact numbers depend on what a customer is worth in your "
          "business, which is why we ask about that on the call before quoting you."),
         ("What's the guarantee?",
@@ -227,7 +227,7 @@ def build_confirmation(tpl):
          "Your numbers, and whoever else has to say yes. If there's a partner in the decision, get them "
          "on with us. I'd rather answer their questions myself than have you sell it for me secondhand."),
         ("How do you charge?",
-         "A setup fee, a flat fee per qualified meeting we book, and a share of what you close. No "
+         "A setup fee and a flat fee per qualified meeting we book. No "
          "retainer. The exact figures depend on what a customer is worth in your business, which is "
          "why I want to hear yours before quoting."),
         ("I've been burned by an agency before.",

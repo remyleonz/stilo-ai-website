@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STILO · Pipeline System</title>
+<style>
+  :root{
+    --bg:#07070A; --bg2:#0b0b12;
+    --surface:#0f0f16; --surface2:#13131c; --raise:#18181f;
+    --line:rgba(255,255,255,.06); --line2:rgba(255,255,255,.1);
+    --ink:#F4F1EA; --ink2:#c9c6bd; --ink3:#807d88;
+    --blue:#2D4FB8; --blue-l:#6E90EA; --blue-d:#1E3A8A; --blue-bg:rgba(45,79,184,.14);
+    --grn:#3fbf8f; --grn-d:#2fa778; --grn-bg:rgba(63,191,143,.12);
+    --amb:#d9a441; --amb-bg:rgba(217,164,65,.12);
+    --r:12px; --r2:16px;
+    --sh:0 20px 48px -22px rgba(0,0,0,.75);
+    --ease:cubic-bezier(.22,.7,.16,1);
+    --font:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1100px 620px at 82% -12%, #13214a 0%, rgba(7,7,10,0) 58%),
+      radial-gradient(900px 600px at 5% 110%, #101c3e 0%, rgba(7,7,10,0) 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--font);
+    font-size:13.5px; line-height:1.5; letter-spacing:-.01em;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  .frame{height:100vh;display:flex;flex-direction:column}
+  .app{flex:1;display:grid;grid-template-columns:250px 1fr;min-height:0}
+
+  /* ---------- SIDEBAR ---------- */
+  .side{background:linear-gradient(180deg,#0b0f18,#080b12);border-right:1px solid var(--line);padding:22px 16px;display:flex;flex-direction:column;gap:3px}
+  .brand{display:flex;align-items:center;gap:11px;padding:2px 8px 18px}
+  .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,#345ec9,#1E3A8A);display:grid;place-items:center;font-weight:800;font-size:16px;color:#fff;box-shadow:0 8px 22px -6px rgba(30,58,138,.7),inset 0 1px 0 rgba(255,255,255,.4)}
+  .brand b{font-size:15.5px;font-weight:700;letter-spacing:.2px;display:block;line-height:1.1}
+  .brand span{font-size:9.5px;color:var(--ink3);letter-spacing:2.5px;font-weight:600}
+  .navlbl{font-size:10px;color:var(--ink3);letter-spacing:1.6px;font-weight:600;padding:14px 10px 6px}
+  .nav{display:flex;align-items:center;gap:12px;padding:10px 11px;border-radius:11px;color:var(--ink2);font-weight:500;font-size:13.5px;transition:.2s}
+  .nav svg{width:18px;height:18px;flex:none;opacity:.7}
+  .nav.on{background:linear-gradient(90deg,rgba(45,79,184,.2),rgba(45,79,184,.04));color:#fff;box-shadow:inset 0 0 0 1px rgba(45,79,184,.28)}
+  .nav.on svg{opacity:1;color:var(--blue-l)}
+  .side .foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:center;gap:11px}
+  .pf{width:34px;height:34px;border-radius:10px;background:#1a2436;display:grid;place-items:center;font-weight:700;color:var(--blue-l);font-size:12px;border:1px solid var(--line)}
+  .foot b{font-size:13px;display:block}
+  .foot small{color:var(--ink3);font-size:11px}
+
+  /* ---------- MAIN ---------- */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .bar{display:flex;align-items:center;gap:12px;padding:16px 28px;border-bottom:1px solid var(--line);background:rgba(8,11,17,.5);backdrop-filter:blur(10px)}
+  .bar .crumb{font-size:11.5px;color:var(--ink3);font-weight:500}
+  .bar h2{font-size:16.5px;font-weight:650;letter-spacing:-.02em}
+  .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:1.3px;color:var(--grn);background:var(--grn-bg);padding:6px 13px;border-radius:99px;border:1px solid rgba(52,211,153,.25)}
+  .live i{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+
+  .stage{flex:1;position:relative;overflow:hidden}
+  .canvas{position:absolute;inset:0;transition:transform .95s var(--ease);will-change:transform}
+  .scene{position:absolute;inset:0;padding:14px 32px 6px;overflow:hidden;opacity:0;transform:scale(.985);pointer-events:none;transition:opacity .34s var(--ease),transform .34s var(--ease);display:flex;flex-direction:column;justify-content:center}
+  .scene.on{opacity:1;transform:none;pointer-events:auto}
+  .scene::-webkit-scrollbar{width:8px}.scene::-webkit-scrollbar-thumb{background:#1a2333;border-radius:8px}
+
+  .rv{opacity:0;transform:translateY(12px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+  .rv.in{opacity:1;transform:none}
+
+  /* ---------- generic ---------- */
+  .card{background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+  .pad{padding:14px 17px}
+  .row{display:flex;align-items:center;gap:12px}
+  .muted{color:var(--ink2)} .dim{color:var(--ink3)}
+  .tab{font-variant-numeric:tabular-nums}
+  h3{font-size:17px;font-weight:700;letter-spacing:-.03em}
+  .sect{font-size:11px;color:var(--ink3);letter-spacing:1.4px;font-weight:700;text-transform:uppercase;margin-bottom:9px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:650;padding:4px 10px;border-radius:99px;letter-spacing:.2px}
+  .chip.b{background:var(--blue-bg);color:var(--blue-l);border:1px solid rgba(96,165,250,.28)}
+  .chip.g{background:var(--grn-bg);color:var(--grn);border:1px solid rgba(52,211,153,.28)}
+  .chip.a{background:var(--amb-bg);color:var(--amb);border:1px solid rgba(217,164,65,.28)}
+  .chip.n{background:rgba(255,255,255,.05);color:var(--ink2);border:1px solid var(--line)}
+  .cta{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(180deg,#345ec9,#1E3A8A);color:#fff;font-weight:650;font-size:13.5px;padding:11px 20px;border-radius:10px;border:none;box-shadow:0 12px 26px -12px rgba(30,58,138,.8),inset 0 1px 0 rgba(255,255,255,.22);letter-spacing:-.01em}
+  .press{transform:scale(.97);filter:brightness(1.15)}
+  .av{width:28px;height:28px;border-radius:8px;background:#1a2338;display:grid;place-items:center;font-size:10.5px;font-weight:700;color:var(--blue-l);flex:none}
+  .av.g{background:rgba(63,191,143,.14);color:var(--grn)}
+
+  .stat{padding:12px 15px}
+  .stat .k{font-size:11px;color:var(--ink2);font-weight:600;margin-bottom:6px}
+  .stat .v{font-size:24px;font-weight:750;letter-spacing:-.04em}
+  .stat .v.g{color:var(--grn)} .stat .v.b{color:var(--blue-l)}
+  .stat .s{font-size:10.5px;color:var(--ink3);margin-top:4px}
+
+  /* ---------- S0 calendar ---------- */
+  .calwrap{max-width:1000px;margin:0 auto;width:100%}
+  .kpi4{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:13px}
+  .cal{padding:14px 16px 16px}
+  .calhead{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:9px}
+  .calhead div{font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center}
+  .calgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+  .cday{background:var(--bg2);border:1px solid var(--line);border-radius:10px;min-height:62px;padding:6px 6px;display:flex;flex-direction:column;gap:5px}
+  .cday .dn{font-size:10px;color:var(--ink3);font-weight:600;padding-left:2px}
+  .mtg{background:linear-gradient(180deg,rgba(45,79,184,.34),rgba(30,58,138,.22));border:1px solid rgba(110,144,234,.34);border-radius:7px;padding:5px 7px;font-size:10.5px;font-weight:600;line-height:1.25;opacity:0;transform:translateY(6px) scale(.96);transition:.45s var(--ease)}
+  .mtg.in{opacity:1;transform:none}
+  .mtg small{display:block;color:var(--blue-l);font-size:9.5px;font-weight:700;letter-spacing:.3px}
+  .mtg.hi{outline:2px solid var(--blue-l);outline-offset:2px;box-shadow:0 0 0 6px rgba(110,144,234,.12)}
+
+  .pop{position:absolute;z-index:40;width:330px;background:linear-gradient(180deg,#161620,#0f0f16);border:1px solid var(--line2);border-radius:14px;box-shadow:0 32px 70px -26px #000;padding:14px 16px;opacity:0;transform:translateY(8px) scale(.97);pointer-events:none;transition:.4s var(--ease)}
+  .pop.on{opacity:1;transform:none}
+  .pop .ph{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .pop .prow{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;padding:5px 0;border-top:1px solid var(--line)}
+  .pop .prow .l{color:var(--ink3);flex:none}
+  .pop .prow .r{text-align:right;font-weight:600}
+
+  /* ---------- S1 criteria ---------- */
+  .setup{max-width:660px;margin:0 auto;width:100%}
+  .field{margin:13px 0}
+  .field label{font-size:12px;color:var(--ink2);font-weight:600;display:block;margin-bottom:7px}
+  .input{background:var(--bg2);border:1px solid var(--line2);border-radius:11px;padding:12px 15px;font-size:13.5px;color:var(--ink);min-height:46px;display:flex;align-items:center}
+  .input .ph{color:var(--ink3)}
+  .caret{display:inline-block;width:1.5px;height:16px;background:var(--blue-l);margin-left:1px;animation:blink 1s steps(1) infinite;vertical-align:middle}
+  @keyframes blink{50%{opacity:0}}
+  .scan{max-width:660px;margin:16px auto 0;display:none}
+  .prog{height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:10px}
+  .prog i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--blue-l));transition:width 1.6s var(--ease)}
+  .scanres{max-width:760px;margin:14px auto 0;display:none;grid-template-columns:repeat(3,1fr);gap:11px}
+
+  /* ---------- S2 research ---------- */
+  .research{max-width:860px;margin:0 auto;width:100%}
+  .rhdr{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
+  .rrow{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:11px 18px;border-bottom:1px solid var(--line);font-size:13px;align-items:start}
+  .rrow:last-child{border-bottom:none}
+  .rrow .l{color:var(--ink3);font-size:11.5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;padding-top:2px}
+  .rrow .r{color:var(--ink)}
+  .rrow.key .r{color:var(--grn);font-weight:600}
+
+  /* ---------- S3 channels ---------- */
+  .chans{max-width:1020px;margin:0 auto;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .ch{display:flex;flex-direction:column;min-height:330px}
+  .chh{display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .chh .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.05);color:var(--ink3);transition:.4s}
+  .chh .ic svg{width:14px;height:14px}
+  .chh b{font-size:13px}
+  .chh .st{margin-left:auto;font-size:10px;color:var(--ink3);font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+  .ch.fire .chh .ic{background:var(--blue-bg);color:var(--blue-l);box-shadow:0 0 0 5px rgba(45,79,184,.1)}
+  .ch.fire .chh .st{color:var(--blue-l)}
+  .ch.done .chh .ic{background:var(--grn-bg);color:var(--grn)}
+  .ch.done .chh .st{color:var(--grn)}
+  .chb{padding:11px 12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;flex:1}
+  .bub{max-width:94%;padding:9px 11px;border-radius:12px;font-size:11.8px;line-height:1.45;opacity:0;transform:translateY(8px);transition:.42s var(--ease)}
+  .bub.in{opacity:1;transform:none}
+  .bub.us{align-self:flex-end;background:linear-gradient(180deg,#2f57bd,#22409a);color:#fff;border-bottom-right-radius:4px}
+  .bub.them{align-self:flex-start;background:var(--raise);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .bub small{display:block;margin-top:5px;font-size:9.5px;opacity:.6;font-weight:600}
+  .clog{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:9px;background:var(--bg2);border:1px solid var(--line);font-size:11.5px;opacity:0;transform:translateY(8px);transition:.42s var(--ease)}
+  .clog.in{opacity:1;transform:none}
+  .clog .who{flex:1;min-width:0}
+  .clog .who b{display:block;font-size:11.8px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .clog .who span{color:var(--ink3);font-size:10.5px}
+  .repbar{display:flex;align-items:center;gap:9px;padding:9px 11px;background:rgba(45,79,184,.08);border:1px solid rgba(45,79,184,.2);border-radius:9px;margin-bottom:3px}
+  .repbar b{font-size:11.8px} .repbar small{color:var(--ink3);font-size:10.5px;display:block}
+
+  /* ---------- S4 booked ---------- */
+  .booked2{max-width:940px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 340px;gap:13px;align-items:start}
+  .brief .bh{padding:14px 17px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px}
+  .brief .brow{padding:10px 17px;border-bottom:1px solid var(--line);font-size:12.8px}
+  .brief .brow:last-child{border-bottom:none}
+  .brief .brow .l{font-size:10.5px;color:var(--ink3);letter-spacing:.7px;text-transform:uppercase;font-weight:700;margin-bottom:3px}
+  .brief .brow .r{color:var(--ink)}
+  .brief .brow.hot{background:rgba(63,191,143,.05)}
+  .brief .brow.hot .r{color:var(--grn);font-weight:600}
+  .conf{padding:16px 17px;text-align:center}
+  .conf .tick{width:46px;height:46px;border-radius:50%;background:var(--grn-bg);border:1px solid rgba(63,191,143,.3);display:grid;place-items:center;margin:0 auto 11px;color:var(--grn)}
+  .conf .tick svg{width:24px;height:24px}
+  .conf b{font-size:15px;display:block;margin-bottom:3px}
+  .synced{margin-top:13px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;font-size:11.5px;color:var(--ink2);text-align:left}
+  .synced div{display:flex;align-items:center;gap:8px}
+  .synced svg{width:14px;height:14px;color:var(--grn);flex:none}
+
+  /* ---------- S5 pipelines ---------- */
+  .pipes{max-width:960px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .pipe .ph2{padding:13px 16px;border-bottom:1px solid var(--line)}
+  .pipe .ph2 b{font-size:14px;display:block}
+  .pipe .ph2 small{color:var(--ink3);font-size:11.5px}
+  .pbody{padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:230px}
+  .prow2{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--bg2);border:1px solid var(--line);font-size:11.8px;opacity:0;transform:translateY(8px);transition:.42s var(--ease)}
+  .prow2.in{opacity:1;transform:none}
+  .prow2 .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .timer{font-variant-numeric:tabular-nums;font-weight:750;color:var(--grn);font-size:12px}
+  .pfoot{margin-top:auto;padding-top:11px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:8px}
+  .pfoot .big{font-size:21px;font-weight:750;letter-spacing:-.03em;color:var(--grn)}
+  .pfoot small{color:var(--ink3);font-size:11px}
+
+  /* ---------- S6 results ---------- */
+  .res{max-width:1000px;margin:0 auto;width:100%}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:12px}
+  .hero{display:grid;grid-template-columns:1.35fr 1fr;gap:12px}
+  .heronum{font-size:38px;font-weight:800;letter-spacing:-.045em;color:var(--grn);margin:2px 0 2px}
+  .chart{display:flex;align-items:flex-end;gap:14px;height:112px;margin:14px 0 7px;padding:0 4px}
+  .colw{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end}
+  .colb{width:100%;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,var(--blue-l),var(--blue-d));height:0;transition:height .9s var(--ease)}
+  .cl{font-size:10px;color:var(--ink3);font-weight:600}
+  .rlist{display:flex;flex-direction:column;gap:8px}
+  .ri{display:flex;align-items:center;gap:10px;font-size:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .ri:last-child{border-bottom:none}
+  .ri .amt{margin-left:auto;color:var(--grn);font-weight:700;font-size:11.5px;white-space:nowrap}
+
+  /* ---------- controls ---------- */
+  .ctrl{display:flex;align-items:center;gap:14px;padding:12px 28px;border-top:1px solid var(--line);background:rgba(8,11,17,.62);backdrop-filter:blur(10px)}
+  .ghost{background:rgba(255,255,255,.05);border:1px solid var(--line2);color:var(--ink2);font-weight:600;font-size:13px;padding:10px 16px;border-radius:10px}
+  .dots{display:flex;gap:7px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.16);cursor:pointer;transition:.3s}
+  .dots i.on{background:var(--blue-l);width:20px;border-radius:99px}
+  .sn{font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums;font-weight:600}
+  .npick{margin-left:auto;display:flex;gap:5px}
+  .npick a{font-size:10.5px;font-weight:650;padding:5px 10px;border-radius:8px;color:var(--ink3);border:1px solid var(--line);text-decoration:none;transition:.2s}
+  .npick a.on{background:var(--blue-bg);color:var(--blue-l);border-color:rgba(96,165,250,.3)}
+
+  #cursor{position:fixed;width:20px;height:20px;z-index:90;pointer-events:none;transition:transform .8s var(--ease);filter:drop-shadow(0 3px 7px rgba(0,0,0,.7))}
+  #ripple{position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:2px solid rgba(110,144,234,.85);opacity:0;z-index:89;pointer-events:none}
+  #ripple.go{animation:rip .65s var(--ease)}
+  @keyframes rip{0%{transform:scale(.35);opacity:.95}100%{transform:scale(1.9);opacity:0}}
+
+  .tele{position:fixed;left:50%;bottom:74px;transform:translateX(-50%) translateY(14px);width:min(880px,92vw);background:rgba(8,10,16,.94);border:1px solid var(--line2);border-radius:14px;padding:13px 18px;z-index:95;opacity:0;pointer-events:none;transition:.4s var(--ease);backdrop-filter:blur(14px)}
+  .tele.on{opacity:1;transform:translateX(-50%)}
+  .tele h6{font-size:10px;letter-spacing:1.6px;color:var(--blue-l);font-weight:700;margin-bottom:6px;text-transform:uppercase}
+  .tele p{font-size:13.5px;color:var(--ink2);line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="side">
+      <div class="brand">
+        <div class="mark">S</div>
+        <div><b>STILO</b><span>PIPELINE</span></div>
+      </div>
+      <div class="navlbl">PIPELINE</div>
+      <div class="nav on" id="nv0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Calendar</div>
+      <div class="nav" id="nv1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Find buyers</div>
+      <div class="nav" id="nv2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>Research</div>
+      <div class="nav" id="nv3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16v12H7l-3 3z"/></svg>Outreach</div>
+      <div class="nav" id="nv4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>Meetings</div>
+      <div class="navlbl">RETENTION</div>
+      <div class="nav" id="nv5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Win-back</div>
+      <div class="navlbl">REPORTING</div>
+      <div class="nav" id="nv6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Results</div>
+      <div class="foot">
+        <div class="pf" id="clientIni">MC</div>
+        <div><b id="clientName">Metro Commercial</b><small id="clientPlan">Pipeline System</small></div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="bar">
+        <div>
+          <div class="crumb" id="crumb">Commercial Cleaning · Miami-Dade</div>
+          <h2 id="bt">Your calendar · 30 days</h2>
+        </div>
+        <div class="live"><i></i>LIVE</div>
+      </div>
+
+      <div class="stage">
+        <div class="canvas" id="canvas">
+
+          <!-- ============ SCENE 0 · CALENDAR ============ -->
+          <section class="scene" data-s="0">
+            <div class="calwrap">
+              <div class="kpi4">
+                <div class="card stat rv"><div class="k">Qualified meetings booked</div><div class="v g tab" data-n="14" id="kMtg0">0</div><div class="s">this month</div></div>
+                <div class="card stat rv"><div class="k">Show rate</div><div class="v tab" data-n="86" data-suffix="%">0</div><div class="s">confirmed and attended</div></div>
+                <div class="card stat rv"><div class="k">Avg <span data-f="dealWord">contract</span></div><div class="v b" data-f="avgDeal">$0</div><div class="s" data-f="dealNote">per closed account</div></div>
+                <div class="card stat rv"><div class="k">Your hours prospecting</div><div class="v tab" data-n="0">0</div><div class="s">we do the front half</div></div>
+              </div>
+              <div class="card cal rv" style="position:relative">
+                <div class="calhead"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div></div>
+                <div class="calgrid" id="calGrid"></div>
+                <div class="pop" id="calPop">
+                  <div class="ph"><div class="av" id="popIni">CR</div><div><b style="font-size:14px" id="popName">Carmen Ruiz</b><div class="dim" style="font-size:11.5px" id="popCo">Coastal Property Group</div></div></div>
+                  <div class="prow"><span class="l">Role</span><span class="r" id="popRole">Director of Facilities</span></div>
+                  <div class="prow"><span class="l">Fits because</span><span class="r" id="popFit">6 buildings · 14,000 sq ft avg</span></div>
+                  <div class="prow"><span class="l">Why now</span><span class="r" style="color:var(--grn)" id="popWhy">Contract up in March</span></div>
+                  <div class="prow"><span class="l">Booked by</span><span class="r" id="popRep">Luke · your rep</span></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ SCENE 1 · FIND BUYERS ============ -->
+          <section class="scene" data-s="1">
+            <div class="setup" id="critBox">
+              <div class="sect">Step 1 · who do you actually want</div>
+              <div class="field"><label>Type of company</label><div class="input" id="f1"><span class="ph">Who is your best customer…</span></div></div>
+              <div class="field"><label>Territory</label><div class="input" id="f2"><span class="ph">Where…</span></div></div>
+              <div class="field"><label>Size filter</label><div class="input" id="f3"><span class="ph">Minimum size…</span></div></div>
+              <div class="field"><label>Buying trigger</label><div class="input" id="f4"><span class="ph">What makes them in-market…</span></div></div>
+              <div style="margin-top:18px;text-align:center"><button class="cta" id="buildBtn">Build my list</button></div>
+            </div>
+
+            <div class="scan card pad" id="scanBox">
+              <div class="row"><b style="font-size:13.5px">Scanning your territory</b><span class="chip b" style="margin-left:auto" id="scanPct">Working…</span></div>
+              <div class="prog"><i id="prog1"></i></div>
+              <div class="dim" style="font-size:11.5px;margin-top:9px" id="scanNote">Reading every business in the territory against your criteria…</div>
+            </div>
+
+            <div class="scanres" id="scanRes">
+              <div class="card stat rv"><div class="k">Companies scanned</div><div class="v tab" data-n="0" id="sScanned">0</div><div class="s">in your territory</div></div>
+              <div class="card stat rv"><div class="k">Match your criteria</div><div class="v b tab" data-n="0" id="sMatched">0</div><div class="s">real prospects</div></div>
+              <div class="card stat rv"><div class="k">Decision makers found</div><div class="v g tab" data-n="0" id="sDM">0</div><div class="s">name, email, direct line</div></div>
+            </div>
+          </section>
+
+          <!-- ============ SCENE 2 · RESEARCH ============ -->
+          <section class="scene" data-s="2">
+            <div class="research">
+              <div class="row rv" style="margin-bottom:11px">
+                <div class="sect" style="margin:0">Step 2 · every company researched before anyone is contacted</div>
+                <span class="chip g" style="margin-left:auto">Deliverable 1 · delivered day 5</span>
+              </div>
+              <div class="card rv">
+                <div class="rhdr">
+                  <div class="av" id="rIni" style="width:36px;height:36px;border-radius:10px;font-size:12.5px">CR</div>
+                  <div style="flex:1">
+                    <b style="font-size:15.5px" id="rName">Carmen Ruiz</b>
+                    <div class="dim" style="font-size:12px"><span id="rTitle">Director of Facilities</span> · <span id="rCo">Coastal Property Group</span></div>
+                  </div>
+                  <span class="chip b" id="rContact">carmen@coastalpg.com</span>
+                </div>
+                <div id="rRows"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ SCENE 3 · OUTREACH ============ -->
+          <section class="scene" data-s="3">
+            <div style="max-width:1020px;margin:0 auto 11px;width:100%" class="row rv">
+              <div class="sect" style="margin:0">Step 3 · three channels, running at the same time</div>
+              <span class="chip n" style="margin-left:auto">Runs until they book or tell us to stop</span>
+            </div>
+            <div class="chans">
+              <div class="card ch" id="chEmail">
+                <div class="chh"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div><b>Email</b><span class="st">Queued</span></div>
+                <div class="chb" id="emailBody"></div>
+              </div>
+              <div class="card ch" id="chPhone">
+                <div class="chh"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg></div><b>Phone</b><span class="st">Queued</span></div>
+                <div class="chb" id="phoneBody">
+                  <div class="repbar rv"><div class="av g" id="repIni">LK</div><div><b id="repName">Luke</b><small>Your dedicated rep · nobody else's list</small></div></div>
+                </div>
+              </div>
+              <div class="card ch" id="chText">
+                <div class="chh"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.9-.9L3 20l1.1-4.1a8.4 8.4 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.4-8.4h.5a8.4 8.4 0 0 1 8 8.3Z"/></svg></div><b>Text</b><span class="st">Queued</span></div>
+                <div class="chb" id="textBody"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ SCENE 4 · MEETING BOOKED ============ -->
+          <section class="scene" data-s="4">
+            <div style="max-width:940px;margin:0 auto 11px;width:100%" class="row rv">
+              <div class="sect" style="margin:0">Step 4 · what lands on your calendar</div>
+              <span class="chip g" style="margin-left:auto">Deliverable 2 · the qualified meeting</span>
+            </div>
+            <div class="booked2">
+              <div class="card brief rv">
+                <div class="bh">
+                  <div class="av" id="bIni" style="width:36px;height:36px;border-radius:10px;font-size:12.5px">CR</div>
+                  <div style="flex:1"><b style="font-size:15.5px" id="bName">Carmen Ruiz</b><div class="dim" style="font-size:12px" id="bSub">Director of Facilities · Coastal Property Group</div></div>
+                  <span class="chip b">Meeting brief</span>
+                </div>
+                <div id="bRows"></div>
+              </div>
+              <div class="card conf rv">
+                <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+                <b id="cWhen">Thursday · 10:00 AM</b>
+                <div class="dim" style="font-size:12px">Confirmed by the prospect</div>
+                <div class="synced">
+                  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>On your calendar</div>
+                  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>Brief sent to you</div>
+                  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>Reminder set for them</div>
+                  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>Billed only if it qualifies</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ SCENE 5 · TWO MORE PIPELINES ============ -->
+          <section class="scene" data-s="5">
+            <div style="max-width:960px;margin:0 auto 11px;width:100%" class="row rv">
+              <div class="sect" style="margin:0">Step 5 · you already have two more pipelines</div>
+              <span class="chip n" style="margin-left:auto">Same team · same calendar</span>
+            </div>
+            <div class="pipes">
+              <div class="card pipe rv">
+                <div class="ph2"><b>Customers who stopped buying</b><small id="p1sub">Your own list · converts better than cold</small></div>
+                <div class="pbody" id="winbackBody">
+                  <!-- No data-n here: this is a formatted string ($46K), not a
+                       counted number. With data-n the counter overwrites it with 0. -->
+                  <div class="pfoot"><span class="big tab" id="wbNum">$0</span><small id="wbNote">recovered in 30 days</small></div>
+                </div>
+              </div>
+              <div class="card pipe rv">
+                <div class="ph2"><b>Leads already coming to you</b><small>Answered in seconds, day or night</small></div>
+                <div class="pbody" id="inboundBody">
+                  <div class="pfoot"><span class="big" id="ibNum">8s</span><small>average reply time · you were losing these to whoever called back first</small></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ SCENE 6 · RESULTS ============ -->
+          <section class="scene" data-s="6">
+            <div class="res">
+              <div class="kpi">
+                <div class="card stat rv"><div class="k">Companies researched</div><div class="v tab" data-n="0" id="kResearched">0</div><div class="s">built for you, not bought</div></div>
+                <div class="card stat rv"><div class="k">Worked across 3 channels</div><div class="v tab" data-n="0" id="kWorked">0</div><div class="s">email, phone, text</div></div>
+                <div class="card stat rv"><div class="k">Decision-maker replies</div><div class="v b tab" data-n="0" id="kReplies">0</div><div class="s">real conversations</div></div>
+                <div class="card stat rv"><div class="k">Qualified meetings</div><div class="v g tab" data-n="14" id="kMtg6">0</div><div class="s">on your calendar</div></div>
+              </div>
+              <div class="hero">
+                <div class="card pad rv">
+                  <div class="muted" style="font-size:12.5px;font-weight:600">Pipeline created · first 30 days</div><div class="dim" style="font-size:11px">annual value of the opportunities created</div>
+                  <div class="heronum tab" data-n="0" data-money="1" id="kPipeline">$0</div>
+                  <div class="row"><span class="chip g" id="kGuar">Guarantee: 12 qualified meetings in 60 days</span></div>
+                  <div class="chart" id="chart">
+                    <div class="colw"><div class="colb" data-h="34"></div><span class="cl">Wk 1</span></div>
+                    <div class="colw"><div class="colb" data-h="58"></div><span class="cl">Wk 2</span></div>
+                    <div class="colw"><div class="colb" data-h="82"></div><span class="cl">Wk 3</span></div>
+                    <div class="colw"><div class="colb" data-h="100"></div><span class="cl">Wk 4</span></div>
+                  </div>
+                  <div class="dim" style="font-size:11.5px;text-align:center">Qualified meetings booked per week</div>
+                </div>
+                <div class="card pad rv rlist">
+                  <div class="muted" style="font-size:12.5px;font-weight:600;margin-bottom:4px">Recently booked</div>
+                  <div id="recentList"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div><!-- /canvas -->
+      </div><!-- /stage -->
+
+      <div class="ctrl">
+        <button class="ghost js-navbtn" onclick="prev()">← Back</button>
+        <div class="dots" id="dots"></div>
+        <span class="sn" id="sn">1 / 7</span>
+        <button class="cta js-navbtn" style="padding:10px 18px" onclick="next()">Next →</button>
+        <div class="npick" id="npick"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<svg id="cursor" viewBox="0 0 24 24"><path d="M4 2l6 16 2.5-6.5L19 9z" fill="#fff" stroke="#0a0e15" stroke-width="1.2" stroke-linejoin="round"/></svg>
+<div id="ripple"></div>
+<div class="tele" id="teleBox"><h6 id="teleH">Narration</h6><p id="teleP"></p></div>
+
+<script>
+/* ==========================================================================
+   NICHE DATA
+   Everything on screen comes from here. Switch with ?niche=staffing etc.
+   The VSL body narration is shared across niches; only these nouns change,
+   which is why the same screen recording script works five times.
+   ========================================================================== */
+const NICHES = {
+
+  general: {
+    label:'Your Pipeline', geo:'Your territory',
+    client:'Your Company', clientIni:'YC',
+    crit:['The companies that fit your best customer','Your territory','Your size floor','A real reason to buy right now'],
+    scanned:7400, matched:1860, dm:1690, worked:1860, replies:212, meetings:12,
+    pipeline:540000, avgDeal:'$45,000', dealWord:'deal', dealNote:'average across the calendar',
+    guarantee:'Qualified meetings · booked onto your calendar',
+    rep:{name:'Jack', ini:'JK'},
+    hero:{ini:'DR', name:'Dana Reeves', co:'Meridian Commercial Group', title:'Director of Operations',
+      email:'dreeves@meridiancg.com', phone:'(305) 555-0164',
+      fit:'Fits your buyer profile · verified', why:'In the market now'},
+    research:[
+      ['What they run','Operations across four sites, growing, with the exact profile you asked for'],
+      ['Who decides','Dana scopes and recommends. Ownership signs above her threshold'],
+      ['What they use today','A vendor they have outgrown, on autopilot since 2022'],
+      ['What changed','Two signals in the last 60 days that say the account is in motion',1],
+      ['Why now','The contract, the budget, and the pain all line up this quarter',1],
+      ['Lead with','The one thing the research says they actually care about']
+    ],
+    email:[
+      ['us','Dana, quick note. We work with companies like Meridian and I noticed two things that suggest the timing is right on your side. Worth fifteen minutes this week?','Email · day 1'],
+      ['them','Good timing actually. We have been looking at this for a few weeks. What does next week look like?','Reply · day 2']
+    ],
+    calls:[
+      ['Dana Reeves','Meridian Commercial Group','Connected · 7m','g'],
+      ['Tom Brennan','Brennan Holdings','Voicemail · retry Thu','n'],
+      ['Priya Nair','Westshore Asset Mgmt','Connected · 5m','g'],
+      ['Kevin Ross','Ross Industrial Park','Gatekeeper · callback','n']
+    ],
+    text:[
+      ['us','Dana, Jack here. Confirming Thursday 10am. I will send the calendar invite now.','Text · day 4'],
+      ['them','Confirmed. Looking forward to it.','Reply · day 4']
+    ],
+    brief:[
+      ['Company','Meridian Commercial Group · four sites, fits your profile'],
+      ['Who you are meeting','Dana Reeves, Director of Operations. Recommends, ownership signs'],
+      ['Why they are in the market','Two buying signals in 60 days, budget confirmed on the call',1],
+      ['What she said on the call','"We have been meaning to fix this for a year. Nobody owns it internally"'],
+      ['Lead with','The outcome she named on the phone, not your process'],
+      ['Do not','Open with price. Open with what changes for her team']
+    ],
+    winback:[['Bayfront Holdings','Went quiet 14 months ago','Reactivated'],['Delta Commerce Park','Lost on timing last year','Meeting set'],['Palm Ridge Group','Quoted 2 years ago','In conversation']],
+    wbNum:'$260K', wbNote:'in re-opened conversations, 30 days',
+    inbound:[['Website form · 11:42 PM','Replied in 8s'],['Phone call · Saturday','Booked'],['Referral · 6:15 AM','Replied in 6s']],
+    recent:[['DR','Dana Reeves','Meridian Commercial · Thu 10:00','Qualified'],['ML','Marisol Ortega','Sunset Business Plaza · Fri 9:00','Qualified'],['DT','Derek Toll','Wynwood Holdings · Mon 2:00','Qualified'],['AH','Angela Hsu','Doral Commerce Park · Tue 11:00','Qualified']]
+  },
+
+  cleaning: {
+    label:'Commercial Cleaning', geo:'Miami-Dade',
+    client:'Metro Commercial', clientIni:'MC',
+    crit:['Property groups + medical offices','Miami-Dade','10,000+ sq ft','Janitorial contract up within 6 months'],
+    scanned:8400, matched:2380, dm:2140, worked:2380, replies:271, meetings:14,
+    pipeline:403000, avgDeal:'$2,400/mo', dealWord:'contract', dealNote:'nightly service, annual',
+    guarantee:'Guarantee: 12 qualified meetings in 60 days',
+    rep:{name:'Luke', ini:'LK'},
+    hero:{ini:'CR', name:'Carmen Ruiz', co:'Coastal Property Group', title:'Director of Facilities',
+      email:'carmen@coastalpg.com', phone:'(305) 555-0148',
+      fit:'6 buildings · 14,000 sq ft avg', why:'Contract up in March'},
+    research:[
+      ['What they run','Six Class B office buildings in Brickell, roughly 84,000 sq ft under management'],
+      ['Who decides','Carmen signs janitorial. Her VP signs anything over $5,000 a month'],
+      ['What they use today','Regional vendor, nightly service, on the contract since 2022'],
+      ['What changed','Two tenant complaints logged about common areas in the last quarter',1],
+      ['Why now','Contract renews in March. They have already asked for one competing quote',1],
+      ['Lead with','Tenant-ready common areas and glass, not price per square foot']
+    ],
+    email:[
+      ['us','Hi Carmen, I run Metro Commercial Cleaning here in Miami. Saw Coastal manages six buildings in Brickell. We do nightly janitorial for two towers on the same block and keep the lobbies and glass tenant-ready. Worth a quick walkthrough of one building?','Email · day 1'],
+      ['them','We have had a couple of tenant complaints about our current crew. What would you charge for nightly?','Reply · day 2']
+    ],
+    calls:[
+      ['Carmen Ruiz','Coastal Property Group','Connected · 6m','g'],
+      ['Marcus Tan','Bayview Realty','Voicemail · retry Thu','n'],
+      ['Sofia Leon','Aventura Office Suites','Connected · 4m','g'],
+      ['Julia Vega','Brickell Tower Mgmt','Gatekeeper · callback','n']
+    ],
+    text:[
+      ['us','Carmen, Luke from Metro Commercial. Following up on the walkthrough. Does Thursday 10am still work?','Text · day 4'],
+      ['them','Yes, Thursday works. Come to the Bay tower.','Reply · day 4']
+    ],
+    brief:[
+      ['Company','Coastal Property Group · 6 buildings, 84,000 sq ft'],
+      ['Who you are meeting','Carmen Ruiz, Director of Facilities. She signs up to $5,000/mo'],
+      ['Why they are in the market','Contract renews in March. Two tenant complaints logged this quarter',1],
+      ['What she said on the call','"We are not unhappy enough to break the contract, but we are shopping it"'],
+      ['Lead with','Tenant-ready lobbies and glass. She has been burned on price-first vendors'],
+      ['Do not','Quote per square foot on the first meeting. Walk the building first']
+    ],
+    winback:[['Bayfront Medical','Left 14 months ago','Reactivated'],['Delta Logistics Park','Left 9 months ago','Meeting set'],['Palm Ridge Offices','Left 2 years ago','In conversation']],
+    wbNum:'$46K', wbNote:'in recovered contracts, 30 days',
+    inbound:[['Website form · 11:42 PM','Replied in 8s'],['Google listing call · Sat','Booked'],['Referral form · 6:15 AM','Replied in 6s']],
+    recent:[['CR','Carmen Ruiz','Coastal Property Group · Thu 10:00','+$2,400/mo'],['ML','Marisol Ortega','Sunset Medical Plaza · Fri 9:00','+$1,900/mo'],['DT','Derek Toll','Wynwood Creative Lofts · Mon 2:00','+$3,100/mo'],['AH','Angela Hsu','Doral Business Park · Tue 11:00','+$4,200/mo']]
+  },
+
+  roofing: {
+    label:'Commercial Roofing', geo:'Tampa Bay',
+    client:'Gulf Coast Roofing', clientIni:'GC',
+    crit:['Building owners + property groups + GCs','Tampa Bay, 45-mile radius','Commercial, 15+ years old','Known leak, ponding, or an open claim'],
+    scanned:6100, matched:1420, dm:1280, worked:1420, replies:168, meetings:9,
+    pipeline:792000, avgDeal:'$88,000', dealWord:'job', dealNote:'re-roof or major repair',
+    guarantee:'Guarantee: 8 qualified meetings in 60 days',
+    rep:{name:'Jack', ini:'JK'},
+    hero:{ini:'RD', name:'Ray Delgado', co:'Harborline Property Partners', title:'Director of Facilities',
+      email:'rdelgado@harborlinepp.com', phone:'(813) 555-0172',
+      fit:'9 buildings · 4 roofs past 18 yrs', why:'Active ponding on two roofs'},
+    research:[
+      ['What they run','Nine commercial buildings across Tampa and Brandon, four with original TPO from 2007'],
+      ['Who decides','Ray scopes and recommends. Ownership signs anything over $50,000'],
+      ['What they use today','A local contractor doing patch repairs, no maintenance program'],
+      ['What changed','Two work orders for interior water damage in the last 60 days',1],
+      ['Why now','Ponding visible on two roofs and their insurer flagged the portfolio at renewal',1],
+      ['Lead with','A free infrared moisture survey. Not a bid. They are sick of bids']
+    ],
+    email:[
+      ['us','Ray, I run Gulf Coast Roofing. Two of the Harborline buildings on Kennedy have TPO that is right at end of life, and I noticed ponding on the north sections. We do infrared moisture surveys free, no bid attached. Worth 20 minutes?','Email · day 1'],
+      ['them','We have had two leaks inside this quarter. What does the survey involve?','Reply · day 3']
+    ],
+    calls:[
+      ['Ray Delgado','Harborline Property Partners','Connected · 9m','g'],
+      ['Tom Brennan','Brennan Construction','Voicemail · retry Fri','n'],
+      ['Priya Nair','Westshore Asset Mgmt','Connected · 5m','g'],
+      ['Kevin Ross','Ross Industrial Park','Gatekeeper · callback','n']
+    ],
+    text:[
+      ['us','Ray, Jack from Gulf Coast. Confirming the infrared survey Thursday 8am at the Kennedy building.','Text · day 5'],
+      ['them','Confirmed. I will meet you at the loading dock.','Reply · day 5']
+    ],
+    brief:[
+      ['Company','Harborline Property Partners · 9 buildings, Tampa and Brandon'],
+      ['Who you are meeting','Ray Delgado, Director of Facilities. Recommends, ownership signs over $50K'],
+      ['Why they are in the market','Ponding on two roofs, two interior water claims in 60 days, insurer flagged them at renewal',1],
+      ['What he said on the call','"We have been patching for three years and I am tired of explaining it to ownership"'],
+      ['Lead with','The infrared survey and what it will cost them to keep patching'],
+      ['Do not','Bring a number to this meeting. Ownership is the buyer, Ray is the champion']
+    ],
+    winback:[['Northbay Logistics','Quoted 2 yrs ago, lost on price','Reactivated'],['Seminole Retail Group','Repair customer 2023','Meeting set'],['Palmetto Storage','Quoted last year','In conversation']],
+    wbNum:'$310K', wbNote:'in re-opened bids, 30 days',
+    inbound:[['Website form · 10:20 PM','Replied in 7s'],['Storm call · Sunday','Booked'],['GC referral · 5:40 AM','Replied in 9s']],
+    recent:[['RD','Ray Delgado','Harborline Property · Thu 8:00','$140K est'],['PN','Priya Nair','Westshore Asset Mgmt · Fri 10:00','$96K est'],['TB','Tom Brennan','Brennan Construction · Mon 7:30','$210K est'],['KR','Kevin Ross','Ross Industrial Park · Wed 9:00','$78K est']]
+  },
+
+  freight: {
+    label:'Freight', geo:'Southeast lanes',
+    client:'Meridian Freight', clientIni:'MF',
+    crit:['Shippers: manufacturing + building products','Southeast, your running lanes','5+ loads per week','Service failure or capacity gap in last 90 days'],
+    scanned:5200, matched:1180, dm:1040, worked:1180, replies:149, meetings:12,
+    pipeline:2088000, avgDeal:'$14,500/mo', dealWord:'account', dealNote:'in monthly freight spend',
+    guarantee:'Guarantee: 10 qualified meetings in 60 days',
+    rep:{name:'Alejandro', ini:'AL'},
+    hero:{ini:'DK', name:'Dana Kolb', co:'Sterling Building Products', title:'Logistics Manager',
+      email:'dkolb@sterlingbp.com', phone:'(704) 555-0193',
+      fit:'22 loads/wk · Charlotte to Atlanta', why:'Carrier missed twice last month'},
+    research:[
+      ['What they run','Building products out of Charlotte, roughly 22 outbound loads a week'],
+      ['Who decides','Dana selects carriers. Her director approves anything that changes the core lane'],
+      ['What they use today','Two core carriers plus a broker for overflow, all contracted annually'],
+      ['What changed','Two service failures on the Atlanta lane in the last 30 days',1],
+      ['Why now','They are re-bidding the Southeast lanes in six weeks and want a third carrier',1],
+      ['Lead with','On-time percentage on the exact lane, not overall rate']
+    ],
+    email:[
+      ['us','Dana, we run the Charlotte to Atlanta lane daily and have capacity on it. I saw Sterling is moving roughly 20 loads a week out of Charlotte. Not asking for the whole book, just to be the third carrier when your primary misses. Worth 15 minutes?','Email · day 1'],
+      ['them','Our primary missed twice last month. What is your on-time on that lane?','Reply · day 2']
+    ],
+    calls:[
+      ['Dana Kolb','Sterling Building Products','Connected · 7m','g'],
+      ['Rick Ansley','Piedmont Manufacturing','Voicemail · retry Thu','n'],
+      ['Nina Cobb','Cobb Distributing','Connected · 4m','g'],
+      ['Hal Prater','Gateway Supply','Gatekeeper · callback','n']
+    ],
+    text:[
+      ['us','Dana, Alejandro from Meridian. Confirming Wednesday 11am to walk your Atlanta lane numbers.','Text · day 4'],
+      ['them','Works. Send a calendar invite.','Reply · day 4']
+    ],
+    brief:[
+      ['Company','Sterling Building Products · 22 outbound loads/wk from Charlotte'],
+      ['Who you are meeting','Dana Kolb, Logistics Manager. Selects carriers, director approves core lane changes'],
+      ['Why they are in the market','Two service failures on Atlanta in 30 days. Re-bidding Southeast lanes in six weeks',1],
+      ['What she said on the call','"I am not replacing anybody, I want a third option that actually answers the phone"'],
+      ['Lead with','On-time percentage on Charlotte to Atlanta specifically, and your after-hours coverage'],
+      ['Do not','Lead with rate. She said twice that price is not the issue']
+    ],
+    winback:[['Ridgeway Metals','Shipped with you in 2024','Reactivated'],['Carolina Packaging','Lost on capacity','Meeting set'],['Delta Millwork','Quoted last spring','In conversation']],
+    wbNum:'$52K', wbNote:'in re-booked monthly freight',
+    inbound:[['Quote form · 1:10 AM','Replied in 8s'],['Load board call · Sat','Booked'],['Website chat · 5:55 AM','Replied in 5s']],
+    recent:[['DK','Dana Kolb','Sterling Building Products · Wed 11:00','$14.5K/mo'],['NC','Nina Cobb','Cobb Distributing · Thu 9:00','$9.2K/mo'],['RA','Rick Ansley','Piedmont Manufacturing · Fri 1:00','$21K/mo'],['HP','Hal Prater','Gateway Supply · Mon 10:00','$11K/mo']]
+  },
+
+  staffing: {
+    label:'Staffing', geo:'Greater Houston',
+    client:'Anchor Staffing', clientIni:'AS',
+    crit:['Manufacturing + warehousing employers','Greater Houston','20+ employees','Hiring 3+ roles in your specialty right now'],
+    scanned:7300, matched:1640, dm:1490, worked:1640, replies:194, meetings:12,
+    pipeline:372000, avgDeal:'$31,000', dealWord:'account', dealNote:'first-year placement value',
+    guarantee:'Guarantee: 10 qualified meetings in 60 days',
+    rep:{name:'Luke', ini:'LK'},
+    hero:{ini:'MB', name:'Marta Benitez', co:'Halcon Industrial', title:'Plant HR Manager',
+      email:'mbenitez@halconind.com', phone:'(713) 555-0126',
+      fit:'240 employees · 4 open roles', why:'6 weeks unfilled on 2nd shift'},
+    research:[
+      ['What they run','Metal fabrication plant in northwest Houston, roughly 240 employees, two shifts'],
+      ['Who decides','Marta runs hiring. The plant manager approves agency spend'],
+      ['What they use today','Indeed and referrals only. No agency on retainer'],
+      ['What changed','Four second-shift roles posted six weeks ago, still open',1],
+      ['Why now','They turned down a contract last month because they could not staff it',1],
+      ['Lead with','Time-to-fill on second shift, not your rate card']
+    ],
+    email:[
+      ['us','Marta, I run Anchor Staffing here in Houston. Noticed Halcon has had four second-shift fabrication roles posted for about six weeks. We fill second shift in that corridor in about nine days. Not asking to replace anything, just to cover the roles nobody is applying to. Worth 15 minutes?','Email · day 1'],
+      ['them','We are struggling with second shift specifically. What does it cost?','Reply · day 2']
+    ],
+    calls:[
+      ['Marta Benitez','Halcon Industrial','Connected · 8m','g'],
+      ['Wes Tanner','Bayou Plastics','Voicemail · retry Thu','n'],
+      ['Grace Owusu','Northline Warehousing','Connected · 5m','g'],
+      ['Dan Petrov','Sabine Assembly','Gatekeeper · callback','n']
+    ],
+    text:[
+      ['us','Marta, Luke from Anchor. Confirming Tuesday 9am to go through the second-shift roles.','Text · day 4'],
+      ['them','Confirmed, come to the front office.','Reply · day 4']
+    ],
+    brief:[
+      ['Company','Halcon Industrial · metal fabrication, 240 employees, two shifts'],
+      ['Who you are meeting','Marta Benitez, Plant HR Manager. Plant manager approves agency spend'],
+      ['Why they are in the market','Four second-shift roles unfilled for six weeks. Turned down a contract they could not staff',1],
+      ['What she said on the call','"We have never used an agency, I have just run out of other ideas"'],
+      ['Lead with','Time-to-fill on second shift and what the unfilled contract cost them'],
+      ['Do not','Open with your markup. She has no agency reference point and it will sound expensive']
+    ],
+    winback:[['Cypress Metalworks','Client in 2024','Reactivated'],['Gulf Assembly Co','One placement, went quiet','Meeting set'],['Katy Cold Storage','Quoted last year','In conversation']],
+    wbNum:'$64K', wbNote:'in re-opened accounts, 30 days',
+    inbound:[['Website form · 9:50 PM','Replied in 7s'],['Careers page call · Sun','Booked'],['Referral form · 6:05 AM','Replied in 6s']],
+    recent:[['MB','Marta Benitez','Halcon Industrial · Tue 9:00','4 roles'],['GO','Grace Owusu','Northline Warehousing · Wed 1:00','7 roles'],['WT','Wes Tanner','Bayou Plastics · Thu 10:00','3 roles'],['DP','Dan Petrov','Sabine Assembly · Fri 8:30','5 roles']]
+  },
+
+  equipment: {
+    label:'Industrial Equipment', geo:'Midwest territory',
+    client:'Rowan Equipment', clientIni:'RE',
+    crit:['Plants + processing facilities','Ohio, Indiana, Michigan','Runs your equipment class','Unit past service life or capex inside 12 months'],
+    scanned:3800, matched:520, dm:470, worked:520, replies:71, meetings:7,
+    pipeline:1155000, avgDeal:'$165,000', dealWord:'order', dealNote:'per unit, installed',
+    guarantee:'Guarantee: 6 qualified meetings in 60 days',
+    rep:{name:'Jack', ini:'JK'},
+    hero:{ini:'GS', name:'Greg Sandoval', co:'Fairmont Processing', title:'Plant Operations Director',
+      email:'gsandoval@fairmontproc.com', phone:'(419) 555-0158',
+      fit:'2 units past service life', why:'Capex approved for Q1'},
+    research:[
+      ['What they run','Food processing plant in northwest Ohio, two lines, running since 2009'],
+      ['Who decides','Greg specs it. Corporate capex committee signs above $100,000'],
+      ['What they use today','Two competitor units from 2011, both past rated service life'],
+      ['What changed','Eleven hours of unplanned downtime on the older line last quarter',1],
+      ['Why now','Capex request already submitted for Q1. They are speccing right now',1],
+      ['Lead with','Downtime cost per hour on that line, and lead time. Not price']
+    ],
+    email:[
+      ['us','Greg, I cover the Midwest for Rowan Equipment. Fairmont is running two units from around 2011, which puts them past rated service life. We are quoting a few plants speccing for Q1 right now and lead times are moving. Worth 20 minutes to look at your line?','Email · day 1'],
+      ['them','We had eleven hours of downtime last quarter on that line. Send me specs and availability.','Reply · day 4']
+    ],
+    calls:[
+      ['Greg Sandoval','Fairmont Processing','Connected · 12m','g'],
+      ['Alan Reidy','Reidy Steel','Voicemail · retry Mon','n'],
+      ['Susan Marek','Lakeshore Foods','Connected · 6m','g'],
+      ['Omar Haddad','Tri-State Plastics','Gatekeeper · callback','n']
+    ],
+    text:[
+      ['us','Greg, Jack from Rowan. Confirming Tuesday 1pm at the plant to walk line two.','Text · day 6'],
+      ['them','Confirmed. Bring the spec sheet on the 400 series.','Reply · day 6']
+    ],
+    brief:[
+      ['Company','Fairmont Processing · food processing, two lines, northwest Ohio'],
+      ['Who you are meeting','Greg Sandoval, Plant Operations Director. Corporate signs above $100,000'],
+      ['Why they are in the market','Two units past rated service life, 11 hours unplanned downtime last quarter, Q1 capex submitted',1],
+      ['What he said on the call','"The capex is approved, I just have to justify which vendor"'],
+      ['Lead with','Downtime cost per hour and your lead time. He needs ammunition for the committee'],
+      ['Do not','Discount. He is not price shopping, he is building a justification']
+    ],
+    winback:[['Northern Grain Co','Quoted 2023, lost on lead time','Reactivated'],['Buckeye Packaging','Parts customer only','Meeting set'],['Wabash Milling','Quoted 18 months ago','In conversation']],
+    wbNum:'$420K', wbNote:'in re-opened quotes, 30 days',
+    inbound:[['RFQ form · 11:05 PM','Replied in 9s'],['Parts line call · Sat','Booked'],['Trade show form · 6:20 AM','Replied in 7s']],
+    recent:[['GS','Greg Sandoval','Fairmont Processing · Tue 1:00','$165K est'],['SM','Susan Marek','Lakeshore Foods · Wed 10:00','$240K est'],['AR','Alan Reidy','Reidy Steel · Thu 9:00','$118K est'],['OH','Omar Haddad','Tri-State Plastics · Mon 2:00','$190K est']]
+  }
+};
+
+/* Short labels for the picker, and extra company names so the 14 calendar
+   blocks in scene 0 don't visibly repeat the same four names. Kept out of the
+   niche objects above so those stay readable. */
+const SHORT = {cleaning:'Cleaning', roofing:'Roofing', freight:'Freight', staffing:'Staffing', equipment:'Equipment'};
+const EXTRA = {
+  general:['Riverside Commerce Group','Coral Way Holdings','Midtown Work Lofts','Kendall Executive Ctr','Flagler Business Park','Biscayne Legal Suites','Gables Corporate Ctr'],
+  cleaning:['Riverside Dental Group','Coral Way Medical','Midtown Work Lofts','Kendall Executive Ctr','Flagler Office Park','Biscayne Legal Suites','Gables Corporate Ctr'],
+  roofing:['Ybor Warehouse Grp','Clearwater Retail Ctr','Tampa Cold Storage','Riverview Logistics','Oldsmar Industrial','Carrollwood Medical','Pinellas Self Storage'],
+  freight:['Summit Fabrication','Tarheel Paper Co','Blue Ridge Foods','Catawba Chemicals','Union Millworks','Iredell Plastics','Rowan Building Supply'],
+  staffing:['Trinity Fabricators','Pasadena Chemical','Clear Lake Packaging','Deer Park Assembly','Baytown Coatings','Spring Valley Foods','Humble Machine Works'],
+  equipment:['Allen County Foods','Maumee Valley Grain','Sandusky Packaging','Toledo Sheet Metal','Findlay Processing','Lima Industrial','Defiance Millworks']
+};
+
+const qs = new URLSearchParams(location.search);
+const KEY = NICHES[qs.get('niche')] ? qs.get('niche') : 'general';
+const D = NICHES[KEY];
+
+/* ---------- niche picker in the control bar ---------- */
+(function(){
+  const wrap=document.getElementById('npick');
+  if(KEY==='general'){wrap.style.display='none';return;}
+  Object.keys(NICHES).forEach(k=>{
+    const a=document.createElement('a');
+    a.href='?niche='+k; a.textContent=SHORT[k]||NICHES[k].label;
+    if(k===KEY)a.className='on';
+    wrap.appendChild(a);
+  });
+})();
+
+/* ---------- fill everything that is pure text ---------- */
+document.getElementById('clientName').textContent=D.client;
+document.getElementById('clientIni').textContent=D.clientIni;
+document.getElementById('crumb').textContent=D.label+' · '+D.geo;
+document.querySelectorAll('[data-f]').forEach(el=>{const v=D[el.dataset.f];if(v)el.textContent=v});
+document.getElementById('popIni').textContent=D.hero.ini;
+document.getElementById('popName').textContent=D.hero.name;
+document.getElementById('popCo').textContent=D.hero.co;
+document.getElementById('popRole').textContent=D.hero.title;
+document.getElementById('popFit').textContent=D.hero.fit;
+document.getElementById('popWhy').textContent=D.hero.why;
+document.getElementById('popRep').textContent=D.rep.name+' · your rep';
+document.getElementById('rIni').textContent=D.hero.ini;
+document.getElementById('rName').textContent=D.hero.name;
+document.getElementById('rTitle').textContent=D.hero.title;
+document.getElementById('rCo').textContent=D.hero.co;
+document.getElementById('rContact').textContent=D.hero.email;
+document.getElementById('bIni').textContent=D.hero.ini;
+document.getElementById('bName').textContent=D.hero.name;
+document.getElementById('bSub').textContent=D.hero.title+' · '+D.hero.co;
+document.getElementById('repName').textContent=D.rep.name;
+document.getElementById('repIni').textContent=D.rep.ini;
+document.getElementById('kGuar').textContent=D.guarantee;
+document.getElementById('wbNote').textContent=D.wbNote;
+document.getElementById('wbNum').textContent=D.wbNum;
+document.getElementById('sScanned').dataset.n=D.scanned;
+document.getElementById('sMatched').dataset.n=D.matched;
+document.getElementById('sDM').dataset.n=D.dm;
+document.getElementById('kResearched').dataset.n=D.matched;
+document.getElementById('kWorked').dataset.n=D.worked;
+document.getElementById('kReplies').dataset.n=D.replies;
+document.getElementById('kPipeline').dataset.n=D.pipeline;
+document.getElementById('kMtg0').dataset.n=D.meetings;
+document.getElementById('kMtg6').dataset.n=D.meetings;
+
+/* research + brief rows */
+function rows(host,data,cls){
+  document.getElementById(host).innerHTML=data.map(r=>
+    cls==='brief'
+      ? `<div class="brow${r[2]?' hot':''}"><div class="l">${r[0]}</div><div class="r">${r[1]}</div></div>`
+      : `<div class="rrow${r[2]?' key':''}"><div class="l">${r[0]}</div><div class="r">${r[1]}</div></div>`
+  ).join('');
+}
+rows('rRows',D.research);
+rows('bRows',D.brief,'brief');
+
+/* recently booked */
+document.getElementById('recentList').innerHTML=D.recent.map(r=>
+  `<div class="ri"><div class="av">${r[0]}</div><div>${r[1]}<div class="dim" style="font-size:11px">${r[2]}</div></div><span class="amt">${r[3]}</span></div>`
+).join('');
+
+/* calendar: 4 weeks x 5 days, 14 meetings spread across it */
+(function(){
+  const grid=document.getElementById('calGrid');
+  // [dayIndex 0-19, time, who]. The hero meeting is index 8 so it sits mid-grid.
+  const plan=[[1,'9:00'],[3,'2:00'],[5,'10:00'],[6,'8:30'],[8,'10:00'],[9,'1:00'],[11,'9:00'],
+              [12,'11:00'],[13,'3:00'],[15,'8:00'],[16,'10:30'],[17,'1:30'],[18,'9:00'],[19,'11:00']];
+  // 14 blocks need 14 distinct names, otherwise the hero shot of the VSL shows
+  // the same person booked four times.
+  const names=D.recent.map(r=>r[1]).concat(D.winback.map(w=>w[0]),EXTRA[KEY]||[]);
+  for(let d=0;d<20;d++){
+    const cell=document.createElement('div');
+    cell.className='cday';
+    cell.innerHTML=`<div class="dn">${d+1}</div>`;
+    grid.appendChild(cell);
+  }
+  const cells=[...grid.children];
+  plan.slice(0,D.meetings).forEach((p,k)=>{
+    const m=document.createElement('div');
+    m.className='mtg';
+    const who = p[0]===8 ? D.hero.co : names[k%names.length];
+    m.innerHTML=`<small>${p[1]}</small>${who}`;
+    if(p[0]===8)m.id='heroMtg';
+    cells[p[0]].appendChild(m);
+  });
+})();
+
+/* ==========================================================================
+   ENGINE  (same scheduler/cursor/counter engine as the other STILO demos)
+   ========================================================================== */
+const scenes=[...document.querySelectorAll('.scene')];
+const titles=[
+  'Your calendar · 30 days',
+  'Find your buyers',
+  'Research · '+D.hero.co,
+  'Outreach · three channels',
+  'Meeting booked',
+  'Win-back and inbound',
+  'Results · 30 days'
+];
+const beats=['THE OUTCOME','STEP 1 · TARGET','STEP 2 · RESEARCH','STEP 3 · WORK IT','STEP 4 · BOOKED','STEP 5 · THE OTHER TWO','THE SCOREBOARD'];
+const WORDS={7:"Seven",9:"Nine",12:"Twelve",14:"Fourteen"};
+const MW=WORDS[D.meetings]||String(D.meetings);
+const script=[
+  "I'm going to start at the end, because this is the only part that matters. This is one month of the system running for a single company. Every block on that calendar is a meeting with a decision maker who fits their ideal customer, who has a real reason to buy right now, and who agreed to sit down. "+MW+" of them, in thirty days. Nobody on their team made a single cold call. Now let me show you how those got there.",
+  "It starts with a conversation about who your best customer actually is. Not anyone with a building, the real answer. "+D.crit.join(', ')+". That goes in, and the system scans every business in the territory against it. Not a list somebody bought and resold four times. It's built the day you start, from what's actually out there right now. It comes back with "+D.matched.toLocaleString()+" companies that match, and for every one of them, the person who signs the contract. Name, title, direct email, direct line.",
+  "But a name and an email is still just a list, and a list is worthless. So before anybody gets contacted, every single company gets researched. Here's one. "+D.hero.name+" at "+D.hero.co+". We know what they run, what they use today, what changed recently, and the one thing worth opening with. That's the difference between a message that gets deleted and a message that gets a reply. And that research file is the first thing we hand you, before we've contacted a single person.",
+  "Then we work it. Three channels, at the same time. Email first, written for that specific company, referencing the thing we found in the research, and when they reply they get answered in minutes. Phone second: you get a rep assigned to your account. Not a shared call center. One person, on your list, who knows your business and calls the people the emails didn't reach. And text, for anyone who showed any interest at all, because a lead who opened three emails and never replied isn't cold, he's busy. All three run until they either book, or they tell us to stop.",
+  "Here's what it looks like when one converts. "+D.hero.name+" replies. The rep gets them on the phone, confirms they're the decision maker, confirms they're actually in the market, and books them straight onto your calendar. And you don't just get a calendar invite. You get this. Who they are, what they run, why they're in the market, what they said on the call, and what to lead with when you sit down. Your job is to show up and be good at what you're already good at.",
+  "One more thing, and this is the part most people don't expect. New business isn't your only pipeline, you already have two more. The first is every customer you've ever had who stopped buying. We run the same three channels against that list, and it converts better than cold, every time, because they already know you. The second is the leads already coming to you. If somebody fills out your form and doesn't hear back for four hours, that's a job you paid for and lost. We answer those in seconds, day or night. Same team, same calendar, three pipelines instead of one.",
+  "And here's the whole month in one screen. "+D.matched.toLocaleString()+" companies found and researched, all of them worked across three channels, "+D.replies+" replies from real decision makers, and "+MW.toLowerCase()+" qualified meetings booked. That's the system."
+];
+
+let i=0, GEN=0;
+const dotsEl=document.getElementById('dots');
+scenes.forEach((s,idx)=>{const d=document.createElement('i');d.onclick=()=>go(idx);dotsEl.appendChild(d)});
+const dots=[...dotsEl.children];
+const navs=scenes.map((s,idx)=>document.getElementById('nv'+idx));
+const cursor=document.getElementById('cursor'), ripple=document.getElementById('ripple');
+function s(fn,ms){const g=GEN;return setTimeout(()=>{if(g===GEN)fn()},ms)}
+
+function go(n){
+  n=Math.max(0,Math.min(scenes.length-1,n)); i=n; GEN++;
+  resetFocus();
+  scenes.forEach((sc,x)=>sc.classList.toggle('on',x===n));
+  dots.forEach((d,x)=>d.classList.toggle('on',x===n));
+  navs.forEach((v,x)=>v&&v.classList.toggle('on',x===n));
+  document.getElementById('sn').textContent=(n+1)+' / '+scenes.length;
+  document.getElementById('bt').textContent=titles[n];
+  document.getElementById('teleH').textContent='Step '+(n+1)+' · '+beats[n];
+  document.getElementById('teleP').textContent=script[n];
+  cursor.style.transform='translate(-100px,-100px)';
+  s(()=>run(n),340);
+}
+const next=()=>go(i+1), prev=()=>go(i-1);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){next();e.preventDefault()}
+  if(e.key==='ArrowLeft')prev();
+  if(e.key.toLowerCase()==='n')document.getElementById('teleBox').classList.toggle('on');
+});
+
+function T(steps){let t=0;steps.forEach(([d,fn])=>{t+=d;s(fn,t)})}
+function point(el,click){ if(!el)return; const r=el.getBoundingClientRect();
+  cursor.style.transform='translate('+(r.left+r.width*.5-3)+'px,'+(r.top+r.height*.55-2)+'px)';
+  if(click)setTimeout(()=>{const rr=el.getBoundingClientRect();ripple.style.left=(rr.left+rr.width*.5)+'px';ripple.style.top=(rr.top+rr.height*.55)+'px';ripple.classList.remove('go');void ripple.offsetWidth;ripple.classList.add('go');el.classList.add('press');setTimeout(()=>el.classList.remove('press'),400)},650);
+}
+function focusOn(el,scale){ if(!el)return; const c=document.getElementById('canvas'); const cr=c.getBoundingClientRect(),r=el.getBoundingClientRect();
+  c.style.transformOrigin=(((r.left+r.width/2)-cr.left)/cr.width*100)+'% '+(((r.top+r.height/2)-cr.top)/cr.height*100)+'%';
+  c.style.transform='scale('+(scale||1.18)+')';
+}
+function resetFocus(){document.getElementById('canvas').style.transform='scale(1)'}
+function count(el){const n=+el.dataset.n,money=el.dataset.money,suf=el.dataset.suffix||'',dur=1150,t0=performance.now();
+  (function fr(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);el.textContent=(money?'$':'')+Math.round(n*e).toLocaleString()+suf;if(p<1)requestAnimationFrame(fr)})(performance.now());}
+function counts(sc){sc.querySelectorAll('[data-n]').forEach((el,k)=>s(()=>count(el),120+k*80))}
+function rvin(sc){sc.querySelectorAll('.rv').forEach((el,k)=>s(()=>el.classList.add('in'),120+k*90))}
+function typeInto(el,text,cb){const g=GEN;el.innerHTML='';let k=0;
+  const c=document.createElement('span'),car=document.createElement('span');car.className='caret';
+  el.appendChild(c);el.appendChild(car);
+  const iv=setInterval(()=>{if(g!==GEN){clearInterval(iv);return}c.textContent=text.slice(0,++k);
+    if(k>=text.length){clearInterval(iv);s(()=>{car.remove();cb&&cb()},350)}},26)}
+function bub(wrap,c){const b=document.createElement('div');b.className='bub '+(c[0]==='us'?'us':'them');
+  b.innerHTML=c[1]+'<small>'+c[2]+'</small>';wrap.appendChild(b);requestAnimationFrame(()=>b.classList.add('in'));wrap.scrollTop=wrap.scrollHeight}
+
+function run(n){
+  const sc=scenes[n];
+
+  /* ---- 0 · calendar ---- */
+  if(n===0){
+    counts(sc);rvin(sc);
+    const mtgs=[...sc.querySelectorAll('.mtg')], hero=sc.querySelector('#heroMtg'), pop=sc.querySelector('#calPop');
+    mtgs.forEach(m=>m.classList.remove('in','hi'));pop.classList.remove('on');
+    s(()=>mtgs.forEach((m,k)=>s(()=>m.classList.add('in'),k*95)),650);
+    T([
+      [3400,()=>{point(hero);hero.classList.add('hi')}],
+      [700,()=>{
+        // .pop lives inside .card.cal (position:relative), so offsets are
+        // measured against that card, not the scene. Measuring against the
+        // scene is what threw it off the bottom of the frame.
+        const host=pop.offsetParent||sc;
+        const r=hero.getBoundingClientRect(), cr=host.getBoundingClientRect();
+        pop.style.left=Math.max(8,Math.min(r.left-cr.left-28, cr.width-346))+'px';
+        pop.style.top=(r.bottom-cr.top+10)+'px';
+        pop.classList.add('on');
+      }]
+    ]);
+  }
+
+  /* ---- 1 · find buyers ---- */
+  if(n===1){
+    const box=sc.querySelector('#critBox'), scan=sc.querySelector('#scanBox'), res=sc.querySelector('#scanRes');
+    box.style.display='block';scan.style.display='none';res.style.display='none';
+    sc.querySelector('#prog1').style.width='0';
+    sc.querySelector('#scanPct').textContent='Working…';
+    const f=[1,2,3,4].map(k=>sc.querySelector('#f'+k));
+    const phs=['Who is your best customer…','Where…','Minimum size…','What makes them in-market…'];
+    f.forEach((el,k)=>{el.innerHTML='<span class="ph">'+phs[k]+'</span>'});
+    const seq=[];
+    D.crit.forEach((txt,k)=>{
+      seq.push([k===0?600:900,()=>point(f[k],true)]);
+      seq.push([420,()=>{const sp=document.createElement('span');f[k].innerHTML='';f[k].appendChild(sp);typeInto(f[k],txt)}]);
+    });
+    seq.push([1500,()=>point(sc.querySelector('#buildBtn'),true)]);
+    seq.push([900,()=>{box.style.display='none';scan.style.display='block'}]);
+    seq.push([250,()=>{sc.querySelector('#prog1').style.width='100%'}]);
+    seq.push([1750,()=>{
+      sc.querySelector('#scanPct').className='chip g';
+      sc.querySelector('#scanPct').textContent='Done';
+      sc.querySelector('#scanNote').textContent='Every match verified and matched to the person who signs.';
+      res.style.display='grid';counts(sc);rvin(sc);
+    }]);
+    T(seq);
+  }
+
+  /* ---- 2 · research ---- */
+  if(n===2){
+    rvin(sc);
+    const rws=[...sc.querySelectorAll('.rrow')];
+    rws.forEach(r=>{r.style.opacity='0';r.style.transform='translateY(8px)';r.style.transition='.45s var(--ease)'});
+    s(()=>rws.forEach((r,k)=>s(()=>{r.style.opacity='1';r.style.transform='none'},k*160)),500);
+    s(()=>{const key=sc.querySelector('.rrow.key');point(key)},2000);
+  }
+
+  /* ---- 3 · outreach ---- */
+  if(n===3){
+    rvin(sc);
+    const E=sc.querySelector('#chEmail'), P=sc.querySelector('#chPhone'), X=sc.querySelector('#chText');
+    [E,P,X].forEach(c=>c.className='card ch');
+    const eb=sc.querySelector('#emailBody'), pb=sc.querySelector('#phoneBody'), xb=sc.querySelector('#textBody');
+    eb.innerHTML='';xb.innerHTML='';
+    [...pb.querySelectorAll('.clog')].forEach(c=>c.remove());
+    const st=c=>c.querySelector('.st');
+    const seq=[
+      [500,()=>{E.className='card ch fire';st(E).textContent='Sending';point(E)}],
+      [700,()=>bub(eb,D.email[0])],
+      [1300,()=>bub(eb,D.email[1])],
+      [500,()=>{E.className='card ch done';st(E).textContent='Replied'}],
+      [400,()=>{P.className='card ch fire';st(P).textContent='Dialing';point(P)}]
+    ];
+    D.calls.forEach((c,k)=>seq.push([k===0?700:520,()=>{
+      const d=document.createElement('div');d.className='clog';
+      d.innerHTML='<span class="av'+(c[3]==='g'?' g':'')+'">'+c[0].split(' ').map(w=>w[0]).join('')+'</span>'
+        +'<span class="who"><b>'+c[0]+'</b><span>'+c[1]+'</span></span>'
+        +'<span class="chip '+c[3]+'">'+c[2]+'</span>';
+      pb.appendChild(d);requestAnimationFrame(()=>d.classList.add('in'));
+    }]));
+    seq.push([500,()=>{P.className='card ch done';st(P).textContent='2 connected'}]);
+    seq.push([400,()=>{X.className='card ch fire';st(X).textContent='Sending';point(X)}]);
+    seq.push([700,()=>bub(xb,D.text[0])]);
+    seq.push([1100,()=>bub(xb,D.text[1])]);
+    seq.push([500,()=>{X.className='card ch done';st(X).textContent='Confirmed'}]);
+    T(seq);
+  }
+
+  /* ---- 4 · booked ---- */
+  if(n===4){
+    rvin(sc);
+    const rws=[...sc.querySelectorAll('.brow')];
+    rws.forEach(r=>{r.style.opacity='0';r.style.transition='.45s var(--ease)'});
+    s(()=>rws.forEach((r,k)=>s(()=>r.style.opacity='1',k*150)),600);
+    s(()=>point(sc.querySelector('.brow.hot')),1900);
+    s(()=>focusOn(sc.querySelector('.conf'),1.1),3400);
+  }
+
+  /* ---- 5 · win-back + inbound ---- */
+  if(n===5){
+    rvin(sc);
+    const wb=sc.querySelector('#winbackBody'), ib=sc.querySelector('#inboundBody');
+    [...wb.querySelectorAll('.prow2'),...ib.querySelectorAll('.prow2')].forEach(r=>r.remove());
+    const wfoot=wb.querySelector('.pfoot'), ifoot=ib.querySelector('.pfoot');
+    D.winback.forEach((w,k)=>s(()=>{
+      const d=document.createElement('div');d.className='prow2';
+      d.innerHTML='<span class="av">'+w[0].split(' ').map(x=>x[0]).join('').slice(0,2)+'</span>'
+        +'<span class="n"><b>'+w[0]+'</b><div class="dim" style="font-size:10.5px">'+w[1]+'</div></span>'
+        +'<span class="chip '+(w[2]==='Reactivated'?'g':'b')+'">'+w[2]+'</span>';
+      wb.insertBefore(d,wfoot);requestAnimationFrame(()=>d.classList.add('in'));
+    },500+k*260));
+    D.inbound.forEach((v,k)=>s(()=>{
+      const d=document.createElement('div');d.className='prow2';
+      d.innerHTML='<span class="n"><b>'+v[0]+'</b></span><span class="timer">'+v[1]+'</span>';
+      ib.insertBefore(d,ifoot);requestAnimationFrame(()=>d.classList.add('in'));
+    },700+k*300));
+  }
+
+  /* ---- 6 · results ---- */
+  if(n===6){
+    rvin(sc);counts(sc);
+    s(()=>sc.querySelectorAll('.chart .colb').forEach((b,k)=>s(()=>b.style.height=b.dataset.h+'%',k*150)),600);
+  }
+}
+
+
+/* ---------- autoplay (embed mode) ---------- */
+const AUTO = qs.get('auto') !== '0';
+const HOLD = [7000, 7800, 8200, 8600, 8000, 7800, 7200];
+let autoTimer=null;
+function schedule(){ if(!AUTO) return; clearTimeout(autoTimer);
+  autoTimer=setTimeout(()=>{ go((i+1)%scenes.length); }, HOLD[i]||7500);
+}
+const _go=go;
+go=function(n){ _go(((n%scenes.length)+scenes.length)%scenes.length); schedule(); };
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{ clearTimeout(autoTimer); schedule(); }));
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) clearTimeout(autoTimer); else schedule(); });
+// Embedded on the marketing site the demo plays as a film: the parent sets
+// pointer-events:none, so hide the controls rather than leave dead buttons.
+try{ if(window.self!==window.top){ document.querySelectorAll('.js-navbtn').forEach(function(b){b.style.display='none'}); } }catch(e){}
+go(0);
+</script>
+</body>
+</html>

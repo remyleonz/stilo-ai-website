@@ -71,7 +71,7 @@ async function geminiDraft(ctx) {
         "- Industry: " + (ctx.niche || 'local business'),
         ctx.hook ? "- What we noticed: " + ctx.hook : "",
         "",
-        "WHAT WE SELL: qualified meetings with their ideal customer, booked onto their calendar. Setup fee, a flat fee per qualified meeting, and a share of what they close. No retainer.",
+        "WHAT WE SELL: qualified meetings with their ideal customer, booked onto their calendar. Setup fee and a flat fee per qualified meeting. No retainer.",
         "THE PAIN TO NAME: " + ctx.pain,
         "",
         "RULES:",

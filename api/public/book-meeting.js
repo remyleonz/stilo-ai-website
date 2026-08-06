@@ -48,6 +48,7 @@ module.exports = async function handler(req, res) {
     const body = await readJsonBody(req);
     const startIso = body.start_iso;
     const email = (body.email || '').trim();
+    const niche = (body.niche || '').trim() || null;
     const name = (body.name || '').trim();
     const businessName = (body.business_name || '').trim();
     const notes = (body.notes || '').slice(0, 1000);
@@ -75,22 +76,24 @@ module.exports = async function handler(req, res) {
     if (sb) {
         try {
             if (lid != null && verifyLead(lid, token)) {
-                const { data } = await sb.from('leads').select('id,name,owner_name,owner_email,call_attempts').eq('id', lid).maybeSingle();
+                const { data } = await sb.from('leads').select('id,name,owner_name,owner_email,call_attempts,niche,pitch_agent').eq('id', lid).maybeSingle();
                 if (data) { lead = data; leadId = data.id; attributed = true; }
             }
             if (leadId == null) {
-                const { data: match } = await sb.from('leads').select('id,name,owner_name,owner_email,call_attempts').or('owner_email.ilike.' + email + ',email.ilike.' + email).limit(1);
+                const { data: match } = await sb.from('leads').select('id,name,owner_name,owner_email,call_attempts,niche,pitch_agent').or('owner_email.ilike.' + email + ',email.ilike.' + email).limit(1);
                 if (match && match[0]) { lead = match[0]; leadId = match[0].id; }
             }
             if (leadId == null) {
-                const { data: created, error: cErr } = await sb.from('leads').insert({
+                const seed = {
                     name: businessName || name || 'Website booking',
                     owner_name: name || null,
                     owner_email: email,
-                    source: 'vsl_landing',
                     stage: 'NEW'
-                }).select('id').single();
+                };
+                if (niche) { seed.niche = niche; seed.category = niche; }
+                const { data: created, error: cErr } = await sb.from('leads').insert(seed).select('id').single();
                 if (!cErr && created) { leadId = created.id; lead = { id: leadId, call_attempts: 0 }; }
+                else if (cErr) console.warn('[public/book-meeting] lead insert failed:', cErr.message);
             }
         } catch (e) { console.warn('[public/book-meeting] lead resolve failed:', e && e.message); }
     }
@@ -151,6 +154,7 @@ module.exports = async function handler(req, res) {
                 meeting_scheduled_at: startDate.toISOString(),
                 meeting_duration_min: durationMin,
                 meeting_booked_by_sdr: 'vsl_landing',
+                pitch_agent: (lead && lead.pitch_agent) || 'Booked Meetings',
                 meeting_booked_at: new Date().toISOString(),
                 stage: 'MEETING_BOOKED',
                 last_called_outcome: 'booked_meeting',
@@ -158,6 +162,7 @@ module.exports = async function handler(req, res) {
                 call_attempts: (Number(lead && lead.call_attempts) || 0) + 1,
                 owner_email: (lead && lead.owner_email) || email,
                 owner_name: (lead && lead.owner_name) || name || null,
+                niche: (lead && lead.niche) || niche || null,
                 call_notes: 'Self-booked from VSL landing page for ' + startDate.toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET' + (attributed ? ' (attributed via emailed link)' : ' (matched/created by email)')
             }).eq('id', leadId);
             persisted = !upd.error;

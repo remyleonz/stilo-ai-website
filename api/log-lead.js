@@ -48,19 +48,6 @@ function str(v, max) {
   return max ? s.slice(0, max) : s;
 }
 
-// Map quiz agent id -> friendly name used in the first-touch email
-var AGENT_NAME = {
-  'receptionist': 'Receptionist',
-  'lead-response': 'Outbound Lead Reply Agent',
-  'reactivation': 'Lost Customer Reactivation',
-  'lead-gen': 'B2B Lead Generator',
-  'website': 'Website',
-  'seo': 'AI SEO',
-  'growth-intel': 'Ontology',
-  'sales-coach': 'AI Sales Manager',
-  'custom': 'Custom Automations'
-};
-
 function firstName(full) {
   if (!full) return 'there';
   return String(full).trim().split(/\s+/)[0] || 'there';
@@ -78,35 +65,67 @@ function buildBookingUrl(row) {
   return 'https://stiloaipartners.com/?' + params.toString();
 }
 
+// Personalised off the five quiz answers: their industry, what a customer is
+// worth, where work comes from today, and who is actually doing the selling.
+// No product list, no agent names, no "AI plan" language.
+var PAIN = {
+  'Referrals and word of mouth': 'everything is coming from referrals, which means the good months and the quiet months are decided for you',
+  'Inbound / our website': 'you are waiting on inbound, which caps you at however many people happen to find you',
+  'We buy leads': 'you are buying leads, which usually means paying for the same names your competitors are calling',
+  'An agency or SDR we hired': 'you have already paid someone to do this and it did not stick',
+  'Mostly nothing right now': 'there is no real outbound happening, so growth is whatever walks in'
+};
+var OWNER = {
+  'Me, the owner': 'you are the one doing it, on top of running the business',
+  'One salesperson': 'it sits on one person, so the pipeline moves at exactly one person\u2019s pace',
+  'A small sales team': 'the team is closing, not prospecting, which is the right way round but leaves the top of the funnel thin',
+  'Nobody owns it': 'nobody actually owns it, so it happens when someone remembers'
+};
+
 function buildQuizReplyHtml(row) {
   var name = firstName(row.contact_name);
   var biz = row.business_name || 'your business';
-  var agents = (row.selected_agents || []).map(function(id){ return AGENT_NAME[id] || id; });
-  // Format agent names as an inline natural list ("X, Y, and Z") rather than a
-  // bullet list — reads more like a real founder note and less like a brochure.
-  var agentsInline;
-  if (agents.length === 0)      agentsInline = 'the three agents';
-  else if (agents.length === 1) agentsInline = 'the ' + agents[0];
-  else if (agents.length === 2) agentsInline = 'the ' + agents[0] + ' and the ' + agents[1];
-  else                          agentsInline = 'the ' + agents.slice(0, -1).join(', the ') + ', and the ' + agents[agents.length - 1];
+  var a = row.quiz_answers || {};
+  var industry = a.industry && a.industry !== 'Something else' ? a.industry.toLowerCase() : null;
+  var pain = PAIN[a.current_source] || null;
+  var owner = OWNER[a.who_owns_sales] || null;
+  var worth = a.customer_value || null;
+  var soon = a.timeline && /now|30/i.test(a.timeline);
 
-  var bookingUrl = buildBookingUrl(row);
+  var lines = [];
+  lines.push('<p>Hey ' + name + ',</p>');
 
-  return [
-    '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;color:#0a0a0f;max-width:560px;margin:0 auto;line-height:1.6;font-size:15.5px;">',
-    '<p>Hey ' + name + ',</p>',
-    '<p>Thanks for running the quiz for ' + biz + '. I went through your answers and the three agents the site recommended (' + agentsInline + ') are the same three I would actually start with.</p>',
-    '<p>I would love to walk you through what we would build, the realistic numbers for ' + biz + ', and what the first 30 days looks like. Fifteen minutes, no slide deck.</p>',
-    '<p style="margin:22px 0;"><a href="' + bookingUrl + '" style="display:inline-block;padding:13px 24px;background:#1E3A8A;color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Pick a time on my calendar</a></p>',
-    '<p>If a call is overkill, just reply to this email with your top question. I read every one.</p>',
-    '<p>Remy<br/><span style="color:#6c6a66;font-size:13.5px;">Founder, STILO AI Partners</span></p>',
-    '</div>'
-  ].join('');
+  var opener = 'Thanks for going through the questions for ' + biz + '.';
+  if (industry) opener += ' We work with ' + industry + ' companies, so this is familiar ground.';
+  lines.push('<p>' + opener + '</p>');
+
+  if (pain || owner) {
+    var read = 'From your answers, the picture is that ' + (pain || '') +
+      (pain && owner ? ', and ' : '') + (owner || '') + '.';
+    lines.push('<p>' + read + '</p>');
+  }
+
+  var fix = 'What we do is the front half. We build the list of every company in your area that fits, research each one, and work them on email, phone and text with a rep assigned to your account. You get the meeting, plus a page on who you are about to sit with and why they are in the market.';
+  lines.push('<p>' + fix + '</p>');
+
+  if (worth) {
+    lines.push('<p>You said a customer is worth ' + worth + ' to you. That number is the whole conversation, because it decides whether this is obviously worth doing or not worth starting. I would rather work that out with you on a call than guess at it here.</p>');
+  }
+
+  lines.push('<p style="margin:22px 0;"><a href="' + buildBookingUrl(row) + '" style="display:inline-block;padding:13px 24px;background:#0A2E85;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">Pick a time on my calendar</a></p>');
+  lines.push('<p>Fifteen minutes' + (soon ? ', and given you said you want to move soon I would take the earliest slot that works' : '') + '. If a call is overkill, reply here with your one question and I will answer it.</p>');
+  lines.push('<p style="margin-top:26px;">Remy Leon<br/>'
+    + '<span style="color:#6c6a66;font-size:13.5px;">Co-founder, STILO AI PARTNERS</span><br/>'
+    + '<span style="color:#6c6a66;font-size:13.5px;">(786) 837-6639 &nbsp;&middot;&nbsp; '
+    + '<a href="https://stiloaipartners.com" style="color:#6c6a66;">stiloaipartners.com</a></span></p>');
+
+  return '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;color:#0a0a0f;max-width:560px;margin:0 auto;line-height:1.6;font-size:15.5px;">'
+    + lines.join('') + '</div>';
 }
 
 async function sendQuizLeadReplyEmail(row, leadId) {
   var html = buildQuizReplyHtml(row);
-  var subject = 'Your AI plan for ' + (row.business_name || 'your business');
+  var subject = (row.business_name || 'Your business') + ': what we would do first';
   // Sender: the real Workspace mailbox, so Gmail recipients
   // see a profile picture (hello@ has no Workspace mailbox, no pfp).
   // Standardised on remyleon@ 2026-07-20: every other sender falls back to it,
