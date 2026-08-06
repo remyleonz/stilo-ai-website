@@ -22,45 +22,21 @@ module.exports.maxDuration = 120;
 
 const MAX_PER_TICK = Number(process.env.NURTURE_MAX_PER_TICK || 25);
 
-function esc(s) {
-    return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// Light, readable, and deliberately NOT dark-themed: Gmail on iPhone
-// force-inverts dark emails into something unreadable.
-function emailHtml(bodyText, senderName) {
-    const paras = String(bodyText || '').split(/\n{2,}/).map(function (p) {
-        return '<p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:#111">' + esc(p).replace(/\n/g, '<br>') + '</p>';
-    }).join('');
-    return [
-        '<div style="background:#ffffff;padding:28px 20px">',
-        '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto">',
-        paras,
-        '<p style="margin:22px 0 0;font-size:15px;color:#111">' + esc(senderName || 'Remy') + '<br>',
-        '<span style="color:#6B7280;font-size:13px">STILO AI Partners, Miami</span></p>',
-        '</div></div>',
-    ].join('');
-}
-
+// Goes to a prospect who already BOOKED, so it must not ride cold sending
+// reputation. sendTransactional is Gmail first with a Resend fallback, and it is
+// text-only by design: no HTML part and no tracking pixel is what keeps these in
+// Primary. See _gmail_send.js.
 async function sendEmail(to, subject, bodyText, senderName) {
-    if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
-    const fromName = process.env.STILO_SENDER_NAME || 'Remy Leon';
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const replyTo = process.env.STILO_REPLY_TO || fromEmail;
-    const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            from: fromName + ' <' + fromEmail + '>',
-            to: [to], reply_to: replyTo,
-            subject: subject || 'Before our call',
-            html: emailHtml(bodyText, senderName),
-            text: bodyText,
-        }),
+    const { sendTransactional } = require('./_gmail_send');
+    const r = await sendTransactional({
+        to: to,
+        subject: subject || 'Before our call',
+        text: bodyText + '\n\n' + (senderName || process.env.STILO_SENDER_NAME || 'Remy Leon') + '\nSTILO AI Partners',
+        replyTo: replyTo,
     });
-    const j = await r.json().catch(() => ({}));
-    return { status: r.status, id: j.id, error: r.ok ? null : (j.message || 'send_failed') };
+    return { status: r.status, id: r.id, via: r.via, error: r.err || null, skipped: r.skip };
 }
 
 module.exports = async function handler(req, res) {

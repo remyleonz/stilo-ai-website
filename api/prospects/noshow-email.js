@@ -24,25 +24,32 @@ function escapeHtml(s) {
 }
 function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim()); }
 
-function buildHtml(opts) {
+// Plain text, and sent through sendTransactional (Gmail first). This goes to
+// someone who BOOKED and then missed, so it must not ride cold sending
+// reputation, and it must not look like a marketing template. The previous HTML
+// version also pitched "where the AI agents fit", which is the retired offer and
+// breaks the rule that no client-facing asset says AI.
+function buildText(opts) {
     const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
     const whenStr = opts.whenIso
         ? new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(opts.whenIso))
         : null;
     return [
-        '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111;font-size:15px;line-height:1.55;">',
-        '<p>Hi ' + escapeHtml(opts.firstName || 'there') + ',</p>',
-        '<p>We had a call on the calendar' + (whenStr ? ' for <strong>' + escapeHtml(whenStr) + '</strong>' : '') + ' but I don\'t think we connected. No problem at all, things come up.</p>',
-        '<p>Did something get in the way, or is the timing just off right now? If you\'re still up for it, you can grab a new time that works better here:</p>',
-        '<p style="margin:18px 0;"><a href="' + escapeHtml(CALENDAR_LINK) + '" style="display:inline-block;background:#2563EB;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px;border-radius:8px;">Pick a new time</a></p>',
-        '<p>It\'s a quick 15 minutes to walk through where the AI agents fit ' + escapeHtml(opts.businessName || 'your business') + '. If now isn\'t the moment, just reply and let me know, no pressure either way.</p>',
-        '<p>Talk soon,<br/>' + escapeHtml(senderName) + '</p>',
-        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;" />',
-        '<table cellpadding="0" cellspacing="0" border="0" style="font-size:13px;color:#374151;">',
-        '<tr><td><strong style="color:#111;">' + escapeHtml(senderName) + '</strong><br/>STILO AI Partners<br/><a href="https://stiloaipartners.com" style="color:#2563EB;text-decoration:none;">stiloaipartners.com</a> · +1 786 876 8677</td></tr>',
-        '</table>',
-        '</div>'
-    ].join('');
+        'Hi ' + (opts.firstName || 'there') + ',',
+        '',
+        'We had a call on the calendar' + (whenStr ? ' for ' + whenStr : '') + ' but I do not think we connected. No problem at all, things come up.',
+        '',
+        'Did something get in the way, or is the timing just off right now? If you are still up for it, you can grab a new time that works better here:',
+        '',
+        CALENDAR_LINK,
+        '',
+        'It is fifteen minutes on where the next customers for ' + (opts.businessName || 'your business') + ' are going to come from, and what it would take to put more of them on your calendar. If now is not the moment, just reply and tell me, no pressure either way.',
+        '',
+        'Talk soon,',
+        senderName,
+        'STILO AI Partners',
+        'stiloaipartners.com'
+    ].join('\n');
 }
 
 module.exports = async function handler(req, res) {
@@ -79,17 +86,14 @@ module.exports = async function handler(req, res) {
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const replyTo = process.env.STILO_REPLY_TO || fromEmail;
     const subject = 'Did we miss each other?';
-    const html = buildHtml({ firstName: firstName, businessName: lead.name, whenIso: lead.meeting_scheduled_at });
+    const text = buildText({ firstName: firstName, businessName: lead.name, whenIso: lead.meeting_scheduled_at });
 
     let sendJson = {};
     try {
-        const r = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: fromName + ' <' + fromEmail + '>', to: [to], reply_to: replyTo, subject: subject, html: html })
-        });
-        sendJson = await r.json().catch(function () { return {}; });
-        if (!r.ok) return res.status(502).json({ error: 'send_failed', detail: sendJson.message || ('resend ' + r.status) });
+        const { sendTransactional } = require('./_gmail_send');
+        const r = await sendTransactional({ to: to, subject: subject, text: text, replyTo: replyTo });
+        sendJson = { id: r.id, via: r.via };
+        if (r.err) return res.status(502).json({ error: 'send_failed', detail: r.err });
     } catch (e) {
         return res.status(502).json({ error: 'send_failed', detail: String(e.message || e) });
     }

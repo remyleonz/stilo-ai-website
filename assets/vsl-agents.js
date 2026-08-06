@@ -61,7 +61,8 @@
         // Loose match, because David words some niches slightly differently.
         if (/clean|janitor/.test(s)) return 'commercial-cleaning';
         if (/roof/.test(s)) return 'commercial-roofing';
-        if (/staff|recruit|employment|temp agency|talent|nursing agency/.test(s)) return 'staffing';
+        // Must stay identical to agentKey() in api/prospects/_vsl.js.
+        if (/staff|recruit|employment|temp agency|talent|nursing agency|executive search|headhunt/.test(s)) return 'staffing';
         if (/freight|truck|logistic|carrier|3pl|shipping/.test(s)) return 'freight';
         if (/equipment|forklift|industrial|suppl|material handling|crane/.test(s)) return 'industrial-supplies';
         return null;

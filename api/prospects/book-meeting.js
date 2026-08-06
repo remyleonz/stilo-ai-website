@@ -22,83 +22,10 @@ const {
     meetingCodeFromLink: meetMeetingCode, enableAutoTranscription
 } = require('./_google_meet');
 
-function buildEmailHtml(opts) {
-    // STILO-branded confirmation. No em dashes, no AI buzzwords (humanizer rules).
-    // Inline CSS only — every email client murders <style> blocks.
-    const fmt = new Intl.DateTimeFormat('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric',
-        hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
-        timeZone: 'America/New_York'
-    });
-    const whenStr = fmt.format(new Date(opts.whenIso));
-    const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
-    return [
-        '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111;font-size:15px;line-height:1.55;">',
-        '<p>Hi ' + escapeHtml(opts.firstName || 'there') + ',</p>',
-        '<p>Quick confirmation. Our call is locked in for <strong>' + escapeHtml(whenStr) + '</strong>.</p>',
-        '<p>Google Meet link: <a href="' + escapeHtml(opts.meetLink) + '" style="color:#2563EB;">' + escapeHtml(opts.meetLink) + '</a></p>',
-        '<p>What we will cover in 15 minutes:</p>',
-        '<ul style="padding-left:20px;margin:8px 0 16px;">',
-        '<li>What ' + escapeHtml(opts.businessName || 'your business') + ' is doing today vs where the AI agents fit</li>',
-        '<li>The two or three highest-ROI use cases for your specific setup</li>',
-        '<li>What a 30 day pilot looks like, with numbers</li>',
-        '</ul>',
-        '<p>If anything comes up before then, just reply to this email and we will reschedule.</p>',
-        '<p>Talk soon,<br/>' + escapeHtml(senderName) + '</p>',
-        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;" />',
-        '<table cellpadding="0" cellspacing="0" border="0" style="font-size:13px;color:#374151;">',
-        '<tr><td style="padding-right:12px;"><strong style="color:#111;">' + escapeHtml(senderName) + '</strong><br/>STILO AI Partners<br/><a href="https://stiloaipartners.com" style="color:#2563EB;text-decoration:none;">stiloaipartners.com</a> · +1 786 876 8677</td></tr>',
-        '</table>',
-        '</div>'
-    ].join('');
-}
 function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
-}
-
-// Prospect-facing booking confirmation.
-//
-// MUST go through sendTransactional (Gmail first, Resend only as a fallback).
-// This used to POST straight to Resend, which put a BOOKED prospect's
-// confirmation on the exact same sending reputation as the cold campaign that
-// runs at 30-250/day. That is the failure the _gmail_send.js split exists to
-// prevent, and it silently bypassed it here: the reminders were insulated, the
-// confirmation itself was not. See _gmail_send.js for the full reasoning.
-//
-// Plain text, no HTML: sendTransactional sends text only, which is what keeps
-// these landing in Primary rather than Promotions.
-async function sendConfirmationEmail(opts) {
-    if (!opts.toEmail) return { skipped: 'no_lead_email' };
-    const { sendTransactional } = require('./_gmail_send');
-    const replyTo = process.env.STILO_REPLY_TO || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
-    const whenStr = opts.whenIso
-        ? new Intl.DateTimeFormat('en-US', {
-            weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric',
-            minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York'
-        }).format(new Date(opts.whenIso))
-        : '';
-    const text = [
-        'Hi ' + (opts.firstName || 'there') + ',',
-        '',
-        whenStr ? 'You are confirmed for ' + whenStr + '.' : 'Your call is confirmed.',
-        opts.meetLink ? '' : null,
-        opts.meetLink ? 'Google Meet: ' + opts.meetLink : null,
-        '',
-        'If anything comes up, just reply to this email and we will move it.',
-        '',
-        'Talk soon,',
-        process.env.STILO_SENDER_NAME || 'Remy Leon',
-        'STILO AI Partners'
-    ].filter(function (l) { return l !== null; }).join('\n');
-    const r = await sendTransactional({
-        to: opts.toEmail,
-        subject: 'Confirmed: ' + (opts.businessName || 'STILO discovery call'),
-        text: text,
-        replyTo: replyTo
-    });
-    return { status: r.status, id: r.id, via: r.via, error: r.err || null, skipped: r.skip };
 }
 
 // Internal heads-up to the STILO inbox on every booking. Google never emails the
@@ -323,14 +250,13 @@ module.exports = async function handler(req, res) {
             console.error('[book-meeting] auto-transcription setup failed for lead=' + leadId + ':', (e && e.message) || e);
         }
 
-        // Branded confirmation email (best-effort; don't fail booking if email fails)
-        let emailResult = null;
-        try {
-            emailResult = await sendConfirmationEmail({
-                toEmail: ownerEmail, firstName: ownerFirstName, businessName: businessName,
-                whenIso: startIso, meetLink: meetLink || ''
-            });
-        } catch (e) { emailResult = { error: String(e.message || e) }; }
+        // NO confirmation email here. There is exactly one, sendConfirmationForLead()
+        // further down, which is the same function the cron calls so the two can
+        // never drift. This spot used to send a SECOND, near-identical "Confirmed:"
+        // email, so every booked prospect got two confirmations minutes apart from
+        // the same person. Removed 2026-08-06. If you are adding a prospect-facing
+        // email to the booking flow, add it to _send_confirmation.js instead.
+        const emailResult = { skipped: 'superseded_by_send_confirmation' };
 
         // Second, STILO-branded "confirm your meeting" email with the VSL button.
         // No-op unless VSL_FLOW_ENABLED === 'true' (guarded inside sendVslConfirmEmail),

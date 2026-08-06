@@ -93,7 +93,9 @@ function agentKey(a) {
     // prospect receives no link at all.
     if (/clean|janitor/.test(k)) return 'commercial-cleaning';
     if (/roof/.test(k)) return 'commercial-roofing';
-    if (/staff|recruit|employment|temp agency|talent|nursing agency/.test(k)) return 'staffing';
+    // 'executive search' and 'headhunt' added 2026-08-06: 17 leads with real
+    // emails sat in "Executive search firm" and were being skipped as no_niche.
+    if (/staff|recruit|employment|temp agency|talent|nursing agency|executive search|headhunt/.test(k)) return 'staffing';
     if (/freight|truck|logistic|carrier|3pl|shipping/.test(k)) return 'freight';
     if (/equipment|forklift|industrial|suppl|material handling|crane/.test(k)) return 'industrial-supplies';
     return DEFAULT_AGENT;   // null. Callers MUST handle it; see sendConfirmEmail.
