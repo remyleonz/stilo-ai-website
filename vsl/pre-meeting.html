@@ -158,10 +158,7 @@
   <div class="container">
     <h1>You are confirmed.<br>Here is who you are meeting.</h1>
     <div class="videowrap">
-      <video controls playsinline preload="metadata" poster="/assets/vsl/confirmation-poster.jpg" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000" onplay="vslEvent('play')">
-        <source src="https://zsrskphpvgautfgklgxf.supabase.co/storage/v1/object/public/public-video/confirmation-vsl.mp4" type="video/mp4">
-        Your browser cannot play this video. <a href="https://zsrskphpvgautfgklgxf.supabase.co/storage/v1/object/public/public-video/confirmation-vsl.mp4">Download it instead.</a>
-      </video>
+      <button type="button" class="vsl-play" style="background-image:url(https://cdn.loom.com/sessions/thumbnails/cd10f731ce3241a49fbae438a6f26183-f45f949535d5ad0a.jpg)" onclick="startVsl(this)" data-loom="cd10f731ce3241a49fbae438a6f26183" data-agent="confirmation" aria-label="Play the confirmation walkthrough"><span class="vsl-orb"></span></button>
     </div>
     <div class="ctaband">
       <h2>See you on the call</h2>
@@ -323,9 +320,8 @@
 })();
 </script>
 <script>
-function vslEvent(ev){try{var q=new URLSearchParams(location.search);fetch('/api/public/vsl-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,agent:'confirmation',lid:q.get('lid'),flow:'confirm',path:location.pathname})});}catch(e){}}
-function startVsl(btn){var w=btn.parentNode,id=btn.getAttribute("data-loom"),agent=btn.getAttribute("data-agent");var q=new URLSearchParams(location.search),lid=q.get("lid"),flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic");w.innerHTML='<iframe src="https://www.loom.com/embed/'+id+'?autoplay=1&hide_owner=true&hide_share=true&hide_title=true" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>';try{if(window.va)window.va("event",{name:"vsl_play",agent:agent});}catch(e){}try{fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"play",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}}
-(function(){try{var agent="confirmation";var q=new URLSearchParams(location.search),lid=q.get("lid"),flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic");fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}})();
+function startVsl(btn){var w=btn.parentNode,id=btn.getAttribute("data-loom"),agent=btn.getAttribute("data-agent");var q=new URLSearchParams(location.search),lid=q.get("lid"),flow="confirm";w.innerHTML='<iframe src="https://www.loom.com/embed/'+id+'?autoplay=1&hide_owner=true&hide_share=true&hide_title=true" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>';try{if(window.va)window.va("event",{name:"vsl_play",agent:agent});}catch(e){}try{fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"play",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}}
+(function(){try{var a=document.querySelector(".vsl-play"),agent=a?a.getAttribute("data-agent"):null;var q=new URLSearchParams(location.search),lid=q.get("lid"),flow="confirm";fetch("/api/public/vsl-event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"view",agent:agent,lid:lid,flow:flow,path:location.pathname})});}catch(e){}})();
 </script>
 <script src="/vsl/_confirm.js"></script>
 <script>

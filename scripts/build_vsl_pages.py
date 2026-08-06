@@ -30,12 +30,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(ROOT, "agents", "receptionist.html")
 OUTDIR = os.path.join(ROOT, "vsl")
 
-# Confirmation video. Served from Supabase Storage, not Vercel: the source is a
-# 90MB screen recording and Vercel static assets are the wrong place for it.
-CONFIRM_VIDEO = os.environ.get(
-    "CONFIRM_VSL_URL",
-    "https://zsrskphpvgautfgklgxf.supabase.co/storage/v1/object/public/public-video/confirmation-vsl.mp4",
-)
+# Confirmation video. Re-recorded on Loom 2026-08-06, so it now uses the same
+# click-to-play player as the five niche pages instead of a self-hosted mp4.
+CONFIRM_LOOM = os.environ.get("CONFIRM_VSL_LOOM", "cd10f731ce3241a49fbae438a6f26183")
+CONFIRM_THUMB = os.environ.get("CONFIRM_VSL_THUMB", "f45f949535d5ad0a")
 
 NICHES = [
     dict(
@@ -201,13 +199,12 @@ def build_confirmation(tpl):
         '  <div class="container">\n'
         '    <h1>You are confirmed.<br>Here is who you are meeting.</h1>\n'
         '    <div class="videowrap">\n'
-        '      <video controls playsinline preload="metadata" poster="/assets/vsl/confirmation-poster.jpg" '
-        'style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000" '
-        'onplay="vslEvent(\'play\')">\n'
-        '        <source src="' + CONFIRM_VIDEO + '" type="video/mp4">\n'
-        '        Your browser cannot play this video. '
-        '<a href="' + CONFIRM_VIDEO + '">Download it instead.</a>\n'
-        '      </video>\n'
+        '      <button type="button" class="vsl-play" '
+        'style="background-image:url(https://cdn.loom.com/sessions/thumbnails/'
+        + CONFIRM_LOOM + '-' + CONFIRM_THUMB + '.jpg)" '
+        'onclick="startVsl(this)" data-loom="' + CONFIRM_LOOM + '" '
+        'data-agent="confirmation" aria-label="Play the confirmation walkthrough">'
+        '<span class="vsl-orb"></span></button>\n'
         '    </div>\n'
         '    <div class="ctaband">\n'
         '      <h2>See you on the call</h2>\n'
@@ -247,18 +244,12 @@ def build_confirmation(tpl):
                s, count=1, flags=re.S)
 
     s = s.replace('src="/agents/_confirm.js"', 'src="/vsl/_confirm.js"')
-    # The Loom player is unused here; keep a stub so the shared event call resolves.
-    # Page-view and play must both be attributed to the confirmation page. The
-    # inherited view tracker reads data-agent off .vsl-play, which does not exist
-    # here (a plain <video> replaced it), so it was posting agent:null.
-    s = s.replace('var a=document.querySelector(".vsl-play"),agent=a?a.getAttribute("data-agent"):null;',
-                  'var agent="confirmation";', 1)
-    s = s.replace("function startVsl(btn){",
-                  "function vslEvent(ev){try{var q=new URLSearchParams(location.search);"
-                  "fetch('/api/public/vsl-event',{method:'POST',"
-                  "headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,"
-                  "agent:'confirmation',lid:q.get('lid'),flow:'confirm',path:location.pathname})});}catch(e){}}\n"
-                  "function startVsl(btn){", 1)
+    # This page IS the confirmation step, so every event is flow=confirm. The
+    # inherited expression keys off ?confirm=1, which is only ever set on the
+    # niche pages, so without this both view and play post flow=organic and the
+    # confirmation funnel reads empty. Applies to the view tracker and startVsl.
+    s = s.replace('flow=q.get("confirm")==="1"?"confirm":(lid?"campaign":"organic")',
+                  'flow="confirm"')
     return s
 
 
