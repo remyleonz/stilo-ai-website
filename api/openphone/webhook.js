@@ -464,7 +464,11 @@ module.exports = async function handler(req, res) {
     // phone-line map below. Keep this in sync with `list-users` in Quo.
     const QUO_USER_ID_TO_EMAIL = {
         'UShj8EpsSW': 'remyleon@stiloaipartners.com',         // Remy Leon (owner)
-        'USxSahMbat': 'huronfire5@gmail.com',                 // Luke Huron
+        // Luke Huron resigned 2026-08-06. KEPT deliberately: a webhook that
+        // arrives late for one of his 904 calls must still attribute to him, and
+        // dropping the id would silently re-credit it to whoever holds the line
+        // next. His sdr_users row is inactive, so nothing routes TO him.
+        'USxSahMbat': 'huronfire5@gmail.com',                 // Luke Huron (departed)
         // Jack Maguire removed (terminated). His old line +17869819302 is now
         // Jorge's; Jorge has his own Quo seat below.
         'UScVtcqU89': 'ayesjorge911@gmail.com',              // Jorge Ayes

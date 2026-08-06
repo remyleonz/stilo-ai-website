@@ -24,8 +24,10 @@ const { createClient } = require('@supabase/supabase-js');
 const storage = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 const leadsDb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });
 
-const REP_EMAIL = { 'rep-a': 'huronfire5@gmail.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'ayesjorge911@gmail.com', 'rep-d': 'georgegutierrez446@gmail.com', 'dc': 'davidcoira@stiloaipartners.com', 'rl': 'remyleon@stiloaipartners.com' };
-const REP_NAME = { 'rep-a': 'Luke', 'rep-b': 'Alejandro', 'rep-c': 'Jorge', 'rep-d': 'George', 'dc': 'David', 'rl': 'Remy' };
+// rep-a was Luke Huron; he resigned 2026-08-06 and the folder is unowned until
+// the next hire. Pointed at Remy so its briefs are not invisible.
+const REP_EMAIL = { 'rep-a': 'remyleon@stiloaipartners.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'ayesjorge911@gmail.com', 'rep-d': 'georgegutierrez446@gmail.com', 'dc': 'davidcoira@stiloaipartners.com', 'rl': 'remyleon@stiloaipartners.com' };
+const REP_NAME = { 'rep-a': 'Remy (unowned)', 'rep-b': 'Alejandro', 'rep-c': 'Jorge', 'rep-d': 'George', 'dc': 'David', 'rl': 'Remy' };
 const NAME_BY_EMAIL = {}; Object.keys(REP_EMAIL).forEach(f => NAME_BY_EMAIL[REP_EMAIL[f]] = REP_NAME[f]);
 const SDR_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d'];
 const ALL_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'dc', 'rl'];

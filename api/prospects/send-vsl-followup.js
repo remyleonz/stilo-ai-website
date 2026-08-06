@@ -130,6 +130,7 @@ module.exports = async function handler(req, res) {
             await sb.from('lead_messages').insert({
                 lead_id: ld.id, direction: 'outbound', channel: 'sms',
                 subject: 'Watched the video, meeting restated',
+                body: sms,
                 body_preview: sms.slice(0, 300),
                 to_address: phone, from_address: (sr && sr.from) || fromLine,
                 provider: 'openphone',

@@ -7618,6 +7618,12 @@
             mode = mode || 'callable';
             prospectState.currentLeadId = leadId;
             callbackState = { selectedIso: null, expandedDay: null };  // fresh picker per lead
+            // Fresh stepper per lead too. It caches an expanded step, expanded
+            // message bodies, and a fetched confirmation-email preview, all keyed
+            // to one lead. The SDR dashboard already did this; admin never did,
+            // which was harmless when the panel only held a stage name and is not
+            // harmless now that it holds another prospect's email.
+            try { NURTURE_STEPPER.reset(); } catch (_) {}
             history.replaceState(null, '', '#lead=' + encodeURIComponent(leadId));
             var drawer = document.getElementById('prospectDrawer');
             var overlay = document.getElementById('prospectDrawerOverlay');
@@ -7991,6 +7997,27 @@
         });
         function renderNurtureStepper(d) { return NURTURE_STEPPER.render(d); }
 
+        // A lead retired in a named bulk batch (a rep left, a list was killed)
+        // looks identical to a live lead in this drawer otherwise, which is how
+        // you end up dialing a lead you deliberately shelved. Say it at the top,
+        // say WHY, and give the one-line way back.
+        var ARCHIVE_BATCH_LABELS = {
+            'luke-huron-2026-08-06': 'Luke Huron resigned Aug 6, 2026. His board was retired rather than redistributed. Meetings, callbacks and engaged leads were pulled out first and reassigned to active reps.'
+        };
+        function archivedBatchHtml(d) {
+            var b = d && d.archived_batch;
+            if (!b) return '';
+            var why = ARCHIVE_BATCH_LABELS[b] || 'Retired in a bulk batch.';
+            return '<div style="margin-bottom:16px;padding:12px 15px;background:rgba(239,68,68,0.07);'
+                + 'border:1px solid rgba(239,68,68,0.3);border-radius:11px;">'
+                + '<div style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--red,#ef4444);margin-bottom:5px;">'
+                  + 'Archived &middot; ' + escapeAdminHtml(b) + '</div>'
+                + '<div style="font-size:12.5px;color:var(--text-secondary);line-height:1.55;">' + escapeAdminHtml(why) + '</div>'
+                + '<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">'
+                  + 'Out of every dial queue until <code>archived_batch</code> is cleared. Nothing was deleted.</div>'
+                + '</div>';
+        }
+
         function renderProspectDrawer(data, mode) {
             var d = data || {};
             window.__lastProspectData = d;
@@ -8211,6 +8238,7 @@
                   + closeDealCta
                 + '</div>'
 
+                + archivedBatchHtml(d)
                 + meetingCardHtml
                 + '<div id="nurtureStepperHost">' + (mode !== 'emailable' ? renderNurtureStepper(d) : '') + '</div>'
                 + phoneCardHtml

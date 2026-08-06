@@ -91,8 +91,15 @@ async function fetchOutboundEmailStats(leadId) {
 // prospect ever opened either. This returns the real artifacts.
 //
 // Two sources, kept separate on purpose:
-//   messages  - what we sent (prospecting.lead_messages), including body preview
+//   messages  - what we sent (prospecting.lead_messages), full body included
 //   vsl       - what they did (public.vsl_events), the engagement signal
+//
+// `body` is selected alongside `body_preview` deliberately. A preview is a
+// summary line, and for the confirmation and reminder emails that line was a
+// DESCRIPTION ("Confirmation + VSL link for Friday") rather than the words the
+// prospect read. Reading the actual email in the panel means never having to go
+// find it in a mailbox, and it is the only way to click the link we sent.
+// Bodies stay short (plain-text sales copy), so the extra bytes are noise.
 async function fetchNurtureDetail(leadId) {
     const empty = { messages: [], vsl: [] };
     if (leadId == null || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return empty;
@@ -100,7 +107,7 @@ async function fetchNurtureDetail(leadId) {
     try {
         const sb = leadsClient();
         const { data } = await sb.from('lead_messages')
-            .select('id,direction,channel,variant,subject,body_preview,to_address,from_address,status,sent_at,delivered_at,opened_at,clicked_at,replied_at,bounced_at')
+            .select('id,direction,channel,variant,subject,body,body_preview,to_address,from_address,sent_by,provider,status,sent_at,delivered_at,opened_at,clicked_at,replied_at,bounced_at')
             .eq('lead_id', leadId)
             .order('sent_at', { ascending: false, nullsFirst: false })
             .limit(200);
@@ -110,7 +117,7 @@ async function fetchNurtureDetail(leadId) {
         // vsl_events lives in public, not prospecting.
         const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
         const { data } = await pub.from('vsl_events')
-            .select('event,flow,agent,created_at')
+            .select('event,flow,agent,path,created_at')
             .eq('lead_id', leadId)
             .order('created_at', { ascending: true })
             .limit(500);

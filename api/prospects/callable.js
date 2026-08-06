@@ -39,7 +39,13 @@ async function callableFromSupabase(opts) {
         // the lead reappears. This is what keeps un-briefed leads off the boards.
         .not('pitch_agent', 'is', null)
         .or('owner_phone.not.is.null,phone.not.is.null')
-        .or('do_not_call.is.null,do_not_call.eq.false');
+        .or('do_not_call.is.null,do_not_call.eq.false')
+        // Bulk-retired leads never come back into a dial queue on their own.
+        // archived_batch names WHY a batch was retired (e.g. luke-huron-2026-08-06),
+        // and it is checked here rather than relying on stage, because this query
+        // does not filter on stage at all. Reviving a batch is a deliberate
+        // UPDATE that clears the column, not an accident of reassignment.
+        .is('archived_batch', null);
 
     q = gateToCurrentOffer(q);
 

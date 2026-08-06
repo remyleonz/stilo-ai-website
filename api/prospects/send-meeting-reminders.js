@@ -178,6 +178,7 @@ module.exports = async function handler(req, res) {
             await sb.from('lead_messages').insert({
                 lead_id: ld.id, direction: 'outbound', channel: 'sms',
                 subject: 'T-15 meeting reminder',
+                body: sms,
                 body_preview: sms.slice(0, 300),
                 to_address: phone, from_address: (sr && sr.from) || fromLine,
                 provider: 'openphone', status: 'sent',
@@ -188,6 +189,10 @@ module.exports = async function handler(req, res) {
             await sb.from('lead_messages').insert({
                 lead_id: ld.id, direction: 'outbound', channel: 'email',
                 subject: 'Your STILO meeting starts in ~15 minutes',
+                // Same reason as _send_confirmation.js: the preview described the
+                // email instead of being it, so the Meet link we sent was not
+                // readable or clickable from the lead panel.
+                body: body,
                 body_preview: 'T-15 reminder + Meet link for ' + when,
                 to_address: email, from_address: 'remyleon@stiloaipartners.com',
                 // Read the provider off the send result. This was hardcoded to

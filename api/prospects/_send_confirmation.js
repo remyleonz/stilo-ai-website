@@ -171,6 +171,12 @@ async function sendConfirmationForLead(sb, pub, ld, opts) {
         await sb.from('lead_messages').insert({
             lead_id: ld.id, direction: 'outbound', channel: 'email',
             subject: subject,
+            // Store the WORDS, not a description of them. body_preview used to be
+            // the only thing written here, and it said "Confirmation + VSL link
+            // for Friday" — which meant the lead panel could never show the email
+            // the prospect actually read, and the VSL link we sent them was not
+            // clickable anywhere in the dashboard.
+            body: body,
             body_preview: 'Confirmation + VSL link for ' + when,
             to_address: email,
             from_address: 'remyleon@stiloaipartners.com',
@@ -184,6 +190,7 @@ async function sendConfirmationForLead(sb, pub, ld, opts) {
         await sb.from('lead_messages').insert({
             lead_id: ld.id, direction: 'outbound', channel: 'sms',
             subject: 'Meeting booked, watch the video',
+            body: sms,
             body_preview: sms.slice(0, 300),
             to_address: phone, from_address: (sr && sr.from) || fromLine,
             provider: 'openphone',

@@ -2,9 +2,17 @@
  * GET /api/prospects/dead?limit=200
  *
  * Dead pool: leads out of the cold-call lifecycle — a terminal outcome
- * (do_not_call / dnc_request / wrong_number / disconnected) OR dialed 3+
- * times with no result. Reads Supabase prospecting.leads directly (the old
- * forward to David's Cloud Run hangs under load).
+ * (do_not_call / dnc_request / wrong_number / disconnected), OR dialed 3+
+ * times with no result, OR retired in a named bulk batch (archived_batch).
+ * Reads Supabase prospecting.leads directly (the old forward to David's Cloud
+ * Run hangs under load).
+ *
+ * Archived batches are the "folder" case: a rep leaves and their untouched
+ * board is retired as one named set (luke-huron-2026-08-06) rather than
+ * disappearing into a rep account nobody logs into. They belong in this view
+ * because they ARE out of the lifecycle, and keeping them findable is the whole
+ * point of naming the batch. `?batch=<slug>` narrows to one, and
+ * `?batch=none` excludes archived rows to get the old behaviour back.
  *
  * SDR scoping: SDR callers are force-scoped to their own email; admins may
  * pass ?assigned_to=<sdr_key|email>.
@@ -34,9 +42,18 @@ module.exports = async function handler(req, res) {
         db: { schema: 'prospecting' }
     });
 
-    let q = sb.from('leads')
-        .select('*')
-        .or('last_called_outcome.in.(' + TERMINAL.join(',') + '),and(call_attempts.gte.3,last_called_outcome.is.null)');
+    const batch = (req.query && req.query.batch) ? String(req.query.batch) : null;
+
+    let q = sb.from('leads').select('*');
+    if (batch && batch !== 'none') {
+        // One named batch, on its own. Nothing else applies.
+        q = q.eq('archived_batch', batch);
+    } else if (batch === 'none') {
+        q = q.is('archived_batch', null)
+             .or('last_called_outcome.in.(' + TERMINAL.join(',') + '),and(call_attempts.gte.3,last_called_outcome.is.null)');
+    } else {
+        q = q.or('last_called_outcome.in.(' + TERMINAL.join(',') + '),and(call_attempts.gte.3,last_called_outcome.is.null),archived_batch.not.is.null');
+    }
     if (sdrEmail) q = q.eq('assigned_to', sdrEmail);
 
     const { data, error } = await q

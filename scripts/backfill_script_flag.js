@@ -79,7 +79,9 @@ async function loadManifest() {
 // live leads to a deactivated account. rep-d (George, hired 2026-07-24) was
 // missing entirely. Keep this in sync with prospecting.reconcile_brief_assignments().
 const REP_EMAIL = {
-    'rep-a': 'huronfire5@gmail.com',
+    // rep-a was Luke Huron, who resigned 2026-08-06. Unowned until the next
+    // hire takes the folder. Routed to Remy so the briefs stay visible.
+    'rep-a': 'remyleon@stiloaipartners.com',
     'rep-b': 'aleb1027@gmail.com',
     'rep-c': 'ayesjorge911@gmail.com',
     'rep-d': 'georgegutierrez446@gmail.com',

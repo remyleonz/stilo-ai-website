@@ -46,9 +46,10 @@ const { createClient } = require('@supabase/supabase-js');
 const { signLead } = require('../public/_token');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
+// Active reps only. A departed rep left in here keeps getting campaign leads
+// routed to a board nobody opens. Luke Huron removed 2026-08-06 (resigned).
 const REPS = [
     'aleb1027@gmail.com',
-    'huronfire5@gmail.com',
     'ayesjorge911@gmail.com',
     'georgegutierrez446@gmail.com',
     'remyleon@stiloaipartners.com',

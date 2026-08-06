@@ -20,6 +20,20 @@
  * the current stage: that quietly asserts steps we never performed, and the gaps
  * are the useful part. A lead can be Confirmed with no Watched (they replied to
  * the SMS instead of opening the page) and that is worth seeing, not smoothing.
+ *
+ * READING the sequence, not just auditing it (2026-08): each step opens to the
+ * FULL text of every email and SMS we sent, with the links live so you can click
+ * the VSL page the prospect was sent and see what they saw. Under each message
+ * is its delivery trail (sent, delivered, opened, clicked, replied, bounced) with
+ * real timestamps. "All activity" flips the panel to every message and page hit
+ * on the lead, including the ones no step claims — reminder emails, campaign
+ * sends, inbound replies — because those were invisible before and they are
+ * usually the interesting ones.
+ *
+ * On open tracking: cold sends run with the pixel OFF on purpose (it is a spam
+ * signal). So a missing `opened_at` means UNKNOWN, not "they ignored it", and
+ * this file says so rather than showing a silently empty pill. The VSL page-view
+ * events are the honest engagement signal.
  */
 (function (global) {
     'use strict';
@@ -80,7 +94,152 @@
         }
     ];
 
-    var OPEN = null;   // which step is expanded. null = collapsed.
+    var OPEN = null;    // which step is expanded. null = collapsed.
+    var ALL = false;    // "All activity" view: every message + page hit, ignoring steps.
+    var PREVIEW = null; // { leadId, subject, body } from confirmation-preview.js
+    var EXPANDED = {};  // message id -> true, for bodies long enough to be clamped
+
+    var URL_RE = /https?:\/\/[^\s<>"')\]]+/g;
+
+    // Escape, then turn bare URLs into real anchors. Escaping the whole string
+    // first and regexing the RESULT would work by luck until a URL carried a
+    // query string, because `&` is `&amp;` by then and the match would stop
+    // short. So split the RAW text and escape each piece for its own context.
+    function linkify(text) {
+        var s = String(text == null ? '' : text);
+        var out = '', last = 0, m;
+        URL_RE.lastIndex = 0;
+        while ((m = URL_RE.exec(s)) !== null) {
+            var url = m[0];
+            // Trailing sentence punctuation is not part of the link.
+            var trail = '';
+            while (/[.,;:!?)]$/.test(url)) { trail = url.slice(-1) + trail; url = url.slice(0, -1); }
+            out += A.escape(s.slice(last, m.index));
+            out += '<a href="' + A.escape(url) + '" target="_blank" rel="noopener noreferrer"'
+                + ' style="color:var(--blue,#2563EB);text-decoration:underline;text-underline-offset:2px;word-break:break-all;"'
+                + ' onclick="event.stopPropagation();">' + A.escape(url) + '</a>';
+            out += A.escape(trail);
+            last = m.index + m[0].length;
+        }
+        return out + A.escape(s.slice(last));
+    }
+
+    function pill(txt, color) {
+        return '<span style="display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:600;'
+            + 'background:rgba(255,255,255,.05);color:' + color + ';margin:0 5px 4px 0;">' + txt + '</span>';
+    }
+
+    // Sent -> delivered -> opened -> clicked -> replied, plus bounced as a
+    // terminal red. Absent stages are shown greyed rather than omitted, so the
+    // gap between "delivered but never opened" and "we never tracked opens"
+    // stays visible instead of both rendering as nothing.
+    function deliveryTrail(m) {
+        // A message they sent US has no delivery trail. Rendering "opened /
+        // clicked / replied" against their own reply reads as five things we
+        // failed to do, when the reply is the win.
+        if (m.direction === 'inbound') return '';
+        var steps = [
+            { k: 'sent', label: 'sent', at: m.sent_at, on: '#94a3b8' },
+            { k: 'delivered', label: 'delivered', at: m.delivered_at, on: '#22c55e' },
+            { k: 'opened', label: 'opened', at: m.opened_at, on: '#22c55e' },
+            { k: 'clicked', label: 'clicked', at: m.clicked_at, on: '#22c55e' },
+            { k: 'replied', label: 'replied', at: m.replied_at, on: '#22c55e' }
+        ];
+        // SMS has no open/click concept at all: showing dead pills for them reads
+        // as a failure that never existed.
+        if (m.channel === 'sms') steps = steps.filter(function (s) { return s.k !== 'opened' && s.k !== 'clicked'; });
+        var html = steps.map(function (s) {
+            if (s.at) return pill(s.label + ' ' + A.fmtTime(s.at), s.on);
+            return pill(s.label, 'var(--text-muted)');
+        }).join('');
+        if (m.bounced_at) html += pill('BOUNCED ' + A.fmtTime(m.bounced_at), '#ef4444');
+        // Anything the trail above does not already say. status='bounced' next to
+        // a BOUNCED pill is the same fact twice.
+        var said = { sent: 1, delivered: 1, bounced: 1, received: 1 };
+        if (m.status && !said[m.status]) html += pill(A.escape(m.status), 'var(--text-secondary)');
+        // Cold mail ships without a tracking pixel by design, so "no open" is not
+        // evidence of anything. Say that instead of letting a grey pill imply it.
+        if (m.channel === 'email' && !m.opened_at && !m.bounced_at) {
+            html += '<span style="font-size:10px;color:var(--text-muted);">opens not tracked on this send</span>';
+        }
+        return '<div style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;">' + html + '</div>';
+    }
+
+    function messageCard(m) {
+        var body = m.body || m.body_preview || '';
+        var isEmail = m.channel === 'email';
+        var inbound = m.direction === 'inbound';
+        var long = body.length > 700;
+        var open = long && EXPANDED[m.id];
+        var accent = inbound ? '#22c55e' : (m.channel === 'sms' ? '#2563eb' : '#5A7BE8');
+        // Some senders historically wrote a DESCRIPTION into body_preview instead
+        // of the copy. Flagging it beats rendering the description as if it were
+        // the email, which is how you end up quoting words nobody ever sent.
+        // Email only: an SMS preview is capped at 300 chars, which is the whole
+        // text for every message we send, so the warning there is just noise.
+        var summaryOnly = !m.body && !!m.body_preview && isEmail;
+
+        return '<div style="border:1px solid ' + (inbound ? 'rgba(34,197,94,.35)' : 'var(--border-subtle)') + ';border-radius:9px;'
+            + 'padding:11px 13px;margin-bottom:9px;background:var(--bg-input);">'
+            + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:6px;">'
+              + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:' + accent + ';">'
+                + (inbound ? '&#8592; reply &middot; ' : '') + A.escape(m.channel || 'msg')
+                + (m.variant ? '<span style="font-weight:500;color:var(--text-muted);text-transform:none;letter-spacing:0;"> &middot; ' + A.escape(m.variant) + '</span>' : '')
+              + '</div>'
+              + '<div style="font-size:11px;color:var(--text-tertiary);white-space:nowrap;">' + A.fmtTime(m.sent_at) + '</div>'
+            + '</div>'
+            + (m.subject && isEmail ? '<div style="font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--text-primary);">' + A.escape(m.subject) + '</div>' : '')
+            + (body
+                ? '<div style="font-size:12.5px;color:var(--text-secondary);line-height:1.62;white-space:pre-wrap;word-break:break-word;'
+                    + (long && !open ? 'max-height:190px;overflow:hidden;mask-image:linear-gradient(180deg,#000 65%,transparent);-webkit-mask-image:linear-gradient(180deg,#000 65%,transparent);' : '')
+                    + '">' + linkify(body) + '</div>'
+                : '<div style="font-size:12px;color:var(--text-muted);">No body was stored for this send.</div>')
+            + (long
+                ? '<div onclick="NURTURE_STEPPER.expand(' + JSON.stringify(String(m.id)) + ')" style="margin-top:6px;font-size:11px;font-weight:600;color:var(--blue,#2563EB);cursor:pointer;">'
+                    + (open ? 'Show less' : 'Read full message') + '</div>'
+                : '')
+            + (summaryOnly ? '<div style="margin-top:7px;font-size:10.5px;color:var(--text-muted);font-style:italic;">'
+                + 'Summary line only. Sends after Aug 6, 2026 store the full text.</div>' : '')
+            + '<div style="margin-top:8px;font-size:11px;color:var(--text-tertiary);">'
+              + (inbound ? 'from ' : 'to ') + A.escape((inbound ? m.from_address : m.to_address) || 'unknown')
+              + (m.sent_by ? ' &middot; by ' + A.escape(m.sent_by) : '')
+              + (m.provider ? ' &middot; ' + A.escape(m.provider) : '')
+            + '</div>'
+            + deliveryTrail(m)
+            + '</div>';
+    }
+
+    // Page hits, collapsed per event. Twenty scanner-driven views is one fact,
+    // not twenty rows. The path is a live link: clicking it opens the exact page
+    // the prospect landed on.
+    function eventBlock(evs) {
+        var byEv = {};
+        evs.forEach(function (e) {
+            var k = e.event + '|' + (e.path || '');
+            byEv[k] = byEv[k] || { event: e.event, path: e.path, flow: e.flow, n: 0, first: e.created_at, last: e.created_at };
+            byEv[k].n++;
+            if (new Date(e.created_at) < new Date(byEv[k].first)) byEv[k].first = e.created_at;
+            if (new Date(e.created_at) > new Date(byEv[k].last)) byEv[k].last = e.created_at;
+        });
+        var keys = Object.keys(byEv);
+        if (!keys.length) return '';
+        return '<div style="border:1px solid rgba(34,197,94,.25);border-radius:9px;padding:11px 13px;margin-bottom:9px;background:rgba(34,197,94,.04);">'
+            + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#22c55e;margin-bottom:7px;">What they did</div>'
+            + keys.map(function (k) {
+                var x = byEv[k];
+                return '<div style="margin-bottom:5px;font-size:12px;color:var(--text-secondary);">'
+                    + pill(A.escape(x.event) + (x.n > 1 ? ' &times;' + x.n : ''), '#22c55e')
+                    + (x.path
+                        ? '<a href="' + A.escape(x.path) + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();"'
+                            + ' style="color:var(--blue,#2563EB);text-decoration:underline;text-underline-offset:2px;font-size:11px;">' + A.escape(x.path) + '</a> '
+                        : '')
+                    + '<span style="color:var(--text-tertiary);font-size:11px;">first ' + A.fmtTime(x.first)
+                    + (x.n > 1 ? ' &middot; last ' + A.fmtTime(x.last) : '')
+                    + (x.flow ? ' &middot; ' + A.escape(x.flow) : '') + '</span>'
+                    + '</div>';
+            }).join('')
+            + '</div>';
+    }
 
     function stageIndex(key) {
         for (var i = 0; i < STAGES.length; i++) if (STAGES[i].key === key) return i;
@@ -106,10 +265,24 @@
         return { key: stageFrom(d), derived: true };
     }
 
-    function toggle(key) {
-        OPEN = (OPEN === key) ? null : key;
+    function repaint() {
         var host = document.getElementById(A.hostId);
         if (host) host.innerHTML = render(A.getLead());
+    }
+
+    function toggle(key) {
+        OPEN = (OPEN === key) ? null : key;
+        if (OPEN) ALL = false;
+        repaint();
+    }
+    function toggleAll() {
+        ALL = !ALL;
+        if (ALL) OPEN = null;
+        repaint();
+    }
+    function expand(id) {
+        EXPANDED[id] = !EXPANDED[id];
+        repaint();
     }
 
     // The artifacts for one step: what we sent and what they did with it. All of
@@ -119,50 +292,77 @@
         var evs = (d.nurture_vsl || []).filter(function (e) {
             return stage.events.indexOf(e.event) >= 0 && (stage.key !== 'vsl_watched' || e.flow === 'confirm');
         });
-        if (!msgs.length && !evs.length) {
+        // Oldest first inside a step: you read a sequence forwards.
+        msgs.sort(function (a, b) { return new Date(a.sent_at || 0) - new Date(b.sent_at || 0); });
+
+        // The confirmation email is the one carrying the VSL link, and every send
+        // before Aug 6 2026 stored a description instead of the copy. Rather than
+        // showing nothing, offer the live build of that email for this lead, which
+        // is byte-for-byte what goes out today.
+        var extra = stage.key === 'vsl_sent' ? previewBlock(d) : '';
+
+        if (!msgs.length && !evs.length && !extra) {
             return '<div style="font-size:12px;color:var(--text-muted);padding:10px 2px;">Nothing recorded for this step yet.</div>';
         }
-        var pill = function (txt, color) {
-            return '<span style="display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:600;'
-                + 'background:rgba(255,255,255,.05);color:' + color + ';margin-right:5px;">' + txt + '</span>';
-        };
-        var msgHtml = msgs.map(function (m) {
-            var flags = '';
-            if (m.bounced_at) flags += pill('bounced', '#ef4444');
-            else if (m.status) flags += pill(A.escape(m.status), 'var(--text-secondary)');
-            if (m.opened_at) flags += pill('opened ' + A.fmtTime(m.opened_at), '#10b981');
-            if (m.clicked_at) flags += pill('clicked', '#10b981');
-            if (m.replied_at) flags += pill('replied', '#10b981');
-            return '<div style="border:1px solid var(--border-subtle);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:var(--bg-input);">'
-                + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:5px;">'
-                + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:' + (m.channel === 'sms' ? '#2563eb' : '#5A7BE8') + ';">'
-                + A.escape(m.channel || 'msg') + '</div>'
-                + '<div style="font-size:11px;color:var(--text-tertiary);white-space:nowrap;">' + A.fmtTime(m.sent_at) + '</div></div>'
-                + (m.subject ? '<div style="font-size:12px;font-weight:600;margin-bottom:3px;">' + A.escape(m.subject) + '</div>' : '')
-                + (m.body_preview ? '<div style="font-size:12px;color:var(--text-secondary);line-height:1.5;white-space:pre-wrap;">' + A.escape(m.body_preview) + '</div>' : '')
-                + '<div style="margin-top:7px;font-size:11px;color:var(--text-tertiary);">'
-                + (m.to_address ? 'to ' + A.escape(m.to_address) + ' · ' : '') + flags + '</div>'
+        return '<div style="padding:10px 2px 2px;">' + msgs.map(messageCard).join('') + eventBlock(evs) + extra + '</div>';
+    }
+
+    // Every message and every page hit on the lead, in one column, oldest first.
+    // The steps deliberately only surface the variants they own, which hid the
+    // T-15 reminders, the campaign sends, and every inbound reply.
+    function allActivity(d) {
+        var msgs = (d.nurture_messages || []).slice()
+            .sort(function (a, b) { return new Date(a.sent_at || 0) - new Date(b.sent_at || 0); });
+        var evs = (d.nurture_vsl || []);
+        if (!msgs.length && !evs.length) {
+            return '<div style="font-size:12px;color:var(--text-muted);padding:10px 2px;">No messages or page hits recorded on this lead.</div>';
+        }
+        var counts = msgs.reduce(function (acc, m) {
+            acc[m.direction === 'inbound' ? 'in' : (m.channel === 'sms' ? 'sms' : 'email')]++;
+            return acc;
+        }, { email: 0, sms: 0, in: 0 });
+        return '<div style="padding:10px 2px 2px;">'
+            + '<div style="font-size:11px;color:var(--text-tertiary);margin-bottom:9px;">'
+                + counts.email + ' emails &middot; ' + counts.sms + ' texts &middot; ' + counts.in + ' replies &middot; '
+                + evs.length + ' page hits</div>'
+            + msgs.map(messageCard).join('')
+            + eventBlock(evs)
+            + '</div>';
+    }
+
+    // Lazily fetched, so opening a step costs nothing until you ask for it.
+    function previewBlock(d) {
+        var id = d && d.id;
+        if (id == null) return '';
+        if (PREVIEW && PREVIEW.leadId === id) {
+            if (PREVIEW.error) {
+                return '<div style="font-size:11.5px;color:var(--red,#ef4444);padding:4px 2px;">Could not build the preview: ' + A.escape(PREVIEW.error) + '</div>';
+            }
+            return '<div style="border:1px dashed var(--border-medium);border-radius:9px;padding:11px 13px;">'
+                + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);margin-bottom:6px;">'
+                    + 'Confirmation email as it goes out today</div>'
+                + '<div style="font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--text-primary);">' + A.escape(PREVIEW.subject || '') + '</div>'
+                + '<div style="font-size:12.5px;color:var(--text-secondary);line-height:1.62;white-space:pre-wrap;word-break:break-word;">'
+                    + linkify(PREVIEW.body || '') + '</div>'
+                + '<div style="margin-top:7px;font-size:10.5px;color:var(--text-muted);font-style:italic;">'
+                    + 'Rebuilt live from this lead. Older sends stored only a summary line, so this is the copy, not a transcript of that exact send.</div>'
                 + '</div>';
-        }).join('');
-        // Collapse repeat events into a count: 20 scanner-driven views is one
-        // fact, not twenty rows.
-        var byEv = {};
-        evs.forEach(function (e) {
-            byEv[e.event] = byEv[e.event] || { n: 0, first: e.created_at, last: e.created_at };
-            byEv[e.event].n++;
-            if (new Date(e.created_at) > new Date(byEv[e.event].last)) byEv[e.event].last = e.created_at;
-        });
-        var evHtml = Object.keys(byEv).length
-            ? '<div style="font-size:12px;color:var(--text-secondary);padding:2px;">'
-                + Object.keys(byEv).map(function (k) {
-                    var x = byEv[k];
-                    return '<div style="margin-bottom:3px;">' + pill(A.escape(k) + (x.n > 1 ? ' ×' + x.n : ''), '#10b981')
-                        + '<span style="color:var(--text-tertiary);font-size:11px;">first ' + A.fmtTime(x.first)
-                        + (x.n > 1 ? ' · last ' + A.fmtTime(x.last) : '') + '</span></div>';
-                }).join('')
-            + '</div>'
-            : '';
-        return '<div style="padding:10px 2px 2px;">' + msgHtml + evHtml + '</div>';
+        }
+        return '<div onclick="NURTURE_STEPPER.loadPreview(' + id + ')" style="display:inline-block;cursor:pointer;font-size:11.5px;font-weight:600;'
+            + 'color:var(--blue,#2563EB);border:1px solid rgba(59,130,246,.35);border-radius:8px;padding:6px 11px;">'
+            + 'Show the confirmation email + VSL link &rarr;</div>';
+    }
+
+    async function loadPreview(leadId) {
+        PREVIEW = { leadId: leadId, subject: 'Loading…', body: '' };
+        repaint();
+        try {
+            var r = await A.fetchJson('/api/prospects/confirmation-preview?lead_id=' + encodeURIComponent(leadId));
+            PREVIEW = { leadId: leadId, subject: r.subject, body: r.body };
+        } catch (e) {
+            PREVIEW = { leadId: leadId, error: (e && e.message) || 'unknown' };
+        }
+        repaint();
     }
 
     function render(d) {
@@ -203,12 +403,19 @@
 
         var openStage = null;
         for (var j = 0; j < STAGES.length; j++) if (STAGES[j].key === OPEN) openStage = STAGES[j];
-        var detail = openStage
-            ? '<div style="margin-top:12px;border-top:1px solid var(--border-subtle);padding-top:10px;">'
+        var detail;
+        if (ALL) {
+            detail = '<div style="margin-top:12px;border-top:1px solid var(--border-subtle);padding-top:10px;">'
+                + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:2px;">'
+                + 'All activity</div>' + allActivity(d) + '</div>';
+        } else if (openStage) {
+            detail = '<div style="margin-top:12px;border-top:1px solid var(--border-subtle);padding-top:10px;">'
                 + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:2px;">'
                 + A.escape(openStage.label) + '</div>'
-                + stepDetail(d, openStage) + '</div>'
-            : '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Click any step to see the exact email and SMS we sent, and whether they opened it.</div>';
+                + stepDetail(d, openStage) + '</div>';
+        } else {
+            detail = '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Click any step to read the exact email and SMS we sent, click the links they got, and see what they did with it.</div>';
+        }
 
         var opts = STAGES.map(function (s) {
             return '<option value="' + s.key + '"' + (s.key === resolved.key && !resolved.derived ? ' selected' : '') + '>' + s.label + '</option>';
@@ -221,6 +428,10 @@
             + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;">'
               + '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue,#2563EB);">Nurture sequence</div>'
               + '<div style="display:flex;align-items:center;gap:8px;">' + autoTag
+                + '<div onclick="NURTURE_STEPPER.toggleAll()" style="cursor:pointer;font-size:11px;font-weight:600;padding:4px 9px;border-radius:7px;'
+                  + 'border:1px solid ' + (ALL ? 'var(--blue,#2563EB)' : 'var(--border-medium)') + ';'
+                  + 'color:' + (ALL ? 'var(--blue,#2563EB)' : 'var(--text-secondary)') + ';'
+                  + (ALL ? 'background:rgba(59,130,246,0.10);' : '') + '">All activity</div>'
                 + '<select onchange="NURTURE_STEPPER.setStage(' + (d && d.id != null ? d.id : 'null') + ', this.value)" style="padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:7px;color:var(--text-secondary);font-size:11px;cursor:pointer;">'
                   + '<option value="">Auto-derive</option>' + opts
                 + '</select>'
@@ -256,9 +467,15 @@
         configure: function (cfg) { Object.keys(cfg || {}).forEach(function (k) { if (cfg[k] != null) A[k] = cfg[k]; }); },
         render: render,
         toggle: toggle,
+        toggleAll: toggleAll,
+        expand: expand,
+        loadPreview: loadPreview,
         setStage: setStage,
         resolveStage: resolveStage,
         stageIndex: stageIndex,
-        reset: function () { OPEN = null; },
+        // Called when the drawer switches leads. PREVIEW and EXPANDED are keyed
+        // to a lead, so leaving them set would show one prospect's email on
+        // another prospect's panel.
+        reset: function () { OPEN = null; ALL = false; PREVIEW = null; EXPANDED = {}; },
     };
 })(typeof window !== 'undefined' ? window : this);
