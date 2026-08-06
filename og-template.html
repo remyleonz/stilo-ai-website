@@ -1,66 +1,58 @@
 <!DOCTYPE html>
 <!--
-  OG image template (1200x630). Mirrors the live hero: black void + blue
-  aurora glows + Saira headline + the 3D STILO wordmark. Rendered to
-  og-image.png via a headless 1200x630 screenshot. Not linked anywhere.
+  OG image template (1200x630). Mirrors the live hero: the booked calendar as
+  the backdrop, the wordmark, and the hero headline. No body copy on purpose,
+  it is unreadable at share-card size. Rendered to og-image.png by
+  scripts/build_og_image.py, which screenshots the real #gcal first.
 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Saira:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,600;6..96,700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg-void:#07070A;
-    --fg:#F4F4F6;
-    --fg-2:#9A9AA6;
-    --accent-hi:#2D4FB8;
-    --accent-glow:#5A7BE8;
-    --font-display:'Saira',system-ui,sans-serif;
-  }
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:1200px;height:630px;overflow:hidden}
-  .og{
-    position:relative;width:1200px;height:630px;
-    background:var(--bg-void);
-    display:flex;flex-direction:column;justify-content:center;
-    padding:0 96px;overflow:hidden;
-    font-family:var(--font-display);
-  }
-  /* Blue aurora glows on black — same language as the hero */
-  .orb{position:absolute;border-radius:50%;filter:blur(90px);mix-blend-mode:screen;pointer-events:none}
-  .orb.a{width:720px;height:720px;left:-200px;top:-260px;background:radial-gradient(circle,rgba(45,79,184,0.60) 0%,rgba(45,79,184,0) 65%)}
-  .orb.b{width:640px;height:640px;right:-160px;bottom:-220px;background:radial-gradient(circle,rgba(30,58,138,0.62) 0%,rgba(30,58,138,0) 65%)}
-  .orb.c{width:520px;height:520px;right:120px;top:-160px;background:radial-gradient(circle,rgba(58,91,199,0.45) 0%,rgba(58,91,199,0) 65%)}
-  .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,7,10,0.30) 0%,rgba(7,7,10,0) 35%,rgba(7,7,10,0.55) 100%);pointer-events:none}
-  .content{position:relative;z-index:2;max-width:1010px}
-  .wordmark{height:96px;width:auto;display:block;margin-bottom:44px;
-    filter:brightness(1.5) contrast(1.06) saturate(1.1) drop-shadow(0 4px 22px rgba(45,79,184,0.55))}
-  h1{
-    font-family:var(--font-display);font-weight:800;
-    font-size:104px;line-height:0.98;letter-spacing:-0.02em;
-    color:var(--fg);text-transform:uppercase;
-  }
-  h1 .blue{color:var(--fg)}
-  p{
-    font-family:var(--font-display);font-weight:500;
-    font-size:30px;line-height:1.4;color:var(--fg-2);
-    margin-top:34px;max-width:760px;letter-spacing:0.005em;
-  }
+  html,body{width:1200px;height:630px;overflow:hidden;background:#07070A}
+  .og{position:relative;width:1200px;height:630px;overflow:hidden;background:#07070A}
+
+  /* the real calendar, pushed back so it reads as texture not content */
+  .cal{position:absolute;left:50%;top:96px;transform:translateX(-50%);
+       width:1180px;border-radius:14px;overflow:hidden;opacity:.62;
+       box-shadow:0 60px 120px -40px rgba(0,0,0,.9)}
+  .cal img{display:block;width:100%;height:auto}
+
+  /* navy wash + bottom scrim so the headline always sits on solid ink */
+  .glow{position:absolute;left:-10%;top:-28%;width:900px;height:620px;border-radius:50%;
+        background:radial-gradient(ellipse at center,rgba(20,52,140,.42),transparent 66%);filter:blur(70px)}
+  .glow2{position:absolute;right:-14%;top:6%;width:860px;height:600px;border-radius:50%;
+        background:radial-gradient(ellipse at center,rgba(10,46,133,.40),transparent 68%);filter:blur(70px)}
+  .scrim{position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(7,7,10,.72) 0%,rgba(7,7,10,.36) 26%,rgba(7,7,10,.86) 62%,#07070A 88%)}
+
+  .wordmark{position:absolute;top:46px;left:64px;height:44px;width:auto;
+            filter:brightness(1.24) saturate(1.05) drop-shadow(0 2px 10px rgba(0,0,0,.6))}
+
+  .headline{position:absolute;left:64px;right:64px;bottom:112px;
+    font-family:'Bodoni Moda',Georgia,serif;font-optical-sizing:none;font-weight:700;
+    font-size:78px;line-height:1.02;letter-spacing:.012em;text-transform:uppercase;color:#F4F1EA;
+    text-shadow:0 4px 40px rgba(0,0,0,.85)}
+
+  .foot{position:absolute;left:66px;bottom:62px;display:flex;align-items:center;gap:14px;
+    font-family:'Bodoni Moda',Georgia,serif;font-weight:600;font-size:21px;letter-spacing:.06em;
+    text-transform:uppercase;color:#8b877e}
+  .foot i{display:block;width:26px;height:2px;background:#2F5FE3;font-style:normal}
 </style>
 </head>
 <body>
   <div class="og">
-    <span class="orb a"></span>
-    <span class="orb b"></span>
-    <span class="orb c"></span>
-    <div class="content">
-      <img class="wordmark" src="/assets/new3DLogoSTILOAI.png" alt="STILO AI PARTNERS">
-      <h1><span class="blue">AI</span> SOLUTIONS<br>FOR YOUR <span class="blue">BUSINESS</span></h1>
-      <p>We design, build, and operate AI agents that give you back your time, close more sales, and grow your business.</p>
-    </div>
-    <div class="veil"></div>
+    <div class="cal"><img src="og-cal.png" alt=""></div>
+    <div class="glow"></div>
+    <div class="glow2"></div>
+    <div class="scrim"></div>
+    <img class="wordmark" src="assets/StiloLogoOfficial.webp" alt="">
+    <div class="headline">Qualified meetings<br>on your calendar</div>
+    <div class="foot"><i></i>stiloaipartners.com</div>
   </div>
 </body>
 </html>
