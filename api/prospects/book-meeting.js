@@ -423,6 +423,22 @@ module.exports = async function handler(req, res) {
                     updateRow.matched_product_name = updateRow.pitch_agent;
                 }
             }
+            // PERSIST THE EMAIL THE REP CONFIRMED ON THE CALL. Same class of bug
+            // as pitch_agent above: typedEmail reached the calendar invite and
+            // the immediate branded confirmation and was then thrown away, so
+            // every LATER touch (_send_confirmation's VSL email, the VSL
+            // follow-up, the day-before, the T-15 reminder) re-read
+            // owner_email from the row and mailed the stale address.
+            //
+            // Early Childhood Job Depot, 2026-08-06: the owner gave Alejandro
+            // janglin@, and the whole sequence went to info@ on a 20-year-old
+            // company with a phone tree. She received nothing before her meeting
+            // and there was no error anywhere, because a calendar invite HAD
+            // gone out. Visible artifact, wrong row. Same shape as the booking
+            // `source` bug.
+            if (typedEmail && typedEmail !== lead.owner_email) {
+                updateRow.owner_email = typedEmail;
+            }
             const upd = await sb.from('leads').update(updateRow).eq('id', leadId);
             if (upd.error) persistError = upd.error.message;
         } catch (e) { persistError = String(e.message || e); }
