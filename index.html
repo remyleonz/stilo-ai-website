@@ -120,20 +120,18 @@ nav.scrolled .nav-logo-img img{height:50px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.28}}
 .gcal-days{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--stroke)}
 .gcal-days span{padding:9px 0 8px;text-align:center;font-size:.68rem;font-weight:600;letter-spacing:.1em;color:var(--fg-4);text-transform:uppercase}
-.gcal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(clamp(62px,7vh,80px),auto)}
-.gcell{position:relative;border-right:1px solid var(--stroke);border-bottom:1px solid var(--stroke);padding:6px 6px 7px;min-width:0}
+.gcal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(clamp(76px,8.6vh,98px),auto)}
+.gcell{position:relative;border-right:1px solid var(--stroke);border-bottom:1px solid var(--stroke);padding:8px 8px 9px;min-width:0}
 .gcell:nth-child(7n){border-right:0}
 .gcell:nth-last-child(-n+7){border-bottom:0}
-.gcell.pad{background:rgba(255,255,255,.012)}
-.gcell.pad .d{opacity:.35}
-.gcell .d{font-size:.7rem;font-weight:500;color:var(--fg-4);width:21px;height:21px;display:grid;place-items:center;border-radius:50%}
+.gcell .d{font-size:.76rem;font-weight:500;color:var(--fg-4);min-width:23px;height:23px;padding:0 6px;display:inline-grid;place-items:center;border-radius:999px;white-space:nowrap}
 .gcell.today .d{background:var(--navy-l);color:#fff;font-weight:600}
-.gev{margin-top:4px;position:relative;border-radius:5px;padding:3px 6px 4px 8px;background:var(--navy-chip);
+.gev{margin-top:6px;position:relative;border-radius:6px;padding:5px 8px 6px 10px;background:var(--navy-chip);
   overflow:hidden;opacity:0;transform:translateY(6px);transition:opacity .55s var(--ease),transform .55s var(--ease)}
 .gev::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--navy-l)}
 .gev.on{opacity:1;transform:none}
-.gev .t{font-size:.62rem;color:#AFC2F2;line-height:1.2}
-.gev .n{font-size:.72rem;font-weight:500;color:#E9EDF9;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gev .t{font-size:.66rem;color:#AFC2F2;line-height:1.2}
+.gev .n{font-size:.78rem;font-weight:500;color:#E9EDF9;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* heading row under the calendar */
 .hero-line{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap}
@@ -412,7 +410,7 @@ footer{padding:74px 0 38px;border-top:1px solid var(--stroke)}
   .gcal-days span{font-size:.5rem;letter-spacing:.04em;padding:7px 0 6px}
   .gcal-grid{grid-auto-rows:minmax(46px,auto)}
   .gcell{padding:4px 2px 5px}
-  .gcell .d{font-size:.62rem;width:18px;height:18px;margin:0 auto}
+  .gcell .d{font-size:.6rem;min-width:18px;height:18px;padding:0 3px;margin:0 auto}
   .gcal-count{display:none}
   .gcal-month{font-size:.92rem}
   .gev{margin:3px auto 0;padding:0;width:16px;height:4px;border-radius:2px;background:var(--navy-l)}
@@ -1028,11 +1026,14 @@ footer{padding:74px 0 38px;border-top:1px solid var(--stroke)}
   if(!grid) return;
   var now=new Date();
   document.getElementById('gcalMonth').textContent=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  // Real month grid, Sun..Sat, leading/trailing padding days like Google Calendar.
-  var y=now.getFullYear(), mo=now.getMonth(), today=now.getDate();
-  var first=new Date(y,mo,1).getDay();               // 0=Sun
-  var dim=new Date(y,mo+1,0).getDate();              // days in month
-  var prevDim=new Date(y,mo,0).getDate();
+  // A rolling five-week window starting from the Sunday of this week. Every cell
+  // is a real, bookable date under its correct weekday, so there are no greyed
+  // filler days and no half-empty first row the way a literal month grid gives
+  // you when the 1st lands on a Saturday.
+  var start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-now.getDay());
+  var CELLS=35;
+  document.getElementById('gcalMonth').textContent=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
   var NAMES=['Ray Delgado','Priya Nair','Tom Brennan','Kevin Ross','Ybor Warehouse Grp',
              'Harborline Property','Seminole Retail','Palmetto Storage','Clearwater Retail',
              'Westshore Asset Mgmt','Ross Industrial','Bayside Facilities','Dana Reeves',
@@ -1040,25 +1041,32 @@ footer{padding:74px 0 38px;border-top:1px solid var(--stroke)}
   var TIMES=['9:00 AM','2:00 PM','10:00 AM','8:30 AM','11:00 AM','1:00 PM','9:30 AM','3:00 PM',
              '8:00 AM','10:30 AM','1:30 PM','2:30 PM'];
 
-  // Spread meetings across weekdays of the month, none on weekends.
-  var weekdays=[];
-  for(var d=1; d<=dim; d++){ var dow=new Date(y,mo,d).getDay(); if(dow!==0 && dow!==6) weekdays.push(d); }
-  var picks=[], step=weekdays.length/NAMES.length;
-  for(var k=0;k<NAMES.length;k++){ var wi=Math.round(k*step); if(wi<weekdays.length) picks.push(weekdays[wi]); }
-  picks=picks.filter(function(v,i,a){return a.indexOf(v)===i});
-
-  var MEET={};
-  picks.forEach(function(day,i){ MEET[day]=[TIMES[i%TIMES.length],NAMES[i]]; });
-
-  var html='', cells=first+dim, rows=Math.ceil(cells/7)*7;
-  for(var i=0;i<rows;i++){
-    var dnum=i-first+1;
-    if(dnum<1){ html+='<div class="gcell pad"><span class="d">'+(prevDim+dnum)+'</span></div>'; continue; }
-    if(dnum>dim){ html+='<div class="gcell pad"><span class="d">'+(dnum-dim)+'</span></div>'; continue; }
-    var m=MEET[dnum];
-    html+='<div class="gcell'+(dnum===today?' today':'')+'"><span class="d">'+dnum+'</span>'+
-      (m?'<div class="gev" data-d="'+dnum+'"><div class="t">'+m[0]+'</div><div class="n">'+m[1]+'</div></div>':'')+'</div>';
+  var days=[];
+  for(var i=0;i<CELLS;i++){
+    var d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    days.push(d);
   }
+  var weekdayIdx=[];
+  days.forEach(function(d,i){ var w=d.getDay(); if(w!==0 && w!==6) weekdayIdx.push(i); });
+
+  var MEET={}, step=weekdayIdx.length/NAMES.length;
+  for(var k=0;k<NAMES.length;k++){
+    var wi=Math.round(k*step);
+    if(wi<weekdayIdx.length) MEET[weekdayIdx[wi]]=[TIMES[k%TIMES.length],NAMES[k]];
+  }
+  var picks=Object.keys(MEET).map(Number).sort(function(x,y){return x-y});
+
+  var todayKey=now.getFullYear()+'-'+now.getMonth()+'-'+now.getDate();
+  var html='';
+  days.forEach(function(d,i){
+    var isToday=(d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate())===todayKey;
+    var label=(d.getDate()===1) ? d.toLocaleDateString('en-US',{month:'short'})+' 1' : d.getDate();
+    var m=MEET[i];
+    html+='<div class="gcell'+(isToday?' today':'')+'"><span class="d">'+label+'</span>'+
+      (m?'<div class="gev" data-d="'+i+'"><div class="t">'+m[0]+'</div><div class="n">'+m[1]+'</div></div>':'')+'</div>';
+  });
+  grid.innerHTML=html;
+
   var order=picks.slice();
   grid.innerHTML=html;
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
