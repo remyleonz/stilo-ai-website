@@ -1259,6 +1259,26 @@
     .crm-caret { grid-row:1; grid-column:2; }
 }
 </style>
+<style id="email-activity">
+/* Sales tab · Emails. Same row-grid language as the booked-meetings CRM. */
+.ea-head, .ea-row { display:grid; grid-template-columns:minmax(0,1.3fr) 96px minmax(0,1.7fr) minmax(0,0.7fr) minmax(150px,1.1fr) 26px; gap:4px 14px; align-items:center; }
+.ea-head { padding:4px 0 8px; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); }
+.ea-row { padding:11px 0; border-top:1px solid var(--border-subtle); cursor:pointer; transition:background 100ms; }
+.ea-row:hover { background:rgba(37,99,235,0.05); }
+.ea-caret { color:var(--text-muted); font-size:11px; text-align:right; transition:transform 150ms; }
+.ea-row.open .ea-caret { transform:rotate(90deg); }
+.ea-expand { border-top:1px dashed var(--border-subtle); padding:14px 4px 16px; }
+.ea-body { white-space:pre-wrap; overflow-wrap:break-word; font-size:13px; line-height:1.65; color:var(--text-primary); max-width:720px; }
+.ea-filter { padding:7px 14px; background:none; border:1px solid var(--border-subtle); border-radius:999px; color:var(--text-secondary); font-size:12px; font-weight:600; cursor:pointer; transition:all 120ms; }
+.ea-filter.active { border-color:var(--blue); color:#5A7BE8; background:rgba(37,99,235,0.10); }
+@media (max-width: 760px) {
+    .ea-head { display:none; }
+    .ea-row { grid-template-columns:minmax(0,1fr) 26px; gap:6px 10px; }
+    .ea-cell { grid-column:1 / -1; }
+    .ea-cell-lead { grid-column:1; }
+    .ea-caret { grid-row:1; grid-column:2; }
+}
+</style>
 <style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
 </head>
 <body>
@@ -2021,12 +2041,13 @@
             <!-- Pipeline tab — part of the unified Sales section. -->
             <div class="page-content" id="page-pipeline" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
+                    <span class="stilo-page-meta">Pipeline · Deals · Activity · Emails</span>
                 </div>
                 <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
                     <button type="button" class="sales-subtab" data-sales-tab="pipeline" onclick="switchSalesTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;">Overview</button>
                     <button type="button" class="sales-subtab" data-sales-tab="deals" onclick="switchSalesTab('deals')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Deals</button>
                     <button type="button" class="sales-subtab" data-sales-tab="activity" onclick="switchSalesTab('activity')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Activity</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="emails" onclick="switchSalesTab('emails')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Emails</button>
                 </div>
                 <section class="stilo-section">
                     <div class="stilo-section-header">
@@ -2044,12 +2065,13 @@
             <!-- Deals tab — part of the unified Sales section. -->
             <div class="page-content" id="page-deals" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
+                    <span class="stilo-page-meta">Pipeline · Deals · Activity · Emails</span>
                 </div>
                 <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
                     <button type="button" class="sales-subtab" data-sales-tab="pipeline" onclick="switchSalesTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Overview</button>
                     <button type="button" class="sales-subtab" data-sales-tab="deals" onclick="switchSalesTab('deals')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;">Deals</button>
                     <button type="button" class="sales-subtab" data-sales-tab="activity" onclick="switchSalesTab('activity')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Activity</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="emails" onclick="switchSalesTab('emails')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Emails</button>
                 </div>
                 <section class="stilo-section">
                     <div class="stilo-section-header">
@@ -2065,12 +2087,13 @@
             <!-- Activity Feed tab — part of the unified Sales section. -->
             <div class="page-content" id="page-activity" style="display:none;">
                 <div class="stilo-page-header-row">
-                    <span class="stilo-page-meta">Pipeline · Deals · Activity</span>
+                    <span class="stilo-page-meta">Pipeline · Deals · Activity · Emails</span>
                 </div>
                 <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
                     <button type="button" class="sales-subtab" data-sales-tab="pipeline" onclick="switchSalesTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Overview</button>
                     <button type="button" class="sales-subtab" data-sales-tab="deals" onclick="switchSalesTab('deals')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Deals</button>
                     <button type="button" class="sales-subtab" data-sales-tab="activity" onclick="switchSalesTab('activity')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;">Activity</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="emails" onclick="switchSalesTab('emails')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Emails</button>
                 </div>
                 <section class="stilo-section">
                     <div class="stilo-section-header">
@@ -2078,6 +2101,38 @@
                         <span class="stilo-section-count" id="activityFeedCount"></span>
                     </div>
                     <div id="activityFeedList">
+                        <div class="stilo-empty">Loading…</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Emails tab — part of the unified Sales section. Every outbound
+                 email with engagement signals, expandable to the full body and
+                 reply thread, so nobody has to open Resend to see what went out. -->
+            <div class="page-content" id="page-emails" style="display:none;">
+                <div class="stilo-page-header-row">
+                    <span class="stilo-page-meta">Pipeline · Deals · Activity · Emails</span>
+                </div>
+                <div class="sales-subtab-strip" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:24px;flex-wrap:wrap;">
+                    <button type="button" class="sales-subtab" data-sales-tab="pipeline" onclick="switchSalesTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Overview</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="deals" onclick="switchSalesTab('deals')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Deals</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="activity" onclick="switchSalesTab('activity')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Activity</button>
+                    <button type="button" class="sales-subtab" data-sales-tab="emails" onclick="switchSalesTab('emails')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;">Emails</button>
+                </div>
+                <div id="eaAbStrip" style="margin-bottom:18px;"></div>
+                <section class="stilo-section">
+                    <div class="stilo-section-header">
+                        <h3 class="stilo-section-title">EVERY EMAIL SENT</h3>
+                        <span class="stilo-section-count" id="eaCount"></span>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+                        <button type="button" class="ea-filter active" data-ea-filter="all" onclick="eaSetFilter('all')">All</button>
+                        <button type="button" class="ea-filter" data-ea-filter="opened" onclick="eaSetFilter('opened')">Opened</button>
+                        <button type="button" class="ea-filter" data-ea-filter="replied" onclick="eaSetFilter('replied')">Replied</button>
+                        <button type="button" class="ea-filter" data-ea-filter="none" onclick="eaSetFilter('none')">No engagement</button>
+                        <input id="eaSearch" type="search" placeholder="Search business or subject" oninput="eaOnSearch()" style="margin-left:auto;flex:1;min-width:170px;max-width:280px;padding:8px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-primary);font-size:13px;font-family:var(--font-body);outline:none;">
+                    </div>
+                    <div id="eaList" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:6px 18px 14px;">
                         <div class="stilo-empty">Loading…</div>
                     </div>
                 </section>
@@ -2412,7 +2467,7 @@
         // Set of valid pages — used by switchPage() and by the hash-based
         // routing on initial load. Add new tabs here so the URL refresh
         // behavior picks them up automatically.
-        var VALID_PAGES = ['dashboard','clients','prospecting','outbound','agents','review','revenue','team','pipeline','deals','activity','support','settings'];
+        var VALID_PAGES = ['dashboard','clients','prospecting','outbound','agents','review','revenue','team','pipeline','deals','activity','emails','support','settings'];
 
         function switchPage(page, opts) {
             opts = opts || {};
@@ -2423,7 +2478,7 @@
                 item.classList.remove('active');
             });
             var navHighlightKey = page;
-            if (page === 'pipeline' || page === 'deals' || page === 'activity') navHighlightKey = 'sales';
+            if (page === 'pipeline' || page === 'deals' || page === 'activity' || page === 'emails') navHighlightKey = 'sales';
             if (page === 'review') navHighlightKey = 'agents';
             var activeBtn = document.querySelector('.nav-item[data-page="' + navHighlightKey + '"]');
             if (activeBtn) activeBtn.classList.add('active');
@@ -2453,6 +2508,7 @@
                 pipeline: 'Sales · Pipeline',
                 deals: 'Sales · Deals',
                 activity: 'Sales · Activity',
+                emails: 'Sales · Emails',
                 support: 'Support',
                 review: 'Pending Review',
                 settings: 'Settings'
@@ -2484,6 +2540,7 @@
             else if (page === 'pipeline') loadPipelinePage();
             else if (page === 'deals') loadDealsPage();
             else if (page === 'activity') loadActivityFeed();
+            else if (page === 'emails') loadEmailActivity();
             else if (page === 'support') adminLoadSupportThreads();
             else if (page === 'settings') loadSettings();
             else if (page === 'prospecting') { loadProspectingPage(); loadAbResults(); }
@@ -2496,9 +2553,9 @@
         /* Sales sub-tab router — Pipeline / Deals / Activity all live under
            the single Sales nav item now. switchSalesTab routes to the right
            page-content panel and updates the in-page sub-tab strip styling.
-           Accepts 'pipeline' (default), 'deals', or 'activity'. */
+           Accepts 'pipeline' (default), 'deals', 'activity', or 'emails'. */
         function switchSalesTab(name) {
-            var target = (name === 'deals' || name === 'activity') ? name : 'pipeline';
+            var target = (name === 'deals' || name === 'activity' || name === 'emails') ? name : 'pipeline';
             switchPage(target);
             // Style every sales sub-tab pill so only the active one is solid.
             document.querySelectorAll('.sales-subtab').forEach(function(btn) {
@@ -10144,6 +10201,198 @@
                     + '</div>';
             }).join('');
             return '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:6px;">All touches · newest first</div>' + rows;
+        }
+        /* ===== Emails tab =====
+           Every outbound email from /api/prospects/email-activity: one row per
+           send with business, subject, rep, A/B variant and signal chips
+           (Hot / Opened / Clicked / Replied / Bounced). Rows expand to the
+           full body plus the reply thread. Filters + search are client-side;
+           rows render 50 at a time. Same row-grid language as the booked CRM. */
+        var EA_DATA = null;      // last email-activity payload
+        var EA_FILTER = 'all';   // all | opened | replied | none
+        var EA_SEARCH = '';
+        var EA_SHOWN = 50;       // lazy-render window
+        var EA_OPEN = {};        // message id -> true (expanded)
+        var EA_THREAD = {};      // message id -> {message, replies} | {error}
+
+        async function loadEmailActivity() {
+            var list = document.getElementById('eaList');
+            if (!EA_DATA && list) list.innerHTML = '<div class="stilo-empty">Loading…</div>';
+            try {
+                EA_DATA = await prospectFetchJSON('/api/prospects/email-activity');
+                eaRender();
+            } catch (e) {
+                if (list) list.innerHTML = '<div style="color:var(--red);font-size:13px;padding:12px 0;">Could not load emails: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+        function eaSetFilter(f) {
+            EA_FILTER = f;
+            EA_SHOWN = 50;
+            document.querySelectorAll('.ea-filter').forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-ea-filter') === f);
+            });
+            eaRenderList();
+        }
+        function eaOnSearch() {
+            var el = document.getElementById('eaSearch');
+            EA_SEARCH = (el && el.value || '').trim().toLowerCase();
+            EA_SHOWN = 50;
+            eaRenderList();
+        }
+        function eaFiltered() {
+            var rows = (EA_DATA && EA_DATA.messages) || [];
+            return rows.filter(function (m) {
+                if (EA_FILTER === 'opened' && !m.opened) return false;
+                if (EA_FILTER === 'replied' && !m.replied) return false;
+                if (EA_FILTER === 'none' && (m.opened || m.clicked || m.replied)) return false;
+                if (EA_SEARCH) {
+                    var hay = ((m.business || '') + ' ' + (m.subject || '')).toLowerCase();
+                    if (hay.indexOf(EA_SEARCH) < 0) return false;
+                }
+                return true;
+            });
+        }
+        function eaChip(label, color, bg) {
+            return '<span style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.03em;white-space:nowrap;color:' + color + ';background:' + bg + ';">' + label + '</span>';
+        }
+        function eaSignalChips(m) {
+            var c = [];
+            if (m.hot) c.push(eaChip('Hot', '#f97316', 'rgba(249,115,22,0.16)'));
+            if (m.replied) c.push(eaChip('Replied', '#10b981', 'rgba(16,185,129,0.14)'));
+            if (m.clicked) c.push(eaChip('Clicked', '#5A7BE8', 'rgba(37,99,235,0.14)'));
+            if (m.opened) c.push(eaChip('Opened' + (m.human_open_days >= 2 ? ' ×' + m.human_open_days + ' days' : ''), '#8b9cf4', 'rgba(139,156,244,0.12)'));
+            if (m.bounced) c.push(eaChip('Bounced', '#ef4444', 'rgba(239,68,68,0.14)'));
+            if (!c.length) c.push(eaChip('No engagement', 'var(--text-muted)', 'rgba(255,255,255,0.04)'));
+            return c.join(' ');
+        }
+        function eaVariantChip(v) {
+            if (!v) return '';
+            var label = v === 'A' || v === 'B' ? v
+                : v.indexOf('vsl') === 0 ? 'VSL'
+                : v === 'meeting_confirm' ? 'Confirm'
+                : v === 'meeting_reminder' ? 'Reminder'
+                : v;
+            var ab = v === 'A' || v === 'B';
+            return '<span title="' + escapeAdminHtml(v) + '" style="display:inline-block;padding:0 6px;border-radius:5px;font-size:10px;font-weight:700;color:' + (ab ? '#5A7BE8' : 'var(--text-muted)') + ';background:' + (ab ? 'rgba(37,99,235,0.14)' : 'rgba(255,255,255,0.05)') + ';">' + escapeAdminHtml(label) + '</span>';
+        }
+        function eaDayLabel(ts) {
+            var ms = tsToMsP(ts);
+            if (ms == null) return 'Unknown date';
+            var d = new Date(ms).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+            var today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+            var yest = new Date(Date.now() - 86400000).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+            if (d === today) return 'Today';
+            if (d === yest) return 'Yesterday';
+            return d.replace(', ' + new Date().getFullYear(), '');
+        }
+        function eaAbStripHtml() {
+            var arms = (EA_DATA && EA_DATA.ab) || [];
+            if (!arms.length || !arms.some(function (a) { return a.sent > 0; })) return '';
+            var cell = function (n, pct, lbl) {
+                return '<div style="min-width:86px;"><div style="font-size:14px;font-weight:700;color:var(--text-primary);">' + pct + '%</div>'
+                    + '<div style="font-size:11px;color:var(--text-muted);">' + n + ' ' + lbl + '</div></div>';
+            };
+            var best = arms.slice().sort(function (a, b) { return (b.reply_rate - a.reply_rate) || (b.click_rate - a.click_rate); })[0];
+            var rows = arms.map(function (a) {
+                var lead = best && a.variant === best.variant && a.sent >= 20 && (a.reply_rate > 0 || a.click_rate > 0);
+                return '<div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border-subtle);' + (lead ? 'box-shadow:inset 3px 0 0 var(--blue);padding-left:12px;' : 'padding-left:15px;') + '">'
+                    + '<div style="min-width:120px;"><div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(a.label) + (lead ? ' <span style="color:#5A7BE8;font-size:11px;">▲ leading</span>' : '') + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-muted);">' + a.sent + ' sent · ' + a.leads + ' leads</div></div>'
+                    + cell(a.opened, a.open_rate, 'opened')
+                    + cell(a.clicked, a.click_rate, 'clicked')
+                    + cell(a.replied, a.reply_rate, 'replied')
+                    + '</div>';
+            }).join('');
+            return '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:14px 18px 6px;">'
+                + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px;">'
+                + '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">Email A/B test</span>'
+                + '<span style="font-size:11px;color:var(--text-muted);">Rates are per distinct lead, so scanner re-opens don\'t inflate them</span></div>'
+                + rows + '</div>';
+        }
+        function eaRow(m) {
+            var open = !!EA_OPEN[m.id];
+            var meta = [m.category, m.stage].filter(Boolean).join(' · ');
+            var leadCell = '<div class="ea-cell-lead" style="min-width:0;">'
+                + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+                + '<span ' + (m.lead_id ? 'onclick="event.stopPropagation();openProspectDrawer(' + m.lead_id + ')" ' : '') + 'style="font-weight:700;font-size:13px;color:var(--text-primary);">' + escapeAdminHtml(m.business || m.to_address || ('Message ' + m.id)) + '</span>'
+                + '</div>'
+                + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(meta || '') + (meta && m.to_address ? ' · ' : '') + escapeAdminHtml(m.to_address || '') + '</div>'
+                + '</div>';
+            var sentCell = '<div class="ea-cell">'
+                + '<div style="font-size:12px;font-weight:700;color:var(--text-secondary);">' + escapeAdminHtml(crmRel(m.sent_at)) + '</div>'
+                + '<div style="font-size:11px;color:var(--text-tertiary);">' + escapeAdminHtml(fmtETp(m.sent_at)) + ' ET</div></div>';
+            var subjCell = '<div class="ea-cell" style="min-width:0;">'
+                + '<div style="display:flex;align-items:center;gap:7px;min-width:0;">'
+                + '<span style="font-size:12px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(m.subject || '(no subject)') + '</span>'
+                + eaVariantChip(m.variant) + '</div>'
+                + (m.replied && m.reply_preview ? '<div style="font-size:11px;color:#10b981;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">↩ ' + escapeAdminHtml(m.reply_preview) + '</div>' : '')
+                + '</div>';
+            var repCell = '<div class="ea-cell" style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                + escapeAdminHtml(m.sent_by_name ? String(m.sent_by_name).split('@')[0] : 'auto') + '</div>';
+            var sigCell = '<div class="ea-cell" style="display:flex;gap:5px;flex-wrap:wrap;">' + eaSignalChips(m) + '</div>';
+            return '<div class="ea-row' + (open ? ' open' : '') + '" onclick="eaToggle(' + m.id + ')">' + leadCell + sentCell + subjCell + repCell + sigCell + '<div class="ea-caret">&#9654;</div></div>'
+                + (open ? '<div class="ea-expand" id="eaExpand' + m.id + '">' + eaThreadHtml(m.id) + '</div>' : '');
+        }
+        function eaRenderList() {
+            var list = document.getElementById('eaList');
+            var count = document.getElementById('eaCount');
+            if (!list || !EA_DATA) return;
+            var rows = eaFiltered();
+            if (count) count.textContent = rows.length === (EA_DATA.messages || []).length ? rows.length + ' emails' : rows.length + ' of ' + (EA_DATA.messages || []).length + ' emails';
+            if (!rows.length) {
+                list.innerHTML = '<div class="stilo-empty">No emails match.</div>';
+                return;
+            }
+            var shown = rows.slice(0, EA_SHOWN);
+            var head = '<div class="ea-head"><div>Business</div><div>Sent</div><div>Subject</div><div>Rep</div><div>Signals</div><div></div></div>';
+            var html = head;
+            var lastDay = null;
+            shown.forEach(function (m) {
+                var day = eaDayLabel(m.sent_at);
+                if (day !== lastDay) {
+                    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:16px 0 2px;">' + escapeAdminHtml(day) + '</div>';
+                    lastDay = day;
+                }
+                html += eaRow(m);
+            });
+            if (rows.length > EA_SHOWN) {
+                html += '<div style="padding:14px 0 6px;text-align:center;"><button onclick="EA_SHOWN+=50;eaRenderList()" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;">Show ' + Math.min(50, rows.length - EA_SHOWN) + ' more</button></div>';
+            }
+            list.innerHTML = html;
+        }
+        function eaRender() {
+            var strip = document.getElementById('eaAbStrip');
+            if (strip) strip.innerHTML = eaAbStripHtml();
+            eaRenderList();
+        }
+        function eaToggle(id) {
+            if (EA_OPEN[id]) delete EA_OPEN[id]; else EA_OPEN[id] = true;
+            eaRenderList();
+            if (EA_OPEN[id] && !EA_THREAD[id]) eaLoadThread(id);
+        }
+        async function eaLoadThread(id) {
+            try {
+                EA_THREAD[id] = await prospectFetchJSON('/api/prospects/email-activity?thread=' + id);
+            } catch (e) { EA_THREAD[id] = { error: e.message || 'failed' }; }
+            var el = document.getElementById('eaExpand' + id);
+            if (el) el.innerHTML = eaThreadHtml(id);
+        }
+        function eaThreadHtml(id) {
+            var t = EA_THREAD[id];
+            if (!t) return '<div style="font-size:12px;color:var(--text-muted);">Loading email…</div>';
+            if (t.error) return '<div style="font-size:12px;color:var(--red);">Could not load the email: ' + escapeAdminHtml(t.error) + '</div>';
+            var msg = t.message || {};
+            var html = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px;">Sent ' + escapeAdminHtml(fmtETp(msg.sent_at)) + ' ET'
+                + (msg.to_address ? ' · to ' + escapeAdminHtml(msg.to_address) : '')
+                + (msg.from_address ? ' · from ' + escapeAdminHtml(msg.from_address) : '') + '</div>'
+                + '<div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">' + escapeAdminHtml(msg.subject || '(no subject)') + '</div>'
+                + '<div class="ea-body">' + escapeAdminHtml(msg.body || '(no body on file)') + '</div>';
+            (t.replies || []).forEach(function (r) {
+                html += '<div style="margin-top:14px;padding:12px 14px;border-left:3px solid #10b981;background:rgba(16,185,129,0.06);border-radius:0 10px 10px 0;">'
+                    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#10b981;margin-bottom:6px;">Reply' + (r.from ? ' · ' + escapeAdminHtml(r.from) : '') + (r.at ? ' · ' + escapeAdminHtml(fmtETp(r.at)) + ' ET' : '') + '</div>'
+                    + '<div class="ea-body">' + escapeAdminHtml(r.body || r.subject || '(no reply text on file)') + '</div></div>';
+            });
+            return html;
         }
         async function moveDealStage(dealId, stage) {
             var reason = null;
