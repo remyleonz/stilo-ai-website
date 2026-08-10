@@ -1,13 +1,19 @@
 /**
  * api/prospects/_email_sequence_copy.js
  *
- * Copy for the 4-step prospecting email sequence (see email-sequence.js).
+ * Copy for the 3-step prospecting email sequence (see email-sequence.js).
  *
  * FINAL COPY, transplanted from Strategy/email-sequence-system-2026-08-10.md
- * (5 niches x 4 steps). Do not rewrite the copy here; edit the strategy doc
- * first, then re-transplant.
+ * (5 niches), restructured 2026-08-10 to 3 steps: the old step 3 (their-math)
+ * and step 4 (breakup) merged into one closing email, and a step-1 copy A/B
+ * added (step1_v, arm V) that carries the niche VSL link plus a direct
+ * pay-per-meeting promise. Do not rewrite the copy here; edit the strategy
+ * doc first, then re-transplant.
  *
- * Shape:  { <niche-slug>: { step1..step4: { subject, body } } }
+ * Shape:  { <niche-slug>: { step1, step1_v, step2, step3: { subject, body } } }
+ * step1 is copy arm Q (question CTA, link-free); step1_v is copy arm V (same
+ * opener and hook slots, then a direct promise and the {{vsl_link}} video
+ * offer). The engine picks the arm by lead id; see buildEmail.
  * Slugs MUST match _vsl.js AGENTS (the 5 niche pages). A lead whose niche
  * cannot resolve to one of these is never mailed.
  *
@@ -33,8 +39,12 @@
  *     broken merge, so only use slots that exist in NICHE_SLOTS or the 3 above.
  *   - NICHE_SLOTS values must be non-empty strings: the renderer skips empty
  *     values, which leaves the slot unresolved and skips the lead.
- *   - Steps 1 and 4 carry no links. Step 4 has no question mark; its CTA is
- *     the literal line starting `Reply "call"`.
+ *   - Step 1 (arm Q) and step 3 carry no links. step1_v carries EXACTLY one
+ *     link, the niche {{vsl_link}}, and nothing else. Step 3 has no question
+ *     mark; its CTA is the literal line starting `Reply "call"`.
+ *   - The step1_v promise stays honest: booked qualified meetings, and the
+ *     per-meeting pricing option means nothing booked costs nothing. Never
+ *     invent client names, revenue numbers, or case studies.
  *   - Seasonal lines (storm season, RFP season, August/October references)
  *     rotate with the calendar; see the strategy doc's markers.
  */
@@ -87,6 +97,20 @@ const COPY = {
                 'Are you actively taking on new client accounts right now, or pretty much at capacity?',
             ]),
         },
+        step1_v: {
+            subject: 'open orders at {{company}}',
+            body: body([
+                'Hi {{first_name}},',
+                '',
+                'Most staffing firms I talk to have plenty of candidates and not enough client orders to run them against. {{hook_line}}',
+                '',
+                "That's the part we handle: we put qualified hiring-manager meetings on your calendar, and one pricing option is per meeting delivered, so if nothing books you pay nothing.",
+                '',
+                'I recorded a 2-minute video showing exactly how it works for staffing firms: {{vsl_link}}',
+                '',
+                'Worth a quick look?',
+            ]),
+        },
         step2: {
             subject: 'how staffing firms add logos',
             body: body([
@@ -108,21 +132,9 @@ const COPY = {
                 '',
                 'You know your numbers better than I do, so run it yourself: take your average markup on one placed contractor, times the hours, times a year. Then multiply by what a steady account actually orders. That is what one held meeting with the right hiring manager is worth.',
                 '',
-                "We book those meetings, you close them. Setup takes a couple weeks, and if month one doesn't earn its keep, you walk.",
+                "We book those meetings, you close them. If month one doesn't earn its keep, you walk.",
                 '',
-                'Got 15 minutes Thursday or Friday?',
-            ]),
-        },
-        step4: {
-            subject: 'closing your file',
-            body: body([
-                'Hi {{first_name}},',
-                '',
-                "Last note from me. If new client accounts aren't the priority this quarter, no hard feelings, I'll get out of your inbox.",
-                '',
-                "But if your recruiters are sitting on candidates they can't place because the orders aren't there, that's fixable. Reply \"call\" and I'll ring you this week.",
-                '',
-                'Either way, good luck this quarter.',
+                "This is my last note either way. If new client accounts aren't the priority this quarter, no hard feelings, I'll get out of your inbox. But if your recruiters are sitting on candidates they can't place because the orders aren't there, that's fixable. Reply \"call\" and I'll ring you this week.",
             ]),
         },
     },
@@ -139,6 +151,20 @@ const COPY = {
                 '{{hook_line}}',
                 '',
                 'When you lose an account, where does the next one usually come from?',
+            ]),
+        },
+        step1_v: {
+            subject: 'bid lists in {{city}}',
+            body: body([
+                'Hi {{first_name}},',
+                '',
+                "Most commercial cleaning companies around {{city}} win work off referrals or property managers' bid lists, priced against guys who bid at cost. {{hook_line}}",
+                '',
+                'We fix that directly: we put walkthrough meetings with facility managers on your calendar, and one pricing option is per meeting delivered, so if nothing books you pay nothing.',
+                '',
+                'I recorded a 2-minute video showing exactly how it works for janitorial companies: {{vsl_link}}',
+                '',
+                'Worth a quick look?',
             ]),
         },
         step2: {
@@ -162,21 +188,9 @@ const COPY = {
                 '',
                 "Run your own math on this. One mid-size office contract, at your normal monthly rate, over a two-year term. That's what a single walkthrough with the right facility manager is worth, and it's why grinding bid lists for thin margins is the expensive way to grow.",
                 '',
-                "We book the walkthrough meetings. You close them. Setup takes a couple weeks, and if month one doesn't pay for itself, you cancel.",
+                "We book the walkthrough meetings, you close them. If month one doesn't pay for itself, you cancel.",
                 '',
-                'Free for 15 minutes Thursday afternoon?',
-            ]),
-        },
-        step4: {
-            subject: 'last one from me',
-            body: body([
-                'Hi {{first_name}},',
-                '',
-                "Last one from me. If the account list is full and the night crews are staffed, ignore this and I'll get out of your inbox.",
-                '',
-                "But if you lost a building this year and haven't replaced it yet, that's the exact gap we fill. Reply \"call\" and I'll ring you this week.",
-                '',
-                'Good luck either way.',
+                "This is my last note either way. If the account list is full and the night crews are staffed, ignore this and I'll get out of your inbox. But if you lost a building this year and haven't replaced it yet, that's the exact gap we fill. Reply \"call\" and I'll ring you this week.",
             ]),
         },
     },
@@ -196,6 +210,21 @@ const COPY = {
                 'Is your calendar set past October, or still filling in?',
             ]),
         },
+        step1_v: {
+            // Seasonal: shoulder-months framing rotates with the calendar.
+            subject: 'after storm season',
+            body: body([
+                'Hi {{first_name}},',
+                '',
+                "Commercial roofers tell me storm work finds you, and it's the shoulder months that decide the year. {{hook_line}}",
+                '',
+                'We fill that gap directly: we put inspection meetings with building owners and property managers on your calendar, and one pricing option is per meeting delivered, so if nothing books you pay nothing.',
+                '',
+                'I recorded a 2-minute video showing exactly how it works for roofing companies: {{vsl_link}}',
+                '',
+                'Worth a quick look?',
+            ]),
+        },
         step2: {
             subject: 'before the roof leaks',
             body: body([
@@ -211,28 +240,16 @@ const COPY = {
             ]),
         },
         step3: {
+            // Seasonal: "past storm season".
             subject: 'one re-roof',
             body: body([
                 'Hi {{first_name}},',
                 '',
                 "You know your average re-roof ticket better than I do. Take that number and ask what a steady flow of owner meetings is worth next to waiting on GC bid invites you're pricing against four other shops.",
                 '',
-                "We book the meetings, complete with notes on the building, the decision maker, and the timeline. Setup takes a couple weeks. If month one doesn't earn its spot, you cancel.",
+                "We book the meetings, complete with notes on the building, the decision maker, and the timeline. If month one doesn't earn its spot, you cancel.",
                 '',
-                'Got 15 minutes Thursday?',
-            ]),
-        },
-        step4: {
-            // Seasonal: "past storm season".
-            subject: 'taking you off my list',
-            body: body([
-                'Hi {{first_name}},',
-                '',
-                'Last note from me. If the crews are booked through winter, ignore this, and hats off.',
-                '',
-                "But if the schedule past storm season looks thin and the GC phone isn't ringing, that's the gap we fill. Reply \"call\" and I'll ring you this week.",
-                '',
-                'Good luck out there.',
+                "This is my last note either way. If the crews are booked through winter, ignore this, and hats off. But if the schedule past storm season looks thin and the GC phone isn't ringing, that's the gap we fill. Reply \"call\" and I'll ring you this week.",
             ]),
         },
     },
@@ -249,6 +266,20 @@ const COPY = {
                 '{{hook_line}}',
                 '',
                 'Are you actively adding direct shippers right now, or mostly living on the boards?',
+            ]),
+        },
+        step1_v: {
+            subject: 'direct freight in your lanes',
+            body: body([
+                'Hi {{first_name}},',
+                '',
+                'Most carriers I talk to are running the same lanes at whatever the boards pay, with direct shipper business down to a handful of accounts. {{hook_line}}',
+                '',
+                'We work that problem directly: we put shipper meetings on your calendar, and one pricing option is per meeting delivered, so if nothing books you pay nothing.',
+                '',
+                'I recorded a 2-minute video showing exactly how it works for carriers: {{vsl_link}}',
+                '',
+                'Worth a quick look?',
             ]),
         },
         step2: {
@@ -275,20 +306,7 @@ const COPY = {
                 '',
                 "We book the shipper meetings, including RFP-season intros. You negotiate the freight. If month one doesn't earn its keep, you cancel.",
                 '',
-                'Got 15 minutes Thursday or Friday?',
-            ]),
-        },
-        step4: {
-            // Seasonal: "before RFP season".
-            subject: 'last note',
-            body: body([
-                'Hi {{first_name}},',
-                '',
-                'Last one from me. If the trucks are covered on contract freight, delete this and keep rolling.',
-                '',
-                "But if you're watching spot rates decide your month and want more direct shipper business before RFP season, that's the gap we fill. Reply \"call\" and I'll ring you this week.",
-                '',
-                'Safe travels.',
+                "This is my last note either way. If the trucks are covered on contract freight, delete this and keep rolling. But if spot rates are deciding your month, that's the gap we fill. Reply \"call\" and I'll ring you this week.",
             ]),
         },
     },
@@ -305,6 +323,20 @@ const COPY = {
                 '{{hook_line}}',
                 '',
                 "When's the last time a brand-new account sent you a PO?",
+            ]),
+        },
+        step1_v: {
+            subject: 'new POs at {{company}}',
+            body: body([
+                'Hi {{first_name}},',
+                '',
+                'Most industrial suppliers I talk to live off house accounts, and when a buyer retires or a plant changes hands, that revenue walks out with them. {{hook_line}}',
+                '',
+                'We work the replacement directly: we put meetings with purchasing managers who have live demand on your calendar, and one pricing option is per meeting delivered, so if nothing books you pay nothing.',
+                '',
+                'I recorded a 2-minute video showing exactly how it works for industrial suppliers: {{vsl_link}}',
+                '',
+                'Worth a quick look?',
             ]),
         },
         step2: {
@@ -328,21 +360,9 @@ const COPY = {
                 '',
                 "You know what a real account orders in a year better than I do. Take one steady customer's annual POs and put that next to the cost of winning them: usually one meeting, one fast quote, one clean first delivery.",
                 '',
-                "We book that first meeting with buyers who have live demand. You quote it and take it from there. If month one doesn't pay for itself, you cancel.",
+                "We book that first meeting with buyers who have live demand. If month one doesn't pay for itself, you cancel.",
                 '',
-                'Got 15 minutes Thursday?',
-            ]),
-        },
-        step4: {
-            subject: 'wrapping up',
-            body: body([
-                'Hi {{first_name}},',
-                '',
-                'Last note from me. If the house accounts are healthy and the quote queue is full, ignore this.',
-                '',
-                'But if this year\'s growth plan is "hope the phone rings," it\'s worth 15 minutes. Reply "call" and I\'ll ring you this week.',
-                '',
-                'Either way, good luck with the season.',
+                'This is my last note either way. If the house accounts are healthy and the quote queue is full, ignore this. But if this year\'s growth plan is "hope the phone rings," it\'s worth 15 minutes. Reply "call" and I\'ll ring you this week.',
             ]),
         },
     },

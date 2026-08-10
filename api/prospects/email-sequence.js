@@ -1,7 +1,7 @@
 /**
  * GET /api/prospects/email-sequence?dry=1&cap=N
  *
- * Drip engine for the 4-step cold email sequence to prospecting leads with a
+ * Drip engine for the 3-step cold email sequence to prospecting leads with a
  * scraped-and-found owner email. Modeled on the guards in vsl-campaign.js,
  * which earned them the hard way; read that file's header before touching any
  * of these.
@@ -21,7 +21,9 @@
  * lead from the sequence forever. A human took over; the robot stands down.
  *
  * STEP TRACKING. The existing leads.email_N_sent_at / email_N_status columns.
- * Steps 2-4 are offset from the STEP 1 send (see STEP_OFFSET_DAYS). Following
+ * Steps 2-3 are offset from the STEP 1 send (see STEP_OFFSET_DAYS); a lead
+ * with email_3_sent_at is sequence-complete and the email_4_* columns are
+ * unused (left in the DB, never read or written here). Following
  * the retry-loop lesson (twice burned): the sent_at stamp is written BEFORE
  * the send is attempted, so a failed send can never loop. status then records
  * 'sent' or 'failed' for the post-mortem.
@@ -29,7 +31,9 @@
  * SENDING. Plain text only, no tracking pixel, Resend, on the SAME cold-sender
  * identity as vsl-campaign (VSL_SENDER_EMAIL) so cold reputation stays off the
  * transactional address. One-click List-Unsubscribe. Every send is logged to
- * prospecting.lead_messages with variant 'seq_<slug>_s<step>'.
+ * prospecting.lead_messages with variant 'seq_<slug>_s<step>_c<copyArm>_f<footerArm>'
+ * (the step-1 copy arm is recorded on every step so whole-sequence outcomes
+ * can be segmented by the step 1 a lead received).
  *
  * SAFETY.
  *   - EMAIL_SEQUENCE_ENABLED must be exactly 'true' or nothing sends, same
@@ -54,7 +58,7 @@ const { signLead } = require('../public/_token');
 // Config
 // ---------------------------------------------------------------------------
 // Days after the STEP 1 send at which each later step becomes due.
-const STEP_OFFSET_DAYS = { 2: 4, 3: 11, 4: 21 };
+const STEP_OFFSET_DAYS = { 2: 4, 3: 11 };
 const DEFAULT_DAILY_CAP = 40;
 const HARD_DAILY_CEILING = 150;  // a bug in ?cap= must never become a blast
 const MAX_PER_RUN = 20;          // one cron tick can't spend the whole day
@@ -170,7 +174,19 @@ function mergeAndValidate(template, values) {
 }
 
 function buildEmail(lead, slug, step) {
-    const copy = COPY[slug] && COPY[slug]['step' + step];
+    // Step-1 copy A/B (2026-08-10), orthogonal to the footer arm below (which
+    // is lead.id % 2, so id/2 keeps the two assignments independent):
+    //   Q: the original step 1. Question CTA, no links.
+    //   V: step1_v, same opener and hook, then the direct pay-per-meeting
+    //      promise and the niche VSL link. Falls back to step1 if a niche has
+    //      no step1_v yet. Steps 2-3 are identical for both arms; the arm is
+    //      still logged on every step (variant _cQ/_cV) so whole-sequence
+    //      outcomes can be segmented by the step 1 a lead received.
+    const copyArm = Math.floor(lead.id / 2) % 2 === 0 ? 'Q' : 'V';
+    let copy = COPY[slug] && COPY[slug]['step' + step];
+    if (step === 1 && copyArm === 'V' && COPY[slug] && COPY[slug].step1_v) {
+        copy = COPY[slug].step1_v;
+    }
     if (!copy) return { ok: false, why: 'no_copy' };
     const values = Object.assign({
         first_name: firstName(lead.owner_name, lead.name, lead.address) || '',
@@ -197,7 +213,7 @@ function buildEmail(lead, slug, step) {
     );
     // Footer A/B (2026-08-10): arm by lead id, stable across all steps.
     //   A: "Remy Leon / Miami" everywhere (as authored, max deliverability).
-    //   B: same on step 1 (link-free rule), full co-founder footer steps 2-4.
+    //   B: same on step 1 (link-free rule), full co-founder footer steps 2-3.
     // Scored on replies per arm via the _fA/_fB variant suffix.
     const footerArm = lead.id % 2 === 0 ? 'A' : 'B';
     if (footerArm === 'B' && step >= 2) {
@@ -208,7 +224,7 @@ function buildEmail(lead, slug, step) {
             'stiloaipartners.com',
         ].join('\n'));
     }
-    return { ok: true, subject: subject.text, body: attributed, footerArm: footerArm };
+    return { ok: true, subject: subject.text, body: attributed, footerArm: footerArm, copyArm: copyArm };
 }
 
 // ---------------------------------------------------------------------------
@@ -244,11 +260,11 @@ function parseNaiveUtc(v) {
  */
 function dueStep(lead, now) {
     if (!lead.email_1_sent_at) return 1;
-    if (lead.email_4_sent_at) return null; // sequence complete
+    if (lead.email_3_sent_at) return null; // sequence complete
     const anchor = parseNaiveUtc(lead.email_1_sent_at);
     if (!anchor) return null;
     const days = (now - anchor) / 86400000;
-    for (const step of [2, 3, 4]) {
+    for (const step of [2, 3]) {
         if (lead['email_' + step + '_sent_at']) continue;
         return days >= STEP_OFFSET_DAYS[step] ? step : null;
     }
@@ -305,13 +321,13 @@ module.exports = async function handler(req, res) {
     const { data: leads, error } = await sb.from('leads')
         .select('id,name,owner_name,owner_email,address,niche,category,assigned_to,'
             + 'last_called_outcome,'
-            + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,email_4_sent_at')
+            + 'email_1_sent_at,email_2_sent_at,email_3_sent_at')
         .eq('email_search_status', 'found')
         .not('owner_email', 'is', null)
         .is('archived_batch', null)
         .is('meeting_booked_at', null)   // permanent exit: booked
         .is('reply_received_at', null)   // permanent exit: replied
-        .is('email_4_sent_at', null)     // sequence already finished
+        .is('email_3_sent_at', null)     // sequence already finished
         .limit(5000);
     if (error) return res.status(500).json({ error: 'read_failed', detail: error.message });
 
@@ -439,7 +455,7 @@ module.exports = async function handler(req, res) {
                 provider: 'resend', provider_message_id: r.id || null,
                 status: 'sent',
                 sent_by: l.assigned_to || null,
-                variant: 'seq_' + p.slug + '_s' + p.step + '_f' + (e.footerArm || 'A'),
+                variant: 'seq_' + p.slug + '_s' + p.step + '_c' + (e.copyArm || 'Q') + '_f' + (e.footerArm || 'A'),
                 sent_at: new Date().toISOString(),
             });
         }
