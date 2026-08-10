@@ -1822,6 +1822,10 @@
                  callback SLA and sorts overdue-first. -->
             <div class="page-content" id="page-outbound" style="display:none;">
                 <div id="obLockBanner" style="display:none;margin:0 0 16px;padding:12px 16px;border-radius:10px;font-size:0.86rem;line-height:1.5;"></div>
+                <!-- Shown when many targets share the same send-blocking provider
+                     error (e.g. Quo out of prepaid credits). Filled by
+                     obRenderErrorBanner. -->
+                <div id="obErrorBanner" style="display:none;margin:0 0 16px;padding:12px 16px;border-radius:10px;font-size:0.86rem;line-height:1.5;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#ef4444;"></div>
 
                 <div class="stilo-page-header-row" style="gap:12px;flex-wrap:wrap;align-items:center;">
                     <select id="obCampaignSelect" onchange="obLoadBoard()" style="padding:9px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-family:var(--font-body);min-width:220px;">
@@ -1832,6 +1836,13 @@
                     </select>
                     <button onclick="obLoadBoard()" style="padding:9px 16px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;cursor:pointer;">Refresh</button>
                     <span id="obPacing" style="margin-left:auto;font-size:0.8rem;color:var(--text-muted);"></span>
+                </div>
+
+                <!-- This board is SMS only by design; the drip email engine has
+                     its own home. Keep this a pointer, not a second email UI. -->
+                <div style="margin:6px 0 14px;font-size:0.76rem;color:var(--text-muted);">
+                    SMS campaigns only. The email sequence lives on the
+                    <a href="#emails" onclick="switchPage('emails');return false;" style="color:#2563EB;text-decoration:none;">Sales tab</a>.
                 </div>
 
                 <div id="obStatStrip" style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px;"></div>
@@ -6406,6 +6417,69 @@
             return (neg ? '+' : '') + m + ':' + (s < 10 ? '0' : '') + s;
         }
 
+        /**
+         * Provider errors arrive as raw JSON blobs and were being dumped into
+         * the cards verbatim. Translate the known ones into a short human
+         * label; anything unknown shows its first 60 chars with the full text
+         * behind a click-to-expand. `blocking` marks errors that stop EVERY
+         * send (so the board can show one banner instead of 500 red cards).
+         */
+        function obHumanError(raw) {
+            var full = String(raw || '');
+            var msg = full, code = '', status = null;
+            try {
+                var j = JSON.parse(full);
+                if (j && typeof j === 'object') {
+                    msg = j.message || j.title || full;
+                    code = String(j.code || '');
+                    status = j.status || null;
+                }
+            } catch (e) { /* not JSON: treat as plain text */ }
+            if (status === 402 || code === '0200402' || /prepaid credits/i.test(msg)) {
+                return { short: 'Quo out of prepaid credits', full: full, blocking: true };
+            }
+            var short = msg.length > 60 ? msg.slice(0, 60).replace(/\s+\S*$/, '') + '…' : msg;
+            return { short: short || 'Send failed', full: full, blocking: false };
+        }
+
+        function obToggleErr(el) {
+            var d = el.nextElementSibling;
+            if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none';
+        }
+        function obToggleClamp(el) {
+            var open = el.getAttribute('data-open') === '1';
+            el.style.webkitLineClamp = open ? '3' : 'unset';
+            el.setAttribute('data-open', open ? '0' : '1');
+        }
+
+        /**
+         * One banner when >5 targets share the same send-blocking error.
+         * A wall of identical red chips means one account problem, not 500
+         * lead problems, so say it once at the top with the fix.
+         */
+        function obRenderErrorBanner(d) {
+            var el = document.getElementById('obErrorBanner');
+            if (!el) return;
+            var counts = {};
+            Object.keys(d.stages || {}).forEach(function (k) {
+                (d.stages[k] || []).forEach(function (c) {
+                    if (!c.last_error) return;
+                    var he = obHumanError(c.last_error);
+                    if (!he.blocking) return;
+                    counts[he.short] = (counts[he.short] || 0) + 1;
+                });
+            });
+            var top = null;
+            Object.keys(counts).forEach(function (k) { if (!top || counts[k] > counts[top]) top = k; });
+            if (!top || counts[top] <= 5) { el.style.display = 'none'; return; }
+            el.style.display = 'block';
+            el.innerHTML = '<strong>Sending is failing:</strong> '
+                + obEsc(top) + ' (' + counts[top] + ' messages). '
+                + (top === 'Quo out of prepaid credits'
+                    ? 'Top up in the Quo dashboard, queued messages will retry.'
+                    : 'Queued messages will retry once the account issue is fixed.');
+        }
+
         async function obInitPage() {
             var sel = document.getElementById('obCampaignSelect');
             try {
@@ -6468,6 +6542,7 @@
                 var d = await prospectFetchJSON(url, { method: 'GET' });
                 obBoardData = d;
                 obRenderLockBanner(d.send_enabled_env, d.campaign);
+                obRenderErrorBanner(d);
                 obRenderStats(d);
                 obRenderBoard(d);
                 obPopulateRepFilter(d);
@@ -6558,7 +6633,10 @@
             var isReplied = c.stage === 'replied';
             var waiting = isReplied && !c.called_back_at;
             var border = waiting ? (c.overdue ? '#ef4444' : '#F59E0B') : 'var(--border-subtle)';
-            var out = ['<div style="background:var(--bg-input,rgba(255,255,255,.03));border:1px solid ' + border + ';border-radius:9px;padding:10px 11px;margin:0 0 8px;">'];
+            // overflow-wrap on the card: scraped business names and raw error
+            // strings have no spaces to break on and were pushing the column
+            // wider than its 282px track.
+            var out = ['<div style="background:var(--bg-input,rgba(255,255,255,.03));border:1px solid ' + border + ';border-radius:9px;padding:10px 11px;margin:0 0 8px;overflow-wrap:anywhere;min-width:0;">'];
 
             out.push('<div style="font-weight:650;font-size:0.83rem;line-height:1.3;">' + obEsc(c.business || ('Lead ' + c.lead_id)) + '</div>');
             var meta = [c.owner_name, c.niche].filter(Boolean).join(' · ');
@@ -6571,16 +6649,29 @@
                     + obFmtCountdown(c.seconds_remaining) + (c.overdue ? ' overdue' : ' left') + '</div>');
             }
 
+            // Bodies are clamped to 3 lines and expand on click instead of the
+            // old hard character slice, which cut mid-word and still overflowed
+            // on long unbroken strings.
+            var clamp = 'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;';
             if (c.first_reply_body) {
-                out.push('<div style="margin:7px 0;padding:7px 9px;background:rgba(245,158,11,.08);border-left:2px solid #F59E0B;border-radius:4px;font-size:0.78rem;line-height:1.45;">'
-                    + obEsc(String(c.first_reply_body).slice(0, 220)) + '</div>');
+                out.push('<div onclick="obToggleClamp(this)" data-open="0" title="Click to expand" style="' + clamp + 'margin:7px 0;padding:7px 9px;background:rgba(245,158,11,.08);border-left:2px solid #F59E0B;border-radius:4px;font-size:0.78rem;line-height:1.45;">'
+                    + obEsc(String(c.first_reply_body).slice(0, 600)) + '</div>');
             } else if (c.step1_body) {
-                out.push('<div style="margin:7px 0;font-size:0.75rem;color:var(--text-muted);line-height:1.45;">'
-                    + obEsc(String(c.step1_body).slice(0, 150)) + '</div>');
+                out.push('<div onclick="obToggleClamp(this)" data-open="0" title="Click to expand" style="' + clamp + 'margin:7px 0;font-size:0.75rem;color:var(--text-muted);line-height:1.45;">'
+                    + obEsc(String(c.step1_body).slice(0, 600)) + '</div>');
             }
 
             if (c.last_error) {
-                out.push('<div style="font-size:0.7rem;color:#ef4444;margin:4px 0;">' + obEsc(c.last_error) + '</div>');
+                // Short human chip, full provider JSON behind a click (and in
+                // the hover tooltip). Never dump raw JSON into the card.
+                var he = obHumanError(c.last_error);
+                out.push('<div style="margin:6px 0 2px;">'
+                    + '<span onclick="obToggleErr(this)" title="' + obEsc(he.full) + '" '
+                    + 'style="display:inline-block;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;'
+                    + 'padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#ef4444;font-size:0.68rem;font-weight:600;cursor:pointer;">'
+                    + obEsc(he.short) + '</span>'
+                    + '<div style="display:none;margin-top:5px;font-size:0.67rem;color:var(--text-muted);line-height:1.4;word-break:break-all;">' + obEsc(he.full) + '</div>'
+                    + '</div>');
             }
 
             var btn = 'padding:5px 9px;border-radius:6px;border:1px solid var(--border-subtle);background:transparent;color:inherit;font-size:0.72rem;cursor:pointer;';
