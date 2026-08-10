@@ -191,11 +191,24 @@ function buildEmail(lead, slug, step) {
     // Per-lead VSL attribution: the copy layer only knows static /vsl/<slug>
     // URLs, so sign the lead id onto any of ours after the merge. Same token
     // scheme as vsl-campaign, so vsl_events attribute the view to this lead.
-    const attributed = body.text.replace(
+    let attributed = body.text.replace(
         /https:\/\/stiloaipartners\.com\/vsl\/([a-z-]+)/g,
         (m, s) => m + '?lid=' + lead.id + '&t=' + signLead(lead.id)
     );
-    return { ok: true, subject: subject.text, body: attributed };
+    // Footer A/B (2026-08-10): arm by lead id, stable across all steps.
+    //   A: "Remy Leon / Miami" everywhere (as authored, max deliverability).
+    //   B: same on step 1 (link-free rule), full co-founder footer steps 2-4.
+    // Scored on replies per arm via the _fA/_fB variant suffix.
+    const footerArm = lead.id % 2 === 0 ? 'A' : 'B';
+    if (footerArm === 'B' && step >= 2) {
+        attributed = attributed.replace(/Remy Leon\nMiami\s*$/, [
+            'Remy Leon',
+            'Co-founder, STILO AI Partners',
+            '(786) 837-6639',
+            'stiloaipartners.com',
+        ].join('\n'));
+    }
+    return { ok: true, subject: subject.text, body: attributed, footerArm: footerArm };
 }
 
 // ---------------------------------------------------------------------------
@@ -426,7 +439,7 @@ module.exports = async function handler(req, res) {
                 provider: 'resend', provider_message_id: r.id || null,
                 status: 'sent',
                 sent_by: l.assigned_to || null,
-                variant: 'seq_' + p.slug + '_s' + p.step,
+                variant: 'seq_' + p.slug + '_s' + p.step + '_f' + (e.footerArm || 'A'),
                 sent_at: new Date().toISOString(),
             });
         }
