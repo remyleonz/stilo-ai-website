@@ -48,12 +48,13 @@ const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { nicheForLead } = require('./_vsl');
 const { COPY, NICHE_SLOTS } = require('./_email_sequence_copy');
+const { signLead } = require('../public/_token');
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 // Days after the STEP 1 send at which each later step becomes due.
-const STEP_OFFSET_DAYS = { 2: 4, 3: 8, 4: 15 };
+const STEP_OFFSET_DAYS = { 2: 4, 3: 11, 4: 21 };
 const DEFAULT_DAILY_CAP = 40;
 const HARD_DAILY_CEILING = 150;  // a bug in ?cap= must never become a blast
 const MAX_PER_RUN = 20;          // one cron tick can't spend the whole day
@@ -173,7 +174,14 @@ function buildEmail(lead, slug, step) {
     if (!subject.ok) return subject;
     const body = mergeAndValidate(copy.body, values);
     if (!body.ok) return body;
-    return { ok: true, subject: subject.text, body: body.text };
+    // Per-lead VSL attribution: the copy layer only knows static /vsl/<slug>
+    // URLs, so sign the lead id onto any of ours after the merge. Same token
+    // scheme as vsl-campaign, so vsl_events attribute the view to this lead.
+    const attributed = body.text.replace(
+        /https:\/\/stiloaipartners\.com\/vsl\/([a-z-]+)/g,
+        (m, s) => m + '?lid=' + lead.id + '&t=' + signLead(lead.id)
+    );
+    return { ok: true, subject: subject.text, body: attributed };
 }
 
 // ---------------------------------------------------------------------------
