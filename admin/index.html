@@ -1242,6 +1242,23 @@
             }
         }
     </style>
+<style id="crm-booked">
+/* Sales tab · booked-meetings CRM rows. Grid on desktop, stacked on mobile. */
+.crm-head, .crm-row { display:grid; grid-template-columns:minmax(0,1.5fr) 128px minmax(0,1fr) minmax(0,1.1fr) minmax(150px,1.3fr) 26px; gap:4px 14px; align-items:center; }
+.crm-head { padding:4px 0 8px; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); }
+.crm-row { padding:11px 0; border-top:1px solid var(--border-subtle); cursor:pointer; transition:background 100ms; }
+.crm-row:hover { background:rgba(37,99,235,0.05); }
+.crm-caret { color:var(--text-muted); font-size:11px; text-align:right; transition:transform 150ms; }
+.crm-row.open .crm-caret { transform:rotate(90deg); }
+.crm-expand { border-top:1px dashed var(--border-subtle); padding:12px 4px 14px; }
+@media (max-width: 760px) {
+    .crm-head { display:none; }
+    .crm-row { grid-template-columns:minmax(0,1fr) 26px; gap:6px 10px; }
+    .crm-cell { grid-column:1 / -1; }
+    .crm-cell-lead { grid-column:1; }
+    .crm-caret { grid-row:1; grid-column:2; }
+}
+</style>
 <style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
 </head>
 <body>
@@ -9817,19 +9834,7 @@
                 var labels = { onboarding: 'Onboarding (paid half, implementing)', active: 'Paid clients (live)', churned: 'Churned' };
                 p.innerHTML = salesPanelWrap(labels[k], list.length ? list.map(function (d) { return salesDealRow(d, k); }).join('') : '<div style="color:var(--text-muted);font-size:13px;">None yet.</div>');
             } else if (k === 'booked') {
-                // Upcoming meetings first (soonest at top), past ones at the bottom.
-                var bl = sortBookedUpcomingFirst(SALES.booked_leads || []);
-                var bs = SALES.booked_summary || {};
-                var chip = function (n, lbl, color) { return '<span style="white-space:nowrap;"><b style="color:' + (color || 'var(--text-primary)') + ';">' + (n || 0) + '</b> <span style="color:var(--text-secondary);">' + lbl + '</span></span>'; };
-                var summary = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:2px 0 14px;font-size:12px;">'
-                    + chip(bs.total, 'total') + chip(bs.upcoming, 'upcoming', '#5A7BE8') + chip(bs.held, 'held')
-                    + chip(bs.won, 'won', '#10b981') + chip(bs.lost, 'lost', '#ef4444') + chip(bs.no_show, 'no-show', '#eab308')
-                    + chip(bs.rescheduled, 'reschedules')
-                    + '<span style="white-space:nowrap;margin-left:auto;"><b style="color:var(--text-primary);font-size:14px;">' + (bs.close_rate_pct || 0) + '%</b> <span style="color:var(--text-secondary);">meeting close rate</span></span>'
-                    + '</div>';
-                var rows = bl.length ? bl.map(salesBookedRow).join('') : '<div style="color:var(--text-muted);font-size:13px;">No booked meetings yet.</div>';
-                p.innerHTML = salesPanelWrap('Booked meetings', summary + rows
-                    + '<div style="margin-top:12px;"><button onclick="switchPage(\'prospecting\');setTimeout(function(){switchProspectTab(\'callable\');},200);" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;">Book a cold-call lead →</button></div>');
+                p.innerHTML = crmBookedPanel();
             } else if (k === 'cold_calls' || k === 'emails_sent') {
                 var metric = k === 'cold_calls' ? 'dials' : 'emails';
                 var board = (SALES.leaderboard || []).slice().sort(function (a, b) { return (b[metric] || 0) - (a[metric] || 0); });
@@ -9861,37 +9866,284 @@
         function salesMoveBtn(id, stage, label, color) {
             return '<button onclick="moveDealStage(\'' + id + '\',\'' + stage + '\')" style="background:none;border:1px solid ' + color + ';color:' + color + ';border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;">' + label + '</button>';
         }
-        var MTG_OUTCOME_META = {
-            won:      { label: 'Closed won',       color: '#10b981', bg: 'rgba(16,185,129,0.14)' },
-            lost:     { label: 'Closed lost',      color: '#ef4444', bg: 'rgba(239,68,68,0.14)' },
-            no_show:  { label: 'No-show',          color: '#eab308', bg: 'rgba(234,179,8,0.14)' },
-            upcoming: { label: 'Upcoming',         color: '#5A7BE8', bg: 'rgba(37,99,235,0.14)' },
-            past:     { label: 'Awaiting outcome', color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.05)' }
-        };
-        function mtgOutcomeBadge(l) {
-            var m = MTG_OUTCOME_META[l.status || 'past'] || MTG_OUTCOME_META.past;
-            var label = m.label;
-            if (l.outcome === 'interested') label = 'Interested';
-            else if (l.outcome === 'needs_time') label = 'Needs time';
-            else if (l.outcome === 'rescheduled') label = 'Rescheduled';
-            return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.03em;color:' + m.color + ';background:' + m.bg + ';">' + label + '</span>';
+        /* ===== Booked meetings CRM =====
+           One row per meeting lead: disposition chip, meeting time, offer +
+           booked-by rep, last touch + engagement signals, and an editable next
+           step (stored on prospecting.leads.next_step / next_step_due via
+           /api/prospects/set-next-step). Rows expand into the full touch
+           timeline from /api/prospects/timeline. Grouped Upcoming / Needs
+           action / Closed; overdue next steps float to the top of Needs
+           action. */
+        var CRM_OPEN = {};   // lead_id -> true (expanded rows survive re-render)
+        var CRM_TL = {};     // lead_id -> timeline events (fetched once per lead)
+        var CRM_EDIT = {};   // lead_id -> true (next-step editor open)
+
+        function crmRel(ts) {
+            var ms = tsToMsP(ts);
+            if (ms == null) return 'TBD';
+            var d = ms - Date.now();
+            var abs = Math.abs(d);
+            var min = Math.round(abs / 60000), hr = Math.round(abs / 3600000), day = Math.round(abs / 86400000);
+            if (min < 1) return 'now';
+            if (d >= 0) {
+                if (min < 60) return 'in ' + min + ' min';
+                if (hr < 24) return 'in ' + hr + (hr === 1 ? ' hour' : ' hours');
+                return 'in ' + day + (day === 1 ? ' day' : ' days');
+            }
+            if (min < 60) return min + 'm ago';
+            if (hr < 24) return hr + 'h ago';
+            return day + 'd ago';
         }
-        function salesBookedRow(l) {
-            var when = l.meeting_scheduled_at ? new Date(l.meeting_scheduled_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'time TBD';
-            var meta = escapeAdminHtml(when)
-                + (l.owner_name ? ' · ' + escapeAdminHtml(l.owner_name) : '')
-                + (l.booked_by_name ? ' · booked by ' + escapeAdminHtml(l.booked_by_name) : '')
-                + (l.reschedule_count ? ' · rescheduled ' + l.reschedule_count + 'x' : '');
-            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border-subtle);flex-wrap:wrap;">'
-                + '<div style="min-width:0;flex:1;">'
-                    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:700;font-size:13px;color:var(--text-primary);cursor:pointer;" onclick="openProspectDrawer(' + (l.id || 'null') + ')">' + escapeAdminHtml(l.name || ('Lead ' + l.id)) + '</span>' + mtgOutcomeBadge(l) + (l.has_transcript ? '<span title="Transcript on file" style="font-size:10px;color:var(--text-muted);">&#128196; transcript</span>' : '') + '</div>'
-                    + '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">' + meta + '</div>'
-                + '</div>'
-                + '<div style="display:flex;gap:6px;align-items:center;">'
-                    + '<button onclick="openProspectDrawer(' + (l.id || 'null') + ')" style="background:none;border:1px solid var(--border-medium);color:var(--text-secondary);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;">' + (l.has_transcript ? 'Transcript' : 'Open') + '</button>'
-                    + (l.meeting_meet_link ? '<a href="' + escapeAdminHtml(l.meeting_meet_link) + '" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:12px;padding:7px 13px;border-radius:7px;">Join Meet</a>' : '')
-                + '</div>'
+        function crmDisposition(l) {
+            if (l.outcome === 'closed_won')  return { label: 'Closed won',        color: '#10b981', bg: 'rgba(16,185,129,0.14)' };
+            if (l.outcome === 'closed_lost') return { label: 'Closed lost',       color: '#ef4444', bg: 'rgba(239,68,68,0.14)' };
+            if (l.outcome === 'no_show')     return { label: 'No-show',           color: '#eab308', bg: 'rgba(234,179,8,0.14)' };
+            if (l.outcome === 'interested')  return { label: 'Held · interested', color: '#10b981', bg: 'rgba(16,185,129,0.14)' };
+            if (l.outcome === 'needs_time')  return { label: 'Held · needs time', color: '#5A7BE8', bg: 'rgba(37,99,235,0.14)' };
+            if (l.status === 'upcoming') {
+                return l.meeting_confirmed_at
+                    ? { label: 'Upcoming',    color: '#5A7BE8', bg: 'rgba(37,99,235,0.14)' }
+                    : { label: 'Unconfirmed', color: '#f97316', bg: 'rgba(249,115,22,0.14)' };
+            }
+            if (l.outcome === 'rescheduled') return { label: 'Rescheduled', color: '#eab308', bg: 'rgba(234,179,8,0.14)' };
+            return { label: 'Awaiting outcome', color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.05)' };
+        }
+        // Sensible default when no next step has been typed. Derived from
+        // state, shown italic + "suggested" so the owner knows it's not saved.
+        function crmDefaultNext(l) {
+            if (l.outcome === 'closed_won')  return 'Kick off onboarding';
+            if (l.outcome === 'closed_lost') return null;
+            if (l.outcome === 'no_show')     return 'Call to reschedule';
+            if (l.outcome === 'interested')  return 'Send follow-up and book the closing call';
+            if (l.outcome === 'needs_time')  return 'Set a check-in call';
+            if (l.status === 'upcoming')     return l.meeting_confirmed_at ? 'Prep for the meeting' : 'Confirm the meeting';
+            if (l.outcome === 'rescheduled') return 'Confirm the new time';
+            return 'Log the meeting outcome';
+        }
+        function crmGroup(l) {
+            if (l.outcome === 'closed_won' || l.outcome === 'closed_lost') return 'closed';
+            if (l.status === 'upcoming') return 'upcoming';
+            return 'action';
+        }
+        function crmDueMs(l) { return l.next_step_due ? Date.parse(String(l.next_step_due).slice(0, 10) + 'T23:59:59') : null; }
+        function crmOverdue(l) { var m = crmDueMs(l); return m != null && m < Date.now(); }
+        function crmDueLabel(due) {
+            var d = new Date(String(due).slice(0, 10) + 'T12:00:00');
+            if (isNaN(d.getTime())) return String(due);
+            var today = new Date(); today.setHours(12, 0, 0, 0);
+            var diff = Math.round((d - today) / 86400000);
+            if (diff === 0) return 'today';
+            if (diff === 1) return 'tomorrow';
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function crmBookedPanel() {
+            var bl = (SALES && SALES.booked_leads || []).slice();
+            var bs = (SALES && SALES.booked_summary) || {};
+            var chip = function (n, lbl, color) { return '<span style="white-space:nowrap;"><b style="color:' + (color || 'var(--text-primary)') + ';">' + (n || 0) + '</b> <span style="color:var(--text-secondary);">' + lbl + '</span></span>'; };
+            var summary = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:2px 0 10px;font-size:12px;">'
+                + chip(bs.total, 'total') + chip(bs.upcoming, 'upcoming', '#5A7BE8') + chip(bs.held, 'held')
+                + chip(bs.won, 'won', '#10b981') + chip(bs.lost, 'lost', '#ef4444') + chip(bs.no_show, 'no-show', '#eab308')
+                + chip(bs.rescheduled, 'reschedules')
+                + '<span style="white-space:nowrap;margin-left:auto;"><b style="color:var(--text-primary);font-size:14px;">' + (bs.close_rate_pct || 0) + '%</b> <span style="color:var(--text-secondary);">meeting close rate</span></span>'
                 + '</div>';
+            var groups = { upcoming: [], action: [], closed: [] };
+            bl.forEach(function (l) { groups[crmGroup(l)].push(l); });
+            var mMs = function (l) { var v = tsToMsP(l.meeting_scheduled_at); return v == null ? 0 : v; };
+            groups.upcoming.sort(function (a, b) { return mMs(a) - mMs(b); });
+            // Needs action: overdue next steps first (oldest due at top), then
+            // dated steps by due date, then the rest by most recent meeting.
+            groups.action.sort(function (a, b) {
+                var ao = crmOverdue(a), bo = crmOverdue(b);
+                if (ao !== bo) return ao ? -1 : 1;
+                var ad = crmDueMs(a), bd = crmDueMs(b);
+                if (ad != null && bd != null && ad !== bd) return ad - bd;
+                if ((ad != null) !== (bd != null)) return ad != null ? -1 : 1;
+                return mMs(b) - mMs(a);
+            });
+            groups.closed.sort(function (a, b) { return mMs(b) - mMs(a); });
+            var head = '<div class="crm-head"><div>Lead</div><div>Meeting</div><div>Offer · booked by</div><div>Last touch · signals</div><div>Next step</div><div></div></div>';
+            var section = function (title, color, rows) {
+                if (!rows.length) return '';
+                return '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:' + color + ';margin:18px 0 2px;">' + title + ' · ' + rows.length + '</div>'
+                    + rows.map(crmRow).join('');
+            };
+            var body = bl.length
+                ? head
+                    + section('Upcoming', '#5A7BE8', groups.upcoming)
+                    + section('Needs action', '#f97316', groups.action)
+                    + section('Closed', 'var(--text-muted)', groups.closed)
+                : '<div style="color:var(--text-muted);font-size:13px;">No booked meetings yet.</div>';
+            return salesPanelWrap('Booked meetings', summary + body
+                + '<div style="margin-top:14px;"><button onclick="switchPage(\'prospecting\');setTimeout(function(){switchProspectTab(\'callable\');},200);" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;">Book a cold-call lead →</button></div>');
+        }
+        function crmChannelLabel(ch, dir) {
+            if (ch === 'call') return dir === 'inbound' ? 'Call in' : 'Call';
+            var base = ch === 'sms' ? 'SMS' : ch === 'email' ? 'Email' : 'Touch';
+            return dir === 'inbound' ? base + ' reply' : base + ' sent';
+        }
+        function crmRow(l) {
+            var d = crmDisposition(l);
+            var open = !!CRM_OPEN[l.id];
+            var chipHtml = '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.03em;color:' + d.color + ';background:' + d.bg + ';white-space:nowrap;">' + d.label + '</span>';
+            var contact = l.owner_name || '';
+            var emailStr = l.owner_email || l.email || '';
+            var lead = '<div class="crm-cell-lead" style="min-width:0;">'
+                + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+                + '<span onclick="event.stopPropagation();openProspectDrawer(' + l.id + ')" style="font-weight:700;font-size:13px;color:var(--text-primary);">' + escapeAdminHtml(l.name || ('Lead ' + l.id)) + '</span>'
+                + chipHtml
+                + (l.has_transcript ? '<span title="Transcript on file" style="font-size:10px;color:var(--text-muted);">transcript</span>' : '')
+                + (l.reschedule_count ? '<span style="font-size:10px;color:var(--text-muted);">resched ×' + l.reschedule_count + '</span>' : '')
+                + '</div>'
+                + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:2px;">' + escapeAdminHtml(contact || 'No contact name') + (emailStr ? ' · ' + escapeAdminHtml(emailStr) : '') + '</div>'
+                + '</div>';
+            var whenRel = l.meeting_scheduled_at ? crmRel(l.meeting_scheduled_at) : 'TBD';
+            var whenAbs = l.meeting_scheduled_at ? fmtETp(l.meeting_scheduled_at) + ' ET' : '';
+            var meet = '<div class="crm-cell">'
+                + '<div style="font-size:12px;font-weight:700;color:' + (l.status === 'upcoming' ? 'var(--green,#10b981)' : 'var(--text-secondary)') + ';">' + whenRel + '</div>'
+                + '<div style="font-size:11px;color:var(--text-tertiary);">' + escapeAdminHtml(whenAbs)
+                + (l.status === 'upcoming' && l.meeting_meet_link ? ' · <a href="' + escapeAdminHtml(l.meeting_meet_link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--blue);font-weight:700;">Join</a>' : '')
+                + '</div></div>';
+            var offer = l.pitch_agent || l.matched_product_name || 'No offer set';
+            var rep = l.booked_by_name || (l.meeting_booked_by_sdr ? String(l.meeting_booked_by_sdr).split('@')[0] : 'unknown');
+            var offerCell = '<div class="crm-cell" style="min-width:0;">'
+                + '<div style="font-size:12px;color:var(--text-primary);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(offer) + '</div>'
+                + '<div style="font-size:11px;color:var(--text-tertiary);">by ' + escapeAdminHtml(rep) + '</div></div>';
+            var touch = l.last_touch_at
+                ? crmChannelLabel(l.last_touch_channel, l.last_touch_direction) + ' · ' + crmRel(l.last_touch_at)
+                : 'No touches logged';
+            var sig = function (on, lbl) {
+                return '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;'
+                    + (on ? 'color:#10b981;background:rgba(16,185,129,0.12);' : 'color:var(--text-muted);background:rgba(255,255,255,0.04);')
+                    + '">' + lbl + (on ? ' &#10003;' : '') + '</span>';
+            };
+            var touchCell = '<div class="crm-cell" style="min-width:0;">'
+                + '<div style="font-size:12px;color:' + (l.last_touch_at ? 'var(--text-secondary)' : 'var(--text-muted)') + ';">' + escapeAdminHtml(touch) + '</div>'
+                + '<div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;">' + sig(l.vsl_watched, 'VSL watched') + sig(l.email_opened, 'Email opened') + '</div></div>';
+            var nextCell = '<div class="crm-cell" id="crmNext' + l.id + '" onclick="event.stopPropagation()" style="min-width:0;">' + crmNextInner(l) + '</div>';
+            var caret = '<div class="crm-caret">&#9654;</div>';
+            return '<div class="crm-row' + (open ? ' open' : '') + '" onclick="crmToggle(' + l.id + ')">' + lead + meet + offerCell + touchCell + nextCell + caret + '</div>'
+                + (open ? '<div class="crm-expand" id="crmExpand' + l.id + '">' + crmTimelineHtml(l.id) + '</div>' : '');
+        }
+        function crmNextInner(l) {
+            if (CRM_EDIT[l.id]) {
+                return '<div style="display:flex;flex-direction:column;gap:5px;">'
+                    + '<input id="crmNextText' + l.id + '" type="text" value="' + escapeAdminHtml(l.next_step || '') + '" placeholder="' + escapeAdminHtml(crmDefaultNext(l) || 'Next step') + '" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text-primary);width:100%;box-sizing:border-box;"/>'
+                    + '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">'
+                    + '<input id="crmNextDue' + l.id + '" type="date" value="' + escapeAdminHtml(l.next_step_due ? String(l.next_step_due).slice(0, 10) : '') + '" style="background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;padding:5px 7px;font-size:11px;color:var(--text-primary);color-scheme:dark;"/>'
+                    + '<button onclick="crmSaveNext(' + l.id + ')" style="background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:700;padding:6px 11px;cursor:pointer;">Save</button>'
+                    + '<button onclick="crmClearNext(' + l.id + ')" style="background:none;border:1px solid var(--border-medium);border-radius:6px;color:var(--text-muted);font-size:11px;padding:5px 9px;cursor:pointer;">Clear</button>'
+                    + '<button onclick="crmCancelNext(' + l.id + ')" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;">Cancel</button>'
+                    + '</div></div>';
+            }
+            var stored = l.next_step;
+            var text = stored || crmDefaultNext(l);
+            var overdue = crmOverdue(l);
+            var due = l.next_step_due
+                ? '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;'
+                    + (overdue ? 'color:#ef4444;background:rgba(239,68,68,0.12);' : 'color:var(--text-secondary);background:rgba(255,255,255,0.05);')
+                    + '">' + (overdue ? 'overdue · ' : 'due ') + escapeAdminHtml(crmDueLabel(l.next_step_due)) + '</span>'
+                : '';
+            var editBtn = '<button title="Edit next step" onclick="crmEditNext(' + l.id + ')" style="background:none;border:1px solid var(--border-subtle);border-radius:5px;color:var(--text-muted);cursor:pointer;font-size:10px;padding:2px 7px;flex:none;">Edit</button>';
+            if (!text) {
+                return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;color:var(--text-muted);">Nothing planned</span>' + editBtn + '</div>';
+            }
+            return '<div style="display:flex;align-items:flex-start;gap:6px;">'
+                + '<div style="min-width:0;flex:1;">'
+                + '<div style="font-size:12px;color:' + (stored ? 'var(--text-primary)' : 'var(--text-secondary)') + ';' + (stored ? '' : 'font-style:italic;') + '">' + escapeAdminHtml(text)
+                + (stored ? '' : ' <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-style:normal;">suggested</span>') + '</div>'
+                + (due ? '<div style="margin-top:3px;">' + due + '</div>' : '')
+                + '</div>' + editBtn + '</div>';
+        }
+        function crmFindLead(id) {
+            var bl = (SALES && SALES.booked_leads) || [];
+            for (var i = 0; i < bl.length; i++) if (bl[i].id === id) return bl[i];
+            return null;
+        }
+        function crmRerenderNext(id) {
+            var el = document.getElementById('crmNext' + id);
+            var l = crmFindLead(id);
+            if (el && l) el.innerHTML = crmNextInner(l);
+        }
+        function crmEditNext(id) {
+            CRM_EDIT[id] = true;
+            crmRerenderNext(id);
+            var t = document.getElementById('crmNextText' + id);
+            if (t) t.focus();
+        }
+        function crmCancelNext(id) { delete CRM_EDIT[id]; crmRerenderNext(id); }
+        async function crmPostNext(id, step, due) {
+            return prospectFetchJSON('/api/prospects/set-next-step', {
+                method: 'POST',
+                body: JSON.stringify({ id: id, next_step: step, next_step_due: due })
+            });
+        }
+        async function crmSaveNext(id) {
+            var l = crmFindLead(id); if (!l) return;
+            var textEl = document.getElementById('crmNextText' + id);
+            var dueEl = document.getElementById('crmNextDue' + id);
+            try {
+                var r = await crmPostNext(id, textEl ? textEl.value : '', dueEl && dueEl.value ? dueEl.value : null);
+                l.next_step = r.next_step; l.next_step_due = r.next_step_due;
+                delete CRM_EDIT[id];
+                renderSalesPanel('booked'); // full re-render so grouping + sort update
+            } catch (e) { alert('Could not save the next step: ' + (e.message || 'unknown')); }
+        }
+        async function crmClearNext(id) {
+            var l = crmFindLead(id); if (!l) return;
+            try {
+                await crmPostNext(id, null, null);
+                l.next_step = null; l.next_step_due = null;
+                delete CRM_EDIT[id];
+                renderSalesPanel('booked');
+            } catch (e) { alert('Could not clear the next step: ' + (e.message || 'unknown')); }
+        }
+        function crmToggle(id) {
+            if (CRM_OPEN[id]) delete CRM_OPEN[id]; else CRM_OPEN[id] = true;
+            renderSalesPanel('booked');
+            if (CRM_OPEN[id] && !CRM_TL[id]) crmLoadTimeline(id);
+        }
+        async function crmLoadTimeline(id) {
+            try {
+                var d = await prospectFetchJSON('/api/prospects/timeline?id=' + id);
+                CRM_TL[id] = d.events || [];
+            } catch (e) { CRM_TL[id] = { error: e.message || 'failed' }; }
+            var el = document.getElementById('crmExpand' + id);
+            if (el) el.innerHTML = crmTimelineHtml(id);
+        }
+        function crmTimelineHtml(id) {
+            var ev = CRM_TL[id];
+            if (!ev) return '<div style="font-size:12px;color:var(--text-muted);">Loading timeline…</div>';
+            if (ev.error) return '<div style="font-size:12px;color:var(--red);">Timeline failed: ' + escapeAdminHtml(ev.error) + '</div>';
+            if (!ev.length) return '<div style="font-size:12px;color:var(--text-muted);">No logged touches for this lead yet.</div>';
+            var rows = ev.slice(0, 40).map(function (e) {
+                var color, title, detail = '';
+                if (e.kind === 'call') {
+                    color = 'var(--blue)';
+                    title = (e.direction === 'inbound' ? 'Inbound call' : 'Call') + (e.outcome ? ' · ' + String(e.outcome).replace(/_/g, ' ') : '');
+                    if (e.duration_seconds) detail = Math.max(1, Math.round(e.duration_seconds / 60)) + ' min';
+                    if (e.notes) detail += (detail ? ' · ' : '') + e.notes;
+                } else if (e.kind === 'message') {
+                    color = e.channel === 'sms' ? '#5A7BE8' : '#8b9cf4';
+                    title = (e.channel === 'sms' ? 'SMS' : 'Email') + (e.direction === 'inbound' ? ' reply' : ' sent') + (e.opened_at ? ' · opened' : '');
+                    detail = e.subject || e.body_preview || (e.body ? String(e.body) : '');
+                } else if (e.kind === 'meeting') {
+                    color = '#10b981';
+                    title = 'Meeting' + (e.outcome ? ' · ' + String(e.outcome).replace(/_/g, ' ') : ' held');
+                    detail = e.title || (e.source ? 'via ' + e.source : '');
+                } else {
+                    color = 'var(--text-muted)';
+                    title = 'Stage ' + (e.from_stage || '?') + ' → ' + (e.to_stage || '?');
+                    detail = e.reason || '';
+                }
+                return '<div style="display:flex;gap:10px;padding:5px 0;align-items:baseline;">'
+                    + '<span style="flex:none;width:7px;height:7px;border-radius:50%;background:' + color + ';position:relative;top:-1px;"></span>'
+                    + '<div style="min-width:0;flex:1;"><span style="font-size:12px;color:var(--text-primary);font-weight:600;">' + escapeAdminHtml(title) + '</span>'
+                    + (detail ? '<span style="font-size:11px;color:var(--text-tertiary);"> · ' + escapeAdminHtml(String(detail).slice(0, 120)) + '</span>' : '') + '</div>'
+                    + '<span style="flex:none;font-size:11px;color:var(--text-muted);white-space:nowrap;">' + fmtETp(e.ts) + '</span>'
+                    + '</div>';
+            }).join('');
+            return '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:6px;">All touches · newest first</div>' + rows;
         }
         async function moveDealStage(dealId, stage) {
             var reason = null;

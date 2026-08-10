@@ -5,11 +5,13 @@
  *   - prospecting.lead_calls   (calls + outcomes + transcripts)
  *   - prospecting.lead_messages (SMS + email + voicemail)
  *   - prospecting.lead_stage_history (lifecycle transitions)
+ *   - prospecting.lead_meetings (held meetings + outcomes)
  *
  * Returns an array of events sorted newest-first with a normalized shape:
- *   { ts, kind: 'call' | 'message' | 'stage', ... }
+ *   { ts, kind: 'call' | 'message' | 'stage' | 'meeting', ... }
  *
- * Powers the Timeline tab in the lead drawer.
+ * Powers the Timeline tab in the lead drawer and the expandable rows on the
+ * Sales tab booked-meetings panel.
  */
 const { assertAdminOrSdr, scopedQuery, methodNotAllowed, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
@@ -32,7 +34,7 @@ module.exports = async function handler(req, res) {
     });
 
     try {
-        const [callsRes, messagesRes, stagesRes] = await Promise.all([
+        const [callsRes, messagesRes, stagesRes, meetingsRes] = await Promise.all([
             sb.from('lead_calls')
               .select('id, direction, called_at, outcome, duration_seconds, recording_url, transcript, transcript_summary, notes, logged_by, from_number, to_number')
               .eq('lead_id', id)
@@ -50,11 +52,17 @@ module.exports = async function handler(req, res) {
               .select('id, from_stage, to_stage, changed_by, changed_at, reason')
               .eq('lead_id', id)
               .order('changed_at', { ascending: false })
-              .limit(200)
+              .limit(200),
+            sb.from('lead_meetings')
+              .select('id, occurred_at, outcome, source, title, duration_seconds, summary')
+              .eq('lead_id', id)
+              .order('occurred_at', { ascending: false })
+              .limit(50)
         ]);
         if (callsRes.error)    throw callsRes.error;
         if (messagesRes.error) throw messagesRes.error;
         if (stagesRes.error)   throw stagesRes.error;
+        if (meetingsRes.error) throw meetingsRes.error;
 
         const events = [];
         for (const c of callsRes.data || []) {
@@ -66,6 +74,9 @@ module.exports = async function handler(req, res) {
         for (const s of stagesRes.data || []) {
             events.push({ kind: 'stage', ts: s.changed_at, ...s });
         }
+        for (const m of meetingsRes.data || []) {
+            events.push({ kind: 'meeting', ts: m.occurred_at, ...m });
+        }
         events.sort((a, b) => (b.ts > a.ts ? 1 : (b.ts < a.ts ? -1 : 0)));
 
         res.setHeader('Cache-Control', 'no-store');
@@ -74,7 +85,8 @@ module.exports = async function handler(req, res) {
             counts: {
                 calls: (callsRes.data || []).length,
                 messages: (messagesRes.data || []).length,
-                stages: (stagesRes.data || []).length
+                stages: (stagesRes.data || []).length,
+                meetings: (meetingsRes.data || []).length
             }
         });
     } catch (e) {

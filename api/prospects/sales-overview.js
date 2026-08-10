@@ -51,7 +51,7 @@ module.exports = async function handler(req, res) {
     // meeting. Keyed on meeting_scheduled_at (not last_called_outcome, which a
     // later reminder/callback overwrites). Drives the card, panel, leaderboard.
     const { data: bookedRaw } = await prospect.from('leads')
-        .select('id, name, owner_name, meeting_event_id, meeting_scheduled_at, meeting_meet_link, meeting_booked_by_sdr')
+        .select('id, name, owner_name, owner_email, email, owner_phone, phone, meeting_event_id, meeting_scheduled_at, meeting_meet_link, meeting_booked_by_sdr, meeting_confirmed_at, pitch_agent, matched_product_name, next_step, next_step_due')
         .not('meeting_scheduled_at', 'is', null)
         .order('meeting_scheduled_at', { ascending: true, nullsFirst: false })
         .limit(500);
@@ -90,6 +90,64 @@ module.exports = async function handler(req, res) {
                     : l.outcome === 'closed_lost' ? 'lost'
                     : l.outcome === 'no_show' ? 'no_show'
                     : (l.meeting_scheduled_at && new Date(l.meeting_scheduled_at).getTime() > nowMs ? 'upcoming' : 'past');
+            });
+
+            // Last touch + engagement signals per booked lead, so the panel can
+            // answer "when did we last talk to them and are they engaging"
+            // without opening leads one at a time.
+            //   - last_touch: most recent lead_message or lead_call
+            //   - email_opened: any outbound email with a recorded open
+            //   - vsl_watched: any 'play' event in public.vsl_events
+            // Queries are ordered desc + capped at 1000 rows (PostgREST's hard
+            // cap anyway); with ~30 booked leads that window is plenty.
+            const [msgRes, callRes, vslRes] = await Promise.all([
+                prospect.from('lead_messages')
+                    .select('lead_id, channel, direction, sent_at, opened_at')
+                    .in('lead_id', bIds)
+                    .order('sent_at', { ascending: false })
+                    .limit(1000),
+                prospect.from('lead_calls')
+                    .select('lead_id, direction, called_at')
+                    .in('lead_id', bIds)
+                    .order('called_at', { ascending: false })
+                    .limit(1000),
+                pub.from('vsl_events')
+                    .select('lead_id')
+                    .eq('event', 'play')
+                    .in('lead_id', bIds)
+                    .limit(1000)
+            ]);
+            // lead_calls.called_at and lead_messages.sent_at are naive UTC in
+            // places; treat timestamps without a zone marker as UTC.
+            const toMs = function (ts) {
+                if (!ts) return null;
+                let s = String(ts);
+                if (!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+                const ms = Date.parse(s);
+                return isNaN(ms) ? null : ms;
+            };
+            const touchByLead = {}, openedByLead = {}, watchedByLead = {};
+            (msgRes.data || []).forEach(function (m) {
+                const ms = toMs(m.sent_at);
+                if (ms != null && (!touchByLead[m.lead_id] || ms > touchByLead[m.lead_id].ms)) {
+                    touchByLead[m.lead_id] = { ms: ms, ts: m.sent_at, channel: m.channel || 'email', direction: m.direction || 'outbound' };
+                }
+                if (m.opened_at && m.channel === 'email' && m.direction !== 'inbound') openedByLead[m.lead_id] = true;
+            });
+            (callRes.data || []).forEach(function (c) {
+                const ms = toMs(c.called_at);
+                if (ms != null && (!touchByLead[c.lead_id] || ms > touchByLead[c.lead_id].ms)) {
+                    touchByLead[c.lead_id] = { ms: ms, ts: c.called_at, channel: 'call', direction: c.direction || 'outbound' };
+                }
+            });
+            (vslRes.data || []).forEach(function (e) { watchedByLead[e.lead_id] = true; });
+            bookedLeads.forEach(function (l) {
+                const t = touchByLead[l.id];
+                l.last_touch_at = t ? new Date(t.ms).toISOString() : null;
+                l.last_touch_channel = t ? t.channel : null;
+                l.last_touch_direction = t ? t.direction : null;
+                l.email_opened = !!openedByLead[l.id];
+                l.vsl_watched = !!watchedByLead[l.id];
             });
         }
     } catch (_) { /* enrichment best-effort */ }
