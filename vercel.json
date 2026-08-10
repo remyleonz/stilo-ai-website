@@ -136,6 +136,10 @@
     {
       "path": "/api/prospects/send-nurture-value",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/prospects/email-sequence",
+      "schedule": "15 * * * *"
     }
   ],
   "headers": []
