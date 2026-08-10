@@ -72,7 +72,14 @@ const REPLY_TO = process.env.VSL_REPLY_TO || process.env.STILO_REPLY_TO || 'remy
 
 // Superset of the required info@/sales@/office@/contact@/admin@/support@/hello@
 // exclusions, borrowed verbatim from vsl-campaign.js.
-const ROLE_RE = /^(info|sales|contact|admin|office|hello|support|team|mail|billing|help|service|reception|frontdesk|no-?reply)@/i;
+// Broader than vsl-campaign's: dot/word suffixes (info.miami@), customer-service
+// spellings, and legal/HR inboxes all surfaced in the first dry run.
+const ROLE_RE = /^(info|sales|contact|admin|office|hello|support|team|mail|billing|help|service|services|reception|frontdesk|no-?reply|cs|customerservice|customer\.?care|privacy|legal|careers|jobs|hr|accounts?|ops|dispatch|estimating|estimates|quotes?)([.@_-]|@)/i;
+
+// Off-ICP categories the loose niche matcher would otherwise sweep into
+// commercial-cleaning: residential maids and pool companies are not janitorial
+// buyers, and mailing them the bid-list pitch reads like a mistake.
+const OFF_ICP_RE = /pool|maid|house ?cleaning|carpet|pressure ?wash|car ?wash|laundry|dry ?clean/i;
 
 // Same "is this actually a person's name" bar as vsl-campaign.js. owner_name is
 // scraped and ~30% junk; a wrong name is worse than no name.
@@ -170,6 +177,13 @@ function buildEmail(lead, slug, step) {
         company: cleanBusiness(lead.name) || 'your company',
         city: cityFromAddress(lead.address) || 'your area',
     }, NICHE_SLOTS[slug] || {});
+    // History-aware hook: when a rep already had this lead on the phone, the
+    // step-1 hook says so instead of the generic niche line. Honest context
+    // ("how I got your name") reads warmer and explains the email.
+    if (['answered', 'callback', 'booked_meeting'].includes(String(lead.last_called_outcome || ''))) {
+        values.hook_line = 'One of my reps called ' + values.company
+            + ' a while back, which is how I got your name.';
+    }
     const subject = mergeAndValidate(copy.subject, values);
     if (!subject.ok) return subject;
     const body = mergeAndValidate(copy.body, values);
@@ -277,6 +291,7 @@ module.exports = async function handler(req, res) {
     // ---- audience ----------------------------------------------------------
     const { data: leads, error } = await sb.from('leads')
         .select('id,name,owner_name,owner_email,address,niche,category,assigned_to,'
+            + 'last_called_outcome,'
             + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,email_4_sent_at')
         .eq('email_search_status', 'found')
         .not('owner_email', 'is', null)
@@ -324,7 +339,7 @@ module.exports = async function handler(req, res) {
     const dailyRemaining = Math.max(0, cap - (sentToday || 0));
     const budget = Math.min(dailyRemaining, MAX_PER_RUN);
 
-    const skipped = { role_inbox: 0, replied: 0, bounced: 0, suppressed: 0, no_niche: 0, not_due: 0, dupe_inbox: 0, bad_merge: 0 };
+    const skipped = { role_inbox: 0, replied: 0, bounced: 0, suppressed: 0, no_niche: 0, off_icp: 0, not_due: 0, dupe_inbox: 0, bad_merge: 0 };
     const seen = new Set();
     const plan = [];
     for (const l of (leads || [])) {
@@ -336,6 +351,7 @@ module.exports = async function handler(req, res) {
         if (ROLE_RE.test(em)) { skipped.role_inbox++; continue; }
         if (bouncedAddrs.has(low)) { skipped.bounced++; continue; }
         if (suppressed.has(low)) { skipped.suppressed++; continue; }
+        if (OFF_ICP_RE.test(String(l.niche || '') + ' ' + String(l.category || ''))) { skipped.off_icp++; continue; }
         const slug = nicheForLead(l);
         if (!slug) { skipped.no_niche++; continue; }
         const step = dueStep(l, now);

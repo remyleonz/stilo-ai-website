@@ -140,6 +140,10 @@
     {
       "path": "/api/prospects/email-sequence",
       "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/prospects/capture-replies",
+      "schedule": "25 * * * *"
     }
   ],
   "headers": []
