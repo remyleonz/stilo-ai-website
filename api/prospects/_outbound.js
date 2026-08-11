@@ -454,6 +454,32 @@ function preSendCheck(campaign, target, lead) {
     // and confirmed scrub blocks, and no campaign setting may override it.
     if (lead.do_not_call) return { ok: false, reason: 'do_not_call' };
 
+    // ICP and copy-staleness guard, added 2026-08-11 after a real incident.
+    //
+    // Every cleanup that retired the pre-pivot audience and regenerated its copy
+    // was scoped to stage='queued'. One target had been flipped to 'replied' by
+    // an inbound text, so it escaped all of it and then sent a July body signed
+    // by a rep who had already resigned, pitching a product we no longer sell.
+    // Data cleanups miss rows; a send-time check does not. These two run on
+    // EVERY send regardless of stage.
+    if (campaign.icp_pattern) {
+        const hay = String(lead.niche || lead.category || '');
+        // No industry at all is not a pass. The webhook stubs a lead row for any
+        // unknown inbound number, and those arrive with a null niche.
+        if (!hay) return { ok: false, reason: 'no_niche' };
+        let re = null;
+        try { re = new RegExp(campaign.icp_pattern, 'i'); } catch (_) { re = null; }
+        if (re && !re.test(hay)) return { ok: false, reason: 'out_of_icp' };
+    }
+    if (campaign.copy_valid_from) {
+        // A body written before the campaign's copy was last reset is stale by
+        // definition. Refuse rather than send last month's offer.
+        const gen = target.body_generated_at ? new Date(target.body_generated_at) : null;
+        if (!gen || gen < new Date(campaign.copy_valid_from)) {
+            return { ok: false, reason: 'stale_copy' };
+        }
+    }
+
     // A confirmed litigator match is also never waivable. The exemption below
     // covers "we have no scrub answer", not "the scrub said no".
     if (lead.scrub_status === 'blocked') return { ok: false, reason: 'scrub_blocked' };

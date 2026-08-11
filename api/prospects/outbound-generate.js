@@ -81,7 +81,10 @@ module.exports = async function handler(req, res) {
         const rep = reps[t.assigned_to] || { first_name: 'me', line: t.from_line, display_name: '' };
         try {
             const out = await ob.generateStepBody(lead, campaign, step, rep, t.variant);
-            const patch = { updated_at: new Date().toISOString() };
+            // body_generated_at is what preSendCheck compares against the
+            // campaign's copy_valid_from, so a body written before the last copy
+            // reset is refused at send time instead of shipping a stale offer.
+            const patch = { updated_at: new Date().toISOString(), body_generated_at: new Date().toISOString() };
             patch[bodyCol] = out.body;
             const { error: uErr } = await sb.from('outbound_targets').update(patch).eq('id', t.id);
             if (uErr) { failed++; continue; }
