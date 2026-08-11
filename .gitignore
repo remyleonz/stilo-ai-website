@@ -14,3 +14,6 @@ CompetitorSites/
 
 # Internal competitive / site analysis — keep local, never publish on the site repo
 site-audit/
+
+# One-off diagnostic script: reads .env.local and /tmp/sa.json at runtime
+_fullscan.js
