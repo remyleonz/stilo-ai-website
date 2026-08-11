@@ -25,7 +25,7 @@
  * consent with THEIR account and rebind our tokens to their mailbox/calendar.
  * Now the start of an owned flow requires ONE of:
  *   a) a Supabase admin Bearer JWT (same check as prospects/_shared assertAdmin)
- *      — use with &mode=json from an authenticated fetch, or
+ *     . Use with &mode=json from an authenticated fetch, or
  *   b) a signed link param k=<HMAC(provider+UTC date)> keyed with
  *      UNSUBSCRIBE_SIGNING_SECRET (or CRON_SECRET as fallback). Valid for the
  *      current + previous UTC day. This keeps the flow browser-friendly: a

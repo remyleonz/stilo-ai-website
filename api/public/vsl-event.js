@@ -13,7 +13,7 @@
  *
  * ── Auth model (audit 2026-08-10) ───────────────────────────────────────────
  * Plain analytics inserts stay open (they have to: the tracker fires from an
- * anonymous landing page), but they are clamped — the event name must be on the
+ * anonymous landing page), but they are clamped. The event name must be on the
  * allowlist, lid must be an integer, and the body is size-capped.
  *
  * The ONE side effect that touches real data, stamping

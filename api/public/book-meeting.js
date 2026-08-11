@@ -26,7 +26,7 @@ async function readJsonBody(req) {
     try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { return {}; }
 }
 // Strict charset on purpose (audit 2026-08-10): the old /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-// accepted , ( ) * and %, which are PostgREST .or()/ilike metacharacters — a
+// accepted , ( ) * and %, which are PostgREST .or()/ilike metacharacters, and a
 // crafted "email" could inject filter clauses or wildcards into the lead-match
 // query below. Reject anything outside a plain mailbox shape.
 function isEmail(s) {

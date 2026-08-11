@@ -33,7 +33,7 @@
  * sorted by key and concatenated as key+value with no separator (Twilio's
  * documented scheme), base64-encoded.
  *
- * IMPORTANT: if TWILIO_AUTH_TOKEN is NOT set, the check FAILS OPEN — the
+ * IMPORTANT: if TWILIO_AUTH_TOKEN is NOT set, the check FAILS OPEN. The
  * request is processed and a console.error is logged on every call. That is
  * deliberate: a real customer sending STOP must never be dropped because of a
  * missing env var, and legally we have to honour the opt-out. Set
@@ -96,7 +96,7 @@ function safeEqual(a, b) {
 function verifyTwilioRequest(req, params) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (!authToken) {
-    console.error('[sms_optout] TWILIO_AUTH_TOKEN is not set — accepting this webhook WITHOUT signature verification. Anyone can forge opt-outs until this env var is added.');
+    console.error('[sms_optout] TWILIO_AUTH_TOKEN is not set. Accepting this webhook WITHOUT signature verification. Anyone can forge opt-outs until this env var is added.');
     return { ok: true, reason: 'unverified_no_token' };
   }
   const sig = req.headers['x-twilio-signature'] || req.headers['X-Twilio-Signature'];

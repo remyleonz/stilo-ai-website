@@ -276,11 +276,11 @@ async function mergeQuoIntoManualRow(sb, rowId, baseFields) {
     return data;
 }
 
-// Secondary SANITY CHECK ONLY — never an authentication path (audit 2026-08-10).
+// Secondary SANITY CHECK ONLY, never an authentication path (audit 2026-08-10).
 //
 // This used to be auth fallback #3: if token and HMAC both failed, a request
 // whose call id resolved against the OpenPhone API was accepted. That is not
-// authentication. A call id is not a secret — it appears in every transcript
+// authentication. A call id is not a secret, it appears in every transcript
 // payload, every webhook we've ever received, and anyone who once saw one could
 // replay it to forge call.transcript.completed / call.summary.completed events
 // and write arbitrary transcripts and summaries onto our leads.
@@ -343,8 +343,8 @@ module.exports = async function handler(req, res) {
     catch { return res.status(400).json({ error: 'invalid_json' }); }
 
     // Authenticate. Exactly two things can grant access (audit 2026-08-10):
-    //   1. the shared secret token in the URL (?token=) — the working path
-    //   2. Quo's HMAC signature over the raw body — kept for when their scheme
+    //   1. the shared secret token in the URL (?token=), the working path
+    //   2. Quo's HMAC signature over the raw body, kept for when their scheme
     //      becomes reproducible; harmless while it never verifies
     // Nothing else. The old third fallback (verifyCallExists) let anyone holding
     // a known call id forge transcript/summary events, because it treated the
@@ -362,7 +362,7 @@ module.exports = async function handler(req, res) {
         return res.status(401).json({ error: 'invalid_signature' });
     }
     // Optional forensic check, off by default: confirms the event's call id is
-    // real in our Quo account. Logs only — it can never accept or reject.
+    // real in our Quo account. Logs only, it can never accept or reject.
     if (process.env.OPENPHONE_SANITY_CHECK_CALLS === '1' && !(await verifyCallExists(evt))) {
         console.warn('[openphone/webhook] sanity check: authenticated event whose call id did not resolve in our Quo account', {
             type: (evt && evt.type) || '?'
