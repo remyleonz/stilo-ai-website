@@ -121,6 +121,33 @@ async function sendAlert(opts) {
  * @param {string} text      message body
  * @returns {object|null}    null when this reply isn't part of any campaign
  */
+/**
+ * Record the number in public.lcr_suppressions so every channel skips it, even
+ * when we cannot match it to a lead. Select-then-insert, not upsert: the
+ * uniqueness there is a PARTIAL index and Postgres cannot infer one from an
+ * ON CONFLICT list (it raises 42P10). Best effort, never throws: a failure here
+ * must not stop the lead-level opt-out from being written.
+ */
+async function suppressPhone(phone) {
+    try {
+        const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+            auth: { persistSession: false },
+        });
+        const { data: existing } = await pub.from('lcr_suppressions')
+            .select('id').eq('client_slug', 'prospecting').eq('phone', phone).limit(1);
+        if (existing && existing.length) return;
+        const { error } = await pub.from('lcr_suppressions').insert({
+            client_slug: 'prospecting', phone: phone,
+            source: 'sms_stop', opted_out_at: new Date().toISOString(),
+        });
+        if (error && error.code !== '23505') {
+            console.error('[outbound] suppressPhone insert failed:', error.message);
+        }
+    } catch (e) {
+        console.error('[outbound] suppressPhone threw:', e && e.message);
+    }
+}
+
 async function handleInboundSms(fromPhone, toPhone, text) {
     if (!fromPhone) return null;
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -134,7 +161,27 @@ async function handleInboundSms(fromPhone, toPhone, text) {
         .select('*').eq('to_phone', fromPhone)
         .in('stage', ['sent', 'replied', 'queued'])
         .order('id', { ascending: false }).limit(1);
-    if (error || !targets || !targets.length) return null;
+
+    // No campaign target does NOT mean we can ignore the message. Nurture texts,
+    // meeting reminders and reply-to-a-rep all reach people who were never in a
+    // campaign, and an opt-out from any of them is legally binding (audit
+    // 2026-08-10: this path used to return null and drop the STOP on the floor).
+    if (error || !targets || !targets.length) {
+        if (classifyReply(text) !== 'opt_out' && !isStop(text)) return null;
+        const digits = String(fromPhone).replace(/[^\d]/g, '').slice(-10);
+        const { data: leads } = await sb.from('leads')
+            .select('id')
+            .or('owner_phone_e164.eq.' + fromPhone + ',phone.ilike.%' + digits + '%,owner_phone.ilike.%' + digits + '%')
+            .limit(25);
+        const ids = (leads || []).map(function (l) { return l.id; });
+        if (ids.length) {
+            await sb.from('leads').update({ do_not_call: true }).in('id', ids);
+        }
+        await suppressPhone(fromPhone);
+        console.warn('[outbound] OPT-OUT with no campaign target, phone=' + fromPhone
+            + ' leads=' + (ids.join(',') || 'none') + ' (suppressed regardless)');
+        return { action: 'opted_out', lead_ids: ids, no_target: true };
+    }
     const t = targets[0];
 
     const now = new Date();
@@ -145,8 +192,13 @@ async function handleInboundSms(fromPhone, toPhone, text) {
             stage: 'opted_out', first_reply_at: t.first_reply_at || now.toISOString(),
             first_reply_body: t.first_reply_body || text, updated_at: now.toISOString(),
         }).eq('id', t.id);
-        // Terminal across the whole system, not just this campaign.
-        await sb.from('leads').update({ do_not_call: true }).eq('id', t.lead_id);
+        // Terminal across the whole system, not just this campaign. Check the
+        // error: a silently failed DNC write is the difference between honoring
+        // an opt-out and texting someone who told us to stop.
+        const { error: dncErr } = await sb.from('leads')
+            .update({ do_not_call: true }).eq('id', t.lead_id);
+        if (dncErr) console.error('[outbound] DNC WRITE FAILED lead=' + t.lead_id + ': ' + dncErr.message);
+        await suppressPhone(fromPhone);
         console.warn('[outbound] OPT-OUT lead=' + t.lead_id + ' phone=' + fromPhone);
         return { action: 'opted_out', lead_id: t.lead_id };
     }
