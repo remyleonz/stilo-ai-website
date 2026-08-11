@@ -174,7 +174,7 @@ module.exports = async function handler(req, res) {
             if (!bodyText) { results.skipped.no_body_generated = (results.skipped.no_body_generated || 0) + 1; continue; }
 
             const { data: lead } = await sb.from('leads')
-                .select('id,name,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
+                .select('id,name,niche,category,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
 
             const check = ob.preSendCheck(campaign, t, lead);
             if (!check.ok) {

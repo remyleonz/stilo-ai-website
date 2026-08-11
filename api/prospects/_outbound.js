@@ -463,6 +463,9 @@ function preSendCheck(campaign, target, lead) {
     // Data cleanups miss rows; a send-time check does not. These two run on
     // EVERY send regardless of stage.
     if (campaign.icp_pattern) {
+        // NOTE: every caller's lead SELECT must include niche and category.
+        // Both were missing on 2026-08-11 and this guard silently refused 100%
+        // of sends as 'no_niche' while the campaign showed as running.
         const hay = String(lead.niche || lead.category || '');
         // No industry at all is not a pass. The webhook stubs a lead row for any
         // unknown inbound number, and those arrive with a null niche.

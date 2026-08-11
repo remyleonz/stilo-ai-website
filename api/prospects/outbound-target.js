@@ -66,7 +66,7 @@ module.exports = async function handler(req, res) {
         const { data: campaign } = await sb.from('outbound_campaigns').select('*').eq('id', t.campaign_id).maybeSingle();
         if (!campaign) return res.status(404).json({ error: 'campaign_not_found' });
         const { data: lead } = await sb.from('leads')
-            .select('id,name,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
+            .select('id,name,niche,category,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
 
         const nextStep = t.stage === 'queued' ? 1 : (t.step >= 3 ? null : t.step + 1);
         if (!nextStep) return res.status(400).json({ error: 'sequence_complete' });
