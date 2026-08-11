@@ -18,8 +18,6 @@ const { createClient } = require('@supabase/supabase-js');
 const { sendSms } = require('./_sms');
 const { normalizePhone } = require('../openphone/_shared');
 
-module.exports.maxDuration = 120;
-
 const MAX_PER_TICK = Number(process.env.NURTURE_MAX_PER_TICK || 25);
 
 // Goes to a prospect who already BOOKED, so it must not ride cold sending
@@ -123,9 +121,22 @@ module.exports = async function handler(req, res) {
                 if (r.skip) { skip(r.skip); continue; }
                 if (r.err) throw new Error(r.err);
             }
-            await sb.from('nurture_touches')
+            // The sent-stamp is the only thing standing between this touch and
+            // a resend every 15 minutes (eligibility is status='pending'). So
+            // the update's error is CHECKED, and a failed stamp moves the touch
+            // to 'failed', which halts it, rather than leaving it pending. Same
+            // bug class as the 40-text loop of 2026-07-20, email flavor.
+            const { error: stampErr } = await sb.from('nurture_touches')
                 .update({ status: 'sent', sent_at: new Date().toISOString(), error: null, updated_at: new Date().toISOString() })
                 .eq('id', touch.id);
+            if (stampErr) {
+                const { error: failErr } = await sb.from('nurture_touches')
+                    .update({ status: 'failed', error: ('sent_but_stamp_failed: ' + stampErr.message).slice(0, 200), updated_at: new Date().toISOString() })
+                    .eq('id', touch.id);
+                results.stamp_failed = (results.stamp_failed || 0) + 1;
+                console.error('[nurture] STAMP FAILED touch=' + touch.id + ' (message DID send): ' + stampErr.message
+                    + (failErr ? '. AND the failed-mark also failed (' + failErr.message + '), touch is still pending and WILL RESEND next tick. Fix the row now.' : '. Parked as failed.'));
+            }
             results.sent++;
         } catch (e) {
             results.failed++;
@@ -139,7 +150,13 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
         ok: true, dry: dry,
         sent: results.sent, failed: results.failed, skipped: results.skipped,
+        stamp_failed: results.stamp_failed || 0,
         preview: results.preview.slice(0, 15),
         due_remaining: Math.max(0, due.length - MAX_PER_TICK),
     });
 };
+
+// Must come AFTER the handler assignment: `module.exports = ...` replaces the
+// exports object, so setting maxDuration before it was silently discarded and
+// Vercel ran this function with the default 10s limit.
+module.exports.maxDuration = 120;

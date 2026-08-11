@@ -76,17 +76,91 @@ module.exports = async function handler(req, res) {
         const check = ob.preSendCheck(campaign, t, lead);
         if (!check.ok) return res.status(409).json({ error: 'blocked', reason: check.reason });
 
+        // send_now skips exactly ONE control, the drip interval. The send
+        // window and both daily caps still apply: "the prospect is waiting"
+        // never justifies texting at 11pm or blowing a line's carrier budget.
+        const nowDate = new Date();
+        const win = ob.windowState(campaign, nowDate);
+        if (!win.open) {
+            return res.status(409).json({ error: 'blocked', reason: 'outside_send_window', local_minutes: win.localMinutes });
+        }
+        let perLine;
+        try { perLine = await ob.sentTodayByLine(sb, campaign, nowDate); }
+        catch (e) { return res.status(500).json({ error: 'pacing_read_failed', detail: e.message }); }
+        const campaignSentToday = Object.values(perLine).reduce(function (a, b) { return a + b; }, 0);
+        if (campaignSentToday >= campaign.daily_cap) {
+            return res.status(409).json({ error: 'blocked', reason: 'daily_cap_reached', sent_today: campaignSentToday });
+        }
+        if ((perLine[t.from_line] || 0) >= campaign.per_line_daily_cap) {
+            return res.status(409).json({ error: 'blocked', reason: 'per_line_cap_reached', line_today: perLine[t.from_line] });
+        }
+
+        // Same atomic claim as outbound-tick.js. Conditional on the stage we
+        // read, so a concurrent tick (or a double-clicked button) loses the
+        // race cleanly instead of double-texting.
+        const { data: claimed, error: claimErr } = await sb.from('outbound_targets')
+            .update({ stage: 'sending', attempt_count: (t.attempt_count || 0) + 1, updated_at: now })
+            .eq('id', targetId).eq('stage', t.stage)
+            .select('id');
+        if (claimErr) return res.status(500).json({ error: 'claim_failed', detail: claimErr.message });
+        if (!claimed || !claimed.length) {
+            return res.status(409).json({ error: 'claim_lost', detail: 'Another sender (the tick worker, or a second click) owns this target right now. Do not retry blindly; refresh the board first.' });
+        }
+
         const r = await sendSms(t.from_line, t.to_phone, text, { leadId: t.lead_id });
         const ok = r && r.status >= 200 && r.status < 300;
         if (!ok) {
-            await sb.from('outbound_targets')
-                .update({ last_error: (r && (r.err || r.skip)) || 'send_failed', updated_at: now }).eq('id', targetId);
+            // Release the claim back to the stage we took it from so the tick
+            // can retry it; attempt_count keeps the attempt on the record.
+            const { error: relErr } = await sb.from('outbound_targets')
+                .update({ stage: t.stage, last_error: (r && (r.err || r.skip)) || 'send_failed', updated_at: new Date().toISOString() })
+                .eq('id', targetId);
+            if (relErr) {
+                return res.status(500).json({
+                    error: 'send_failed_and_release_failed',
+                    detail: 'Send failed (' + ((r && (r.err || r.skip)) || 'send_failed') + ') AND the target could not be released: ' + relErr.message
+                        + '. The row is stuck in stage=sending; fix it manually (requeue) before retrying.',
+                });
+            }
             return res.status(502).json({ error: 'send_failed', detail: (r && (r.err || r.skip)) || null });
         }
-        patch['step' + nextStep + '_sent_at'] = now;
-        patch.step = nextStep;
-        patch.stage = 'sent';
-        patch.last_error = null;
+
+        // Same at-send-time log as outbound-tick.js, so the _sms.js per-human
+        // guard can see manual sends without depending on the Quo webhook.
+        const { error: logErr } = await sb.from('lead_messages').insert({
+            lead_id: t.lead_id, direction: 'outbound', channel: 'sms',
+            subject: 'Outbound campaign step ' + nextStep + ' (send_now)',
+            body: text, body_preview: text.slice(0, 300),
+            to_address: t.to_phone, from_address: (r && r.from) || t.from_line,
+            provider: 'openphone', status: 'sent',
+            variant: 'outbound_campaign', sent_at: new Date().toISOString(),
+        });
+        if (logErr) console.error('[outbound-target] lead_messages log failed target=' + targetId + ': ' + logErr.message);
+
+        // Stamp the outcome and CHECK it. The message is already out, so a
+        // failed stamp must be loud and must tell the operator not to retry.
+        const sentPatch = {
+            updated_at: new Date().toISOString(),
+            step: nextStep, stage: 'sent', last_error: null,
+        };
+        sentPatch['step' + nextStep + '_sent_at'] = new Date().toISOString();
+        let { data: updatedRow, error: stampErr } = await sb.from('outbound_targets')
+            .update(sentPatch).eq('id', targetId).select().maybeSingle();
+        if (stampErr) {
+            const second = await sb.from('outbound_targets').update(sentPatch).eq('id', targetId).select().maybeSingle();
+            updatedRow = second.data; stampErr = second.error;
+        }
+        if (stampErr) {
+            console.error('[outbound-target] STAMP FAILED after send target=' + targetId + ': ' + stampErr.message);
+            return res.status(500).json({
+                error: 'sent_but_stamp_failed',
+                detail: 'The message WAS SENT but the database stamp failed twice: ' + stampErr.message
+                    + '. DO NOT press send again, the prospect already has the text.'
+                    + ' The row is stuck in stage=sending; set stage/step' + nextStep + '_sent_at manually.',
+                message_log: logErr ? 'also_failed' : 'written',
+            });
+        }
+        return res.status(200).json({ ok: true, target: updatedRow });
     } else {
         return res.status(400).json({ error: 'unknown_action' });
     }

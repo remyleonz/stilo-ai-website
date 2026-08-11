@@ -36,8 +36,6 @@ const { assertAdminOrSdr } = require('./_shared');
 const { sendSms } = require('./_sms');
 const ob = require('./_outbound');
 
-module.exports.maxDuration = 60;
-
 // Ceiling on sends per tick, across all campaigns. The cron runs every 5 min;
 // this keeps one tick inside maxDuration and stops a misconfigured drip of 0
 // from emptying the queue in a single invocation.
@@ -47,6 +45,15 @@ const MAX_PER_TICK = Number(process.env.OUTBOUND_MAX_PER_TICK || 40);
 // number of active lines so a single bad line cannot trip it, but a provider
 // outage stops the run almost immediately.
 const MAX_CONSECUTIVE_FAILURES = Number(process.env.OUTBOUND_MAX_CONSECUTIVE_FAILURES || 8);
+
+// A target that has burned this many send attempts is parked as 'failed'
+// rather than retried forever. attempt_count is bumped inside the atomic
+// claim, so it counts real attempts even when the process dies mid-send.
+const MAX_ATTEMPTS_PER_TARGET = Number(process.env.OUTBOUND_MAX_ATTEMPTS_PER_TARGET || 5);
+
+// Campaign-level breaker: this many ticks IN A ROW where every attempt failed
+// (with at least 2 attempts made) pauses the campaign outright.
+const MAX_CONSECUTIVE_FAILED_TICKS = Number(process.env.OUTBOUND_MAX_FAILED_TICKS || 5);
 
 module.exports = async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
@@ -77,6 +84,9 @@ module.exports = async function handler(req, res) {
 
     const report = [];
     let totalSent = 0;
+    // Set when a post-send stamp cannot be written even after a retry. Stops
+    // the ENTIRE run, not just the campaign: DB writes failing is global state.
+    let halted = null;
 
     for (const campaign of campaigns) {
         const win = ob.windowState(campaign, now);
@@ -105,13 +115,13 @@ module.exports = async function handler(req, res) {
         if (dErr) { report.push({ campaign: campaign.id, error: dErr.message }); continue; }
 
         const dripMs = Math.max(0, (campaign.drip_interval_seconds || 600) * 1000);
-        const lastSendByLine = {};
-        for (const t of (due || [])) {
-            const stamps = [t.step1_sent_at, t.step2_sent_at, t.step3_sent_at].filter(Boolean).map(s => new Date(s).getTime());
-            if (!stamps.length) continue;
-            const newest = Math.max.apply(null, stamps);
-            if (!lastSendByLine[t.from_line] || newest > lastSendByLine[t.from_line]) lastSendByLine[t.from_line] = newest;
-        }
+        // Computed across ALL targets of the campaign, not just the due subset.
+        // Deriving it from `due` alone missed every stamp on a target that had
+        // already left the queued/replied stages (i.e. the ones that were
+        // literally just sent), which quietly disabled the drip.
+        let lastSendByLine;
+        try { lastSendByLine = await ob.lastSendByLine(sb, campaign); }
+        catch (e) { report.push({ campaign: campaign.id, error: e.message }); continue; }
 
         const results = { sent: 0, skipped: {}, errors: [] };
         const usedLineThisTick = new Set();
@@ -119,6 +129,10 @@ module.exports = async function handler(req, res) {
         // provider outage or a rate-limit must abort the run, not be retried
         // against every remaining target.
         let consecutiveFailures = 0;
+        // For the cross-tick breaker: how many real attempts this tick made for
+        // this campaign, and how many of them failed.
+        let attemptsThisTick = 0;
+        let failuresThisTick = 0;
 
         for (const t of (due || [])) {
             if (totalSent >= MAX_PER_TICK) break;
@@ -136,6 +150,21 @@ module.exports = async function handler(req, res) {
             const last = lastSendByLine[line] || 0;
             if (last && (now.getTime() - last) < dripMs) {
                 results.skipped.drip_interval = (results.skipped.drip_interval || 0) + 1;
+                continue;
+            }
+
+            // Park a target that has already burned its attempt budget. Checked
+            // before anything else costs money so a poisoned row cannot eat a
+            // line slot on every tick forever.
+            if ((t.attempt_count || 0) >= MAX_ATTEMPTS_PER_TARGET) {
+                await sb.from('outbound_targets')
+                    .update({
+                        stage: 'failed',
+                        last_error: 'attempts_exhausted: ' + t.attempt_count + ' send attempts, none delivered',
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', t.id).eq('stage', t.stage);
+                results.skipped.attempts_exhausted = (results.skipped.attempts_exhausted || 0) + 1;
                 continue;
             }
 
@@ -173,6 +202,25 @@ module.exports = async function handler(req, res) {
             // rate limiter. One attempt per line per tick, pass or fail.
             usedLineThisTick.add(line);
 
+            // Atomically CLAIM the target BEFORE the provider call. The
+            // .eq('stage', ...) makes the update conditional on the stage we
+            // read: if a concurrent invocation (overlapping cron, manual tick,
+            // send_now) already moved this row, zero rows come back and we walk
+            // away without sending. The old read-check-send-stamp flow left a
+            // multi-second window in which two invocations could both pass the
+            // check and both text the same person.
+            const attemptNo = (t.attempt_count || 0) + 1;
+            const { data: claimed, error: claimErr } = await sb.from('outbound_targets')
+                .update({ stage: 'sending', attempt_count: attemptNo, updated_at: new Date().toISOString() })
+                .eq('id', t.id).eq('stage', t.stage)
+                .select('id');
+            if (claimErr || !claimed || !claimed.length) {
+                results.skipped.claim_lost = (results.skipped.claim_lost || 0) + 1;
+                if (claimErr) results.errors.push({ target: t.id, error: 'claim_failed: ' + claimErr.message });
+                continue;
+            }
+            attemptsThisTick++;
+
             const r = await sendSms(line, t.to_phone, bodyText, { leadId: t.lead_id });
             const ok = r && r.status >= 200 && r.status < 300;
             const patch = { updated_at: new Date().toISOString() };
@@ -188,11 +236,60 @@ module.exports = async function handler(req, res) {
                 consecutiveFailures = 0;
             } else {
                 patch.last_error = (r && (r.err || r.skip)) || 'send_failed';
-                if (r && r.blocked) patch.stage = 'blocked';
+                if (r && r.blocked) {
+                    patch.stage = 'blocked';
+                } else if (attemptNo >= MAX_ATTEMPTS_PER_TARGET) {
+                    patch.stage = 'failed';
+                    patch.last_error = 'attempts_exhausted after ' + attemptNo + ' attempts; last error: ' + patch.last_error;
+                } else {
+                    // Back to the stage we claimed it from, so the next tick
+                    // retries it. attempt_count already carries the attempt.
+                    patch.stage = t.stage;
+                }
                 results.errors.push({ target: t.id, error: patch.last_error });
                 consecutiveFailures++;
+                failuresThisTick++;
             }
-            await sb.from('outbound_targets').update(patch).eq('id', t.id);
+
+            // Log the send in prospecting.lead_messages AT SEND TIME (same shape
+            // as send-meeting-reminders.js). Before this, campaign sends only
+            // became visible when Quo's message webhook delivered them, which it
+            // never has, so the per-human guard in _sms.js was blind to the very
+            // messages it exists to cap. Logging is loud on failure but never
+            // triggers a resend.
+            if (ok) {
+                const { error: logErr } = await sb.from('lead_messages').insert({
+                    lead_id: t.lead_id, direction: 'outbound', channel: 'sms',
+                    subject: 'Outbound campaign step ' + nextStep,
+                    body: bodyText,
+                    body_preview: bodyText.slice(0, 300),
+                    to_address: t.to_phone, from_address: (r && r.from) || line,
+                    provider: 'openphone', status: 'sent',
+                    variant: 'outbound_campaign', sent_at: new Date().toISOString(),
+                });
+                if (logErr) {
+                    results.errors.push({ target: t.id, error: 'lead_messages_log_failed: ' + logErr.message, sent: true });
+                    console.error('[outbound] lead_messages log failed target=' + t.id + ': ' + logErr.message);
+                }
+            }
+
+            // The outcome stamp is the one write this loop can never shrug off:
+            // an unstamped row sits in stage='sending' with a message already
+            // out the door. Retry once; if it still fails, STOP THE WHOLE RUN
+            // rather than pile more sends on top of unknown DB state.
+            let { error: stampErr } = await sb.from('outbound_targets').update(patch).eq('id', t.id);
+            if (stampErr) {
+                const second = await sb.from('outbound_targets').update(patch).eq('id', t.id);
+                stampErr = second.error;
+            }
+            if (stampErr) {
+                halted = 'stamp_failed on target ' + t.id + ' after retry: ' + stampErr.message
+                    + '. The row is stuck in stage=sending and the send outcome (sent=' + ok + ') is NOT recorded.'
+                    + ' Fix the row manually before the campaign resumes; the run was stopped to avoid sending on unknown state.';
+                results.errors.push({ target: t.id, error: 'STAMP_FAILED_AFTER_RETRY: ' + stampErr.message, sent: ok });
+                console.error('[outbound] HALT: ' + halted);
+                break;
+            }
 
             // Circuit breaker. If every line in turn is failing, the provider is
             // down, rate-limiting, or the credentials are wrong. Continuing
@@ -205,17 +302,51 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // Cross-tick campaign breaker. A tick that made >=2 real attempts and
+        // landed none of them bumps consecutive_failed_ticks; enough of those in
+        // a row means retrying every 5 minutes is just feeding an outage, so the
+        // campaign pauses itself. Any successful send resets the streak.
+        if (!dry) {
+            if (results.sent > 0) {
+                if (campaign.consecutive_failed_ticks) {
+                    const { error: rErr } = await sb.from('outbound_campaigns')
+                        .update({ consecutive_failed_ticks: 0 }).eq('id', campaign.id);
+                    if (rErr) results.errors.push({ error: 'breaker_reset_failed: ' + rErr.message });
+                }
+            } else if (attemptsThisTick >= 2 && failuresThisTick === attemptsThisTick) {
+                const streak = (campaign.consecutive_failed_ticks || 0) + 1;
+                const cPatch = { consecutive_failed_ticks: streak };
+                if (streak >= MAX_CONSECUTIVE_FAILED_TICKS) {
+                    cPatch.status = 'paused';
+                    results.paused_by_breaker = streak + ' consecutive all-failure ticks; campaign auto-paused.'
+                        + ' Check last_error on its targets, fix the cause, then set status back to running.';
+                    console.error('[outbound] BREAKER: paused campaign ' + campaign.id + ' after ' + streak + ' all-failure ticks');
+                }
+                const { error: bErr } = await sb.from('outbound_campaigns').update(cPatch).eq('id', campaign.id);
+                if (bErr) results.errors.push({ error: 'breaker_update_failed: ' + bErr.message });
+            }
+        }
+
         report.push({
             campaign: campaign.id, name: campaign.name,
             sent: results.sent, skipped: results.skipped,
             errors: results.errors.slice(0, 10),
+            aborted: results.aborted, paused_by_breaker: results.paused_by_breaker,
             sent_today: campaignSentToday + results.sent,
             per_line_today: perLine,
         });
+
+        if (halted) break;
     }
 
-    return res.status(200).json({
-        ok: true, dry: dry, send_enabled_env: ob.SEND_ENABLED,
+    return res.status(halted ? 500 : 200).json({
+        ok: !halted, dry: dry, send_enabled_env: ob.SEND_ENABLED,
+        halted: halted || undefined,
         total_sent: dry ? 0 : totalSent, campaigns: report,
     });
 };
+
+// Must come AFTER the handler assignment: `module.exports = ...` replaces the
+// exports object, so anything set on it earlier (like this) was silently
+// discarded, and Vercel ran this function with the default 10s limit.
+module.exports.maxDuration = 60;

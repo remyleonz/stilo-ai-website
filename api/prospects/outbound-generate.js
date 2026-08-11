@@ -21,8 +21,6 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const ob = require('./_outbound');
 
-module.exports.maxDuration = 300;
-
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
     // Same auth shape as sync-scripts.js and outbound-tick.js: a Vercel cron /
@@ -115,3 +113,7 @@ module.exports = async function handler(req, res) {
         note: 'Nothing was sent. Review the samples, then run again with regenerate:true if the copy needs work.',
     });
 };
+
+// Must come AFTER the handler assignment: `module.exports = ...` replaces the
+// exports object, so setting maxDuration before it was silently discarded.
+module.exports.maxDuration = 300;

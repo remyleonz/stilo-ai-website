@@ -33,8 +33,6 @@ const { createClient } = require('@supabase/supabase-js');
 const cc = require('./cold-call-script'); // reuse getAccessToken/readObject/slugify
 const scrub = require('./_scrub');
 
-module.exports.maxDuration = 60;
-
 // Litigator/DNC scrub budget per run. Each lookup is a network round trip, so
 // this is bounded by maxDuration, not by taste. The pass is self-healing rather
 // than incremental: it targets every scripted lead that still has no verdict,
@@ -388,3 +386,7 @@ module.exports = async function handler(req, res) {
         scrub_backlog: scrubBacklog,
     });
 };
+
+// Must come AFTER the handler assignment: `module.exports = ...` replaces the
+// exports object, so setting maxDuration before it was silently discarded.
+module.exports.maxDuration = 60;

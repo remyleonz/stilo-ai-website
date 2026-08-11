@@ -43,8 +43,6 @@ const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = requi
 const { normalizePhone } = require('../openphone/_shared');
 const ob = require('./_outbound');
 
-module.exports.maxDuration = 60;
-
 const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
 
 async function connectedLeadIds(sb) {
@@ -207,3 +205,7 @@ module.exports = async function handler(req, res) {
         send_enabled_env: ob.SEND_ENABLED, campaign_status: campaign.status,
     });
 };
+
+// Must come AFTER the handler assignment: `module.exports = ...` replaces the
+// exports object, so setting maxDuration before it was silently discarded.
+module.exports.maxDuration = 60;

@@ -32,6 +32,39 @@ function isStop(text) {
     return STOP_WORDS.some(w => t === w || t.startsWith(w + ' '));
 }
 
+/**
+ * Negative-intent routing for replies of ANY length. isStop above only catches
+ * short bare keywords, so "please stop texting me, wrong number" fell through
+ * to stage='replied', and 'replied' is what unlocks the step-2 pitch. Pitching
+ * someone who just said stop is the exact complaint that ends an account.
+ *
+ * Returns:
+ *   'opt_out' -> do_not_call + stage='opted_out' (stop/unsubscribe/remove/
+ *                quit/cancel/don't-text variants, leave me alone)
+ *   'dead'    -> stage='dead' (wrong number, not interested); no DNC flag,
+ *                they didn't ask us to never contact them, just not to pitch
+ *   'replied' -> everything else, the normal callback path
+ */
+const NEGATIVE_RE = /\b(stop|unsubscribe|remove me|don'?t (?:text|message|contact)|wrong number|not interested|leave me alone|quit|cancel)\b/i;
+// "stop by tomorrow", "stop in when you can", "quit early Friday": friendly uses
+// where the next word makes it plainly not an opt-out. Narrow and deliberate; if
+// a phrase is ambiguous it stays an opt-out, because a false opt-out costs one
+// lead and a missed one costs the account.
+const FRIENDLY_STOP_RE = /\b(?:stop|quit)\s+(by|in|over|back|through|at|on)\b/i;
+function classifyReply(text) {
+    const s = String(text || '');
+    const m = s.match(NEGATIVE_RE);
+    if (!m) return 'replied';
+    const hit = m[1].toLowerCase();
+    if (hit === 'wrong number' || hit === 'not interested') return 'dead';
+    // Only forgive the friendly reading when it is the ONLY negative hit.
+    if ((hit === 'stop' || hit === 'quit') && FRIENDLY_STOP_RE.test(s)
+        && !/\b(unsubscribe|remove me|don'?t (?:text|message|contact)|leave me alone)\b/i.test(s)) {
+        return 'replied';
+    }
+    return 'opt_out';
+}
+
 function esc(s) {
     return String(s == null ? '' : s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -106,7 +139,8 @@ async function handleInboundSms(fromPhone, toPhone, text) {
 
     const now = new Date();
 
-    if (isStop(text)) {
+    const intent = classifyReply(text);
+    if (isStop(text) || intent === 'opt_out') {
         await sb.from('outbound_targets').update({
             stage: 'opted_out', first_reply_at: t.first_reply_at || now.toISOString(),
             first_reply_body: t.first_reply_body || text, updated_at: now.toISOString(),
@@ -115,6 +149,19 @@ async function handleInboundSms(fromPhone, toPhone, text) {
         await sb.from('leads').update({ do_not_call: true }).eq('id', t.lead_id);
         console.warn('[outbound] OPT-OUT lead=' + t.lead_id + ' phone=' + fromPhone);
         return { action: 'opted_out', lead_id: t.lead_id };
+    }
+
+    // "wrong number" / "not interested": the sequence must end (a step-2 pitch
+    // to either is indefensible) but nobody asked to be DNC'd, so the lead
+    // stays callable elsewhere. No rep alert either: there is no 4-minute
+    // callback race to win against someone who said no.
+    if (intent === 'dead') {
+        await sb.from('outbound_targets').update({
+            stage: 'dead', first_reply_at: t.first_reply_at || now.toISOString(),
+            first_reply_body: t.first_reply_body || String(text || '').slice(0, 1000),
+            updated_at: now.toISOString(),
+        }).eq('id', t.id);
+        return { action: 'dead', lead_id: t.lead_id };
     }
 
     const { data: campaign } = await sb.from('outbound_campaigns')
@@ -181,4 +228,4 @@ async function handleInboundSms(fromPhone, toPhone, text) {
     return { action: 'replied', lead_id: t.lead_id, alerted: !!(alert && alert.id), callback_due_at: due.toISOString() };
 }
 
-module.exports = { handleInboundSms, isStop };
+module.exports = { handleInboundSms, isStop, classifyReply };

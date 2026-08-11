@@ -181,6 +181,36 @@ async function sentTodayByLine(sb, campaign, now) {
     return counts;
 }
 
+/**
+ * Newest send stamp per line for a campaign, as epoch ms: { '+1786...': ms }.
+ *
+ * Read across ALL targets of the campaign, not just the due subset the worker
+ * happens to be iterating. A target that was just sent leaves the queued/replied
+ * stages immediately, so a "due rows only" computation forgot every recent send
+ * the moment it happened and the drip interval never actually held.
+ *
+ * Bounded to stamps in the last 24h: the drip is minutes, so anything older
+ * cannot gate a send, and the bound keeps the row count under PostgREST's
+ * 1000-row default even on a large campaign.
+ */
+async function lastSendByLine(sb, campaign, now) {
+    const since = new Date((now ? now.getTime() : Date.now()) - 24 * 3600 * 1000).toISOString();
+    const { data, error } = await sb.from('outbound_targets')
+        .select('from_line, step1_sent_at, step2_sent_at, step3_sent_at')
+        .eq('campaign_id', campaign.id)
+        .or('step1_sent_at.gte.' + since + ',step2_sent_at.gte.' + since + ',step3_sent_at.gte.' + since);
+    if (error) throw new Error('drip pacing read failed: ' + error.message);
+    const newest = {};
+    for (const r of (data || [])) {
+        for (const stamp of [r.step1_sent_at, r.step2_sent_at, r.step3_sent_at]) {
+            if (!stamp) continue;
+            const ms = new Date(stamp).getTime();
+            if (!newest[r.from_line] || ms > newest[r.from_line]) newest[r.from_line] = ms;
+        }
+    }
+    return newest;
+}
+
 // ---------------------------------------------------------------------------
 // Message generation
 // ---------------------------------------------------------------------------
@@ -400,13 +430,20 @@ function preSendCheck(campaign, target, lead) {
         return { ok: false, reason: 'stage_' + target.stage };
     }
 
+    // A lead we could not read is a lead we cannot clear. Every check below
+    // (do_not_call, scrub verdict, phone match) reads off the lead row, and a
+    // null lead used to sail through all of them: a transient read failure was
+    // indistinguishable from a clean lead, and the scrub exemption could waive
+    // a scrub for a lead nobody had actually looked at. Hard-fail instead.
+    if (!lead) return { ok: false, reason: 'lead_read_failed' };
+
     // do_not_call is NEVER waivable. It carries actual opt-outs, DNC requests,
     // and confirmed scrub blocks, and no campaign setting may override it.
-    if (lead && lead.do_not_call) return { ok: false, reason: 'do_not_call' };
+    if (lead.do_not_call) return { ok: false, reason: 'do_not_call' };
 
     // A confirmed litigator match is also never waivable. The exemption below
     // covers "we have no scrub answer", not "the scrub said no".
-    if (lead && lead.scrub_status === 'blocked') return { ok: false, reason: 'scrub_blocked' };
+    if (lead.scrub_status === 'blocked') return { ok: false, reason: 'scrub_blocked' };
 
     const s = scrub.assertScrubbedForSms(lead, target.to_phone);
     if (!s.ok) {
@@ -423,7 +460,7 @@ function preSendCheck(campaign, target, lead) {
 module.exports = {
     SEND_ENABLED, DEFAULT_GUIDANCE, DEFAULT_GUIDANCE_B,
     serviceClient, publicClient, loadReps,
-    windowState, localParts, sentTodayByLine,
+    windowState, localParts, sentTodayByLine, lastSendByLine,
     generateStepBody, fallbackBody, firstNameOf, leadFacts, validateBody, plainAgent,
     preSendCheck,
 };

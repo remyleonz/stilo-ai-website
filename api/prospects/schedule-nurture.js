@@ -31,8 +31,6 @@ const { assertAdminOrSdr, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const nv = require('./_nurture_value');
 
-module.exports.maxDuration = 300;
-
 const LOOKAHEAD_DAYS = 14;
 
 async function senderFor(pub, email) {
@@ -158,3 +156,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json(Object.assign({ ok: true, dry: dry }, report, { details: report.details.slice(0, 25) }));
 };
+
+// Must come AFTER the handler assignment: `module.exports = ...` replaces the
+// exports object, so setting maxDuration before it was silently discarded.
+module.exports.maxDuration = 300;
