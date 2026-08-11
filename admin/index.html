@@ -1313,9 +1313,63 @@
 .ob-btn:hover { border-color:var(--border-medium, rgba(255,255,255,.2)); }
 .ob-btn-call { background:#2563EB; border-color:#2563EB; color:#fff; font-weight:600; }
 .ob-more { margin-top:12px; padding:8px 16px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-input, rgba(255,255,255,.03)); color:var(--text-secondary); font-size:0.76rem; font-weight:600; font-family:inherit; cursor:pointer; }
+
+/* Conversation drawer. Same slide-over mechanics as the prospect drawer
+   (fixed panel, negative right offset, overlay behind), but laid out as a
+   messages app: fixed header, the thread scrolls, the compose box is pinned
+   to the bottom so it never scrolls away mid-reply. */
+/* Slides on transform, not on a negative `right`. The offscreen offset has to
+   differ between desktop and phone, and animating a property whose closed value
+   changes with the viewport left the panel parked offscreen after a resize. A
+   translate is one value at every width. */
+.ob-convo { position:fixed; top:0; right:0; width:620px; max-width:100vw; height:100vh; height:100dvh;
+    background:#0a0a0f; border-left:1px solid rgba(37,99,235,0.2);
+    /* Above the sticky mobile top bar (150) and the sidebar (200), or on a
+       phone the top bar sits on top of the business name and the close X. */
+    z-index:220;
+    transform:translateX(101%); transition:transform .28s ease;
+    display:flex; flex-direction:column; }
+.ob-convo.open { transform:translateX(0); }
+.ob-convo-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:219; }
+.ob-convo-head { flex:0 0 auto; padding:20px 22px 14px; border-bottom:1px solid var(--border-subtle); }
+.ob-convo-close { position:absolute; top:14px; right:14px; background:none; border:0; color:inherit; font-size:24px; line-height:1; cursor:pointer; padding:2px 6px; }
+.ob-convo-title { font-size:1.02rem; font-weight:700; line-height:1.3; padding-right:34px; color:var(--text-primary); }
+.ob-convo-sub { margin-top:5px; font-size:0.78rem; color:var(--text-muted); line-height:1.5; overflow-wrap:anywhere; }
+.ob-convo-chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+.ob-convo-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+.ob-thread { flex:1 1 auto; overflow-y:auto; padding:18px 22px 8px; display:flex; flex-direction:column; gap:14px; }
+.ob-msg { max-width:82%; display:flex; flex-direction:column; }
+.ob-msg-out { align-self:flex-end; align-items:flex-end; }
+.ob-msg-in { align-self:flex-start; align-items:flex-start; }
+.ob-bub { padding:10px 13px; border-radius:14px; font-size:0.84rem; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ob-msg-out .ob-bub { background:rgba(37,99,235,.16); border:1px solid rgba(37,99,235,.42); border-bottom-right-radius:5px; color:var(--text-primary); }
+.ob-msg-in .ob-bub { background:rgba(255,255,255,.045); border:1px solid var(--border-subtle); border-bottom-left-radius:5px; color:var(--text-primary); }
+.ob-msg-email .ob-bub { background:rgba(245,158,11,.07); border-color:rgba(245,158,11,.3); }
+.ob-msg-subj { font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:5px; }
+.ob-msg-meta { margin-top:5px; font-size:0.68rem; color:var(--text-muted); letter-spacing:.02em; }
+.ob-msg-tag { display:inline-block; padding:1px 6px; border-radius:4px; border:1px solid var(--border-subtle); font-size:0.62rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-right:6px; color:var(--text-muted); }
+.ob-day { align-self:center; font-size:0.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); padding:2px 0; }
+.ob-compose { flex:0 0 auto; border-top:1px solid var(--border-subtle); padding:12px 22px 16px; background:#0a0a0f; }
+.ob-compose textarea { width:100%; box-sizing:border-box; min-height:66px; max-height:180px; resize:vertical; padding:11px 13px;
+    background:var(--bg-input, rgba(255,255,255,.03)); border:1px solid var(--border-subtle); border-radius:10px;
+    color:inherit; font-family:inherit; font-size:0.85rem; line-height:1.5; }
+.ob-compose textarea:focus { outline:none; border-color:rgba(37,99,235,.65); box-shadow:0 0 0 3px rgba(37,99,235,.18); }
+.ob-compose-row { display:flex; align-items:center; gap:10px; margin-top:9px; }
+.ob-compose-note { font-size:0.7rem; color:var(--text-muted); line-height:1.45; flex:1 1 auto; }
+.ob-send { padding:9px 20px; border-radius:8px; border:1px solid #2563EB; background:#2563EB; color:#fff; font-size:0.8rem; font-weight:650; font-family:inherit; cursor:pointer; flex:0 0 auto; }
+.ob-send[disabled] { opacity:.45; cursor:not-allowed; }
+.ob-blocked { padding:11px 13px; border-radius:9px; background:rgba(239,68,68,.10); border:1px solid rgba(239,68,68,.35); color:#ef4444; font-size:0.78rem; line-height:1.5; }
+.ob-card { cursor:pointer; transition:border-color 120ms, background 120ms; }
+.ob-card:hover { border-color:rgba(37,99,235,.45); }
+
 @media (max-width: 700px) {
     .ob-grid { grid-template-columns:1fr; }
     .ob-sec-note { display:none; }
+    .ob-convo { width:100vw; border-left:0; }
+    .ob-convo-head { padding:16px 16px 12px; }
+    .ob-thread { padding:14px 16px 6px; }
+    .ob-compose { padding:10px 16px 14px; }
+    .ob-msg { max-width:92%; }
 }
 </style>
 <style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
@@ -1895,6 +1949,19 @@
                 <div id="obBoard">
                     <div style="color:var(--text-muted);font-size:0.9rem;">Loading board...</div>
                 </div>
+            </div>
+
+            <!-- Conversation drawer. Opens from any card in any stage band and
+                 shows the full thread with that lead, texts and emails both,
+                 with a compose box for a manual SMS reply. -->
+            <div id="obConvoOverlay" class="ob-convo-overlay" onclick="obCloseConvo()"></div>
+            <div id="obConvo" class="ob-convo" role="dialog" aria-modal="true" aria-label="Conversation">
+                <button class="ob-convo-close" onclick="obCloseConvo()" aria-label="Close conversation">&times;</button>
+                <div class="ob-convo-head" id="obConvoHead">
+                    <div class="ob-convo-title">Loading…</div>
+                </div>
+                <div class="ob-thread" id="obConvoThread"></div>
+                <div class="ob-compose" id="obConvoCompose"></div>
             </div>
 
             <!-- Agents tab -->
@@ -2681,7 +2748,11 @@
         var kbdBuf = '';
         var kbdTimer = null;
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') { closeSidebar(); closeDrawer(); return; }
+            if (e.key === 'Escape') {
+                closeSidebar(); closeDrawer();
+                try { obCloseConvo(); } catch (_) {}
+                return;
+            }
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 var s = document.getElementById('clientSearch');
@@ -6722,7 +6793,12 @@
             // overflow-wrap lives on .ob-card: scraped business names and raw
             // error strings have no spaces to break on and will otherwise push
             // a grid track wider than its share.
-            var out = ['<div class="ob-card"' + (border ? ' style="border-color:' + border + ';"' : '') + '>'];
+            // The whole card opens the conversation. Every control inside it
+            // stops propagation, so Call / Called / Booked / Dead and the two
+            // expand toggles still do only their own job.
+            var out = ['<div class="ob-card" onclick="obOpenConvo(' + c.id + ',' + c.lead_id + ')"'
+                + ' title="Open conversation"'
+                + (border ? ' style="border-color:' + border + ';"' : '') + '>'];
 
             // Scraped rows often carry the phone as the business name, so only
             // add the number when it is not already on screen.
@@ -6752,7 +6828,7 @@
                 var bid = 'ob-body-' + c.id;
                 out.push('<div id="' + bid + '" class="ob-body ' + body.cls + '">' + obEsc(body.text) + '</div>');
                 // Only offer the toggle when there is plausibly something hidden.
-                out.push('<button class="ob-toggle" data-for="' + bid + '" onclick="obToggleClamp(this)">Show more</button>');
+                out.push('<button class="ob-toggle" data-for="' + bid + '" onclick="event.stopPropagation();obToggleClamp(this)">Show more</button>');
             }
 
             if (c.last_error) {
@@ -6763,7 +6839,7 @@
                 var he = obHumanError(c.last_error);
                 var stale = !!c.error_stale;
                 out.push('<div style="margin:10px 0 0;">'
-                    + '<span onclick="obToggleErr(this)" title="' + obEsc(he.full) + '" '
+                    + '<span onclick="event.stopPropagation();obToggleErr(this)" title="' + obEsc(he.full) + '" '
                     + 'class="ob-chip ' + (stale ? 'ob-chip-old' : 'ob-chip-err') + '" '
                     + 'style="max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;">'
                     + (stale ? 'Earlier: ' : '') + obEsc(he.short) + '</span>'
@@ -6771,13 +6847,65 @@
                     + '</div>');
             }
 
-            out.push('<div class="ob-actions">');
-            if (c.tel_link) out.push('<a href="' + c.tel_link + '" class="ob-btn ob-btn-call">Call</a>');
-            if (waiting) out.push('<button class="ob-btn" onclick="obAct(' + c.id + ',\'called_back\')">Called</button>');
-            if (c.stage !== 'booked') out.push('<button class="ob-btn" onclick="obAct(' + c.id + ',\'booked\')">Booked</button>');
-            if (c.stage !== 'dead') out.push('<button class="ob-btn" onclick="obAct(' + c.id + ',\'dead\')">Dead</button>');
-            out.push('</div></div>');
+            out.push(obActionButtons(c, waiting));
+            out.push('</div>');
             return out.join('');
+        }
+
+        /**
+         * Call / Called / Booked / Dead. One builder so the card and the
+         * conversation drawer can never drift apart on what a rep can do.
+         */
+        function obActionButtons(c, waiting) {
+            var out = ['<div class="ob-actions">'];
+            if (c.tel_link) {
+                out.push('<a href="' + c.tel_link + '" class="ob-btn ob-btn-call" '
+                    + 'onclick="event.stopPropagation();obOnCall(' + (c.id || 'null') + ',' + c.lead_id + ',' + (waiting ? 'true' : 'false') + ')">Call</a>');
+            }
+            // The three stage buttons act on a campaign target. A lead opened
+            // without one (no outbound row yet) can still be called, but there
+            // is nothing to move, so they stay off rather than 400.
+            if (c.id) {
+                if (waiting) out.push('<button class="ob-btn" onclick="event.stopPropagation();obAct(' + c.id + ',\'called_back\')">Called</button>');
+                if (c.stage !== 'booked') out.push('<button class="ob-btn" onclick="event.stopPropagation();obAct(' + c.id + ',\'booked\')">Booked</button>');
+                if (c.stage !== 'dead') out.push('<button class="ob-btn" onclick="event.stopPropagation();obAct(' + c.id + ',\'dead\')">Dead</button>');
+            }
+            out.push('</div>');
+            return out.join('');
+        }
+
+        /**
+         * Call used to be a bare tel: link: it dialed and recorded nothing, so
+         * the lead's attempt count never moved and, worse, the callback SLA on a
+         * Replied card kept counting down after the rep had already called back.
+         *
+         * Now it does what the rest of the dashboard does when someone dials:
+         *   - POST /api/prospects/log-dial, the same stamp the Leads tab fires,
+         *     which bumps leads.call_attempts and last_called_at and leaves
+         *     last_called_outcome null so the lead still reads as "dialed, no
+         *     outcome logged yet".
+         *   - Mark the target called_back, which stops the SLA clock. Only when
+         *     the clock is actually running; calling a Queued card should not
+         *     invent a callback that was never owed.
+         *
+         * Both fire in the background. The anchor's default action still runs so
+         * the phone app opens immediately, and a failed stamp never eats a dial.
+         */
+        function obOnCall(targetId, leadId, waiting) {
+            if (leadId) {
+                prospectFetchJSON('/api/prospects/log-dial', {
+                    method: 'POST', body: JSON.stringify({ lead_id: leadId })
+                }).catch(function (e) { console.warn('[ob log-dial]', e); });
+            }
+            if (waiting) {
+                prospectFetchJSON('/api/prospects/outbound-target', {
+                    method: 'POST', body: JSON.stringify({ target_id: targetId, action: 'called_back' })
+                }).then(function () {
+                    obLoadBoard();
+                    if (obConvoState.targetId === targetId) obOpenConvo(targetId, leadId, true);
+                }).catch(function (e) { console.warn('[ob called_back]', e); });
+            }
+            // No preventDefault: the tel: link still opens the dialer.
         }
 
         async function obAct(targetId, action) {
@@ -6787,8 +6915,219 @@
                     body: JSON.stringify({ target_id: targetId, action: action })
                 });
                 await obLoadBoard();
+                if (obConvoState.targetId === targetId) await obOpenConvo(targetId, obConvoState.leadId, true);
             } catch (e) {
                 alert('Action failed: ' + (e.message || e));
+            }
+        }
+
+        /* ===========================================================
+           Conversation drawer
+           ===========================================================
+           One lead, one thread, oldest at top. Texts and emails both, each
+           labelled, because anyone answering a text needs to know what is
+           already sitting in that person's inbox. The compose box sends a
+           manual SMS from the rep's own line via /api/prospects/send-sms.
+        */
+        var obConvoState = { targetId: null, leadId: null, data: null, sending: false };
+
+        async function obOpenConvo(targetId, leadId, silent) {
+            obConvoState.targetId = targetId;
+            obConvoState.leadId = leadId;
+            var panel = document.getElementById('obConvo');
+            var overlay = document.getElementById('obConvoOverlay');
+            var head = document.getElementById('obConvoHead');
+            var thread = document.getElementById('obConvoThread');
+            var compose = document.getElementById('obConvoCompose');
+            if (!panel) return;
+            panel.classList.add('open');
+            overlay.style.display = 'block';
+            if (!silent) {
+                head.innerHTML = '<div class="ob-convo-title">Loading…</div>';
+                thread.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;">Pulling the thread…</div>';
+                compose.innerHTML = '';
+            }
+            try {
+                var url = '/api/prospects/conversation?lead_id=' + encodeURIComponent(leadId)
+                    + (targetId ? '&target_id=' + encodeURIComponent(targetId) : '');
+                var d = await prospectFetchJSON(url, { method: 'GET' });
+                obConvoState.data = d;
+                obRenderConvo(d);
+            } catch (e) {
+                thread.innerHTML = '<div style="color:#ef4444;font-size:0.85rem;">Could not load the conversation: ' + obEsc(e.message || e) + '</div>';
+            }
+        }
+
+        function obCloseConvo() {
+            var panel = document.getElementById('obConvo');
+            var overlay = document.getElementById('obConvoOverlay');
+            if (panel) panel.classList.remove('open');
+            if (overlay) overlay.style.display = 'none';
+            obConvoState.targetId = null;
+            obConvoState.leadId = null;
+        }
+
+        var OB_STAGE_CHIP = {
+            replied:  { label: 'Replied',     color: '#F59E0B' },
+            booked:   { label: 'Call booked', color: '#10B981' },
+            sent:     { label: 'Sent',        color: '#2563EB' },
+            queued:   { label: 'Queued',      color: '#6B7280' },
+            dead:     { label: 'Dead',        color: '#4B5563' },
+            opted_out:{ label: 'Opted out',   color: '#4B5563' },
+            blocked:  { label: 'Blocked',     color: '#ef4444' },
+            failed:   { label: 'Failed',      color: '#ef4444' }
+        };
+
+        function obConvoChip(text, color) {
+            return '<span class="ob-chip" style="background:rgba(255,255,255,.03);border:1px solid ' + color + ';color:' + color + ';">' + obEsc(text) + '</span>';
+        }
+
+        function obFmtTime(iso) {
+            if (!iso) return '';
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+        function obFmtDay(iso) {
+            if (!iso) return 'Undated';
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return 'Undated';
+            return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function obRenderConvo(d) {
+            var lead = d.lead || {};
+            var t = d.target || {};
+            var head = document.getElementById('obConvoHead');
+            var thread = document.getElementById('obConvoThread');
+            var compose = document.getElementById('obConvoCompose');
+
+            var st = OB_STAGE_CHIP[t.stage] || null;
+            var chips = [];
+            if (st) chips.push(obConvoChip(st.label, st.color));
+            if (lead.pitch_agent) chips.push('<span class="ob-chip ob-chip-agent">' + obEsc(lead.pitch_agent) + '</span>');
+            if (d.rep) chips.push('<span class="ob-chip ob-chip-old" style="cursor:default;">Rep: ' + obEsc(d.rep.name) + '</span>');
+
+            var subParts = [lead.owner_name, lead.niche, lead.phone].filter(Boolean);
+            var waiting = t.stage === 'replied' && !t.called_back_at;
+
+            head.innerHTML =
+                '<div class="ob-convo-title">' + obEsc(lead.business || ('Lead ' + lead.id)) + '</div>'
+                + (subParts.length ? '<div class="ob-convo-sub">' + obEsc(subParts.join(' · ')) + '</div>' : '')
+                + (chips.length ? '<div class="ob-convo-chips">' + chips.join('') + '</div>' : '')
+                + obActionButtons({
+                    id: t.id || obConvoState.targetId || null,
+                    lead_id: lead.id,
+                    stage: t.stage || '',
+                    tel_link: lead.phone ? 'tel:' + String(lead.phone).replace(/[^\d+]/g, '') : null
+                }, waiting);
+
+            var msgs = d.messages || [];
+            if (!msgs.length) {
+                thread.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;line-height:1.6;">'
+                    + 'Nothing on record with this lead yet. The first message you send shows up here.</div>';
+            } else {
+                var lastDay = '';
+                thread.innerHTML = msgs.map(function (m) {
+                    var day = obFmtDay(m.at);
+                    var sep = '';
+                    if (day !== lastDay) { sep = '<div class="ob-day">' + obEsc(day) + '</div>'; lastDay = day; }
+                    var isEmail = m.channel === 'email';
+                    var cls = 'ob-msg ' + (m.direction === 'inbound' ? 'ob-msg-in' : 'ob-msg-out') + (isEmail ? ' ob-msg-email' : '');
+                    var who = m.direction === 'inbound' ? 'Them' : (m.by ? String(m.by).split('@')[0] : 'Us');
+                    var meta = [obFmtTime(m.at), who].filter(Boolean).join(' · ');
+                    // The email drip stores HTML bodies. Escaping is enough to
+                    // read them, but a wall of markup helps nobody, so emails
+                    // lead with their subject and the body is stripped to text.
+                    var text = isEmail ? obStripHtml(m.body) : String(m.body || '');
+                    return sep
+                        + '<div class="' + cls + '">'
+                        + '<div class="ob-bub">'
+                        + (isEmail && m.subject ? '<div class="ob-msg-subj">' + obEsc(m.subject) + '</div>' : '')
+                        + obEsc(text)
+                        + '</div>'
+                        + '<div class="ob-msg-meta"><span class="ob-msg-tag">' + (isEmail ? 'Email' : 'SMS') + '</span>' + obEsc(meta) + '</div>'
+                        + '</div>';
+                }).join('');
+            }
+            if (!d.can_send) {
+                compose.innerHTML = '<div class="ob-blocked">' + obEsc(d.block_message || 'Texting this lead is blocked.') + '</div>';
+                obScrollThreadToEnd();
+                return;
+            }
+            var fromLine = t.from_line || (d.rep && d.rep.openphone_number) || '';
+            compose.innerHTML =
+                '<textarea id="obComposeBox" maxlength="320" placeholder="Write a reply…" oninput="obComposeCount()"></textarea>'
+                + '<div class="ob-compose-row">'
+                + '<div class="ob-compose-note" id="obComposeNote">'
+                + (fromLine ? 'Sends from ' + obEsc(fromLine) : 'Sends from the assigned line')
+                + '<span id="obComposeCount"></span></div>'
+                + '<button class="ob-send" id="obSendBtn" onclick="obSendReply()">Send</button>'
+                + '</div>';
+            obScrollThreadToEnd();
+        }
+
+        // Newest message visible on open, the way every messages app behaves.
+        // Deferred a frame: the compose box is rendered after the thread and
+        // changes its height, so scrolling before that lands short.
+        function obScrollThreadToEnd() {
+            requestAnimationFrame(function () {
+                var thread = document.getElementById('obConvoThread');
+                if (thread) thread.scrollTop = thread.scrollHeight;
+            });
+        }
+
+        // Emails in this thread come through as HTML. Flatten to something a
+        // person can read at a glance instead of dumping tags into a bubble.
+        function obStripHtml(s) {
+            var raw = String(s || '');
+            if (!/<[a-z!/]/i.test(raw)) return raw;
+            var div = document.createElement('div');
+            div.innerHTML = raw.replace(/<\/(p|div|tr|h[1-6])>/gi, '\n').replace(/<br\s*\/?>/gi, '\n');
+            var text = div.textContent || '';
+            return text.replace(/\n{3,}/g, '\n\n').trim();
+        }
+
+        function obComposeCount() {
+            var box = document.getElementById('obComposeBox');
+            var out = document.getElementById('obComposeCount');
+            if (!box || !out) return;
+            var n = box.value.length;
+            out.textContent = n ? '  ·  ' + n + '/320' : '';
+        }
+
+        async function obSendReply() {
+            if (obConvoState.sending) return;
+            var box = document.getElementById('obComposeBox');
+            var btn = document.getElementById('obSendBtn');
+            var note = document.getElementById('obComposeNote');
+            if (!box) return;
+            var text = box.value.trim();
+            if (!text) return;
+
+            obConvoState.sending = true;
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+            try {
+                await prospectFetchJSON('/api/prospects/send-sms', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        lead_id: obConvoState.leadId,
+                        target_id: obConvoState.targetId,
+                        body: text
+                    })
+                });
+                box.value = '';
+                obConvoState.sending = false;
+                // Reload the thread so the sent message appears exactly as the
+                // server recorded it, not as an optimistic guess.
+                await obOpenConvo(obConvoState.targetId, obConvoState.leadId, true);
+            } catch (e) {
+                obConvoState.sending = false;
+                if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
+                var msg = (e.body && (e.body.detail || e.body.error)) || e.message || String(e);
+                if (note) {
+                    note.innerHTML = '<span style="color:#ef4444;">' + obEsc(msg) + '</span>';
+                }
             }
         }
 

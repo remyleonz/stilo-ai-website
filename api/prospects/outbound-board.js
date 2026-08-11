@@ -19,6 +19,57 @@ const ob = require('./_outbound');
 const STAGES = ['queued', 'sent', 'replied', 'booked', 'dead', 'blocked', 'opted_out', 'failed'];
 const ADMINS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
 
+// Stages that mean the conversation has moved on. A delivery error recorded
+// before any of these is history by definition.
+const SETTLED_STAGES = ['replied', 'booked', 'dead', 'opted_out'];
+const SENT_COLS = ['step1_sent_at', 'step2_sent_at', 'step3_sent_at'];
+
+/**
+ * Is this row's last_error a live problem, or a leftover?
+ *
+ * There is no error timestamp column. updated_at is the only proxy, and it is
+ * bumped by EVERY write to the row, not just by a failed send. That is exactly
+ * what kept a red "Quo out of prepaid credits" chip on the one Replied card:
+ * the reply capture stamped stage, first_reply_at and updated_at, which pushed
+ * updated_at hours past the campaign's last good send. An error from a send
+ * attempt that was never even made (attempt_count 0, no step ever stamped)
+ * ended up looking newer than every success on the board.
+ *
+ * An error only counts as live when ALL of these hold:
+ *
+ *   1. The row has not received a reply and has not settled. Once a prospect
+ *      texts back, an earlier delivery failure is history: either the message
+ *      reached them anyway or it stopped mattering the moment they answered.
+ *   2. The row has actually attempted a send (attempt_count > 0, or some step
+ *      is stamped sent). Neither means the error can be the outcome of the most
+ *      recent attempt if there was no attempt at all.
+ *   3. Nothing this row itself sent successfully is newer than the error.
+ *   4. The campaign's most recent successful send anywhere is not newer than
+ *      the error. last_error sticks to a row until that exact row retries, so
+ *      an outage fixed days ago otherwise shouts on hundreds of queued cards.
+ */
+function errorIsStale(t, lastSuccessAt) {
+    if (!t.last_error) return false;
+    if (t.first_reply_at) return true;
+    if (SETTLED_STAGES.indexOf(t.stage) >= 0) return true;
+
+    const attempted = (t.attempt_count || 0) > 0
+        || SENT_COLS.some(function (c) { return !!t[c]; });
+    if (!attempted) return true;
+
+    const errAt = t.updated_at ? new Date(t.updated_at).getTime() : null;
+    if (errAt == null) return true;
+
+    let ownSuccess = null;
+    for (const c of SENT_COLS) {
+        const v = t[c] ? new Date(t[c]).getTime() : null;
+        if (v != null && (ownSuccess == null || v > ownSuccess)) ownSuccess = v;
+    }
+    if (ownSuccess != null && ownSuccess >= errAt) return true;
+    if (lastSuccessAt != null && errAt <= lastSuccessAt) return true;
+    return false;
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
     const gate = await assertAdminOrSdr(req, res);
@@ -62,7 +113,7 @@ module.exports = async function handler(req, res) {
     // long after sending recovered. Anything older than the last good send is
     // history, not a live problem, and the board must not raise an alarm for it.
     let lastSuccessAt = null;
-    for (const col of ['step1_sent_at', 'step2_sent_at', 'step3_sent_at']) {
+    for (const col of SENT_COLS) {
         const { data: row } = await sb.from('outbound_targets')
             .select(col).eq('campaign_id', campaignId)
             .not(col, 'is', null).order(col, { ascending: false }).limit(1).maybeSingle();
@@ -107,11 +158,10 @@ module.exports = async function handler(req, res) {
             seconds_remaining: secondsRemaining,
             overdue: overdue,
             last_error: t.last_error,
-            // updated_at is the closest thing the row has to an error timestamp:
-            // every write that sets last_error also stamps updated_at.
+            // updated_at is the closest thing the row has to an error timestamp,
+            // and it is not a good one. See errorIsStale above.
             last_error_at: t.last_error ? t.updated_at : null,
-            error_stale: !!(t.last_error && lastSuccessAt != null
-                && new Date(t.updated_at).getTime() <= lastSuccessAt),
+            error_stale: errorIsStale(t, lastSuccessAt),
             // Deep link that opens the thread on the rep's own phone.
             quo_link: 'https://my.openphone.com/inbox?contact=' + encodeURIComponent(t.to_phone || ''),
             tel_link: 'tel:' + String(t.to_phone || '').replace(/[^\d+]/g, ''),
