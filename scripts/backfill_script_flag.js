@@ -79,12 +79,16 @@ async function loadManifest() {
 // live leads to a deactivated account. rep-d (George, hired 2026-07-24) was
 // missing entirely. Keep this in sync with prospecting.reconcile_brief_assignments().
 const REP_EMAIL = {
-    // rep-a was Luke Huron, who resigned 2026-08-06. Unowned until the next
-    // hire takes the folder. Routed to Remy so the briefs stay visible.
-    'rep-a': 'remyleon@stiloaipartners.com',
+    // 2026-08-11: rep-a and rep-d swapped owners. rep-a is the only SDR folder
+    // David has generated rep-facing GCS scripts for, so it goes to George, who
+    // is dialling now. rep-d has 250 briefs and no scripts, so it goes to
+    // Marcus, the new hire, and becomes callable as David generates them.
+    // Each rep then owns exactly one folder, which is what keeps a rep to two
+    // niches instead of a mix of four.
+    'rep-a': 'georgegutierrez446@gmail.com',
     'rep-b': 'aleb1027@gmail.com',
     'rep-c': 'ayesjorge911@gmail.com',
-    'rep-d': 'georgegutierrez446@gmail.com',
+    'rep-d': 'marcuslindsey8@gmail.com',
     'dc':    'davidcoira@stiloaipartners.com',
     'rl':    'remyleon@stiloaipartners.com'
 };

@@ -291,9 +291,18 @@ module.exports = async function handler(req, res) {
         console.error('[cold-call-script] listing failed:', e.message);
     }
 
-    // 3) FALLBACK: a STILO-generated script (from David's Sage brief) in Supabase
-    //    Storage. Used until David's official GCS script for this lead lands.
-    try {
+    // 3) FALLBACK: a STILO-generated script from David's Sage brief.
+    //    DISABLED 2026-08-11. Every one of the 609 files in that bucket was
+    //    written before the 2026-08-02 pivot (newest is 2026-07-27) and pitches
+    //    the retired AI receptionist: "a receptionist that answers 24/7", "no
+    //    booking widget", "We don't need automation". A rep opening one of these
+    //    reads a product we do not sell to a prospect, in the exact category the
+    //    market already rejected. No script is strictly better than the wrong
+    //    script, so we now 404 and the drawer shows nothing.
+    //    To re-enable: regenerate the bucket against the current Booked Meetings
+    //    offer, then restore the block below. Gate it on the content actually
+    //    naming the current offer rather than trusting the bucket.
+    if (process.env.ALLOW_LEGACY_GENERATED_SCRIPTS === '1') try {
         const gen = await readGeneratedScript(slug);
         if (gen) {
             res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
