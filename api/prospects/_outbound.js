@@ -275,17 +275,26 @@ function validateBody(text, senderFirstName) {
     return { ok: true };
 }
 
-function leadFacts(lead) {
+function leadFacts(lead, campaign) {
     const bits = [];
     if (lead.name) bits.push('Business: ' + lead.name);
     const who = firstNameOf(lead.owner_name);
     if (who) bits.push('Owner first name: ' + who);
     if (lead.niche || lead.category) bits.push('Industry: ' + (lead.niche || lead.category));
     if (lead.address) bits.push('Location: ' + lead.address);
-    // Translate the internal codename into plain language. Feeding the raw value
-    // in leaked "LCR" and "GMB" straight into 13 of 120 generated texts, which
-    // reads as gibberish to a prospect who has never heard our product names.
-    if (lead.pitch_agent) bits.push('The topic we discussed (describe in PLAIN WORDS, never by this name): ' + plainAgent(lead.pitch_agent));
+    // The topic. A campaign-level topic_override wins over the lead's own
+    // pitch_agent, because pitch_agent records what we pitched them under the
+    // OLD offer. Without the override, a warm re-touch in Aug 2026 asks a
+    // dentist about "attracting new patients", a product we no longer sell.
+    const override = campaign && String(campaign.topic_override || '').trim();
+    if (override) {
+        bits.push('The topic we discussed (describe in PLAIN WORDS): ' + override);
+    } else if (lead.pitch_agent) {
+        // Translate the internal codename into plain language. Feeding the raw value
+        // in leaked "LCR" and "GMB" straight into 13 of 120 generated texts, which
+        // reads as gibberish to a prospect who has never heard our product names.
+        bits.push('The topic we discussed (describe in PLAIN WORDS, never by this name): ' + plainAgent(lead.pitch_agent));
+    }
     if (lead.last_called_outcome) bits.push('Outcome of our last call with them: ' + lead.last_called_outcome);
     if (lead.website) bits.push('They already have a website: ' + lead.website);
     return bits.join('\n');
@@ -308,10 +317,11 @@ function leadFacts(lead) {
  * B never did. A fallback that violates the rules is worse than no fallback,
  * because it looks like it worked.
  */
-function fallbackBody(lead, step, sender, variant) {
+function fallbackBody(lead, step, sender, variant, campaign) {
     const who = firstNameOf(lead.owner_name);
     const hi = who ? 'hey ' + who : 'hey';
-    const topic = lead.pitch_agent ? plainAgent(lead.pitch_agent) : 'your business';
+    const override = campaign && String(campaign.topic_override || '').trim();
+    const topic = override || (lead.pitch_agent ? plainAgent(lead.pitch_agent) : 'your business');
     if (step === 1) {
         // Fallback must match the arm it is standing in for, or it silently
         // contaminates the experiment with the other arm's framing.
@@ -319,7 +329,10 @@ function fallbackBody(lead, step, sender, variant) {
             ? hi + ', ' + sender.first_name + ' here. have we spoken before or am i misremembering? was about ' + topic + '.'
             : hi + ', ' + sender.first_name + ' here. we spoke a little while back about ' + topic + '. still worth a quick chat?';
     }
-    if (step === 2) return 'appreciate you getting back. short version: we build and run the AI that brings local businesses more booked work, and we handle the setup. could you take on more work right now if it came in?';
+    // Step 2 states the CURRENT offer in plain words. The old version said "we
+    // build and run the AI that brings local businesses more booked work", which
+    // is both the retired offer and the AI framing we no longer use with clients.
+    if (step === 2) return 'appreciate you getting back. short version: we find the companies in your market that need what you do and put the ready ones on your calendar as booked meetings. you just show up and close. could you handle more work right now if it came in?';
     return 'perfect. ok if i give you a quick call from this number in a few minutes?';
 }
 
@@ -377,7 +390,7 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         'Who is sending: ' + sender.first_name + ' at STILO AI Partners, a small Miami team.',
         '',
         'About the recipient:',
-        leadFacts(lead),
+        leadFacts(lead, campaign),
         '',
         'What this message must do:',
         guidance,
@@ -411,7 +424,7 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         else rejected = v.why;
     }
     if (!body) {
-        body = fallbackBody(lead, step, sender, variant).replace(/—|–/g, ',').replace(/!/g, '.').trim();
+        body = fallbackBody(lead, step, sender, variant, campaign).replace(/—|–/g, ',').replace(/!/g, '.').trim();
         if (body.length > 320) body = body.slice(0, 317).replace(/\s+\S*$/, '') + '...';
     }
     return { body: body, generated: generated, rejected: rejected };
