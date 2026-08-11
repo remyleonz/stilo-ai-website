@@ -9104,7 +9104,24 @@
         // the agent dropdown. The VSL link in the body is agent-specific, so
         // switching agent has to re-fetch or the rep approves the wrong link.
         function refreshConfirmationPreview(force) {
-            if (!window.CONFIRMATION_PREVIEW || bookingState.leadId == null) return;
+            if (!window.CONFIRMATION_PREVIEW) return;
+            // Fall back to whichever lead the drawer has open. Any entry point that
+            // shows the picker without going through openBookingPicker() used to
+            // leave leadId null here and fail silently, which reads to the rep as
+            // "the confirmation email just does not write itself".
+            if (bookingState.leadId == null && prospectState && prospectState.currentLeadId != null) {
+                bookingState.leadId = prospectState.currentLeadId;
+            }
+            if (bookingState.leadId == null) {
+                // Never fail silently again. If we genuinely cannot tell which lead
+                // this is, say so where the rep is already looking.
+                var pmsg = document.getElementById('prospectConfirmPreview_msg');
+                if (pmsg) {
+                    pmsg.style.color = 'var(--red,#ef4444)';
+                    pmsg.textContent = 'Cannot draft the confirmation: no lead is selected. Reopen the lead and try again.';
+                }
+                return;
+            }
             CONFIRMATION_PREVIEW.configure({ escape: escapeAdminHtml, fetchJson: prospectFetchJSON });
             CONFIRMATION_PREVIEW.load({
                 leadId: bookingState.leadId,
@@ -9168,7 +9185,19 @@
             }
             // booked_meeting → show the embedded Google booking page.
             if (sel.value === 'booked_meeting') {
-                if (pickerHost) { pickerHost.style.display = 'block'; loadBookingSlots(); }
+                if (pickerHost) {
+                    pickerHost.style.display = 'block';
+                    // The confirmation preview keys off bookingState.leadId, and
+                    // until 2026-08-11 only openBookingPicker() ever set it. Reaching
+                    // the picker through this dropdown left it null, so every slot
+                    // click called refreshConfirmationPreview() and hit its silent
+                    // early return: the subject and body just stayed blank forever.
+                    if (bookingState.leadId == null && prospectState && prospectState.currentLeadId != null) {
+                        bookingState.leadId = prospectState.currentLeadId;
+                    }
+                    loadBookingSlots();
+                    refreshConfirmationPreview(true);
+                }
             } else {
                 if (pickerHost) pickerHost.style.display = 'none';
             }
