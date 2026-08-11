@@ -1279,6 +1279,45 @@
     .ea-caret { grid-row:1; grid-column:2; }
 }
 </style>
+<style id="outbound-board">
+/* Outbound tab · stacked stage sections. Same section language as the Sales
+   tab CRM: mono caps eyebrow, hairline rule, right-aligned count. The board
+   used to be five side-by-side kanban columns, which at any real screen width
+   left each card a ~280px strip too narrow to read a message in. Stages are
+   now full-width bands stacked most-actionable-first, and the cards flow in a
+   responsive grid inside each band. */
+.ob-section { margin: 0 0 30px; }
+.ob-sec-head { display:flex; align-items:baseline; gap:10px; padding-bottom:11px; margin-bottom:14px; border-bottom:1px solid var(--border-subtle); }
+.ob-dot { width:8px; height:8px; border-radius:50%; align-self:center; flex:0 0 auto; }
+.ob-sec-title { margin:0; font-family:var(--font-mono); font-size:0.78rem; font-weight:500; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-secondary); }
+.ob-sec-count { font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); letter-spacing:0.1em; }
+.ob-sec-note { margin-left:auto; font-size:0.72rem; color:var(--text-muted); text-align:right; }
+.ob-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:12px; align-items:start; }
+.ob-empty { font-size:0.8rem; color:var(--text-muted); padding:2px 0 4px; }
+.ob-card { background:var(--bg-card, rgba(255,255,255,.025)); border:1px solid var(--border-subtle); border-radius:11px; padding:14px 16px; overflow-wrap:anywhere; min-width:0; }
+.ob-card-name { font-weight:650; font-size:0.9rem; line-height:1.35; color:var(--text-primary); }
+.ob-card-meta { font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.45; }
+.ob-chip { display:inline-block; padding:2px 9px; border-radius:999px; font-size:0.68rem; font-weight:600; line-height:1.6; }
+.ob-chip-agent { background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.35); color:#5A7BE8; }
+.ob-chip-err { background:rgba(239,68,68,.10); border:1px solid rgba(239,68,68,.35); color:#ef4444; cursor:pointer; }
+.ob-chip-old { background:rgba(255,255,255,.03); border:1px solid var(--border-subtle); color:var(--text-muted); cursor:pointer; }
+/* Message bodies clamp to four lines and open on the toggle underneath, so a
+   long text never gets sliced mid-word and never blows out the card. */
+.ob-body { font-size:0.82rem; line-height:1.6; margin:10px 0 0; max-width:62ch; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.ob-body.open { -webkit-line-clamp:unset; display:block; }
+.ob-body-reply { padding:9px 12px; background:rgba(245,158,11,.08); border-left:2px solid #F59E0B; border-radius:5px; color:var(--text-primary); }
+.ob-body-draft { color:var(--text-secondary); }
+.ob-toggle { margin-top:6px; background:none; border:0; padding:0; font-size:0.72rem; font-weight:600; color:#5A7BE8; cursor:pointer; font-family:inherit; }
+.ob-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+.ob-btn { padding:6px 12px; border-radius:7px; border:1px solid var(--border-subtle); background:transparent; color:inherit; font-size:0.74rem; font-family:inherit; cursor:pointer; text-decoration:none; }
+.ob-btn:hover { border-color:var(--border-medium, rgba(255,255,255,.2)); }
+.ob-btn-call { background:#2563EB; border-color:#2563EB; color:#fff; font-weight:600; }
+.ob-more { margin-top:12px; padding:8px 16px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-input, rgba(255,255,255,.03)); color:var(--text-secondary); font-size:0.76rem; font-weight:600; font-family:inherit; cursor:pointer; }
+@media (max-width: 700px) {
+    .ob-grid { grid-template-columns:1fr; }
+    .ob-sec-note { display:none; }
+}
+</style>
 <style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
 </head>
 <body>
@@ -1847,14 +1886,13 @@
 
                 <div id="obStatStrip" style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px;"></div>
 
-                <!-- Flex row with a fixed column width and its own horizontal
-                     scroll, NOT an auto-fit grid. auto-fit reflows the last
-                     column onto a second row as soon as the viewport can't fit
-                     all five (it did exactly that at 1280px, dropping "Dead"
-                     underneath "Queued"), and a kanban with a wrapped column
-                     reads as a broken page. Columns now stay on one line and
-                     the board scrolls sideways instead of the page. -->
-                <div id="obBoard" style="display:flex;gap:14px;align-items:flex-start;overflow-x:auto;padding-bottom:8px;">
+                <!-- Stacked stage bands, not a kanban. Five side-by-side
+                     columns gave every card a ~280px strip, which is too narrow
+                     to read an SMS body in, and the page scrolled sideways.
+                     Sections now run full width top to bottom, most actionable
+                     first (Replied, Call Booked, Sent, Queued, Dead), with the
+                     cards in a responsive grid inside each band. -->
+                <div id="obBoard">
                     <div style="color:var(--text-muted);font-size:0.9rem;">Loading board...</div>
                 </div>
             </div>
@@ -6395,15 +6433,21 @@
            server value is the truth; the interval is just cosmetic motion
            between refreshes.
         */
+        /* Order is deliberate and is the whole point of the stacked layout:
+           what needs a human right now sits at the top of the page. Replied
+           has a callback clock running, Booked is the result worth seeing next,
+           Sent and Queued are reference, Dead is an archive. */
         var OB_STAGES = [
-            { key: 'queued',   label: 'Queued',      color: '#6B7280' },
-            { key: 'sent',     label: 'Sent',        color: '#2563EB' },
-            { key: 'replied',  label: 'Replied',     color: '#F59E0B' },
-            { key: 'booked',   label: 'Call Booked', color: '#10B981' },
-            { key: 'dead',     label: 'Dead',        color: '#4B5563' }
+            { key: 'replied',  label: 'Replied',     color: '#F59E0B', note: 'Call these back first. The clock is the SLA.', preview: 24 },
+            { key: 'booked',   label: 'Call Booked', color: '#10B981', note: '', preview: 24 },
+            { key: 'sent',     label: 'Sent',        color: '#2563EB', note: 'Waiting on a reply.', preview: 9 },
+            { key: 'queued',   label: 'Queued',      color: '#6B7280', note: 'Goes out on the drip schedule.', preview: 9 },
+            { key: 'dead',     label: 'Dead',        color: '#4B5563', note: '', preview: 6 }
         ];
         var obBoardData = null;
         var obTicker = null;
+        // Which stage bands the user has expanded past their preview count.
+        var obExpanded = {};
 
         function obEsc(s) {
             return String(s == null ? '' : s)
@@ -6446,16 +6490,28 @@
             var d = el.nextElementSibling;
             if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none';
         }
-        function obToggleClamp(el) {
-            var open = el.getAttribute('data-open') === '1';
-            el.style.webkitLineClamp = open ? '3' : 'unset';
-            el.setAttribute('data-open', open ? '0' : '1');
+        function obToggleClamp(btn) {
+            var body = document.getElementById(btn.getAttribute('data-for'));
+            if (!body) return;
+            var open = body.classList.toggle('open');
+            btn.textContent = open ? 'Show less' : 'Show more';
+        }
+        function obToggleSection(key) {
+            obExpanded[key] = !obExpanded[key];
+            if (obBoardData) { obRenderBoard(obBoardData); obStartTicker(); }
         }
 
         /**
          * One banner when >5 targets share the same send-blocking error.
          * A wall of identical red chips means one account problem, not 500
          * lead problems, so say it once at the top with the fix.
+         *
+         * Only errors newer than the campaign's last successful send count.
+         * last_error sticks to a target until that exact target is retried, and
+         * the drip only retries a handful per tick, so an outage that was fixed
+         * days ago leaves hundreds of rows still carrying its error. The old
+         * version counted those and kept shouting "sending is failing" on a day
+         * when 20 messages went out fine. The server marks them error_stale.
          */
         function obRenderErrorBanner(d) {
             var el = document.getElementById('obErrorBanner');
@@ -6463,7 +6519,7 @@
             var counts = {};
             Object.keys(d.stages || {}).forEach(function (k) {
                 (d.stages[k] || []).forEach(function (c) {
-                    if (!c.last_error) return;
+                    if (!c.last_error || c.error_stale) return;
                     var he = obHumanError(c.last_error);
                     if (!he.blocking) return;
                     counts[he.short] = (counts[he.short] || 0) + 1;
@@ -6536,7 +6592,11 @@
             var id = sel && sel.value;
             if (!id) return;
             var rep = document.getElementById('obRepFilter');
+            // limit=1000 (the endpoint's ceiling) because the section headers
+            // now show a count. The old default of 400 silently truncated a
+            // 581-target campaign and the Queued header would have read 377.
             var url = '/api/prospects/outbound-board?campaign_id=' + encodeURIComponent(id)
+                + '&limit=1000'
                 + (rep && rep.value ? '&rep=' + encodeURIComponent(rep.value) : '');
             try {
                 var d = await prospectFetchJSON(url, { method: 'GET' });
@@ -6615,71 +6675,107 @@
                              - (b.seconds_remaining == null ? 1e9 : b.seconds_remaining);
                     });
                 }
-                return '<div style="box-sizing:border-box;flex:0 0 282px;max-height:calc(100vh - 300px);overflow-y:auto;background:var(--bg-card,rgba(255,255,255,.02));border:1px solid var(--border-subtle);border-radius:12px;padding:12px;">'
-                    + '<div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;">'
-                    + '<span style="width:8px;height:8px;border-radius:50%;background:' + st.color + ';"></span>'
-                    + '<span style="font-weight:700;font-size:0.85rem;">' + st.label + '</span>'
-                    + '<span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted);">' + cards.length + '</span>'
+                // Queued runs to the hundreds. Showing all of it by default
+                // buries every band underneath it, so each stage opens with a
+                // preview and expands on request.
+                var preview = st.preview || 9;
+                var open = !!obExpanded[st.key];
+                var shown = open ? cards : cards.slice(0, preview);
+                var more = '';
+                if (cards.length > preview) {
+                    more = '<button class="ob-more" onclick="obToggleSection(\'' + st.key + '\')">'
+                        + (open ? 'Show fewer' : 'Show all ' + cards.length) + '</button>';
+                }
+                return '<section class="ob-section">'
+                    + '<div class="ob-sec-head">'
+                    + '<span class="ob-dot" style="background:' + st.color + ';"></span>'
+                    + '<h3 class="ob-sec-title">' + st.label + '</h3>'
+                    + '<span class="ob-sec-count">' + cards.length + '</span>'
+                    + (st.note && cards.length ? '<span class="ob-sec-note">' + st.note + '</span>' : '')
                     + '</div>'
                     + (cards.length
-                        ? cards.slice(0, 60).map(obCard).join('')
-                        : '<div style="font-size:0.78rem;color:var(--text-muted);padding:6px 2px;">Empty</div>')
-                    + (cards.length > 60 ? '<div style="font-size:0.75rem;color:var(--text-muted);padding:6px 2px;">+' + (cards.length - 60) + ' more</div>' : '')
-                    + '</div>';
+                        ? '<div class="ob-grid">' + shown.map(obCard).join('') + '</div>'
+                        : '<div class="ob-empty">Nothing here yet.</div>')
+                    + more
+                    + '</section>';
             }).join('');
+            obTrimToggles();
+        }
+
+        /**
+         * Hide the Show more button on any body that already fits. Whether a
+         * four-line clamp actually hides anything depends on the rendered card
+         * width, which no character count can predict, so ask the layout after
+         * it has run instead of guessing.
+         */
+        function obTrimToggles() {
+            document.querySelectorAll('#obBoard .ob-toggle').forEach(function (btn) {
+                var body = document.getElementById(btn.getAttribute('data-for'));
+                if (body && body.scrollHeight <= body.clientHeight + 2) btn.style.display = 'none';
+            });
         }
 
         function obCard(c) {
             var isReplied = c.stage === 'replied';
             var waiting = isReplied && !c.called_back_at;
-            var border = waiting ? (c.overdue ? '#ef4444' : '#F59E0B') : 'var(--border-subtle)';
-            // overflow-wrap on the card: scraped business names and raw error
-            // strings have no spaces to break on and were pushing the column
-            // wider than its 282px track.
-            var out = ['<div style="background:var(--bg-input,rgba(255,255,255,.03));border:1px solid ' + border + ';border-radius:9px;padding:10px 11px;margin:0 0 8px;overflow-wrap:anywhere;min-width:0;">'];
+            var border = waiting ? (c.overdue ? '#ef4444' : '#F59E0B') : '';
+            // overflow-wrap lives on .ob-card: scraped business names and raw
+            // error strings have no spaces to break on and will otherwise push
+            // a grid track wider than its share.
+            var out = ['<div class="ob-card"' + (border ? ' style="border-color:' + border + ';"' : '') + '>'];
 
-            out.push('<div style="font-weight:650;font-size:0.83rem;line-height:1.3;">' + obEsc(c.business || ('Lead ' + c.lead_id)) + '</div>');
-            var meta = [c.owner_name, c.niche].filter(Boolean).join(' · ');
-            if (meta) out.push('<div style="font-size:0.73rem;color:var(--text-muted);margin-top:2px;">' + obEsc(meta) + '</div>');
-            if (c.pitch_agent) out.push('<div style="font-size:0.7rem;color:#2563EB;margin-top:3px;">' + obEsc(c.pitch_agent) + '</div>');
+            // Scraped rows often carry the phone as the business name, so only
+            // add the number when it is not already on screen.
+            var name = String(c.business || ('Lead ' + c.lead_id));
+            var phone = (c.to_phone && name.indexOf(c.to_phone) === -1) ? c.to_phone : null;
+            out.push('<div class="ob-card-name">' + obEsc(name) + '</div>');
+            var meta = [c.owner_name, c.niche, phone].filter(Boolean).join(' · ');
+            if (meta) out.push('<div class="ob-card-meta">' + obEsc(meta) + '</div>');
+
+            var chips = [];
+            if (c.pitch_agent) chips.push('<span class="ob-chip ob-chip-agent">' + obEsc(c.pitch_agent) + '</span>');
+            if (c.assigned_to) chips.push('<span class="ob-chip ob-chip-old" style="cursor:default;">' + obEsc(String(c.assigned_to).split('@')[0]) + '</span>');
+            if (chips.length) out.push('<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">' + chips.join('') + '</div>');
 
             if (waiting) {
                 out.push('<div id="ob-cd-' + c.id + '" data-sec="' + (c.seconds_remaining == null ? '' : c.seconds_remaining) + '" '
-                    + 'style="margin:8px 0 6px;font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums;color:' + (c.overdue ? '#ef4444' : '#F59E0B') + ';">'
+                    + 'style="margin:10px 0 2px;font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums;color:' + (c.overdue ? '#ef4444' : '#F59E0B') + ';">'
                     + obFmtCountdown(c.seconds_remaining) + (c.overdue ? ' overdue' : ' left') + '</div>');
             }
 
-            // Bodies are clamped to 3 lines and expand on click instead of the
-            // old hard character slice, which cut mid-word and still overflowed
-            // on long unbroken strings.
-            var clamp = 'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;';
-            if (c.first_reply_body) {
-                out.push('<div onclick="obToggleClamp(this)" data-open="0" title="Click to expand" style="' + clamp + 'margin:7px 0;padding:7px 9px;background:rgba(245,158,11,.08);border-left:2px solid #F59E0B;border-radius:4px;font-size:0.78rem;line-height:1.45;">'
-                    + obEsc(String(c.first_reply_body).slice(0, 600)) + '</div>');
-            } else if (c.step1_body) {
-                out.push('<div onclick="obToggleClamp(this)" data-open="0" title="Click to expand" style="' + clamp + 'margin:7px 0;font-size:0.75rem;color:var(--text-muted);line-height:1.45;">'
-                    + obEsc(String(c.step1_body).slice(0, 600)) + '</div>');
+            // Bodies clamp to four lines with an explicit toggle underneath,
+            // never a hard character slice that cuts mid-word.
+            var body = c.first_reply_body
+                ? { text: String(c.first_reply_body), cls: 'ob-body-reply' }
+                : (c.step1_body ? { text: String(c.step1_body), cls: 'ob-body-draft' } : null);
+            if (body) {
+                var bid = 'ob-body-' + c.id;
+                out.push('<div id="' + bid + '" class="ob-body ' + body.cls + '">' + obEsc(body.text) + '</div>');
+                // Only offer the toggle when there is plausibly something hidden.
+                out.push('<button class="ob-toggle" data-for="' + bid + '" onclick="obToggleClamp(this)">Show more</button>');
             }
 
             if (c.last_error) {
                 // Short human chip, full provider JSON behind a click (and in
-                // the hover tooltip). Never dump raw JSON into the card.
+                // the hover tooltip). Never dump raw JSON into the card. Errors
+                // older than the last successful send read as history, in grey,
+                // so they stop looking like a live outage.
                 var he = obHumanError(c.last_error);
-                out.push('<div style="margin:6px 0 2px;">'
+                var stale = !!c.error_stale;
+                out.push('<div style="margin:10px 0 0;">'
                     + '<span onclick="obToggleErr(this)" title="' + obEsc(he.full) + '" '
-                    + 'style="display:inline-block;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;'
-                    + 'padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#ef4444;font-size:0.68rem;font-weight:600;cursor:pointer;">'
-                    + obEsc(he.short) + '</span>'
-                    + '<div style="display:none;margin-top:5px;font-size:0.67rem;color:var(--text-muted);line-height:1.4;word-break:break-all;">' + obEsc(he.full) + '</div>'
+                    + 'class="ob-chip ' + (stale ? 'ob-chip-old' : 'ob-chip-err') + '" '
+                    + 'style="max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;">'
+                    + (stale ? 'Earlier: ' : '') + obEsc(he.short) + '</span>'
+                    + '<div style="display:none;margin-top:6px;font-size:0.7rem;color:var(--text-muted);line-height:1.5;word-break:break-all;">' + obEsc(he.full) + '</div>'
                     + '</div>');
             }
 
-            var btn = 'padding:5px 9px;border-radius:6px;border:1px solid var(--border-subtle);background:transparent;color:inherit;font-size:0.72rem;cursor:pointer;';
-            out.push('<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">');
-            if (c.tel_link) out.push('<a href="' + c.tel_link + '" style="' + btn + 'text-decoration:none;background:#2563EB;border-color:#2563EB;color:#fff;font-weight:600;">Call</a>');
-            if (waiting) out.push('<button onclick="obAct(' + c.id + ',\'called_back\')" style="' + btn + '">Called</button>');
-            if (c.stage !== 'booked') out.push('<button onclick="obAct(' + c.id + ',\'booked\')" style="' + btn + '">Booked</button>');
-            if (c.stage !== 'dead') out.push('<button onclick="obAct(' + c.id + ',\'dead\')" style="' + btn + '">Dead</button>');
+            out.push('<div class="ob-actions">');
+            if (c.tel_link) out.push('<a href="' + c.tel_link + '" class="ob-btn ob-btn-call">Call</a>');
+            if (waiting) out.push('<button class="ob-btn" onclick="obAct(' + c.id + ',\'called_back\')">Called</button>');
+            if (c.stage !== 'booked') out.push('<button class="ob-btn" onclick="obAct(' + c.id + ',\'booked\')">Booked</button>');
+            if (c.stage !== 'dead') out.push('<button class="ob-btn" onclick="obAct(' + c.id + ',\'dead\')">Dead</button>');
             out.push('</div></div>');
             return out.join('');
         }

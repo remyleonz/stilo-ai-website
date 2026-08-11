@@ -56,6 +56,20 @@ module.exports = async function handler(req, res) {
         for (const l of (leads || [])) leadById[l.id] = l;
     }
 
+    // Most recent successful send on this campaign, campaign-wide (not just the
+    // filtered slice). last_error sticks to a row until that row is retried, so
+    // a credit outage days ago leaves hundreds of queued rows carrying an error
+    // long after sending recovered. Anything older than the last good send is
+    // history, not a live problem, and the board must not raise an alarm for it.
+    let lastSuccessAt = null;
+    for (const col of ['step1_sent_at', 'step2_sent_at', 'step3_sent_at']) {
+        const { data: row } = await sb.from('outbound_targets')
+            .select(col).eq('campaign_id', campaignId)
+            .not(col, 'is', null).order(col, { ascending: false }).limit(1).maybeSingle();
+        const v = row && row[col] ? new Date(row[col]).getTime() : null;
+        if (v != null && (lastSuccessAt == null || v > lastSuccessAt)) lastSuccessAt = v;
+    }
+
     const now = Date.now();
     const grouped = {};
     for (const s of STAGES) grouped[s] = [];
@@ -93,6 +107,11 @@ module.exports = async function handler(req, res) {
             seconds_remaining: secondsRemaining,
             overdue: overdue,
             last_error: t.last_error,
+            // updated_at is the closest thing the row has to an error timestamp:
+            // every write that sets last_error also stamps updated_at.
+            last_error_at: t.last_error ? t.updated_at : null,
+            error_stale: !!(t.last_error && lastSuccessAt != null
+                && new Date(t.updated_at).getTime() <= lastSuccessAt),
             // Deep link that opens the thread on the rep's own phone.
             quo_link: 'https://my.openphone.com/inbox?contact=' + encodeURIComponent(t.to_phone || ''),
             tel_link: 'tel:' + String(t.to_phone || '').replace(/[^\d+]/g, ''),
@@ -114,6 +133,7 @@ module.exports = async function handler(req, res) {
         window: win,
         sent_today_by_line: perLine,
         sent_today_total: Object.values(perLine).reduce((a, b) => a + b, 0),
+        last_success_at: lastSuccessAt == null ? null : new Date(lastSuccessAt).toISOString(),
         send_enabled_env: ob.SEND_ENABLED,
         is_admin: isAdmin,
         server_time: new Date().toISOString(),
