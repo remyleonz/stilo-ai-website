@@ -17,6 +17,13 @@
  *   - leads.reply_received_at    = when the reply arrived
  *   - leads.reply_snippet        = first ~200 chars of the reply
  *
+ * ADDRESS-LEVEL EXIT. reply_received_at is also stamped on every OTHER lead
+ * sitting on the same address (same owner_email, or previously mailed at that
+ * to_address), because a reply is a human deciding to talk to us, and the drip
+ * must stop for all of that human's rows, not just the one we happened to mail.
+ * The reply body, status and lead_messages update stay attributed to the single
+ * matched row.
+ *
  * NOTE on where the snippet lives: the task described a lead_messages.reply_snippet
  * column, but the live schema does NOT have one. lead_messages has replied_at,
  * body_preview and raw_payload. So we write the reply text to body_preview (and
@@ -92,6 +99,15 @@ async function accessTokenFromRefresh(refreshToken) {
 }
 
 // ---- Gmail parsing helpers --------------------------------------------------
+
+// PostgREST's ilike passes the pattern straight to SQL LIKE, where `_` matches
+// any single character and `%` matches any run. Email local-parts are full of
+// underscores ("john_smith@acme.com"), so an unescaped address is a wildcard
+// that happily matches johnXsmith@acme.com and attributes the reply to the
+// wrong lead. Backslash is LIKE's default escape character.
+function likeEscape(s) {
+    return String(s).replace(/([\\%_])/g, '\\$1');
+}
 
 // Pull "Name <a@b.com>" or "a@b.com" down to the bare, lowercased address.
 function parseAddress(headerValue) {
@@ -293,7 +309,7 @@ module.exports = async function handler(req, res) {
                 .select('id, lead_id, to_address, provider_message_id, sent_at')
                 .eq('direction', 'outbound')
                 .is('replied_at', null)
-                .ilike('to_address', fromAddr)
+                .ilike('to_address', likeEscape(fromAddr))
                 .order('sent_at', { ascending: false })
                 .limit(1);
             if (data && data[0]) outbound = data[0];
@@ -356,7 +372,38 @@ module.exports = async function handler(req, res) {
             }).eq('id', outbound.lead_id);
         } catch (e) { console.error('[capture-replies] lead update threw', outbound.lead_id, e && e.message); }
 
-        matched.push({ from: fromAddr, lead_id: outbound.lead_id, message_row: outbound.id, when: receivedAt });
+        // Address-level exit. One person can own several lead rows (a franchise
+        // group, one owner with three LLCs). When they reply once, every lead
+        // on that address has to stop, or the drip keeps mailing the same human
+        // from a different row. Only reply_received_at is copied across: the
+        // snippet and the lead_messages attribution belong to the row that
+        // actually received the reply, not to its siblings.
+        let siblingIds = [];
+        try {
+            const pattern = likeEscape(fromAddr);
+            const both = await Promise.all([
+                sb.from('lead_messages').select('lead_id').ilike('to_address', pattern).limit(500),
+                sb.from('leads').select('id').ilike('owner_email', pattern).is('reply_received_at', null).limit(500),
+            ]);
+            const ids = new Set();
+            for (const r of ((both[0] && both[0].data) || [])) { if (r.lead_id) ids.add(r.lead_id); }
+            for (const r of ((both[1] && both[1].data) || [])) { if (r.id) ids.add(r.id); }
+            ids.delete(outbound.lead_id);
+            siblingIds = Array.from(ids);
+            if (siblingIds.length) {
+                const { error: sibErr } = await sb.from('leads')
+                    .update({ reply_received_at: receivedAt })
+                    .in('id', siblingIds)
+                    .is('reply_received_at', null);
+                if (sibErr) console.error('[capture-replies] sibling stamp failed', fromAddr, sibErr.message);
+            }
+        } catch (e) { console.error('[capture-replies] sibling stamp threw', fromAddr, e && e.message); }
+
+        matched.push({
+            from: fromAddr, lead_id: outbound.lead_id, message_row: outbound.id,
+            when: receivedAt,
+            sibling_leads_exited: siblingIds.length,
+        });
     }
 
     return res.status(200).json({

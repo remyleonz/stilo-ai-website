@@ -181,19 +181,30 @@ module.exports = async function handleSmsOptout(req, res) {
     } catch (e) { /* fall through with _unknown_ */ }
   }
 
+  // Select-then-insert, NOT upsert: uniqueness on (client_slug, phone) is a
+  // PARTIAL index (WHERE phone IS NOT NULL) and Postgres cannot infer one from
+  // an ON CONFLICT column list, so every STOP write here raised 42P10 and
+  // recorded nothing (audit 2026-08-10). An unrecorded STOP is the whole ballgame.
   try {
-    const { error } = await supabase
+    const { data: existing } = await supabase
       .from('lcr_suppressions')
-      .upsert(
-        {
+      .select('id')
+      .eq('client_slug', clientSlug)
+      .eq('phone', from)
+      .limit(1);
+    if (!existing || existing.length === 0) {
+      const { error } = await supabase
+        .from('lcr_suppressions')
+        .insert({
           client_slug: clientSlug,
           phone: from,
           source: 'sms_stop',
           opted_out_at: new Date().toISOString(),
-        },
-        { onConflict: 'client_slug,phone' }
-      );
-    if (error) console.error('[sms_optout] upsert failed:', error.message);
+        });
+      if (error && error.code !== '23505') {
+        console.error('[sms_optout] insert failed:', error.message);
+      }
+    }
   } catch (err) {
     console.error('[sms_optout] unexpected:', err);
   }

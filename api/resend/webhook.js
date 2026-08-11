@@ -12,8 +12,16 @@
  *   email.delivered → delivered_at, status='delivered'
  *   email.opened    → opened_at   (weak signal: Apple Mail prefetches inflate it)
  *   email.clicked   → clicked_at  (the real intent signal we test on)
- *   email.bounced   → bounced_at, status='bounced'
- *   email.complained→ status='complained'
+ *   email.bounced   → bounced_at, status='bounced'  + leads.bounced_at
+ *   email.complained→ status='complained' + leads.bounced_at + lcr_suppressions
+ *
+ * BOUNCES AND COMPLAINTS PROPAGATE TO THE LEAD. Stamping only the message row
+ * is not enough: every sender path (email-sequence, vsl-campaign, outbound)
+ * decides who to mail off prospecting.leads and public.lcr_suppressions. A
+ * bounce writes leads.bounced_at (first one wins, so the original bounce date
+ * survives duplicate webhook deliveries). A complaint is a hard stop: somebody
+ * pressed "report spam", so it stamps the lead AND suppresses the address
+ * outright, which is the one list every sender we own consults.
  *
  * Auth: Svix signature (Resend signs every webhook with Svix). The signing
  * secret is RESEND_WEBHOOK_SECRET ("whsec_..."), created when you add the
@@ -27,6 +35,26 @@ function leadsClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
+}
+// lcr_suppressions lives in public, not prospecting.
+function publicClient() {
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+}
+
+// Suppression rows are keyed by (client_slug, email). Cold prospecting mail is
+// tagged 'prospecting', the same slug the one-click unsubscribe token carries,
+// so a complaint and an unsubscribe land in the same bucket.
+const SUPPRESSION_CLIENT_SLUG = 'prospecting';
+
+// Resend puts the bounce detail in different places depending on the provider
+// that reported it. Take the first thing that reads like a reason.
+function bounceReason(data) {
+    const d = data || {};
+    const b = d.bounce || {};
+    const raw = b.message || b.subType || b.type || d.reason || d.message
+        || (b.diagnosticCode || d.diagnostic_code) || null;
+    if (!raw) return null;
+    return String(raw).replace(/\s+/g, ' ').trim().slice(0, 300) || null;
 }
 
 async function readRawBody(req) {
@@ -87,19 +115,86 @@ module.exports = async function handler(req, res) {
     else if (type === 'email.complained') { patch.status = 'complained'; }
     else return res.status(200).json({ ok: true, ignored: type });
 
+    const isBounce = type === 'email.bounced';
+    const isComplaint = type === 'email.complained';
+    let propagated = null;
+
     try {
         const sb = leadsClient();
         // Don't overwrite an existing earlier timestamp with a later duplicate
         // event: only stamp the column if it's currently null (for clicked/opened).
-        const { error } = await sb.from('lead_messages').update(patch)
-            .eq('provider_message_id', emailId);
+        // The returned rows tell us which lead and address this event belongs
+        // to, which is what the bounce/complaint propagation below needs.
+        const { data: rows, error } = await sb.from('lead_messages').update(patch)
+            .eq('provider_message_id', emailId)
+            .select('lead_id,to_address');
         if (error) { console.error('[resend-webhook] update failed:', error.message); return res.status(200).json({ ok: false }); }
+
+        if (isBounce || isComplaint) {
+            const leadIds = Array.from(new Set((rows || []).map(function (r) { return r.lead_id; }).filter(Boolean)));
+            const addrs = Array.from(new Set((rows || [])
+                .map(function (r) { return String(r.to_address || '').toLowerCase().trim(); })
+                .filter(Boolean)));
+            propagated = { leads: leadIds.length, addresses: addrs.length, suppressed: 0 };
+
+            // Stamp the lead so every sender path stops picking it up. Only
+            // when currently null: a duplicate webhook must not move the date
+            // forward, and a later complaint must not overwrite the original
+            // bounce reason.
+            if (leadIds.length) {
+                const leadPatch = { bounced_at: when };
+                const reason = isComplaint
+                    ? 'spam_complaint' + (bounceReason(evt.data) ? ': ' + bounceReason(evt.data) : '')
+                    : bounceReason(evt.data);
+                if (reason) leadPatch.bounce_reason = reason;
+                const { error: leadErr } = await sb.from('leads')
+                    .update(leadPatch).in('id', leadIds).is('bounced_at', null);
+                if (leadErr) console.error('[resend-webhook] lead stamp failed:', leadErr.message);
+            }
+
+            // A complaint is a hard stop, not a data point. Suppress the
+            // address itself so the sequence, the VSL campaign and every other
+            // sender skip it even if the person turns up on a different lead.
+            if (isComplaint && addrs.length) {
+                const pub = publicClient();
+                // Deliberately NOT an upsert. The uniqueness here is a PARTIAL
+                // index (client_slug, email) WHERE email IS NOT NULL, and
+                // Postgres cannot infer a partial index from a bare
+                // ON CONFLICT (client_slug, email); it raises 42P10. So read
+                // first, insert only what's missing. Duplicates are the normal
+                // case (Resend redelivers), not an error.
+                const { data: already } = await pub.from('lcr_suppressions')
+                    .select('email')
+                    .eq('client_slug', SUPPRESSION_CLIENT_SLUG)
+                    .in('email', addrs);
+                const have = new Set((already || []).map(function (r) { return String(r.email || '').toLowerCase(); }));
+                const rowsToAdd = addrs.filter(function (a) { return !have.has(a); }).map(function (a) {
+                    return {
+                        client_slug: SUPPRESSION_CLIENT_SLUG,
+                        email: a,
+                        source: 'resend_complaint',
+                        opted_out_at: when,
+                        notes: 'Resend email.complained on ' + emailId,
+                    };
+                });
+                if (rowsToAdd.length) {
+                    const { error: supErr } = await pub.from('lcr_suppressions').insert(rowsToAdd);
+                    // 23505 = the race lost to a concurrent delivery of the same
+                    // event. That address is suppressed either way; not an error.
+                    if (supErr && supErr.code !== '23505') {
+                        console.error('[resend-webhook] suppression insert failed:', supErr.message);
+                    } else {
+                        propagated.suppressed = rowsToAdd.length;
+                    }
+                }
+            }
+        }
     } catch (e) {
         console.error('[resend-webhook] threw:', e && e.message);
         return res.status(200).json({ ok: false });
     }
 
-    return res.status(200).json({ ok: true, type: type });
+    return res.status(200).json({ ok: true, type: type, propagated: propagated || undefined });
 };
 
 // Raw body required for Svix verification — keep Vercel's parser off.

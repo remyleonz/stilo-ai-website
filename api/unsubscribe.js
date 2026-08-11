@@ -103,22 +103,33 @@ module.exports = async function handleUnsubscribe(req, res) {
     return res.status(200).end(confirmationPage(parsed.email, ''));
   }
 
-  // Upsert by (client_slug, email). Idempotent — repeat clicks don't error.
+  // Select-then-insert, NOT upsert. The uniqueness on (client_slug, email) comes
+  // from a PARTIAL index (WHERE email IS NOT NULL), and Postgres cannot infer a
+  // partial index from an ON CONFLICT column list: it raises 42P10. So every
+  // unsubscribe click since this shipped returned a 500 and recorded nothing,
+  // which is a CAN-SPAM problem, not a style one (audit 2026-08-10).
   try {
-    const { error } = await supabase
+    const { data: existing } = await supabase
       .from('lcr_suppressions')
-      .upsert(
-        {
+      .select('id')
+      .eq('client_slug', parsed.client_slug)
+      .ilike('email', parsed.email)
+      .limit(1);
+    if (!existing || existing.length === 0) {
+      const { error } = await supabase
+        .from('lcr_suppressions')
+        .insert({
           client_slug: parsed.client_slug,
           email: parsed.email,
           source: 'email_unsubscribe',
           opted_out_at: new Date().toISOString(),
-        },
-        { onConflict: 'client_slug,email' }
-      );
-    if (error) {
-      console.error('[unsubscribe] supabase upsert failed:', error.message);
-      return res.status(500).json({ ok: false, error: 'persist_failed' });
+        });
+      // 23505 means a concurrent click won the race: the address is suppressed
+      // either way, which is the outcome we care about.
+      if (error && error.code !== '23505') {
+        console.error('[unsubscribe] supabase insert failed:', error.message);
+        return res.status(500).json({ ok: false, error: 'persist_failed' });
+      }
     }
   } catch (err) {
     console.error('[unsubscribe] unexpected:', err);
