@@ -25,7 +25,57 @@ async function readJsonBody(req) {
     for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
     try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { return {}; }
 }
-function isEmail(s) { return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+// Strict charset on purpose (audit 2026-08-10): the old /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// accepted , ( ) * and %, which are PostgREST .or()/ilike metacharacters — a
+// crafted "email" could inject filter clauses or wildcards into the lead-match
+// query below. Reject anything outside a plain mailbox shape.
+function isEmail(s) {
+    return typeof s === 'string'
+        && s.length <= 320
+        && /^[A-Za-z0-9._+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(s);
+}
+
+// ── Rate limiting (audit 2026-08-10) ────────────────────────────────────────
+// Public endpoint that creates real calendar events + emails, so cap abuse:
+// max 5 bookings per IP per hour (in-memory, per warm lambda) and max 20/day
+// globally (in-memory counter + a DB count of leads.meeting_booked_at today as
+// the cross-instance backstop). On breach: 429.
+const RL_PER_IP_PER_HOUR = 5;
+const RL_GLOBAL_PER_DAY = 20;
+const _rl = { ipHits: new Map(), day: null, dayCount: 0 };
+function _ipOf(req) {
+    return (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+        || (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+function rateLimited(req) {
+    const now = Date.now();
+    const day = new Date().toISOString().slice(0, 10);
+    if (_rl.day !== day) { _rl.day = day; _rl.dayCount = 0; }
+    if (_rl.dayCount >= RL_GLOBAL_PER_DAY) return 'global_daily_limit';
+    const ip = _ipOf(req);
+    const hits = (_rl.ipHits.get(ip) || []).filter(function (t) { return now - t < 60 * 60 * 1000; });
+    if (hits.length >= RL_PER_IP_PER_HOUR) { _rl.ipHits.set(ip, hits); return 'ip_hourly_limit'; }
+    hits.push(now);
+    _rl.ipHits.set(ip, hits);
+    _rl.dayCount++;
+    // Keep the map from growing without bound on a long-lived instance.
+    if (_rl.ipHits.size > 5000) _rl.ipHits.clear();
+    return null;
+}
+async function globalDailyBackstop(sb) {
+    if (!sb) return null;
+    try {
+        const since = new Date().toISOString().slice(0, 10) + 'T00:00:00Z';
+        // Scoped to self-bookings only: an SDR-heavy booking day must never lock
+        // the public picker (they write their own value into meeting_booked_by_sdr).
+        const { count } = await sb.from('leads')
+            .select('id', { count: 'exact', head: true })
+            .eq('meeting_booked_by_sdr', 'vsl_landing')
+            .gte('meeting_booked_at', since);
+        if (count != null && count >= RL_GLOBAL_PER_DAY) return 'global_daily_limit_db';
+    } catch (_) { /* backstop only; never block a real booking on a count error */ }
+    return null;
+}
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
 
@@ -61,6 +111,12 @@ module.exports = async function handler(req, res) {
     if (isNaN(startDate.getTime())) return res.status(400).json({ error: 'invalid_start_iso' });
     if (startDate.getTime() < Date.now() + 60 * 60 * 1000) return res.status(400).json({ error: 'slot_too_soon' });
 
+    const rlHit = rateLimited(req);
+    if (rlHit) {
+        console.warn('[public/book-meeting] rate limited:', rlHit, _ipOf(req));
+        return res.status(429).json({ error: 'rate_limited', detail: 'Too many bookings. Try again later or email us.' });
+    }
+
     const refreshToken = await getCalendarRefreshToken();
     if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !refreshToken) return res.status(503).json({ error: 'google_calendar_not_configured', detail: 'The booking calendar is not connected yet.' });
 
@@ -71,6 +127,14 @@ module.exports = async function handler(req, res) {
         ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } })
         : null;
 
+    // Cross-instance backstop for the global daily cap: the in-memory counter
+    // above only sees one warm lambda, so also count today's bookings in the DB.
+    const dbHit = await globalDailyBackstop(sb);
+    if (dbHit) {
+        console.warn('[public/book-meeting] rate limited:', dbHit, _ipOf(req));
+        return res.status(429).json({ error: 'rate_limited', detail: 'Too many bookings. Try again later or email us.' });
+    }
+
     // --- Resolve the lead (token attribution first, then match, then create) ---
     let leadId = null, attributed = false, lead = null;
     if (sb) {
@@ -80,8 +144,19 @@ module.exports = async function handler(req, res) {
                 if (data) { lead = data; leadId = data.id; attributed = true; }
             }
             if (leadId == null) {
-                const { data: match } = await sb.from('leads').select('id,name,owner_name,owner_email,call_attempts,niche,pitch_agent').or('owner_email.ilike.' + email + ',email.ilike.' + email).limit(1);
-                if (match && match[0]) { lead = match[0]; leadId = match[0].id; }
+                // Two separate .ilike calls instead of a raw .or() string (audit
+                // 2026-08-10). PostgREST's .or() takes a filter EXPRESSION, so any
+                // metacharacter that survives isEmail would become query syntax.
+                // .ilike passes the value as a bound filter argument, so there is
+                // nothing to escape and nothing to inject.
+                const cols = 'id,name,owner_name,owner_email,call_attempts,niche,pitch_agent';
+                const byOwner = await sb.from('leads').select(cols).ilike('owner_email', email).limit(1);
+                let hit = byOwner.data && byOwner.data[0];
+                if (!hit) {
+                    const byEmail = await sb.from('leads').select(cols).ilike('email', email).limit(1);
+                    hit = byEmail.data && byEmail.data[0];
+                }
+                if (hit) { lead = hit; leadId = hit.id; }
             }
             if (leadId == null) {
                 const seed = {

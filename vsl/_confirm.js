@@ -20,7 +20,9 @@
         var m = /^\/(?:vsl|agents)\/([a-z0-9-]+)/.exec(location.pathname);
         return m ? m[1] : null;
     }
-    function ev(name) { try { fetch('/api/public/vsl-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: name, agent: agentSlug(), lid: lid, flow: 'confirm', path: location.pathname }) }); } catch (e) {} }
+    // t rides along: the server now requires it before stamping
+    // leads.meeting_confirmed_at on a 'confirm' event (audit 2026-08-10).
+    function ev(name) { try { fetch('/api/public/vsl-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: name, agent: agentSlug(), lid: lid, t: t, flow: 'confirm', path: location.pathname }) }); } catch (e) {} }
     function fmtWhen(iso) { if (!iso) return 'your scheduled time'; try { return new Date(iso).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET'; } catch (e) { return iso; } }
 
     function ready(fn) { if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }

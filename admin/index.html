@@ -8895,10 +8895,21 @@
                 + '<button onclick="loadBookingSlots()" style="margin-left:8px;background:none;color:var(--text-secondary);border:1px solid var(--border-medium);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;">I reconnected, recheck</button>'
                 + '</div>';
         }
-        function openCalendarReauth(url) {
-            window.open(url, 'stilo_cal_reauth', 'width=520,height=680');
-            // Re-check shortly after the popup likely finished the consent flow.
-            setTimeout(loadBookingSlots, 6000);
+        // Starting a STILO-owned OAuth grant now requires an admin (audit
+        // 2026-08-10) — a bare window.open can't carry the Bearer header, so
+        // resolve the Google consent URL over an authenticated fetch first
+        // (&mode=json) and open THAT. Same pattern as connectInvoiceGmail().
+        async function openCalendarReauth(url) {
+            try {
+                var { data: { session } } = await sb.auth.getSession();
+                var jsonUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + 'mode=json';
+                var res = await fetch(jsonUrl, { headers: { 'Authorization': 'Bearer ' + (session && session.access_token || '') } });
+                var data = await res.json();
+                if (!data.url) { alert('Could not start the Google reconnect: ' + (data.error || 'unknown')); return; }
+                window.open(data.url, 'stilo_cal_reauth', 'width=520,height=680');
+                // Re-check shortly after the popup likely finished the consent flow.
+                setTimeout(loadBookingSlots, 6000);
+            } catch (e) { alert('Could not start the Google reconnect: ' + e.message); }
         }
 
         function bookingDayKey(iso) {

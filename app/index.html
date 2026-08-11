@@ -2859,6 +2859,16 @@
         // OAuth: open the start endpoint in a popup. The endpoint sets a cookie
         // or postMessages back when done. v1: simple popup, polls until closed.
         function wizardStartOAuth(btn, target) {
+            // Always carry the client_agent id (audit 2026-08-10). Without it the
+            // callback treated a CLIENT's grant as a STILO-owned connection and
+            // overwrote our own oauth_tokens row; that path is now admin-gated and
+            // would 401 here. With aid the tokens land on the client's agent config,
+            // which is what this button was always meant to do.
+            var host = btn.closest('[data-agent-id]');
+            var clientAgentId = (host && host.dataset && host.dataset.agentId) || '';
+            if (clientAgentId && target.indexOf('aid=') === -1) {
+                target += (target.indexOf('?') === -1 ? '?' : '&') + 'aid=' + encodeURIComponent(clientAgentId);
+            }
             var w = window.open(target, 'stilo_oauth', 'width=520,height=620');
             if (!w) { alert('Pop-up blocked. Allow pop-ups for this site and try again.'); return; }
             var hidden = btn.parentElement.querySelector('[data-oauth-value]');

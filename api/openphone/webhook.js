@@ -13,8 +13,11 @@
  * last_called_outcome (David's column names) so the row drops out of "Cold
  * Call Ready" and into the right bucket.
  *
- * Public endpoint — admin gate would block OpenPhone. Auth is the HMAC
- * signature on the body; reject anything that doesn't verify.
+ * Public endpoint — an admin gate would block OpenPhone. Auth is a shared secret
+ * token in the webhook URL (?token=, OPENPHONE_WEBHOOK_TOKEN) OR Quo's HMAC
+ * signature over the raw body. One of those two must pass; everything else is
+ * rejected with 401. See the comment above verifyCallExists for why the old
+ * "does this call id exist?" fallback is no longer an auth path (audit 2026-08-10).
  */
 
 const { verifySignature, readRawBody, serviceClient, publicClient, normalizePhone, openphoneFetch } = require('./_shared');
@@ -273,11 +276,19 @@ async function mergeQuoIntoManualRow(sb, rowId, baseFields) {
     return data;
 }
 
-// Definitive webhook auth that survives Vercel cold starts (where req.query is
-// not populated, so the URL token isn't seen). Pull the call id out of the
-// event and ask the OpenPhone API whether that call exists in OUR account. Only
-// real Quo calls resolve; a forger would need a live call id from our org. Used
-// only as a fallback when token + HMAC both fail.
+// Secondary SANITY CHECK ONLY — never an authentication path (audit 2026-08-10).
+//
+// This used to be auth fallback #3: if token and HMAC both failed, a request
+// whose call id resolved against the OpenPhone API was accepted. That is not
+// authentication. A call id is not a secret — it appears in every transcript
+// payload, every webhook we've ever received, and anyone who once saw one could
+// replay it to forge call.transcript.completed / call.summary.completed events
+// and write arbitrary transcripts and summaries onto our leads.
+//
+// The cold-start race it was added for is already covered by getUrlToken(),
+// which falls back to parsing req.url directly when req.query is missing, so
+// nothing is lost by demoting it. It now only runs as an optional forensic
+// check (OPENPHONE_SANITY_CHECK_CALLS=1) and only logs.
 async function verifyCallExists(evt) {
     try {
         const data = (evt && (evt.data || evt.payload || evt.object || evt)) || {};
@@ -311,6 +322,11 @@ module.exports = async function handler(req, res) {
     // the webhook by a shared secret in the URL that only we and Quo know. HMAC
     // still works as a fallback if it ever verifies. The token is rotatable via
     // OPENPHONE_WEBHOOK_TOKEN + re-pointing the webhooks.
+    //
+    // The second branch is what covers the Vercel cold-start race: on a cold
+    // invocation req.query can be undefined, but req.url ALWAYS carries the raw
+    // path + query string, so parsing it directly still finds the token. This is
+    // the reason verifyCallExists no longer needs to be an auth path.
     function getUrlToken() {
         if (req.query && req.query.token) return String(req.query.token);
         try { return new URL(req.url, 'http://x').searchParams.get('token') || ''; }
@@ -326,25 +342,31 @@ module.exports = async function handler(req, res) {
     try { evt = JSON.parse(raw.toString('utf8') || '{}'); }
     catch { return res.status(400).json({ error: 'invalid_json' }); }
 
-    // Authenticate, cheapest check first:
-    //   1. token in the URL (?token=)        — fast
-    //   2. HMAC signature                     — fast (Quo's scheme is unverifiable
-    //                                            in practice, kept for the future)
-    //   3. OpenPhone API confirms the call id exists in OUR account — definitive.
-    // Why (3): Vercel intermittently does NOT expose req.query on COLD function
-    // starts, so the token isn't seen and (1) flaps. call.completed +
-    // call.recording.completed fire first (cold) and were 401ing, while
-    // transcript/summary fired seconds later (warm) and passed. The API check
-    // has no such race — only a real call in our account resolves — so it
-    // catches the cold-start deliveries the token check misses.
-    let authed = tokenOk || verifySignature(sigHeader, raw);
-    if (!authed) authed = await verifyCallExists(evt);
+    // Authenticate. Exactly two things can grant access (audit 2026-08-10):
+    //   1. the shared secret token in the URL (?token=) — the working path
+    //   2. Quo's HMAC signature over the raw body — kept for when their scheme
+    //      becomes reproducible; harmless while it never verifies
+    // Nothing else. The old third fallback (verifyCallExists) let anyone holding
+    // a known call id forge transcript/summary events, because it treated the
+    // request's own contents as its credential. The cold-start race that fallback
+    // was written for is handled inside getUrlToken() above, which reads the raw
+    // req.url when req.query is missing, so removing it costs no deliveries.
+    const sigOk = verifySignature(sigHeader, raw);
+    const authed = tokenOk || sigOk;
     if (!authed) {
         console.warn('[openphone/webhook] unauthenticated event rejected', {
             type: (evt && (evt.type || (evt.object && evt.object.type))) || '?',
-            token_seen: !!urlToken
+            token_seen: !!urlToken,
+            token_configured: !!expectedToken
         });
         return res.status(401).json({ error: 'invalid_signature' });
+    }
+    // Optional forensic check, off by default: confirms the event's call id is
+    // real in our Quo account. Logs only — it can never accept or reject.
+    if (process.env.OPENPHONE_SANITY_CHECK_CALLS === '1' && !(await verifyCallExists(evt))) {
+        console.warn('[openphone/webhook] sanity check: authenticated event whose call id did not resolve in our Quo account', {
+            type: (evt && evt.type) || '?'
+        });
     }
 
     const type = evt.type || evt.event || '';

@@ -48,9 +48,84 @@ function str(v, max) {
   return max ? s.slice(0, max) : s;
 }
 
+// HTML-escape every user-supplied value before interpolating into email HTML.
+// Same helper as api/public/book-meeting.js. Without this the quiz form was an
+// unauthenticated way to send arbitrary HTML from our domain (audit 2026-08-10).
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
 function firstName(full) {
   if (!full) return 'there';
   return String(full).trim().split(/\s+/)[0] || 'there';
+}
+
+// ── Anti-abuse gates (audit 2026-08-10) ─────────────────────────────────────
+// The endpoint stays publicly callable (real quiz submissions come from the
+// marketing site with no auth), but the auto-reply email is capped:
+//   - max 3 sends per recipient email per day
+//   - max 30 sends per day total from this endpoint
+// Checked twice: a cheap in-memory counter (per warm lambda) plus a DB count of
+// today's quiz_submissions rows as the cross-instance backstop. On breach the
+// row is still inserted; only the email is skipped.
+// Additionally, requests that carry an Origin/Referer from a host that is NOT
+// ours are rejected outright. Absent origin is allowed (the site's own form
+// posts and curl both work).
+var ALLOWED_ORIGIN_HOSTS = ['stiloaipartners.com', 'www.stiloaipartners.com', 'localhost', '127.0.0.1'];
+function originAllowed(req) {
+  var src = req.headers.origin || req.headers.referer || '';
+  if (!src) return true;
+  try {
+    var h = new URL(src).hostname.toLowerCase();
+    return ALLOWED_ORIGIN_HOSTS.indexOf(h) !== -1;
+  } catch (_) { return false; }
+}
+
+var MAX_SENDS_PER_EMAIL_PER_DAY = 3;
+var MAX_SENDS_PER_DAY = 30;
+var _sendLog = { day: null, total: 0, byEmail: {} };
+function _todayUtc() { return new Date().toISOString().slice(0, 10); }
+function _rollDay() {
+  var d = _todayUtc();
+  if (_sendLog.day !== d) _sendLog = { day: d, total: 0, byEmail: {} };
+}
+function memAllowsSend(email) {
+  _rollDay();
+  if (_sendLog.total >= MAX_SENDS_PER_DAY) return false;
+  if ((_sendLog.byEmail[email] || 0) >= MAX_SENDS_PER_EMAIL_PER_DAY) return false;
+  return true;
+}
+function memRecordSend(email) {
+  _rollDay();
+  _sendLog.total++;
+  _sendLog.byEmail[email] = (_sendLog.byEmail[email] || 0) + 1;
+}
+
+// DB backstop. Called AFTER the row insert, so counts include the current
+// submission: recipient count of 1..3 and total of 1..30 still allow the send.
+async function dbAllowsSend(supabase, email) {
+  var since = _todayUtc() + 'T00:00:00Z';
+  try {
+    var perEmail = await supabase
+      .from('quiz_submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('email', email)
+      .gte('created_at', since);
+    if (perEmail.count != null && perEmail.count > MAX_SENDS_PER_EMAIL_PER_DAY) return false;
+    var total = await supabase
+      .from('quiz_submissions')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', since);
+    if (total.count != null && total.count > MAX_SENDS_PER_DAY) return false;
+    return true;
+  } catch (e) {
+    // Count failing shouldn't block a legit lead's first-touch; the in-memory
+    // limit still applies.
+    console.warn('[log-lead] rate-limit count failed:', e && e.message);
+    return true;
+  }
 }
 
 // Build a deep-link URL that lands the recipient directly on the booking modal
@@ -83,13 +158,16 @@ var OWNER = {
 };
 
 function buildQuizReplyHtml(row) {
-  var name = firstName(row.contact_name);
-  var biz = row.business_name || 'your business';
+  // Every value that originates in the request body goes through esc().
+  // PAIN/OWNER lookups are safe (values come from our own fixed maps, the
+  // user's answer is only used as a lookup key).
+  var name = esc(firstName(row.contact_name));
+  var biz = esc(row.business_name || 'your business');
   var a = row.quiz_answers || {};
-  var industry = a.industry && a.industry !== 'Something else' ? a.industry.toLowerCase() : null;
+  var industry = a.industry && a.industry !== 'Something else' ? esc(String(a.industry).toLowerCase()) : null;
   var pain = PAIN[a.current_source] || null;
   var owner = OWNER[a.who_owns_sales] || null;
-  var worth = a.customer_value || null;
+  var worth = a.customer_value ? esc(String(a.customer_value)) : null;
   var soon = a.timeline && /now|30/i.test(a.timeline);
 
   var lines = [];
@@ -112,7 +190,7 @@ function buildQuizReplyHtml(row) {
     lines.push('<p>You said a customer is worth ' + worth + ' to you. That number is the whole conversation, because it decides whether this is obviously worth doing or not worth starting. I would rather work that out with you on a call than guess at it here.</p>');
   }
 
-  lines.push('<p style="margin:22px 0;"><a href="' + buildBookingUrl(row) + '" style="display:inline-block;padding:13px 24px;background:#0A2E85;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">Pick a time on my calendar</a></p>');
+  lines.push('<p style="margin:22px 0;"><a href="' + esc(buildBookingUrl(row)) + '" style="display:inline-block;padding:13px 24px;background:#0A2E85;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">Pick a time on my calendar</a></p>');
   lines.push('<p>Fifteen minutes' + (soon ? ', and given you said you want to move soon I would take the earliest slot that works' : '') + '. If a call is overkill, reply here with your one question and I will answer it.</p>');
   lines.push('<p style="margin-top:26px;">Remy Leon<br/>'
     + '<span style="color:#6c6a66;font-size:13.5px;">Co-founder, STILO AI PARTNERS</span><br/>'
@@ -125,7 +203,8 @@ function buildQuizReplyHtml(row) {
 
 async function sendQuizLeadReplyEmail(row, leadId) {
   var html = buildQuizReplyHtml(row);
-  var subject = (row.business_name || 'Your business') + ': what we would do first';
+  // Strip line breaks so a crafted business_name can't smuggle extra headers.
+  var subject = String(row.business_name || 'Your business').replace(/[\r\n]+/g, ' ').slice(0, 150) + ': what we would do first';
   // Sender: the real Workspace mailbox, so Gmail recipients
   // see a profile picture (hello@ has no Workspace mailbox, no pfp).
   // Standardised on remyleon@ 2026-07-20: every other sender falls back to it,
@@ -166,6 +245,12 @@ module.exports = async function handleLogLead(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ ok: false, error: 'method_not_allowed' });
+  }
+
+  // Cross-site posts (an Origin/Referer that is not ours) are rejected. Absent
+  // origin stays allowed so the site's own forms and curl keep working.
+  if (!originAllowed(req)) {
+    return res.status(403).json({ ok: false, error: 'origin_not_allowed' });
   }
 
   let body = req.body;
@@ -216,7 +301,7 @@ module.exports = async function handleLogLead(req, res) {
     const { data, error } = await supabase
       .from('quiz_submissions')
       .insert(row)
-      .select('id')
+      .select('id,email')
       .single();
 
     if (error) {
@@ -236,13 +321,30 @@ module.exports = async function handleLogLead(req, res) {
     // by Vercel after the response. Resend takes ~500ms — negligible UX hit.
     // Send on quiz_complete, audit, and purchase so every meaningful intent
     // triggers a first-touch.
+    // The auto-reply only ever goes to row.email — the address in the row we
+    // just inserted — and only within the daily caps (audit 2026-08-10).
+    // The recipient is read back OFF THE INSERTED ROW, not off the request body,
+    // so there is no path where this endpoint mails an address it did not just
+    // persist. Everything else in the template still comes from `row`.
     var emailResult = null;
-    if (row.email && process.env.RESEND_API_KEY) {
-      try {
-        emailResult = await sendQuizLeadReplyEmail(row, data.id);
-      } catch (e) {
-        console.warn('[log-lead] lead-reply email failed:', e && e.message);
-        emailResult = { ok: false, error: e && e.message };
+    var storedEmail = data && data.email;
+    if (storedEmail && process.env.RESEND_API_KEY) {
+      var recipient = String(storedEmail).toLowerCase();
+      if (!memAllowsSend(recipient)) {
+        console.warn('[log-lead] rate limit (memory): skipping email to', recipient);
+        emailResult = { ok: false, reason: 'rate_limited' };
+      } else if (!(await dbAllowsSend(supabase, storedEmail))) {
+        console.warn('[log-lead] rate limit (db): skipping email to', recipient);
+        emailResult = { ok: false, reason: 'rate_limited' };
+      } else {
+        memRecordSend(recipient);
+        try {
+          emailResult = await sendQuizLeadReplyEmail(
+            Object.assign({}, row, { email: storedEmail }), data.id);
+        } catch (e) {
+          console.warn('[log-lead] lead-reply email failed:', e && e.message);
+          emailResult = { ok: false, error: e && e.message };
+        }
       }
     }
 
