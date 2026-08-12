@@ -75,8 +75,17 @@ async function sendAlert(opts) {
     const fromName = process.env.STILO_SENDER_NAME || 'STILO Outbound';
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const owner = process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com';
+    // The inbox Remy actually watches on his phone. health-alerts.js has always
+    // used this one, and reply alerts used only STILO_REPLY_TO, so a prospect
+    // reply landed in a work inbox nobody was refreshing. A four-minute callback
+    // SLA is worthless if the alert goes somewhere unread, so send to both.
+    const alertInbox = process.env.HEALTH_ALERT_TO || 'remyleon11@gmail.com';
 
-    const to = Array.from(new Set([opts.repEmail, owner].filter(Boolean)));
+    const to = Array.from(new Set(
+        [opts.repEmail, owner, alertInbox]
+            .map(function (e) { return String(e || '').toLowerCase().trim(); })
+            .filter(function (e) { return e && /.+@.+\..+/.test(e); })
+    ));
     const adminUrl = 'https://stiloaipartners.com/admin/?lead=' + opts.leadId;
     const telLink = 'tel:' + String(opts.phone || '').replace(/[^\d+]/g, '');
 
@@ -107,7 +116,7 @@ async function sendAlert(opts) {
             from: fromName + ' <' + fromEmail + '>',
             to: to,
             reply_to: owner,
-            subject: 'Reply: ' + (opts.business || 'lead') + ' — call within ' + opts.slaMinutes + ' min',
+            subject: 'Reply: ' + (opts.business || 'lead') + ', call within ' + opts.slaMinutes + ' min',
             html: html,
         }),
     });
