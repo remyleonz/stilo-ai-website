@@ -8671,6 +8671,25 @@
                 + '<button id="prospectShareBtn" type="button" onclick="adminShareToRep(' + JSON.stringify(d.id) + ')" title="Send this lead to a rep" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">' + shareIconSvg + 'Share</button>'
                 + '</div>';
 
+            // "Alert me when they watch the video" arms leads.vsl_watch_alert.
+            // The /api/prospects/vsl-watch-alerts cron then emails the moment a
+            // real human view/play lands on their VSL page, so the follow-up
+            // call happens while it's still on their screen instead of the next
+            // morning. Scanner opens are filtered server-side, not here.
+            var vslWatchOn = d.vsl_watch_alert === true;
+            var vslWatchedAt = d.vsl_watch_alerted_at
+                ? new Date(d.vsl_watch_alerted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+                : '';
+            var vslWatchHtml = '<label id="vslWatchRow" style="display:flex;align-items:center;gap:11px;margin-bottom:18px;padding:12px 14px;background:' + (vslWatchOn ? 'rgba(37,99,235,0.08)' : 'var(--bg-card)') + ';border:1px solid ' + (vslWatchOn ? 'rgba(37,99,235,0.35)' : 'var(--border-subtle)') + ';border-radius:10px;cursor:pointer;">'
+                + '<input type="checkbox" id="vslWatchToggle"' + (vslWatchOn ? ' checked' : '') + ' onchange="toggleVslWatch(' + JSON.stringify(d.id) + ', this)" style="width:17px;height:17px;accent-color:var(--blue);cursor:pointer;flex-shrink:0;">'
+                + '<span style="flex:1;min-width:0;">'
+                  + '<span style="display:block;font-size:13px;font-weight:700;color:var(--text-primary);">Alert me when they watch the video</span>'
+                  + '<span id="vslWatchMsg" style="display:block;font-size:11px;color:var(--text-muted);margin-top:2px;">'
+                    + (vslWatchedAt ? 'Last alert sent ' + escapeAdminHtml(vslWatchedAt) + ' ET.' : 'Emails you within 5 minutes of a real view. Mail-scanner opens are ignored.')
+                  + '</span>'
+                + '</span>'
+                + '</label>';
+
             // Info grid — Niche / City / Email (+ Recommended), matching SDR.
             var infoGridHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-bottom:18px;">'
                 + '<div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Niche</div><div style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(niche || '—') + '</div></div>'
@@ -8783,6 +8802,7 @@
                 + '<div id="nurtureStepperHost">' + (mode !== 'emailable' ? renderNurtureStepper(d) : '') + '</div>'
                 + phoneCardHtml
                 + actionPillsHtml
+                + vslWatchHtml
                 + infoGridHtml
 
                 + '<form id="' + formId + '" onsubmit="event.preventDefault();' + submitFn + ';return false;" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
@@ -9437,6 +9457,37 @@
                 _pNotesDirty = true; // let a later flush retry
                 var m2 = document.getElementById('prospectNotesSaved');
                 if (m2) { m2.style.color = 'var(--red)'; m2.textContent = 'Save failed'; }
+            }
+        }
+
+        /* ===== VSL WATCH ALERT =====
+           One boolean on the lead. Optimistic UI with a revert on failure: a
+           checkbox that looks armed but isn't is worse than no checkbox, since
+           Remy would sit there waiting for an alert that can never fire. */
+        async function toggleVslWatch(leadId, el) {
+            if (leadId == null || !el) return;
+            var on = !!el.checked;
+            var row = document.getElementById('vslWatchRow');
+            var msg = document.getElementById('vslWatchMsg');
+            el.disabled = true;
+            if (msg) { msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving…'; }
+            try {
+                await prospectFetchJSON('/api/prospects/set-vsl-watch', { method: 'POST', body: JSON.stringify({ id: leadId, on: on }) });
+                if (row) {
+                    row.style.background = on ? 'rgba(37,99,235,0.08)' : 'var(--bg-card)';
+                    row.style.borderColor = on ? 'rgba(37,99,235,0.35)' : 'var(--border-subtle)';
+                }
+                if (msg) {
+                    msg.style.color = on ? 'var(--blue)' : 'var(--text-muted)';
+                    msg.textContent = on
+                        ? 'Armed. You get an email within 5 minutes of a real view.'
+                        : 'Off. Nothing will be sent for this lead.';
+                }
+            } catch (e) {
+                el.checked = !on;
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Could not save. Try again.'; }
+            } finally {
+                el.disabled = false;
             }
         }
 

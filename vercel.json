@@ -144,6 +144,10 @@
     {
       "path": "/api/prospects/capture-replies",
       "schedule": "25 * * * *"
+    },
+    {
+      "path": "/api/prospects/vsl-watch-alerts",
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": []
