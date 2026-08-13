@@ -337,8 +337,17 @@ module.exports = async function handler(req, res) {
     }).sort(function (a, b) { return b.meetings - a.meetings || b.dials - a.dials; });
 
     // booked-meeting list (upcoming + recent), with an outcome flag
+    // occRows replaced the old `outcomes` pull (which read lead_meetings, one
+    // row per artifact). Take the most recent occurrence's outcome per lead.
     const outcomeByLead = {};
-    for (const o of outcomes) { outcomeByLead[o.lead_id] = o.outcome; }
+    for (const o of occRows) {
+        if (!o.lead_id) continue;
+        const prev = outcomeByLead[o.lead_id];
+        if (!prev || new Date(o.occurred_at) > new Date(prev.at)) {
+            outcomeByLead[o.lead_id] = { outcome: o.outcome, at: o.occurred_at };
+        }
+    }
+    Object.keys(outcomeByLead).forEach(function (k) { outcomeByLead[k] = outcomeByLead[k].outcome; });
     const meetings = [];
     const seen2 = new Set();
     for (const l of bookedLeads) {
