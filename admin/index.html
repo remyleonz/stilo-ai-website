@@ -5750,8 +5750,11 @@
         function populateNicheFilter(stats) {
             var sel = document.getElementById('prospectNicheFilter');
             if (!sel) return;
-            // Stats API doesn't return per-niche breakdown for David's backend yet,
-            // so we infer niches from the currently loaded rows. Cheap + correct enough.
+            // Niches are inferred from the loaded rows, which is only "correct
+            // enough" while the query actually loads the whole pool. If the row
+            // limit in buildProspectQuery() is ever dropped below the pool size
+            // again, this dropdown silently loses the niches that got truncated,
+            // and there is then no way to filter to them.
             var seen = {};
             (prospectState.rows || []).forEach(function (r) {
                 var n = r.category || r.niche;
@@ -5767,14 +5770,19 @@
         function buildProspectQuery() {
             var f = prospectState.filters;
             var qs = [];
-            // Cloud Run stilo-api hangs on requests > 150 rows (query timeout
-            // in David's backend). 150 is the safe ceiling regardless of
-            // filter. The full pool is 187 leads; callers that want all
-            // results beyond 150 need David to fix the backend first.
+            // The old 150 ceiling was for David's Cloud Run backend, which has not
+            // been in this path since /api/prospects/callable started reading
+            // Supabase directly, and it assumed a 187-lead pool. The current-offer
+            // pool is ~1,150. That mattered more than it looks: callable.js orders
+            // by category so the queue clusters by niche, so a 150-row cap returned
+            // nothing past the first few categories alphabetically. Roofing,
+            // janitorial, freight and logistics were all cut off, and because
+            // populateNicheFilter() infers its options from the loaded rows, those
+            // niches were not even selectable in the filter. Load the whole pool.
             if (f.tier) {
                 qs.push('tier_min=' + encodeURIComponent(String(f.tier).toLowerCase()));
             }
-            qs.push('limit=150');
+            qs.push('limit=1500');
             if (f.q) qs.push('q=' + encodeURIComponent(f.q));
             if (f.niche) qs.push('niche=' + encodeURIComponent(f.niche));
             // Forward SDR to upstream as a hint. If David's backend doesn't
