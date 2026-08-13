@@ -193,9 +193,19 @@ function playbookKey(pb) {
     return null;
 }
 
+// owner_name is only ~70% real names. The rest is David's placeholder text
+// ("ask for owner", "verify on call", "N/A"), and taking word one of that gave
+// "Hi ask," and, once the subject line started using this, "ask, the video I
+// mentioned". A blocklist alone could not keep up, so the rule is now positive:
+// it must LOOK like a name. Real names in this data are capitalised
+// ("Shantae Whisby", "Nury", "Memfis"); the placeholder text is lowercase.
+const NOT_A_NAME = /^(owner|the|practice|office|manager|front|desk|ask|verify|contact|admin|hr|team|staff|none|unknown|n\/?a|tbd|whoever|someone|receptionist|gatekeeper|principal|president|director|supervisor|coordinator)$/i;
 function firstName(full) {
     const f = String(full || '').trim().split(/\s+/)[0];
-    if (!f || /^(owner|the|practice|office|manager|front)$/i.test(f)) return '';
+    if (!f || NOT_A_NAME.test(f)) return '';
+    // Letters, apostrophes and hyphens only, starting with a capital. Rejects
+    // "N/A", "24/7", anything with a digit, and lowercase placeholder words.
+    if (!/^[A-Z][A-Za-z'’-]{1,}$/.test(f)) return '';
     return f;
 }
 

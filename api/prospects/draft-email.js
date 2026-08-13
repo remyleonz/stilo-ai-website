@@ -225,7 +225,17 @@ module.exports = async function handler(req, res) {
             + 'Any questions, just reply.\n';
     draft = kit.sanitizeCopy(draft);
 
-    const subject = 'Quick look for ' + business;
+    // This lands minutes after a call the prospect agreed to take, so the
+    // subject's job is to be instantly recognisable, not to sell. "Quick look
+    // for <business>" read like every agency blast they already ignore and
+    // named the company rather than the conversation.
+    //
+    // It has to track the same branch the body took. Saying "the video" when
+    // the no-niche branch sends a calendar link is the exact mismatch the
+    // comment above the templates warns about.
+    const subject = slug
+        ? (fName ? fName + ', the video I mentioned' : 'The video I mentioned on our call')
+        : (fName ? fName + ', following up on our call' : 'Following up on our call');
 
     const toEmail = lead.owner_email || lead.email || researchEmail(lead) || '';
 
