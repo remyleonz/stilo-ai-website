@@ -76,8 +76,17 @@ module.exports = async function handler(req, res) {
         db: { schema: 'prospecting' }
     });
 
+    // Exactly the fields sync-from-supabase touches: buildContactBody() reads
+    // the name / tier / score / niche / owner / matched product, the eligibility
+    // predicate re-checks tier + phone + owner_name + do_not_call +
+    // last_called_outcome, and the upsert path needs quo_contact_id. The lead
+    // row is forwarded as the trigger `record`, so anything not listed here is
+    // simply never looked at downstream.
+    const RESYNC_COLS = 'id, name, category, niche, owner_name, owner_email, email, owner_phone, phone, '
+        + 'prospect_tier, tier, prospect_score, score, matched_product_name, quo_contact_id, '
+        + 'do_not_call, last_called_outcome';
     const { data: leads, error } = await sb.from('leads')
-        .select('*')
+        .select(RESYNC_COLS)
         .eq('prospect_tier', 'hot')
         .not('owner_name', 'is', null).neq('owner_name', '')
         .not('owner_phone', 'is', null).neq('owner_phone', '')

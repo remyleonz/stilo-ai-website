@@ -6,7 +6,7 @@
  * leads) but should stay visible in the Cold Call list, dimmed at the
  * bottom. This endpoint re-injects them after every page refresh.
  */
-const { assertAdminOrSdr, scopedQuery, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, methodNotAllowed, LEAD_LIST_COLUMNS } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
@@ -25,8 +25,10 @@ module.exports = async function handler(req, res) {
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
+    // List columns only. These rows get pushed into the same Cold Call table as
+    // /callable, so they need exactly the same fields and nothing more.
     const { data, error } = await sb.from('leads')
-        .select('*')
+        .select(LEAD_LIST_COLUMNS)
         .gte('last_called_at', since)
         .is('last_called_outcome', null)
         .not('call_attempts', 'is', null)

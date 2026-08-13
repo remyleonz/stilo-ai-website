@@ -8,7 +8,7 @@
  * Day boundary is ET (Miami), not UTC, so an 8pm call doesn't roll
  * out of the tab at 7-8pm local. DST handled by startOfDayET().
  */
-const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, startOfDayET, normalizeLead } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, startOfDayET, normalizeLead, LEAD_LIST_COLUMNS } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
@@ -36,8 +36,10 @@ module.exports = async function handler(req, res) {
         sdrEmail = await resolveAssignedTo(req.query.assigned_to);
     }
 
+    // List columns only. The Calls Today table renders time / tier / business /
+    // owner / phone / outcome / niche, none of which needs the research blobs.
     let q = sb.from('leads')
-        .select('*')
+        .select(LEAD_LIST_COLUMNS)
         .gte('last_called_at', startOfDay.toISOString());
     if (sdrEmail) q = q.eq('assigned_to', sdrEmail);
     const { data, error } = await q

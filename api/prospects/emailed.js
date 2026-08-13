@@ -79,9 +79,15 @@ module.exports = async function handler(req, res) {
     }
 
     // Lead rows (owner + booking rep + meeting stamps drive scoping AND engagement).
+    // Explicit columns: `order` can hold hundreds of ids, so a select('*') here
+    // pulled hundreds of full 1.4 kB rows (mostly deep_research_json) on every
+    // load of a tab that shows business / owner / niche / type / sent / dots.
+    // assigned_to and meeting_booked_by_sdr are for the rep scoping below;
+    // meeting_confirmed_at and meeting_booked_at feed _engagement.
+    const EMAILED_COLS = 'id, name, category, niche, owner_name, assigned_to, meeting_booked_by_sdr, meeting_confirmed_at, meeting_booked_at';
     let leadsById = {};
     try {
-        const { data: leads } = await sb.from('leads').select('*').in('id', order);
+        const { data: leads } = await sb.from('leads').select(EMAILED_COLS).in('id', order);
         (leads || []).forEach(function (l) { leadsById[l.id] = l; });
     } catch (_) { /* fall back to stubs */ }
 
@@ -106,7 +112,13 @@ module.exports = async function handler(req, res) {
             .select('lead_id, event')
             .in('lead_id', keptIds)
             .in('event', ['email_open', 'view', 'play', 'confirm_open', 'confirm'])
-            .limit(50000);
+            // Was 50000. All we do with these rows is set five booleans per
+            // lead, so the ceiling only ever needs to cover "enough rows to see
+            // every distinct (lead, event) pair". The whole table holds 535
+            // matching rows today (155 distinct pairs), so 5000 is already ~10x
+            // headroom and it stops a runaway scan from becoming the second
+            // biggest egress line item after the dial board.
+            .limit(5000);
         (evs || []).forEach(function (e) {
             if (e.lead_id == null) return;
             const g = engagement[e.lead_id] || (engagement[e.lead_id] = {});

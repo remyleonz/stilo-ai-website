@@ -12,7 +12,7 @@
  * SDR scoping: SDR callers are force-scoped to their own email; admins may
  * pass ?assigned_to=<sdr_key|email>.
  */
-const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer, LEAD_LIST_COLUMNS } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
@@ -47,8 +47,10 @@ module.exports = async function handler(req, res) {
     // David's backend) must never surface here even if something re-stamps
     // next_action_type — that was the bug where every unanswered dial showed up
     // as a due-today callback. Keep in sync with list-callbacks.js.
+    // List columns only. The callback calendar renders a chip per lead
+    // (time, business, owner, phone) and nothing else off the row.
     let q = sb.from('leads')
-        .select('*')
+        .select(LEAD_LIST_COLUMNS)
         .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
         .or('do_not_call.is.null,do_not_call.eq.false');
     // All 128 callbacks on the boards at the pivot were legacy agent pitches and

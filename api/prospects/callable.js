@@ -4,7 +4,7 @@
  * recently-called leads. Pass-through query params: limit, niche, tier,
  * min_score, q.
  */
-const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer, LEAD_LIST_COLUMNS } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 // "Callable" = lead has owner_name + owner_phone, not on the DNC list, not
@@ -29,8 +29,12 @@ async function callableFromSupabase(opts) {
     // rep to confirm on the call). Phone may live in owner_phone OR `phone`.
     // The two owners get scripted leads on loan from the SDRs (see the
     // owner_lead_loan tracking), so they run through this exact same path.
+    // Explicit column list, never select('*'). This is the board a rep reloads
+    // dozens of times a day, so it was the single biggest Supabase egress line
+    // item: 200 full rows weighed 377 kB, 44% of it deep_research_json that
+    // nothing on this screen renders. See LEAD_LIST_COLUMNS in _shared.js.
     let q = sb.from('leads')
-        .select('*')
+        .select(LEAD_LIST_COLUMNS)
         .eq('has_cold_call_script', true)
         // A lead is only dial-ready if David actually stated an agent to pitch
         // (pitch_agent, set at ingest from his script). No agent = the rep would

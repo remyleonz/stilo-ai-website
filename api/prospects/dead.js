@@ -17,7 +17,7 @@
  * SDR scoping: SDR callers are force-scoped to their own email; admins may
  * pass ?assigned_to=<sdr_key|email>.
  */
-const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, LEAD_LIST_COLUMNS } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const TERMINAL = ['do_not_call', 'dnc_request', 'wrong_number', 'disconnected'];
@@ -44,7 +44,9 @@ module.exports = async function handler(req, res) {
 
     const batch = (req.query && req.query.batch) ? String(req.query.batch) : null;
 
-    let q = sb.from('leads').select('*');
+    // List columns only. The dead pool renders the standard lead table, and
+    // archived_batch is a filter here rather than something the table shows.
+    let q = sb.from('leads').select(LEAD_LIST_COLUMNS);
     if (batch && batch !== 'none') {
         // One named batch, on its own. Nothing else applies.
         q = q.eq('archived_batch', batch);

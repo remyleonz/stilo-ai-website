@@ -307,3 +307,45 @@ function gateToCurrentOffer(q) {
 module.exports.normalizeLead = normalizeLead;
 module.exports.CURRENT_OFFER = CURRENT_OFFER;
 module.exports.gateToCurrentOffer = gateToCurrentOffer;
+
+/**
+ * The columns a LEAD LIST needs. Nothing else.
+ *
+ * prospecting.leads has ~150 columns and averages 1,358 bytes a row, but 44% of
+ * that is deep_research_json alone (2,346 bytes average across the 7k rows that
+ * have it). A select('*') page of 200 rows weighed 377 kB, and the dial board
+ * reloads all day, which is what put the org over the 5.5 GB Supabase egress
+ * quota. None of the list tables render the research blob, the business profile,
+ * the outreach draft or the scoring prose: those belong to the lead drawer,
+ * which fetches ONE row through detail.js.
+ *
+ * Every column below is read by admin/index.html renderProspectTable() or
+ * sdr/index.html standardLeadTableHtml() / the callback calendar, or by
+ * normalizeLead() above to build the business_name / niche / tier / owner_phone
+ * aliases those renderers depend on. If you add a column to a list table, add it
+ * here too or it renders as a dash.
+ *
+ * Deliberately NOT here (detail-view or backend-only): deep_research_json,
+ * business_profile, outreach_draft, outreach_angle, scoring_reasoning,
+ * prospect_reasoning, pain_signals, all_emails_json, call_notes, rep_notes,
+ * confirmation_email_body, address, website and the whole email-verify plus
+ * phone-scrub enrichment surface.
+ */
+const LEAD_LIST_COLUMNS = [
+    'id',
+    // Name + niche: normalizeLead aliases these to business_name / niche.
+    'name', 'category', 'niche',
+    // Contact columns. leadPhone() in /sdr/ reads owner_phone_e164 first, then
+    // owner_phone, then the business `phone`, so all three have to come back.
+    'owner_name', 'owner_phone', 'owner_phone_e164', 'phone', 'owner_email', 'email',
+    // Score + tier. brief_tier and has_cold_call_script feed normalizeLead's
+    // tier derivation, so the Hot/Warm/Cool badge needs them even though the
+    // renderer only ever reads prospect_tier.
+    'prospect_score', 'score', 'prospect_tier', 'brief_tier', 'has_cold_call_script',
+    // Lifecycle: stage badge, SDR scoping, dialed-today dimming, last-touch sort.
+    'stage', 'assigned_to', 'last_called_at', 'last_called_outcome', 'call_attempts',
+    // Callback + meeting stamps the calendars and the Booked column read.
+    'next_action_due_at', 'meeting_scheduled_at', 'meeting_confirmed_at'
+].join(', ');
+
+module.exports.LEAD_LIST_COLUMNS = LEAD_LIST_COLUMNS;

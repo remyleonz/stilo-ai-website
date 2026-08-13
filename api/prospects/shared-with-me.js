@@ -42,7 +42,11 @@ module.exports = async function handler(req, res) {
     let leadsById = {};
     try {
         const lc = leadsClient();
-        const { data: leads } = await lc.from('leads').select('*').in('id', ids);
+        // Narrower than LEAD_LIST_COLUMNS on purpose: the Shared tab shows
+        // business / owner / phone / email / who shared it / note, and swaps out
+        // the tier and last-touch columns the standard table has. No blobs.
+        const SHARED_COLS = 'id, name, category, niche, owner_name, owner_phone, owner_phone_e164, phone, owner_email, email';
+        const { data: leads } = await lc.from('leads').select(SHARED_COLS).in('id', ids);
         (leads || []).forEach(function (l) { leadsById[l.id] = l; });
     } catch (_) { /* fall back to share stubs below */ }
 
