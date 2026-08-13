@@ -4,13 +4,19 @@
  * "Hot lead watched the video" alert. Remy calls a lead, they say they're
  * interested, he texts or emails the VSL link, and then nothing tells him when
  * they actually open it. By the time he follows up the next day the moment is
- * gone. This cron closes that gap: it watches prospecting.leads.vsl_watch_alert
- * and emails him within 5 minutes of a real human landing on the VSL page.
+ * gone. This cron closes that gap: it emails him within 5 minutes of a real
+ * human landing on the VSL page.
  *
- * ARMING. Remy flips vsl_watch_alert on a lead (admin drawer toggle ->
- * /api/prospects/set-vsl-watch). Nothing is opt-out here: a global "tell me
- * about every view" would fire on 350 historical rows and get muted in a day.
- * The whole value is that when this email lands, it matters.
+ * WHO IS COVERED. Every lead we have ever sent something to, which in practice
+ * means every VSL email, confirmation email and pre-meeting email: any lead with
+ * an outbound row in prospecting.lead_messages. There is no arming step. If a
+ * human is on a VSL page carrying our signed lid, we are the ones who put them
+ * there, so the alert should just happen. Requiring a prior outbound message is
+ * the whole gate: the vsl-event append endpoint is intentionally public, and
+ * without this a forged or stray lid in the URL could generate an alert for a
+ * lead we never contacted. The old prospecting.leads.vsl_watch_alert boolean is
+ * DEPRECATED and read nowhere. It is kept on the table only so existing rows do
+ * not break, and it should not be dropped without a migration.
  *
  * WHAT COUNTS AS WATCHING. Only public.vsl_events rows with event 'view' or
  * 'play', which are the two page-level beacons the VSL itself fires.
@@ -64,10 +70,20 @@ const SCANNER_WINDOW_SEC = 60;
 // agent inside this many seconds is the same burst.
 const SCANNER_BURST_SEC = 600;
 
-// Never alert on an event older than this. On the first arming of an old lead
-// the table already holds months of history, and "they watched it in July" is
-// not a reason to pick up the phone right now.
+// Never alert on an event older than this. The table already holds months of
+// history, and "they watched it in July" is not a reason to pick up the phone
+// right now.
 const MAX_EVENT_AGE_HOURS = 48;
+
+// A dry run pulls a wider window than a live tick so the report can show the
+// near misses and say out loud why each one was skipped. Bounded, because the
+// gate is no longer a short list of armed leads and an unbounded read would
+// walk the whole vsl_events table.
+const DRY_LOOKBACK_HOURS = 14 * 24;
+
+// Safety valve on the event read. Real volume is tens of rows per 48h, so this
+// only matters if something starts spraying events.
+const MAX_EVENTS = 3000;
 
 // Substrings that mean the request was not a prospect in a browser. Lowercased
 // compare. Order is irrelevant, any hit disqualifies.
@@ -190,7 +206,7 @@ async function sendWatchAlert(opts) {
         '</table>',
 
         '<a href="' + adminUrl + '" style="display:inline-block;background:#111;color:#fff;padding:11px 20px;border-radius:4px;text-decoration:none;font-weight:600;font-size:15px">Open the lead</a>',
-        '<p style="margin:18px 0 0;font-size:12px;color:#9CA3AF">You armed this alert on the lead. Turn it off in the admin drawer once the deal moves.</p>',
+        '<p style="margin:18px 0 0;font-size:12px;color:#9CA3AF">You get this for any lead we have emailed, the moment a real person lands on their video page. Mail-scanner opens are filtered out.</p>',
         '</div>',
     ].join('');
 
@@ -251,32 +267,36 @@ module.exports = async function handler(req, res) {
     const now = new Date();
     const cutoff = new Date(now.getTime() - MAX_EVENT_AGE_HOURS * 3600 * 1000).toISOString();
 
-    const { data: watched, error: wErr } = await sb.from('leads')
-        .select('id,name,owner_name,niche,category,phone,owner_phone_e164,owner_email,assigned_to,stage,meeting_scheduled_at,vsl_watch_alert,vsl_watch_alerted_at')
-        .eq('vsl_watch_alert', true);
-    if (wErr) return res.status(500).json({ error: 'lead_query_failed', detail: wErr.message });
-    if (!watched || !watched.length) {
-        return res.status(200).json({ ok: true, dry: dry, armed: 0, alerted: 0, candidates: [] });
-    }
+    // Start from the EVENTS, not from a list of leads. The gate is now "have we
+    // ever sent this lead anything", which is most of the table, so asking for
+    // those leads first and then their events would be backwards. Almost nobody
+    // is on a VSL page in any given window, and every query below is scoped to
+    // that handful. The age cutoff is re-applied in the loop rather than relied
+    // on here so a dry run can pull a wider window and say out loud WHY each old
+    // or bot event was skipped.
+    const eventFloor = new Date(
+        now.getTime() - (dry ? DRY_LOOKBACK_HOURS : MAX_EVENT_AGE_HOURS) * 3600 * 1000
+    ).toISOString();
 
-    const ids = watched.map(function (l) { return l.id; });
-
-    // Every page-level beacon for every armed lead. The age cutoff is applied in
-    // the loop rather than the query so a dry run can pull the full history and
-    // say out loud WHY each old or bot event was skipped. A live tick still only
-    // needs the recent window, so it asks for that much.
     const { data: events, error: eErr } = await pub.from('vsl_events')
         .select('id,lead_id,event,flow,agent,path,ua,created_at')
-        .in('lead_id', ids)
         .in('event', WATCH_EVENTS)
-        .gte('created_at', dry ? '1970-01-01T00:00:00Z' : cutoff)
-        .order('created_at', { ascending: false });
+        .not('lead_id', 'is', null)
+        .gte('created_at', eventFloor)
+        .order('created_at', { ascending: false })
+        .limit(MAX_EVENTS);
     if (eErr) return res.status(500).json({ error: 'event_query_failed', detail: eErr.message });
 
-    // Our own outbound sends, used for the timing half of the scanner filter.
+    const seenIds = Array.from(new Set((events || []).map(function (e) { return e.lead_id; })));
+    if (!seenIds.length) {
+        return res.status(200).json({ ok: true, dry: dry, leads_with_events: 0, alerted: 0, candidates: [] });
+    }
+
+    // Our own outbound sends. This one query does double duty: it is the timing
+    // half of the scanner filter, AND a lead having any row here is the gate.
     const { data: sends } = await sb.from('lead_messages')
         .select('id,lead_id,channel,subject,sent_at')
-        .in('lead_id', ids)
+        .in('lead_id', seenIds)
         .eq('direction', 'outbound')
         .not('sent_at', 'is', null)
         .order('sent_at', { ascending: false });
@@ -286,9 +306,23 @@ module.exports = async function handler(req, res) {
         (sendsByLead[m.lead_id] = sendsByLead[m.lead_id] || []).push(m);
     });
 
+    const ids = seenIds.filter(function (id) { return !!sendsByLead[id]; });
+    const ungated = seenIds.filter(function (id) { return !sendsByLead[id]; });
+    if (!ids.length) {
+        return res.status(200).json({
+            ok: true, dry: dry, leads_with_events: seenIds.length, alerted: 0,
+            skipped_no_outbound: ungated, candidates: [],
+        });
+    }
+
+    const { data: watched, error: wErr } = await sb.from('leads')
+        .select('id,name,owner_name,niche,category,phone,owner_phone_e164,owner_email,assigned_to,stage,meeting_scheduled_at,vsl_watch_alerted_at')
+        .in('id', ids);
+    if (wErr) return res.status(500).json({ error: 'lead_query_failed', detail: wErr.message });
+
     const results = [];
 
-    for (const lead of watched) {
+    for (const lead of (watched || [])) {
         const mine = (events || []).filter(function (e) { return e.lead_id === lead.id; });
         const leadSends = sendsByLead[lead.id] || [];
         const lastSend = leadSends[0] || null;
@@ -434,7 +468,9 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
         ok: true,
         dry: dry,
-        armed: watched.length,
+        leads_with_events: seenIds.length,
+        leads_checked: ids.length,
+        skipped_no_outbound: ungated,
         alerted: dry ? 0 : alertable.filter(function (r) { return r.sent; }).length,
         would_alert: alertable.length,
         scanner_window_sec: SCANNER_WINDOW_SEC,
