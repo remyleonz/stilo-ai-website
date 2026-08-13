@@ -5277,6 +5277,9 @@
             // overwrites this with the signed-in user before any fetch fires.
             filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '', historyRange: 'all' },
             rows: [],
+            // Pool-wide [{niche, count}] from /api/prospects/niches. Drives the
+            // niche dropdown so it does not depend on which rows loaded.
+            niches: [],
             // null = default (tier/score) order; 'desc' = newest last-touch first;
             // 'asc' = oldest first. Persisted so the rep's "Last touch" sort
             // survives every re-render (logging a call, advancing, cache refresh)
@@ -5747,19 +5750,39 @@
             }
         }
 
+        // Pool-wide niche list, independent of what the lead list managed to
+        // load. Cheap (one narrow column) and cached for a minute upstream.
+        async function loadProspectNiches() {
+            try {
+                var qs = prospectState.filters.sdr
+                    ? '?assigned_to=' + encodeURIComponent(prospectState.filters.sdr) : '';
+                var data = await prospectFetchJSON('/api/prospects/niches' + qs);
+                prospectState.niches = (data && data.niches) || [];
+                populateNicheFilter();
+            } catch (e) {
+                // Non-fatal: populateNicheFilter falls back to the loaded rows.
+                console.warn('niche facets failed', e);
+            }
+        }
+
         function populateNicheFilter(stats) {
             var sel = document.getElementById('prospectNicheFilter');
             if (!sel) return;
-            // Niches are inferred from the loaded rows, which is only "correct
-            // enough" while the query actually loads the whole pool. If the row
-            // limit in buildProspectQuery() is ever dropped below the pool size
-            // again, this dropdown silently loses the niches that got truncated,
-            // and there is then no way to filter to them.
+            // Options come from /api/prospects/niches (the whole callable pool),
+            // NOT from the loaded rows. Inferring them from rows meant a niche
+            // past PostgREST's 1000-row response cap could not be selected, and
+            // it could not be seen without selecting it. prospectNiches is
+            // refreshed by loadProspectNiches(); fall back to the loaded rows
+            // only until that first response lands.
             var seen = {};
-            (prospectState.rows || []).forEach(function (r) {
-                var n = r.category || r.niche;
-                if (n) seen[n] = true;
-            });
+            if (prospectState.niches && prospectState.niches.length) {
+                prospectState.niches.forEach(function (n) { if (n.niche) seen[n.niche] = true; });
+            } else {
+                (prospectState.rows || []).forEach(function (r) {
+                    var n = r.category || r.niche;
+                    if (n) seen[n] = true;
+                });
+            }
             var current = sel.value;
             var keys = Object.keys(seen).sort();
             sel.innerHTML = '<option value="">All niches</option>' + keys.map(function (n) {
@@ -5954,6 +5977,9 @@
 
         async function loadProspectCallable(opts) {
             opts = opts || {};
+            // Fire-and-forget: the dropdown fills in when this lands, and the
+            // lead list must not wait on it.
+            loadProspectNiches();
             var host = document.getElementById('prospectTableCallable');
             var cached = !opts.force && prospectState.cache.callable;
             if (cached) {
