@@ -73,6 +73,8 @@ module.exports = async function handler(req, res) {
             dial_days: new Set(),
             meetings: emptyRange(),
             mtg_outcomes: { interested: 0, needs_time: 0, rescheduled: 0, no_show: 0, closed_won: 0, closed_lost: 0 },
+            mtg_occurrences: emptyRange(), mtg_showed: emptyRange(), mtg_noshow: emptyRange(), mtg_unknown: emptyRange(),
+            mtg_won: emptyRange(), mtg_lost: emptyRange(),
             closed: 0, mrr_cents: 0
         };
     });
@@ -88,6 +90,8 @@ module.exports = async function handler(req, res) {
         dials: emptyRange(), connects: emptyRange(), conversations: emptyRange(), talk_sec: emptyRange(), connected: emptyRange(),
         meetings: emptyRange(), emails: emptyRange(),
         mtg_outcomes: { interested: 0, needs_time: 0, rescheduled: 0, no_show: 0, closed_won: 0, closed_lost: 0 },
+        mtg_occurrences: emptyRange(), mtg_showed: emptyRange(), mtg_noshow: emptyRange(), mtg_unknown: emptyRange(),
+        mtg_won: emptyRange(), mtg_lost: emptyRange(),
         closed: 0, mrr_cents: 0
     };
     // niche (category) performance from called leads
@@ -172,22 +176,48 @@ module.exports = async function handler(req, res) {
     }
 
     // ── meeting outcomes (per rep + company + niche) ────────────────────────
-    const outcomes = await pullAll(prospect.from('lead_meetings')
-        .select('lead_id, outcome, occurred_at')
-        .not('outcome', 'is', null));
-    // map lead_id -> booked_by + category for attribution
-    const outIds = Array.from(new Set(outcomes.map(function (o) { return o.lead_id; }).filter(Boolean)));
+    // Reads meeting_occurrences, NOT lead_meetings. lead_meetings holds one row
+    // per artifact (booking, call, transcript, note, manual outcome), so a lead
+    // with four outcome logs counted four times here while the denominator
+    // counted one booking. That mismatch is why Luke showed a 150% held rate.
+    //
+    // An SDR does not hold meetings, they book them. So what this measures for
+    // a rep is booking QUALITY: of the meetings they set, how many did the
+    // prospect actually turn up to. Numerator and denominator both come from
+    // occurrences and are bucketed by the meeting date, so it cannot exceed 100%.
+    const occRows = await pullAll(prospect.from('meeting_occurrences')
+        .select('lead_id, outcome, occurred_at, is_meeting, has_transcript, duration_seconds')
+        .eq('is_meeting', true));
+    const occIds = Array.from(new Set(occRows.map(function (o) { return o.lead_id; }).filter(Boolean)));
     const bookedByLead = {}, catByLead = {};
-    for (let i = 0; i < outIds.length; i += 500) {
-        const chunk = outIds.slice(i, i + 500);
+    for (let i = 0; i < occIds.length; i += 500) {
+        const chunk = occIds.slice(i, i + 500);
         const { data } = await prospect.from('leads').select('id, meeting_booked_by_sdr, category').in('id', chunk);
         (data || []).forEach(function (l) { bookedByLead[l.id] = l.meeting_booked_by_sdr; catByLead[l.id] = l.category; });
     }
-    for (const o of outcomes) {
-        if (!o.outcome || !company.mtg_outcomes.hasOwnProperty(o.outcome)) continue;
-        company.mtg_outcomes[o.outcome] += 1;
+    const NOSHOW_OC = ['no_show', 'noshow'];
+    for (const o of occRows) {
+        const b = R.buckets(o.occurred_at, B);
         const r = rep(bookedByLead[o.lead_id]);
-        if (r) r.mtg_outcomes[o.outcome] += 1;
+        const oc = String(o.outcome || '').toLowerCase().trim();
+
+        // Same evidence rule the closer cards use: a past meeting with no
+        // outcome, no transcript and no duration is unknown, not attended.
+        const noShow = NOSHOW_OC.indexOf(oc) !== -1;
+        const showed = !noShow && (!!oc || o.has_transcript || o.duration_seconds);
+
+        addRange(company.mtg_occurrences, b);
+        if (r) addRange(r.mtg_occurrences, b);
+        if (noShow) { addRange(company.mtg_noshow, b); if (r) addRange(r.mtg_noshow, b); }
+        else if (showed) { addRange(company.mtg_showed, b); if (r) addRange(r.mtg_showed, b); }
+        else { addRange(company.mtg_unknown, b); if (r) addRange(r.mtg_unknown, b); }
+
+        if (o.outcome && company.mtg_outcomes.hasOwnProperty(o.outcome)) {
+            company.mtg_outcomes[o.outcome] += 1;
+            if (r) r.mtg_outcomes[o.outcome] += 1;
+        }
+        if (oc === 'closed_won') { addRange(company.mtg_won, b); if (r) addRange(r.mtg_won, b); }
+        else if (oc === 'closed_lost') { addRange(company.mtg_lost, b); if (r) addRange(r.mtg_lost, b); }
     }
 
     // ── deals (closed clients + MRR) ────────────────────────────────────────
@@ -217,6 +247,13 @@ module.exports = async function handler(req, res) {
 
     // ── shape the response ──────────────────────────────────────────────────
     const rate = function (num, den) { return den > 0 ? Math.round((num / den) * 1000) / 10 : 0; };
+    // Per-range version. Held% and Close% used to be all-time scalars, so they
+    // ignored the range slider entirely while every column beside them moved.
+    const rateR = function (num, den) {
+        const o = {};
+        for (const k of R.RANGE_KEYS) o[k] = (den[k] > 0) ? Math.round((num[k] / den[k]) * 1000) / 10 : 0;
+        return o;
+    };
     // "Held" = the prospect showed up and engaged (won/lost/interested/needs_time).
     // no_show and rescheduled did NOT hold; upcoming hasn't happened yet. Held rate
     // depends on reps logging meeting outcomes (Data Health flags the gaps).
@@ -243,10 +280,18 @@ module.exports = async function handler(req, res) {
             dials_per_meeting: r.meetings.all > 0 ? Math.round(r.dials.all / r.meetings.all) : null,
             quota_attainment_pct: rate(r.dials.today, r.quota),
             meeting_outcomes: o,
+            // An SDR books meetings, they do not hold them. What this measures
+            // is booking QUALITY: of the meetings they set that have since come
+            // round, how many the prospect actually turned up to. Both sides are
+            // occurrences bucketed by meeting date, so it cannot exceed 100%.
+            meetings_occurred: r.mtg_occurrences,
+            meetings_showed: r.mtg_showed,
+            meetings_noshow: r.mtg_noshow,
+            meetings_unknown: r.mtg_unknown,
             meetings_held: held,
-            held_rate_pct: rate(held, r.meetings.all),
-            no_show_rate_pct: rate(o.no_show, r.meetings.all),
-            meeting_close_rate_pct: rate(o.closed_won, held),
+            show_rate_pct: rateR(r.mtg_showed, { today: r.mtg_showed.today + r.mtg_noshow.today, week: r.mtg_showed.week + r.mtg_noshow.week, month: r.mtg_showed.month + r.mtg_noshow.month, last_week: r.mtg_showed.last_week + r.mtg_noshow.last_week, last_month: r.mtg_showed.last_month + r.mtg_noshow.last_month, all: r.mtg_showed.all + r.mtg_noshow.all }),
+            no_show_rate_pct: rateR(r.mtg_noshow, r.mtg_occurrences),
+            meeting_close_rate_pct: rateR(r.mtg_won, { today: r.mtg_won.today + r.mtg_lost.today, week: r.mtg_won.week + r.mtg_lost.week, month: r.mtg_won.month + r.mtg_lost.month, last_week: r.mtg_won.last_week + r.mtg_lost.last_week, last_month: r.mtg_won.last_month + r.mtg_lost.last_month, all: r.mtg_won.all + r.mtg_lost.all }),
             closed_clients: r.closed,
             mrr_cents: r.mrr_cents
         };
@@ -257,21 +302,28 @@ module.exports = async function handler(req, res) {
     const coHeld = heldCount(company.mtg_outcomes);
     const co = {
         dials: company.dials, connects: company.connects,
-        connect_rate_pct: rate(company.connects.all, company.dials.all),
+        connect_rate_pct: rateR(company.connects, company.dials),
         conversations: company.conversations,
-        conversation_rate_pct: rate(company.conversations.all, company.dials.all),
+        conversation_rate_pct: rateR(company.conversations, company.dials),
         talk_hours: Math.round(company.talk_sec.all / 360) / 10,
         avg_call_sec: company.connected.all > 0 ? Math.round(company.talk_sec.all / company.connected.all) : 0,
         meetings: company.meetings,
-        booked_per_dial_pct: rate(company.meetings.all, company.dials.all),
-        booked_per_conversation_pct: rate(company.meetings.all, company.conversations.all),
+        booked_per_dial_pct: rateR(company.meetings, company.dials),
+        booked_per_conversation_pct: rateR(company.meetings, company.conversations),
         dials_per_meeting: company.meetings.all > 0 ? Math.round(company.dials.all / company.meetings.all) : null,
         emails: company.emails,
         meeting_outcomes: company.mtg_outcomes,
+        // Company-wide averages across every closer, per range. The no-show
+        // rate is deliberately a company number: there is more than one closer,
+        // so the average is the useful figure.
+        meetings_occurred: company.mtg_occurrences,
+        meetings_showed: company.mtg_showed,
+        meetings_noshow: company.mtg_noshow,
+        meetings_unknown: company.mtg_unknown,
         meetings_held: coHeld,
-        held_rate_pct: rate(coHeld, company.meetings.all),
-        meeting_close_rate_pct: rate(company.mtg_outcomes.closed_won, coHeld),
-        no_show_rate_pct: rate(company.mtg_outcomes.no_show, company.meetings.all),
+        show_rate_pct: rateR(company.mtg_showed, { today: company.mtg_showed.today + company.mtg_noshow.today, week: company.mtg_showed.week + company.mtg_noshow.week, month: company.mtg_showed.month + company.mtg_noshow.month, last_week: company.mtg_showed.last_week + company.mtg_noshow.last_week, last_month: company.mtg_showed.last_month + company.mtg_noshow.last_month, all: company.mtg_showed.all + company.mtg_noshow.all }),
+        no_show_rate_pct: rateR(company.mtg_noshow, company.mtg_occurrences),
+        meeting_close_rate_pct: rateR(company.mtg_won, { today: company.mtg_won.today + company.mtg_lost.today, week: company.mtg_won.week + company.mtg_lost.week, month: company.mtg_won.month + company.mtg_lost.month, last_week: company.mtg_won.last_week + company.mtg_lost.last_week, last_month: company.mtg_won.last_month + company.mtg_lost.last_month, all: company.mtg_won.all + company.mtg_lost.all }),
         closed_clients: company.closed,
         mrr_cents: company.mrr_cents,
         reps_active: Object.values(reps).filter(function (r) { return r.active; }).length

@@ -4798,10 +4798,10 @@
                 return '<div style="flex:1;text-align:center;"><div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + val + '</div><div style="font-size:9px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px;">' + lbl + '</div></div>';
             };
             return '<div style="display:flex;gap:6px;margin:10px 0 12px;padding:9px 4px;background:rgba(255,255,255,0.02);border-radius:8px;">'
-                + cell('Connect', r.connect_rate_pct + '%')
+                + cell('Connect', rv(r.connect_rate_pct) + '%')
                 + cell('Avg call', fmtDur(r.avg_call_sec))
                 + cell('Dials/mtg', r.dials_per_meeting != null ? r.dials_per_meeting : '—')
-                + cell('Close', r.meeting_close_rate_pct + '%')
+                + cell('Close', rv(r.meeting_close_rate_pct) + '%')
                 + '</div>';
         }
 
@@ -4812,6 +4812,15 @@
                 + (sub ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + sub + '</div>' : '')
                 + '</div>';
         }
+        // Rates from team-analytics are now per-range objects. rv() reads them
+        // through the active range and still tolerates a plain number, so any
+        // field not yet converted keeps rendering instead of showing [object].
+        function rv(v) {
+            if (v === null || v === undefined) return 0;
+            if (typeof v === 'object') { var k = teamArRange(); return v[k] !== undefined ? v[k] : (v.all || 0); }
+            return v;
+        }
+
         function renderCompanyKpis() {
             var grid = document.getElementById('teamKpiGrid');
             if (!grid) return;
@@ -4828,12 +4837,12 @@
             if (lbl) lbl.textContent = rangeLabel;
             grid.innerHTML = [
                 kpiTile('Dials · ' + rangeLabel, (c.dials[rk] || 0), 'outbound only', true),
-                kpiTile('Connect rate', c.connect_rate_pct + '%', c.connects[rk] + ' connected'),
+                kpiTile('Connect rate', rv(c.connect_rate_pct) + '%', c.connects[rk] + ' connected'),
                 kpiTile('Avg call time', fmtDur(c.avg_call_sec), c.talk_hours + 'h talk time'),
                 kpiTile('Meetings · ' + rangeLabel, (c.meetings[rk] || 0), null, true),
                 kpiTile('Dials / meeting', c.dials_per_meeting != null ? c.dials_per_meeting : '—', 'efficiency'),
-                kpiTile('Meeting close', c.meeting_close_rate_pct + '%', c.meetings_held + ' held'),
-                kpiTile('No-show rate', c.no_show_rate_pct + '%', null),
+                kpiTile('Meeting close', rv(c.meeting_close_rate_pct) + '%', rv(c.meetings_showed) + ' showed'),
+                kpiTile('No-show rate', rv(c.no_show_rate_pct) + '%', rv(c.meetings_noshow) + ' of ' + rv(c.meetings_occurred)),
                 kpiTile('Emails · ' + rangeLabel, (c.emails[rk] || 0), null),
                 kpiTile('Clients closed', c.closed_clients, null),
                 kpiTile('MRR', formatMoneyCents(c.mrr_cents), 'live retainers'),
@@ -4855,7 +4864,7 @@
                 return '<tr style="border-top:1px solid var(--border-subtle);">'
                     + '<td style="' + tdN + 'font-weight:600;">' + escapeAdminHtml(n.niche) + '</td>'
                     + '<td style="' + tdN + 'text-align:right;font-family:var(--font-mono);">' + n.dials + '</td>'
-                    + '<td style="' + tdN + 'text-align:right;">' + n.connect_rate_pct + '%</td>'
+                    + '<td style="' + tdN + 'text-align:right;">' + rv(n.connect_rate_pct) + '%</td>'
                     + '<td style="' + tdN + 'text-align:right;font-family:var(--font-mono);">' + n.leads_called + '</td>'
                     + '<td style="' + tdN + 'text-align:right;font-weight:700;color:' + (n.meetings ? 'var(--green,#10b981)' : 'var(--text-muted)') + ';">' + n.meetings + '</td>'
                     + '<td style="' + tdN + 'text-align:right;color:var(--text-muted);font-family:var(--font-mono);">' + n.callable_remaining + '</td>'
@@ -4884,7 +4893,7 @@
                 + '<th style="' + th + '">Rep</th><th style="' + th + 'text-align:right;">Dials</th>'
                 + '<th style="' + th + 'text-align:right;">Connect%</th><th style="' + th + 'text-align:right;">Conv%</th>'
                 + '<th style="' + th + 'text-align:right;">Booked</th><th style="' + th + 'text-align:right;">Bkd/Conv</th>'
-                + '<th style="' + th + 'text-align:right;">Bkd/Dial</th><th style="' + th + 'text-align:right;">Held%</th>'
+                + '<th style="' + th + 'text-align:right;">Bkd/Dial</th><th style="' + th + 'text-align:right;">Showed%</th>'
                 + '<th style="' + th + 'text-align:right;">Close%</th></tr>';
             var mkRow = function (name, o, bold) {
                 var w = bold ? 'font-weight:800;' : 'font-weight:600;';
@@ -4898,14 +4907,14 @@
                     + '<td style="' + tdR + 'font-weight:700;">' + bk + '</td>'
                     + '<td style="' + tdR + '">' + pct(bk, conv) + '%</td>'
                     + '<td style="' + tdR + '">' + pct(bk, d) + '%</td>'
-                    + '<td style="' + tdR + '">' + (o.held_rate_pct || 0) + '%</td>'
-                    + '<td style="' + tdR + 'color:#10b981;font-weight:700;">' + (o.meeting_close_rate_pct || 0) + '%</td>'
+                    + '<td style="' + tdR + '">' + rv(o.show_rate_pct) + '%</td>'
+                    + '<td style="' + tdR + 'color:#10b981;font-weight:700;">' + rv(o.meeting_close_rate_pct) + '%</td>'
                     + '</tr>';
             };
             var body = mkRow('Team total', teamAnalytics.company, true);
             (teamAnalytics.per_rep || []).forEach(function (r) { body += mkRow(r.name, r, false); });
             panel.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:800px;">' + head + body + '</table>'
-                + '<div style="padding:8px 12px;font-size:10px;color:var(--text-muted);border-top:1px solid var(--border-subtle);">Conversation = an answered call over 2 minutes (past the gatekeeper). Held% &amp; Close% are all-time and depend on reps logging meeting outcomes.</div>';
+                + '<div style="padding:8px 12px;font-size:10px;color:var(--text-muted);border-top:1px solid var(--border-subtle);">Conversation = an answered call over 2 minutes (past the gatekeeper). Showed% = of the meetings this rep booked that have since come round, how many the prospect turned up to. Both follow the range above and depend on outcomes being logged.</div>';
         }
         function exportTeamForClaude() {
             if (!teamAnalytics) { alert('Analytics still loading — try again in a moment.'); return; }
@@ -4917,20 +4926,20 @@
             L.push('');
             L.push('## Company (today / week / month / all-time)');
             L.push('- Dials: ' + c.dials.today + ' / ' + c.dials.week + ' / ' + c.dials.month + ' / ' + c.dials.all);
-            L.push('- Connect rate: ' + c.connect_rate_pct + '% | Avg call: ' + fmtDur(c.avg_call_sec) + ' | Talk time: ' + c.talk_hours + 'h');
+            L.push('- Connect rate: ' + rv(c.connect_rate_pct) + '% | Avg call: ' + fmtDur(c.avg_call_sec) + ' | Talk time: ' + c.talk_hours + 'h');
             L.push('- Meetings booked: ' + c.meetings.today + ' / ' + c.meetings.week + ' / ' + c.meetings.month + ' / ' + c.meetings.all + ' | Dials/meeting: ' + c.dials_per_meeting);
-            L.push('- Meetings held: ' + c.meetings_held + ' | Meeting close rate: ' + c.meeting_close_rate_pct + '% | No-show: ' + c.no_show_rate_pct + '%');
-            L.push('- FUNNEL (all-time): dials ' + c.dials.all + ' -> connect ' + c.connect_rate_pct + '% -> conversation ' + c.conversation_rate_pct + '% -> booked/dial ' + c.booked_per_dial_pct + '% (booked/conv ' + c.booked_per_conversation_pct + '%) -> held ' + c.held_rate_pct + '% -> close ' + c.meeting_close_rate_pct + '%');
+            L.push('- Meetings showed: ' + rv(c.meetings_showed) + ' of ' + rv(c.meetings_occurred) + ' | Meeting close rate: ' + rv(c.meeting_close_rate_pct) + '% | No-show: ' + rv(c.no_show_rate_pct) + '%');
+            L.push('- FUNNEL (all-time): dials ' + c.dials.all + ' -> connect ' + rv(c.connect_rate_pct) + '% -> conversation ' + rv(c.conversation_rate_pct) + '% -> booked/dial ' + rv(c.booked_per_dial_pct) + '% (booked/conv ' + rv(c.booked_per_conversation_pct) + '%) -> showed ' + rv(c.show_rate_pct) + '% -> close ' + rv(c.meeting_close_rate_pct) + '%');
             L.push('- Emails sent: ' + c.emails.all + ' | Clients closed: ' + c.closed_clients + ' | MRR: ' + money(c.mrr_cents));
             L.push('');
             L.push('## Per SDR (all-time unless noted)');
             (teamAnalytics.per_rep || []).forEach(function (r) {
                 L.push('### ' + r.name);
                 L.push('- Dials: ' + r.dials.all + ' (today ' + r.dials.today + ', week ' + r.dials.week + ', ~' + r.avg_dials_per_day + '/active day over ' + r.active_days + ' days)');
-                L.push('- Connect rate: ' + r.connect_rate_pct + '% | Avg call: ' + fmtDur(r.avg_call_sec) + ' | Talk: ' + r.talk_min + ' min');
+                L.push('- Connect rate: ' + rv(r.connect_rate_pct) + '% | Avg call: ' + fmtDur(r.avg_call_sec) + ' | Talk: ' + r.talk_min + ' min');
                 L.push('- Meetings booked: ' + r.meetings.all + ' | Dials/meeting: ' + (r.dials_per_meeting != null ? r.dials_per_meeting : 'n/a'));
-                L.push('- Funnel: dials ' + r.dials.all + ' -> connect ' + r.connect_rate_pct + '% -> conversation ' + r.conversation_rate_pct + '% -> booked/dial ' + r.booked_per_dial_pct + '% (booked/conv ' + r.booked_per_conversation_pct + '%) -> held ' + r.held_rate_pct + '% -> close ' + r.meeting_close_rate_pct + '%');
-                L.push('- Meetings held: ' + r.meetings_held + ' | Close rate: ' + r.meeting_close_rate_pct + '% | No-show: ' + r.no_show_rate_pct + '%');
+                L.push('- Funnel: dials ' + r.dials.all + ' -> connect ' + rv(r.connect_rate_pct) + '% -> conversation ' + rv(r.conversation_rate_pct) + '% -> booked/dial ' + rv(r.booked_per_dial_pct) + '% (booked/conv ' + rv(r.booked_per_conversation_pct) + '%) -> showed ' + rv(r.show_rate_pct) + '% -> close ' + rv(r.meeting_close_rate_pct) + '%');
+                L.push('- Meetings showed: ' + rv(r.meetings_showed) + ' of ' + rv(r.meetings_occurred) + ' | Close rate: ' + rv(r.meeting_close_rate_pct) + '% | No-show: ' + rv(r.no_show_rate_pct) + '%');
                 L.push('- Outcomes: won ' + r.meeting_outcomes.closed_won + ', lost ' + r.meeting_outcomes.closed_lost + ', no-show ' + r.meeting_outcomes.no_show + ', rescheduled ' + r.meeting_outcomes.rescheduled + ', interested ' + r.meeting_outcomes.interested + ', needs-time ' + r.meeting_outcomes.needs_time);
                 L.push('- Clients closed: ' + r.closed_clients + ' | MRR: ' + money(r.mrr_cents));
                 L.push('');
