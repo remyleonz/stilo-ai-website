@@ -27,34 +27,12 @@ function pc() { return createClient(process.env.SUPABASE_URL, process.env.SUPABA
 function lc() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } }); }
 
 // ── ET calendar boundaries ────────────────────────────────────────────────
-function etParts() {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    const wd = now.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
-    return { dateStr, wd };
-}
-function startOfTodayET() { return new Date(etParts().dateStr + 'T00:00:00-04:00'); }
-function startOfWeekET() {
-    const { dateStr, wd } = etParts();
-    const daysSinceMon = (({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 })[wd] + 6) % 7;
-    const d = new Date(dateStr + 'T00:00:00-04:00');
-    d.setUTCDate(d.getUTCDate() - daysSinceMon);
-    return d;
-}
-function startOfMonthET() { return new Date(etParts().dateStr.slice(0, 8) + '01' + 'T00:00:00-04:00'); }
-
-// Which range buckets does this timestamp fall in?
-function buckets(iso, tday, twk, tmon) {
-    const t = new Date(iso).getTime();
-    return {
-        today: t >= tday,
-        week: t >= twk,
-        month: t >= tmon,
-        all: true
-    };
-}
-function emptyRange() { return { today: 0, week: 0, month: 0, all: 0 }; }
-function addRange(r, b, n) { n = n || 1; if (b.today) r.today += n; if (b.week) r.week += n; if (b.month) r.month += n; r.all += n; }
+// Shared with closer-analytics via ./_ranges so every card on the Team tab
+// agrees on what "last week" means. The local copies here only had
+// today/week/month, which is why the admin UI folded last_week onto week and
+// showed the current week's numbers under a "Last week" label.
+const R = require('./_ranges');
+const { emptyRange, addRange } = R;
 
 async function pullAll(query) {
     // Paginate a select past PostgREST's 1000-row cap.
@@ -79,9 +57,7 @@ module.exports = async function handler(req, res) {
     const prospect = lc();
     const pub = pc();
 
-    const tday = startOfTodayET().getTime();
-    const twk = startOfWeekET().getTime();
-    const tmon = startOfMonthET().getTime();
+    const B = R.bounds();
 
     // ── roster ────────────────────────────────────────────────────────────
     const { data: roster } = await pub.from('sdr_users')
@@ -122,7 +98,7 @@ module.exports = async function handler(req, res) {
     const leadCat = {}; // lead_id -> category (filled below)
     for (const c of calls) {
         if (c.lead_id) callLeadIds.add(c.lead_id);
-        const b = buckets(c.called_at, tday, twk, tmon);
+        const b = R.buckets(c.called_at, B);
         const answered = c.outcome === 'answered';
         addRange(company.dials, b);
         const r = rep(c.logged_by);
@@ -165,7 +141,7 @@ module.exports = async function handler(req, res) {
         // period it's HELD, not booked (the "why does Luke show meetings
         // scheduled-this-week" bug). A meeting missing booked_at counts only in
         // all-time (buckets(null) → all:true, periods:false), never a wrong week.
-        const b = buckets(l.meeting_booked_at, tday, twk, tmon);
+        const b = R.buckets(l.meeting_booked_at, B);
         addRange(company.meetings, b);
         const r = rep(l.meeting_booked_by_sdr);
         if (r) addRange(r.meetings, b);
@@ -232,7 +208,11 @@ module.exports = async function handler(req, res) {
     // ── emails sent ─────────────────────────────────────────────────────────
     try {
         const msgs = await pullAll(prospect.from('lead_messages').select('sent_by, sent_at').eq('channel', 'email'));
-        for (const m of msgs) { addRange(company.emails, buckets(m.sent_at || new Date().toISOString(), tday, twk, tmon)); }
+        // sent_at is null on older rows. They belong in the all-time total but
+        // in no dated bucket; the previous code substituted new Date(), which
+        // stamped every undated email onto "today".
+        const UNDATED = { today: false, week: false, month: false, last_week: false, last_month: false, all: true };
+        for (const m of msgs) { addRange(company.emails, m.sent_at ? R.buckets(m.sent_at, B) : UNDATED); }
     } catch (_) {}
 
     // ── shape the response ──────────────────────────────────────────────────

@@ -4481,6 +4481,9 @@
             renderTeamGrid();
             renderCompanyKpis();
             renderFunnel();
+            // Closers were left out, so their cards kept showing all-time
+            // numbers under whatever range label was selected.
+            renderClosers();
         }
 
         function renderTeamGrid() {
@@ -4573,20 +4576,34 @@
             return '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.08em;">' + label + '</div>'
                 + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;color:' + color + ';">' + value + '</div></div>';
         }
+        // Every closer stat is an object keyed by range (today/week/month/
+        // last_week/last_month/all). Read it through the active range so the
+        // cards actually answer the question the range buttons are asking.
+        function cv(v) {
+            if (v === null || v === undefined) return 0;
+            if (typeof v === 'object') { var k = teamArRange(); return v[k] !== undefined ? v[k] : (v.all || 0); }
+            return v;
+        }
+
         function renderClosers() {
             var grid = document.getElementById('teamClosersGrid');
             var note = document.getElementById('teamClosersNote');
             if (!grid || !closerData) return;
-            if (note) note.textContent = closerData.attribution_note || '';
+            if (note) {
+                note.textContent = [closerData.data_note, closerData.attribution_note]
+                    .filter(Boolean).join('  ');
+            }
             var rows = closerData.closers || [];
             if (!rows.length) { grid.innerHTML = '<div class="stilo-empty">No closers on the roster.</div>'; return; }
+            var label = TEAM_RANGE_LABEL[teamRange] || 'All time';
 
-            grid.innerHTML = rows.map(function (x) {
+            grid.innerHTML = rows.map(function (x, idx) {
                 var c = x.closer, b = x.stats, r = x.rates;
                 var color = c.avatar_color || '#2563EB';
-                var pipeline = b.upcoming;
-                var recent = (x.recent || []).slice(0, 5).map(function (m) {
-                    var oc = (m.outcome || '').split(/[.\u2014]/)[0].slice(0, 34) || 'no outcome logged';
+                var held = cv(b.meetings_held), unknown = cv(b.outcome_unknown);
+                var recent = (x.recent || []).filter(function (m) { return inTeamRange(m.occurred_at); })
+                    .slice(0, 5).map(function (m) {
+                    var oc = (m.outcome || '').split(/[.—]/)[0].slice(0, 34) || 'no outcome logged';
                     var tone = /won|closed_won/i.test(oc) ? 'var(--green,#3fbf8f)'
                              : /lost/i.test(oc) ? 'var(--red,#f87171)'
                              : /no_show/i.test(oc) ? 'var(--orange,#f59e0b)' : 'var(--text-tertiary)';
@@ -4595,50 +4612,176 @@
                         + '<span style="color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;">' + escapeAdminHtml(m.business) + '</span>'
                         + '<span style="color:' + tone + ';white-space:nowrap;">' + escapeAdminHtml(oc) + ' &middot; ' + d + '</span>'
                         + '</div>';
-                }).join('') || '<div style="font-size:12px;color:var(--text-tertiary);padding-top:8px;border-top:1px solid var(--border-subtle);">No attributed meetings yet.</div>';
+                }).join('') || '<div style="font-size:12px;color:var(--text-tertiary);padding-top:8px;border-top:1px solid var(--border-subtle);">No meetings in ' + escapeAdminHtml(label.toLowerCase()) + '.</div>';
 
                 return ''
-                + '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.18);border-radius:14px;padding:20px;">'
+                + '<div onclick="openCloserDetail(' + idx + ')" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.18);border-radius:14px;padding:20px;cursor:pointer;transition:border-color .15s,background .15s;" '
+                  + 'onmouseover="this.style.borderColor=\'rgba(37,99,235,0.45)\';this.style.background=\'rgba(255,255,255,0.035)\'" '
+                  + 'onmouseout="this.style.borderColor=\'rgba(37,99,235,0.18)\';this.style.background=\'rgba(255,255,255,0.02)\'">'
                   + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">'
                     + '<div style="width:42px;height:42px;border-radius:50%;background:' + color + ';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;">' + escapeAdminHtml(c.initials || '?') + '</div>'
                     + '<div style="flex:1;">'
                       + '<div style="font-size:15px;font-weight:600;">' + escapeAdminHtml(c.display_name) + '</div>'
-                      + '<div style="font-size:11px;color:var(--text-tertiary);">Closer &middot; ' + escapeAdminHtml(c.email) + '</div>'
+                      + '<div style="font-size:11px;color:var(--text-tertiary);">Closer &middot; ' + escapeAdminHtml(label) + '</div>'
                     + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-tertiary);">View &rsaquo;</div>'
                   + '</div>'
                   + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">'
-                    + closerStat('Meetings held', b.meetings_held)
-                    + closerStat('Show rate', r.show_rate_pct + '%', r.show_rate_pct >= 70 ? 'good' : 'warn')
-                    + closerStat('Closed won', b.won, b.won ? 'good' : null)
-                    + closerStat('Close rate', r.close_rate_pct + '%', r.close_rate_pct >= 20 ? 'good' : 'warn')
+                    + closerStat('Meetings held', held)
+                    + closerStat('Show rate', cv(r.show_rate_pct) + '%', cv(r.show_rate_pct) >= 70 ? 'good' : 'warn')
+                    + closerStat('Closed won', cv(b.won), cv(b.won) ? 'good' : null)
+                    + closerStat('Close rate', cv(r.close_rate_pct) + '%', cv(r.close_rate_pct) >= 20 ? 'good' : 'warn')
                   + '</div>'
                   + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);margin-bottom:12px;font-size:12px;">'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Upcoming</div><div style="font-weight:700;">' + pipeline + '</div></div>'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">No-shows</div><div style="font-weight:700;color:' + (b.no_shows ? 'var(--orange,#f59e0b)' : 'inherit') + ';">' + b.no_shows + '</div></div>'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Still open</div><div style="font-weight:700;">' + (b.open + b.awaiting_outcome) + '</div></div>'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Avg meeting</div><div style="font-weight:700;">' + r.avg_meeting_min + 'm</div></div>'
+                    + closerMini('Upcoming', cv(b.upcoming))
+                    + closerMini('No-shows', cv(b.no_shows), cv(b.no_shows) ? 'var(--orange,#f59e0b)' : null)
+                    + closerMini('Still open', cv(b.open))
+                    + closerMini('Avg meeting', cv(r.avg_meeting_min) + 'm')
                   + '</div>'
                   + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;font-size:12px;">'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Lost</div><div style="font-weight:700;">' + b.lost + '</div></div>'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Self-booked</div><div style="font-weight:700;">' + b.booked_by_them + '</div></div>'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Own dials</div><div style="font-weight:700;">' + b.dials + '</div></div>'
-                    + '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Revenue</div><div style="font-weight:700;">' + formatMoneyCents(b.revenue_cents) + '</div></div>'
+                    + closerMini('Own dials', cv(b.dials))
+                    + closerMini('Conv. rate', cv(r.conversation_rate_pct) + '%')
+                    + closerMini('Emails', cv(b.emails_sent))
+                    + closerMini('Time in mtgs', cv(r.meeting_min) + 'm')
                   + '</div>'
+                  // Unlogged meetings are shown, not folded into "held", because
+                  // hiding them is what made show rate read ~100%.
+                  + (unknown ? '<div style="font-size:11px;color:var(--orange,#f59e0b);margin-bottom:10px;">'
+                      + unknown + ' past meeting' + (unknown === 1 ? '' : 's') + ' with no outcome logged, excluded from show and close rates.</div>' : '')
                   + '<div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Last meetings</div>'
                   + recent
                 + '</div>';
             }).join('');
         }
 
+        function closerMini(label, value, color) {
+            return '<div><div style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">' + label + '</div>'
+                + '<div style="font-weight:700;' + (color ? 'color:' + color + ';' : '') + '">' + value + '</div></div>';
+        }
+
+        // Is this timestamp inside the range the buttons are showing? Mirrors
+        // api/sdr/_ranges.js; keep the two in step.
+        function inTeamRange(iso) {
+            if (!iso) return false;
+            var t = new Date(iso).getTime();
+            if (isNaN(t)) return false;
+            var now = new Date();
+            var etDay = new Date(now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }) + 'T00:00:00-04:00');
+            var dow = (new Date(now.toLocaleDateString('en-US', { timeZone: 'America/New_York' })).getDay() + 6) % 7;
+            var wkStart = new Date(etDay); wkStart.setDate(wkStart.getDate() - dow);
+            var monStart = new Date(etDay.getFullYear(), etDay.getMonth(), 1);
+            var lastWkStart = new Date(wkStart); lastWkStart.setDate(lastWkStart.getDate() - 7);
+            var lastMonStart = new Date(etDay.getFullYear(), etDay.getMonth() - 1, 1);
+            switch (teamRange) {
+                case 'today': return t >= etDay.getTime();
+                case 'week': return t >= wkStart.getTime();
+                case 'month': return t >= monStart.getTime();
+                case 'last_week': return t >= lastWkStart.getTime() && t < wkStart.getTime();
+                case 'last_month': return t >= lastMonStart.getTime() && t < monStart.getTime();
+                default: return true;
+            }
+        }
+
+        /* ── Closer detail panel ──────────────────────────────────────────
+           Full breakdown for one closer: every metric across every range side
+           by side, plus their meeting log. Opened by clicking a closer card. */
+        function openCloserDetail(idx) {
+            var x = (closerData && closerData.closers || [])[idx];
+            if (!x) return;
+            var c = x.closer, b = x.stats, r = x.rates;
+            var RANGES = [['today','Today'],['week','This week'],['last_week','Last week'],['month','This month'],['last_month','Last month'],['all','All time']];
+
+            function row(label, obj, suffix, hint) {
+                return '<tr>'
+                  + '<td style="padding:7px 10px;color:var(--text-secondary);white-space:nowrap;">' + label
+                  + (hint ? '<div style="font-size:10px;color:var(--text-tertiary);font-weight:400;">' + hint + '</div>' : '')
+                  + '</td>'
+                  + RANGES.map(function (rg) {
+                      var v = obj ? (obj[rg[0]] !== undefined ? obj[rg[0]] : 0) : 0;
+                      var on = rg[0] === teamArRange();
+                      return '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;'
+                        + (on ? 'color:var(--blue,#2563EB);font-weight:700;' : 'color:var(--text-primary);') + '">'
+                        + v + (suffix || '') + '</td>';
+                  }).join('')
+                  + '</tr>';
+            }
+
+            var log = (x.recent || []).map(function (m) {
+                var d = m.occurred_at ? new Date(m.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+                var oc = m.outcome || 'not logged';
+                var tone = /won/i.test(oc) ? 'var(--green,#3fbf8f)' : /lost|no_show/i.test(oc) ? 'var(--red,#f87171)' : 'var(--text-tertiary)';
+                return '<tr>'
+                  + '<td style="padding:6px 10px;color:var(--text-secondary);">' + escapeAdminHtml(m.business) + '</td>'
+                  + '<td style="padding:6px 10px;color:var(--text-tertiary);white-space:nowrap;">' + d + '</td>'
+                  + '<td style="padding:6px 10px;color:var(--text-tertiary);">' + (m.duration_min ? m.duration_min + 'm' : '—') + '</td>'
+                  + '<td style="padding:6px 10px;color:' + tone + ';">' + escapeAdminHtml(String(oc).slice(0, 30)) + '</td>'
+                  + '<td style="padding:6px 10px;color:var(--text-tertiary);font-size:11px;">' + escapeAdminHtml((m.sources || []).join(', ')) + '</td>'
+                  + '</tr>';
+            }).join('') || '<tr><td colspan="5" style="padding:14px 10px;color:var(--text-tertiary);">No attributed meetings.</td></tr>';
+
+            var head = '<tr><th style="text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary);">Metric</th>'
+                + RANGES.map(function (rg) {
+                    var on = rg[0] === teamArRange();
+                    return '<th style="text-align:right;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;'
+                      + (on ? 'color:var(--blue,#2563EB);' : 'color:var(--text-tertiary);') + '">' + rg[1] + '</th>';
+                }).join('') + '</tr>';
+
+            var html = ''
+              + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">'
+                + '<div style="width:46px;height:46px;border-radius:50%;background:' + (c.avatar_color || '#2563EB') + ';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">' + escapeAdminHtml(c.initials || '?') + '</div>'
+                + '<div><div style="font-size:18px;font-weight:600;">' + escapeAdminHtml(c.display_name) + '</div>'
+                + '<div style="font-size:12px;color:var(--text-tertiary);">' + escapeAdminHtml(c.email) + '</div></div>'
+              + '</div>'
+              + '<p style="font-size:12px;color:var(--text-tertiary);margin:10px 0 16px;">'
+                + 'The highlighted column is the range selected on the Team tab. Meetings are reconstructed from booking, call, transcript and note records, so one meeting counts once here even when it has several underlying rows.</p>'
+              + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">'
+              + '<thead>' + head + '</thead><tbody>'
+              + '<tr><td colspan="7" style="padding:12px 10px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue,#2563EB);">Meetings</td></tr>'
+              + row('Held', b.meetings_held, '', 'Evidence it happened: an outcome, a transcript or a duration')
+              + row('No-shows', b.no_shows)
+              + row('Outcome not logged', b.outcome_unknown, '', 'Past meetings with no evidence either way. Excluded from rates')
+              + row('Upcoming', b.upcoming)
+              + row('Show rate', r.show_rate_pct, '%', 'Held / (held + no-shows)')
+              + row('Avg length', r.avg_meeting_min, 'm', 'Only meetings with a real transcript duration')
+              + row('Time in meetings', r.meeting_min, 'm')
+              + '<tr><td colspan="7" style="padding:12px 10px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue,#2563EB);">Outcomes</td></tr>'
+              + row('Closed won', b.won)
+              + row('Lost', b.lost)
+              + row('Still open', b.open)
+              + row('Close rate', r.close_rate_pct, '%', 'Won / (won + lost)')
+              + row('Close rate of held', r.close_rate_of_held_pct, '%', 'Won / every meeting they sat in')
+              + '<tr><td colspan="7" style="padding:12px 10px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue,#2563EB);">Their own outbound</td></tr>'
+              + row('Dials', b.dials)
+              + row('Connects', b.connects)
+              + row('Conversations', b.conversations, '', 'Connected calls over 2 minutes')
+              + row('Connect rate', r.connect_rate_pct, '%')
+              + row('Conversation rate', r.conversation_rate_pct, '%')
+              + row('Talk time', r.talk_min, 'm')
+              + row('Emails sent', b.emails_sent)
+              + '</tbody></table></div>'
+              + '<div style="margin-top:22px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary);margin-bottom:6px;">Meeting log</div>'
+              + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
+              + '<thead><tr>'
+              + ['Business','Date','Length','Outcome','Sources'].map(function (h) {
+                  return '<th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);">' + h + '</th>';
+                }).join('')
+              + '</tr></thead><tbody>' + log + '</tbody></table></div>';
+
+            // Reuses the existing SDR detail drawer shell rather than adding a
+            // second modal system to this page.
+            document.getElementById('sdrDetailContent').innerHTML = html;
+            document.getElementById('sdrDetailDrawer').style.right = '0';
+            document.getElementById('sdrDetailOverlay').style.display = 'block';
+        }
+
         /* ── Company + niche analytics (one call: /api/sdr/team-analytics) ── */
         var teamAnalytics = null;
-        // The analytics endpoint buckets today/week/month/all. Map the tab's
-        // range (which also has last_week/last_month) onto those.
+        // The analytics endpoints bucket every range in api/sdr/_ranges.js, so
+        // the tab's range key passes straight through. It used to fold
+        // last_week onto week and last_month onto month, which meant picking
+        // "Last week" silently showed THIS week's numbers on every card.
         function teamArRange() {
-            if (teamRange === 'today' || teamRange === 'week' || teamRange === 'month') return teamRange;
-            if (teamRange === 'last_week') return 'week';
-            if (teamRange === 'last_month') return 'month';
-            return 'all';
+            return teamRange || 'all';
         }
         function fmtDur(sec) { sec = Math.round(sec || 0); var m = Math.floor(sec / 60); var s = sec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
         function repAnalytics(email) {
