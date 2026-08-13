@@ -4693,13 +4693,13 @@
 
             function row(label, obj, suffix, hint) {
                 return '<tr>'
-                  + '<td style="padding:7px 10px;color:var(--text-secondary);white-space:nowrap;">' + label
+                  + '<td style="padding:6px 8px;color:var(--text-secondary);max-width:190px;">' + label
                   + (hint ? '<div style="font-size:10px;color:var(--text-tertiary);font-weight:400;">' + hint + '</div>' : '')
                   + '</td>'
                   + RANGES.map(function (rg) {
                       var v = obj ? (obj[rg[0]] !== undefined ? obj[rg[0]] : 0) : 0;
                       var on = rg[0] === teamArRange();
-                      return '<td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;'
+                      return '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;'
                         + (on ? 'color:var(--blue,#2563EB);font-weight:700;' : 'color:var(--text-primary);') + '">'
                         + v + (suffix || '') + '</td>';
                   }).join('')
@@ -4719,10 +4719,10 @@
                   + '</tr>';
             }).join('') || '<tr><td colspan="5" style="padding:14px 10px;color:var(--text-tertiary);">No attributed meetings.</td></tr>';
 
-            var head = '<tr><th style="text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary);">Metric</th>'
+            var head = '<tr><th style="text-align:left;padding:6px 8px;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);">Metric</th>'
                 + RANGES.map(function (rg) {
                     var on = rg[0] === teamArRange();
-                    return '<th style="text-align:right;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;'
+                    return '<th style="text-align:right;padding:6px 8px;font-size:9.5px;text-transform:uppercase;letter-spacing:.02em;'
                       + (on ? 'color:var(--blue,#2563EB);' : 'color:var(--text-tertiary);') + '">' + rg[1] + '</th>';
                 }).join('') + '</tr>';
 
