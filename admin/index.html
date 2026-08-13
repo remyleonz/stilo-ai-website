@@ -4467,7 +4467,7 @@
         // locally when the range changes (no refetch).
         var teamRange = 'today';
         var teamData = [];
-        var TEAM_RANGE_LABEL = { today: 'Today', week: 'This week', month: 'This month', last_week: 'Last week', last_month: 'Last month' };
+        var TEAM_RANGE_LABEL = { today: 'Today', week: 'This week', month: 'This month', last_week: 'Last week', last_month: 'Last month', all: 'All time' };
 
         var teamAgencyMrrCents = 0, teamAgencyOwedCents = 0;
         function setTeamRange(range) {
@@ -4818,7 +4818,13 @@
             var lbl = document.getElementById('teamKpiRangeLabel');
             if (!teamAnalytics) { grid.innerHTML = '<div class="stilo-empty">No data.</div>'; return; }
             var c = teamAnalytics.company, rk = teamArRange();
-            var rangeLabel = ({ today: 'today', week: 'this week', month: 'this month', all: 'all time' })[rk];
+            // Must cover every key in _ranges.RANGE_KEYS. It was missing
+            // last_week/last_month, which only surfaced once teamArRange stopped
+            // folding them onto week/month: the tiles read "Dials · undefined".
+            var rangeLabel = ({
+                today: 'today', week: 'this week', month: 'this month',
+                last_week: 'last week', last_month: 'last month', all: 'all time'
+            })[rk] || 'all time';
             if (lbl) lbl.textContent = rangeLabel;
             grid.innerHTML = [
                 kpiTile('Dials · ' + rangeLabel, (c.dials[rk] || 0), 'outbound only', true),
@@ -4866,7 +4872,10 @@
             if (!panel) return;
             if (!teamAnalytics) { panel.innerHTML = '<div class="stilo-empty" style="padding:14px;">No data.</div>'; return; }
             var rk = teamArRange();
-            if (rl) rl.textContent = ({ today: 'today', week: 'this week', month: 'this month', all: 'all time' })[rk];
+            if (rl) rl.textContent = ({
+                today: 'today', week: 'this week', month: 'this month',
+                last_week: 'last week', last_month: 'last month', all: 'all time'
+            })[rk] || 'all time';
             var pct = function (n, d) { return d > 0 ? Math.round((n / d) * 1000) / 10 : 0; };
             var th = 'text-align:left;padding:10px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);white-space:nowrap;';
             var td = 'padding:10px 12px;font-size:13px;white-space:nowrap;';
