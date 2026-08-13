@@ -193,20 +193,19 @@ function playbookKey(pb) {
     return null;
 }
 
-// owner_name is only ~70% real names. The rest is David's placeholder text
-// ("ask for owner", "verify on call", "N/A"), and taking word one of that gave
-// "Hi ask," and, once the subject line started using this, "ask, the video I
-// mentioned". A blocklist alone could not keep up, so the rule is now positive:
-// it must LOOK like a name. Real names in this data are capitalised
-// ("Shantae Whisby", "Nury", "Memfis"); the placeholder text is lowercase.
-const NOT_A_NAME = /^(owner|the|practice|office|manager|front|desk|ask|verify|contact|admin|hr|team|staff|none|unknown|n\/?a|tbd|whoever|someone|receptionist|gatekeeper|principal|president|director|supervisor|coordinator)$/i;
-function firstName(full) {
-    const f = String(full || '').trim().split(/\s+/)[0];
-    if (!f || NOT_A_NAME.test(f)) return '';
-    // Letters, apostrophes and hyphens only, starting with a capital. Rejects
-    // "N/A", "24/7", anything with a digit, and lowercase placeholder words.
-    if (!/^[A-Z][A-Za-z'’-]{1,}$/.test(f)) return '';
-    return f;
+// Delegates to _names.js, the canonical rule, so there is one definition of
+// "is this a real person's name" instead of several that drift apart.
+// owner_name is only ~70% real names; the rest is placeholder text ("ask for
+// owner", "verify on call", "N/A"), and taking word one of that produced
+// "Hi ask," in the greeting and "ask, the video I mentioned" as a subject line.
+// _names.js also rejects a first name that merely echoes the business
+// ("Tom's Forklift" -> Tom), which is a guess rather than a known contact.
+// Pass the business and address when you have them: _names.js drops a "first
+// name" that merely echoes them ("Animal Cancer Care Clinic" -> Animal,
+// "Tom's Forklift" -> Tom), which is a guess off the company name rather than
+// a contact anyone confirmed.
+function firstName(full, business, address) {
+    return require('./_names').firstName(full, business, address) || '';
 }
 
 // E.164 (+17869819302) → "(786) 981-9302" for the footer. Leaves anything

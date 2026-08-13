@@ -22,11 +22,17 @@ const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').repl
 // the first touch, before they booked. slugFor is kept only so the older callers
 // that still ask for a slug keep resolving; it now returns a niche via _vsl.js.
 const { agentKey, confirmUrlFor } = require('./_vsl');
+const { firstName: canonicalFirstName } = require('./_names');
 function slugFor(name) {
     return agentKey(name);   // null when the niche cannot be determined
 }
 
-function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
+// Delegates to _names.js, the canonical rule. Taking word one of owner_name
+// was sending "Hi ask," and "Hi N/A," to prospects who had just booked a
+// meeting, because owner_name is only ~70% real names and the rest is
+// placeholder text ("ask for owner", "verify on call"). Keeps the 'there'
+// fallback so every caller still gets a usable greeting.
+function firstName(n, business, address) { return canonicalFirstName(n, business, address) || 'there'; }
 
 function fmtWhen(iso) {
     if (!iso) return 'the time we set';
@@ -60,7 +66,7 @@ function buildConfirmation(opts) {
     // report which niche was resolved; the confirmation link itself is shared.
     const slug = slugFor(opts.agent || ld.niche || ld.category);
     const whenIso = opts.whenIso || ld.meeting_scheduled_at || null;
-    const first = firstName(ld.owner_name);
+    const first = firstName(ld.owner_name, ld.name, ld.address);
     const when = fmtWhen(whenIso);
     const repName = opts.repName || 'Remy';
     const to = ld.owner_email || ld.email || null;

@@ -22,6 +22,11 @@ const NOT_A_NAME = new RegExp('^(' + [
     'main', 'front', 'desk', 'customer', 'client', 'new', 'the', 'best', 'top',
     'north', 'south', 'east', 'west', 'beach', 'harbour', 'harbor', 'park',
     'miami', 'florida', 'doral', 'hialeah', 'brickell', 'kendall', 'aventura',
+    // David's placeholder text, which is what owner_name holds ~30% of the
+    // time: "ask for owner", "verify on call", "N/A", "TBD".
+    'ask', 'verify', 'confirm', 'tbd', 'na', 'none', 'unknown', 'whoever',
+    'someone', 'anybody', 'receptionist', 'gatekeeper', 'supervisor',
+    'coordinator', 'principal', 'staff', 'hr', 'practice',
 ].join('|') + ')$', 'i');
 
 /**
@@ -34,11 +39,30 @@ function firstName(ownerName, business, address) {
     if (!raw) return null;
     const first = raw.split(/\s+/)[0];
     if (!first || first.length < 2 || first.length > 20) return null;
-    if (!/^[A-Za-z][A-Za-z'’.-]+$/.test(first)) return null;
+    // Must be capitalised. A blocklist alone cannot keep up with free-text
+    // placeholders, and every real name in this data is capitalised while
+    // David's placeholder prose ("ask for owner", "verify on call") is not.
+    if (!/^[A-Z][A-Za-z'’.-]+$/.test(first)) return null;
     if (NOT_A_NAME.test(first)) return null;
     const f = first.toLowerCase();
-    if (String(business || '').toLowerCase().includes(f)) return null;
-    if (String(address || '').toLowerCase().includes(f)) return null;
+    // The business/address guard exists to catch a first name DERIVED from the
+    // company ("Tom's Forklift Services" -> Tom), which is a guess rather than
+    // a contact anyone confirmed. But plenty of real owner-operators name the
+    // business after themselves ("Dr. Ryan Ballent, D.C.", "KELLY JOSEPH DMD"),
+    // and blanket-suppressing those threw away 189 real first names per 1000.
+    // A full name is evidence of a real person; a lone token that echoes the
+    // company is not. So only apply the guard to single-token values.
+    // A value carrying a company suffix is a BUSINESS sitting in the owner
+    // field ("Animal Cancer Care Clinic"), not a person, however many tokens it
+    // has. Credentials (DMD, MD, CPA) are deliberately absent: those follow a
+    // real person's name.
+    if (/\b(inc|llc|corp|corporation|co|company|services|service|clinic|center|centre|group|associates|holdings|enterprises|solutions|systems|realty|properties|studio|salon|spa|agency|team)\b/i.test(raw)) return null;
+
+    const isFullName = raw.split(/\s+/).length > 1;
+    if (!isFullName) {
+        if (String(business || '').toLowerCase().includes(f)) return null;
+        if (String(address || '').toLowerCase().includes(f)) return null;
+    }
     return first;
 }
 

@@ -138,11 +138,9 @@ function minutesAgo(iso, now) {
     return h === 1 ? 'about an hour ago' : 'about ' + h + ' hours ago';
 }
 
-function firstName(name) {
-    const n = String(name || '').trim();
-    if (!n) return '';
-    return n.split(/\s+/)[0];
-}
+// Canonical rule, shared with the client-facing mail. Placeholder owner_name
+// values would otherwise show up in Remy's alert as a prospect called "ask".
+function firstName(name) { return require('./_names').firstName(name) || ''; }
 
 /**
  * One-line description of the last thing we sent them, so Remy opens the call

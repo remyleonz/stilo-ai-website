@@ -136,7 +136,7 @@ module.exports = async function handler(req, res) {
 
     const business = lead.name || 'your business';
     const niche = lead.category || '';
-    const fName = kit.firstName(lead.owner_name);
+    const fName = kit.firstName(lead.owner_name, lead.name, lead.address);
     // Pitch the agent we're ACTUALLY selling this lead. Priority:
     //   1. body.agent      — composer dropdown override (rep picked it)
     //   2. leads.pitch_agent — THE source of truth, and the exact field the lead
