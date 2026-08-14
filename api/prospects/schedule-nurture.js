@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
     const horizon = new Date(now.getTime() + LOOKAHEAD_DAYS * 86400000);
 
     let lq = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,niche,category,address,pitch_agent,meeting_scheduled_at,meeting_booked_by_sdr,do_not_call,owner_phone_e164,owner_phone,phone')
+        .select('id,name,owner_name,owner_email,email,niche,category,address,pitch_agent,meeting_scheduled_at,meeting_booked_by_sdr,do_not_call,owner_phone_e164,owner_phone,phone,primary_language')
         .not('meeting_scheduled_at', 'is', null)
         .gte('meeting_scheduled_at', now.toISOString())
         .lte('meeting_scheduled_at', horizon.toISOString());

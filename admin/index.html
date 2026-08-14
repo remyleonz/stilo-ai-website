@@ -6003,7 +6003,11 @@
             if (f.tier) {
                 qs.push('tier_min=' + encodeURIComponent(String(f.tier).toLowerCase()));
             }
-            qs.push('limit=1500');
+            // 1000, not 1500: PostgREST truncates any single response at 1000
+            // rows whatever .limit() asks for, so 1500 was never achievable, and
+            // /api/prospects/emailable rejected it outright (422) which is what
+            // left the Cold Email tab stuck on an error.
+            qs.push('limit=1000');
             if (f.q) qs.push('q=' + encodeURIComponent(f.q));
             if (f.niche) qs.push('niche=' + encodeURIComponent(f.niche));
             // Forward SDR to upstream as a hint. If David's backend doesn't
@@ -6230,29 +6234,30 @@
 
         async function loadProspectEmailable(opts) {
             opts = opts || {};
+            // Same fire-and-forget facet load the Cold Call tab does, so the
+            // niche dropdown is populated when the user lands here first.
+            loadProspectNiches();
             var host = document.getElementById('prospectTableEmailable');
             var cached = !opts.force && prospectState.cache.emailable;
             if (cached) {
                 prospectState.rows = applyClientFilters(cached);
                 host.innerHTML = renderProspectTable(prospectState.rows, 'emailable');
+                populateNicheFilter();
             } else {
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
             }
             try {
+                // The niche filter is applied SERVER-side, same as Cold Call.
+                // /api/prospects/emailable reads Supabase directly now and shares
+                // applyNicheFilter() with the dial board, so the five-niche
+                // dropdown groups leads here exactly the way it does there.
                 var data = await prospectFetchJSON('/api/prospects/emailable' + buildProspectQuery());
                 var raw = data.results || data.leads || data.prospects || data || [];
-                // NOTE: the niche filter does nothing on this tab. Cold Email is
-                // the one lead list still served by David's Cloud Run backend,
-                // and that backend ignores ?niche= (checked 2026-08-14: byte
-                // identical response with and without it). Not filtered in the
-                // browser instead, because it also caps limit at 1000 of the
-                // 1,981 emailable leads, so a client-side filter would quietly
-                // return part of a niche and look like the whole of it. Fixing
-                // this properly means teaching that backend the niche groups.
                 prospectState.cache.emailable = raw;
                 var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'emailable');
+                populateNicheFilter();
             } catch (e) {
                 console.error('[prospects/emailable]', e);
                 if (!cached) {

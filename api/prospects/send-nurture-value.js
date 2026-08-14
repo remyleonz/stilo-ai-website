@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
 
     for (const touch of due) {
         const { data: lead } = await sb.from('leads')
-            .select('id,name,owner_name,owner_email,email,meeting_scheduled_at,do_not_call,meeting_booked_by_sdr,owner_phone_e164,owner_phone,phone,last_called_outcome')
+            .select('id,name,owner_name,owner_email,email,meeting_scheduled_at,do_not_call,meeting_booked_by_sdr,owner_phone_e164,owner_phone,phone,last_called_outcome,primary_language')
             .eq('id', touch.lead_id).maybeSingle();
 
         const skip = function (reason) {

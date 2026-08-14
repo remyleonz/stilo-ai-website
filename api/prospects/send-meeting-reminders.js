@@ -31,15 +31,17 @@ const { createClient } = require('@supabase/supabase-js');
 // safety mechanism you do not have.
 const { sendSms, guardOutbound } = require('./_sms');
 const { sendTransactional } = require('./_gmail_send');
+const { LANG_COL, langForLead, t } = require('./_lang');
 
 const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').replace(/\/$/, '');
 const REMY_LINE = '+17868376639';
 const CLOSER_EMAILS = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
 
 function firstName(n) { return (n || '').trim().split(/\s+/)[0] || 'there'; }
-function fmtTime(iso) {
-    if (!iso) return 'shortly';
-    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(new Date(iso));
+function fmtTimeL(iso, lang) {
+    if (!iso) return lang === 'es' ? 'ahorita' : 'shortly';
+    return new Intl.DateTimeFormat(lang === 'es' ? 'es-US' : 'en-US',
+        { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(new Date(iso));
 }
 // (No esc() here any more: plain text only, nothing to escape.)
 
@@ -91,7 +93,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,owner_phone,phone,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_booked_by_sdr')
+        .select('id,name,owner_name,owner_email,email,owner_phone,phone,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_booked_by_sdr,' + LANG_COL)
         .is('meeting_reminder_sent_at', null)
         .not('meeting_scheduled_at', 'is', null);
     if (explicitIds.length) {
@@ -112,7 +114,8 @@ module.exports = async function handler(req, res) {
     const results = [];
     for (const ld of (leads || [])) {
         const first = firstName(ld.owner_name);
-        const when = fmtTime(ld.meeting_scheduled_at);
+        const lang = langForLead(ld);
+        const when = fmtTimeL(ld.meeting_scheduled_at, lang);
         const meet = ld.meeting_meet_link || ld.meeting_event_link || '';
         const email = ld.owner_email || ld.email || null;
         const phone = ld.owner_phone || ld.phone || null;
@@ -122,36 +125,25 @@ module.exports = async function handler(req, res) {
 
         // Plain text. No button, no card. The Meet link has to be the plainest
         // thing in the message so it survives every client.
-        const joinLine = meet
-            ? ['Join here:', meet]
-            : [repName + ' will call you at the number on file.'];
-        const body = [
-            'Hi ' + first + ',',
-            '',
-            'Quick reminder, your meeting with STILO is at ' + when + ', about 15 minutes from now.',
-            '',
-        ].concat(joinLine).concat([
-            '',
-            'Running late or need to move it? Just reply here.',
-            '',
-            'See you shortly,',
-            repName,
-            'STILO AI Partners',
-        ]).join('\n');
-        const sms = meet
-            ? 'Hi ' + first + ', ' + repName + ' from STILO. Our meeting is at ' + when + ', about 15 min out. Join here: ' + meet
-            : 'Hi ' + first + ', ' + repName + ' from STILO. Our meeting is at ' + when + ', about 15 min out. I\'ll call you then.';
+        const joinLine = t(lang, 'reminderEmailJoin', { meet: meet, rep: repName });
+        const body = t(lang, 'reminderEmailBody', {
+            first: first, time: when, joinLines: joinLine, rep: repName,
+        });
+        const reminderSubject = t(lang, 'reminderEmailSubject', {});
+        const sms = t(lang, 'reminderSms', {
+            first: first, rep: repName, time: when, meet: meet,
+        });
 
         if (dry) { results.push({ id: ld.id, to_email: email, to_phone: phone, when: when, meet: !!meet, sms_preview: sms }); continue; }
 
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
         if (email) {
-            const eg = await guardOutbound(ld.id, 'email', body, 'Your STILO meeting starts in ~15 minutes');
+            const eg = await guardOutbound(ld.id, 'email', body, reminderSubject);
             if (!eg.ok) {
                 console.error('[send-meeting-reminders] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
                 er = { skip: eg.reason, blocked: true };
             } else {
-                er = await sendEmail(email, 'Your STILO meeting starts in ~15 minutes', body);
+                er = await sendEmail(email, reminderSubject, body);
             }
         }
         if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
@@ -240,7 +232,8 @@ module.exports = async function handler(req, res) {
         closerError = cErr.message;
     }
     for (const ld of (closerLeads || [])) {
-        const when = fmtTime(ld.meeting_scheduled_at);
+        // Internal alert to Remy and David, always English regardless of the lead.
+        const when = fmtTimeL(ld.meeting_scheduled_at, 'en');
         const meet = ld.meeting_meet_link || ld.meeting_event_link || '';
         const adminLink = BASE + '/admin/#lead=' + ld.id;
         const subject = 'Meeting in ~15 min: ' + (ld.name || 'lead ' + ld.id) + ' at ' + when;

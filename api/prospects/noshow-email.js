@@ -13,6 +13,7 @@
  */
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
+const { LANG_COL, langForLead, t } = require('./_lang');
 
 // The one booking link the whole team sends (mirrors _email_kit CALENDAR_LINK).
 const CALENDAR_LINK = 'https://calendar.app.google/qW5iT5kYeK5EipA9A';
@@ -31,25 +32,14 @@ function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''
 // breaks the rule that no client-facing asset says AI.
 function buildText(opts) {
     const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
-    const whenStr = opts.whenIso
-        ? new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(opts.whenIso))
-        : null;
-    return [
-        'Hi ' + (opts.firstName || 'there') + ',',
-        '',
-        'We had a call on the calendar' + (whenStr ? ' for ' + whenStr : '') + ' but I do not think we connected. No problem at all, things come up.',
-        '',
-        'Did something get in the way, or is the timing just off right now? If you are still up for it, you can grab a new time that works better here:',
-        '',
-        CALENDAR_LINK,
-        '',
-        'It is fifteen minutes on where the next customers for ' + (opts.businessName || 'your business') + ' are going to come from, and what it would take to put more of them on your calendar. If now is not the moment, just reply and tell me, no pressure either way.',
-        '',
-        'Talk soon,',
-        senderName,
-        'STILO AI Partners',
-        'stiloaipartners.com'
-    ].join('\n');
+    const lang = opts.lang || 'en';
+    return t(lang, 'noshowBody', {
+        first: opts.firstName || (lang === 'es' ? 'qué tal' : 'there'),
+        whenIso: opts.whenIso,
+        link: CALENDAR_LINK,
+        biz: opts.businessName || (lang === 'es' ? 'su negocio' : 'your business'),
+        sender: senderName,
+    });
 }
 
 module.exports = async function handler(req, res) {
@@ -66,7 +56,7 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }, db: { schema: 'prospecting' }
     });
     const { data: lead } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,bounced_at,meeting_scheduled_at')
+        .select('id,name,owner_name,owner_email,email,bounced_at,meeting_scheduled_at,' + LANG_COL)
         .eq('id', id).maybeSingle();
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
 
@@ -85,8 +75,12 @@ module.exports = async function handler(req, res) {
     const fromName = process.env.STILO_SENDER_NAME || 'Remy Leon';
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const replyTo = process.env.STILO_REPLY_TO || fromEmail;
-    const subject = 'Did we miss each other?';
-    const text = buildText({ firstName: firstName, businessName: lead.name, whenIso: lead.meeting_scheduled_at });
+    const lang = langForLead(lead);
+    const subject = t(lang, 'noshowSubject', {});
+    const text = buildText({
+        firstName: firstName, businessName: lead.name,
+        whenIso: lead.meeting_scheduled_at, lang: lang,
+    });
 
     let sendJson = {};
     try {

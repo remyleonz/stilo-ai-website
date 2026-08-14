@@ -349,3 +349,43 @@ const LEAD_LIST_COLUMNS = [
 ].join(', ');
 
 module.exports.LEAD_LIST_COLUMNS = LEAD_LIST_COLUMNS;
+
+/**
+ * Role inboxes: info@, sales@, office@ and friends.
+ *
+ * These are shared mailboxes, not a person. They bounced at 22.3% historically
+ * and produced no replies, so nothing we build a cold-email audience from
+ * should include them. 3,531 of the 4,258 addresses on file are one of these,
+ * and 3,296 of those are plain info@.
+ *
+ * Two shapes of the same list, because they get used in two different places:
+ *
+ *   ROLE_INBOX_PREFIXES — for a PostgREST `not.ilike.<prefix>@*` filter, so the
+ *     exclusion happens in Postgres and the endpoint never pays egress for rows
+ *     it is going to throw away.
+ *   ROLE_INBOX_RE — the same list as a regex, which also catches the separator
+ *     variants ILIKE cannot express cheaply (info.miami@, contact_us@). Measured
+ *     2026-08-14: only 3 addresses in the whole pool need it, so it runs as a
+ *     JS pass over the rows the SQL filter already narrowed.
+ *
+ * api/prospects/email-sequence.js still carries its own ROLE_RE copy. Point it
+ * here when its in-flight work lands; two role tables drift the same way two
+ * niche tables did.
+ */
+const ROLE_INBOX_PREFIXES = [
+    'info', 'sales', 'contact', 'admin', 'office', 'hello', 'support', 'team',
+    'mail', 'billing', 'help', 'service', 'services', 'reception', 'frontdesk',
+    'noreply', 'no-reply', 'cs', 'customerservice', 'customercare',
+    'privacy', 'legal', 'careers', 'jobs', 'hr', 'account', 'accounts', 'ops',
+    'dispatch', 'estimating', 'estimates', 'quote', 'quotes'
+];
+
+const ROLE_INBOX_RE = /^(info|sales|contact|admin|office|hello|support|team|mail|billing|help|service|services|reception|frontdesk|no-?reply|cs|customerservice|customer\.?care|privacy|legal|careers|jobs|hr|accounts?|ops|dispatch|estimating|estimates|quotes?)([.@_-]|@)/i;
+
+function isRoleInbox(addr) {
+    return ROLE_INBOX_RE.test(String(addr || '').trim());
+}
+
+module.exports.ROLE_INBOX_PREFIXES = ROLE_INBOX_PREFIXES;
+module.exports.ROLE_INBOX_RE = ROLE_INBOX_RE;
+module.exports.isRoleInbox = isRoleInbox;

@@ -291,8 +291,83 @@ def build_confirmation(tpl):
     return s
 
 
+# The template is agents/receptionist.html, a page written BEFORE the 2026-08
+# pivot, so its footer still sells the thing we stopped selling: "Custom AI agents
+# ... Receptionist, lead response, customer reactivation" plus an "Other Agents"
+# column linking to five retired /agents/* pages.
+#
+# That footer was riding along on all six generated VSL pages. A prospect watches
+# a video about booked qualified meetings, scrolls down, and is told we sell AI
+# agents, with five links to prove it. It contradicts the page it sits on and it
+# puts AI language in front of a buyer who is being sold on customers.
+#
+# Rewriting it here rather than in the template keeps the fix with the pages it
+# is for, and survives someone regenerating from a template nobody re-reads.
+def rewrite_footer(s):
+    # The wordmark, not the text. The header already renders the real logo via
+    # <picture>; the footer was rendering the brand name as uppercase display
+    # type, so the one page a prospect lands on showed two different brands.
+    # Same asset and same responsive sources as the header in index.html.
+    # The WORDMARK at every breakpoint, deliberately. The header swaps to
+    # /assets/STILOMOBILELOGO on narrow screens, but that asset is a 1024x1024
+    # square MARK, not a wordmark. It works in the header because the mobile nav
+    # is a cramped bar where a square icon is the point. The footer brand column
+    # is full width even on a phone, so the same swap would render a stranded
+    # 38px square above the description. StiloLogoOfficial is 2508x627 (4:1), so
+    # at 34px tall it is ~136px wide and fits a 375px viewport with room to spare.
+    old_logo = '<a href="/" class="flogo">STILO AI PARTNERS</a>'
+    new_logo = (
+        '<a href="/" class="flogo" aria-label="STILO AI Partners, home">\n'
+        '          <picture class="flogo-img">\n'
+        '            <source srcset="/assets/StiloLogoOfficial.webp" type="image/webp">\n'
+        '            <img src="/assets/StiloLogoOfficial.png" alt="STILO AI Partners" loading="lazy" decoding="async">\n'
+        '          </picture>\n'
+        '        </a>')
+    if old_logo not in s:
+        sys.exit("build_vsl_pages: footer wordmark not found in template, refusing to write a stale footer")
+    s = s.replace(old_logo, new_logo, 1)
+
+    # .flogo is styled as uppercase display TEXT. Once it wraps an <img> those
+    # rules do nothing and the image needs its own sizing, or it renders at the
+    # asset's natural width and blows the footer grid apart.
+    s = s.replace('</style>',
+        '  .footer-brand .flogo{display:inline-flex;align-items:center;transition:opacity .2s}\n'
+        '  .footer-brand .flogo:hover{opacity:.85}\n'
+        '  .flogo-img img{height:44px;width:auto;max-width:100%;object-fit:contain;\n'
+        '    filter:brightness(1.22) saturate(1.04) drop-shadow(0 2px 10px rgba(0,0,0,.5))}\n'
+        '  @media(max-width:760px){.flogo-img img{height:34px}}\n'
+        '</style>', 1)
+
+    # The old blurb sold the pre-pivot product line. The replacement is the
+    # positioning from index.html's meta description, which is the canonical
+    # description of the offer, so the footer cannot drift from the homepage.
+    old_blurb = ('<p>Custom AI agents for growing businesses. Receptionist, lead response, '
+                 'customer reactivation, websites, SEO, growth intelligence, and sales coaching.</p>')
+    new_blurb = ('<p>We find the buyers in your market, work them for you across email, phone '
+                 'and text, and book the ones ready to buy onto your calendar. A setup fee and '
+                 'a flat fee per qualified meeting. No retainer.</p>')
+    if old_blurb not in s:
+        sys.exit("build_vsl_pages: footer blurb not found in template, refusing to write a stale footer")
+    s = s.replace(old_blurb, new_blurb, 1)
+
+    # Keep class="x-agent": the inline script at the bottom of the page copies
+    # lid/t onto every x-agent href, so cross-links stay attributed to the lead.
+    old_col = re.search(r'<div class="footer-col">\s*<h4>Other Agents</h4>.*?</div>', s, re.S)
+    if not old_col:
+        sys.exit("build_vsl_pages: 'Other Agents' footer column not found, refusing to write a stale footer")
+    links = "\n".join(
+        '          <li><a class="x-agent" href="/vsl/%s">%s</a></li>' % (n["slug"], n["name"])
+        for n in NICHES)
+    new_col = ('<div class="footer-col">\n        <h4>Industries</h4>\n        <ul>\n'
+               + links + '\n        </ul>\n      </div>')
+    s = s[:old_col.start()] + new_col + s[old_col.end():]
+    return s
+
+
 def main():
-    tpl = open(TEMPLATE).read()
+    # Rewrite the footer ONCE, on the template, so the niche pages and the
+    # confirmation page cannot drift apart.
+    tpl = rewrite_footer(open(TEMPLATE).read())
     os.makedirs(OUTDIR, exist_ok=True)
     made = []
     for n in NICHES:

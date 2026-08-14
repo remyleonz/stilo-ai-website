@@ -46,6 +46,8 @@
 // math has to be one the prospect said out loud. A stat that gets checked and
 // found thin costs more credibility than saying nothing.
 // ---------------------------------------------------------------------------
+const { langForLead, t } = require('./_lang');
+
 const AGENT_FACTS = {
     receptionist: {
         label: 'AI Receptionist',
@@ -325,14 +327,22 @@ function firstNameOf(full) {
 
 function fallbackContent(stepKey, lead, facts, senderName) {
     const who = firstNameOf(lead.owner_name);
-    const hi = who ? 'Hi ' + who + ',' : 'Hi,';
-    const biz = lead.name || 'your business';
+    const lang = langForLead(lead);
+    const hi = lang === 'es'
+        ? (who ? 'Hola ' + who + ',' : 'Hola,')
+        : (who ? 'Hi ' + who + ',' : 'Hi,');
+    const biz = lead.name || (lang === 'es' ? 'su negocio' : 'your business');
     if (stepKey === 'quick_thought') {
-        return { subject: null, body: 'Hey' + (who ? ' ' + who : '') + ', ' + senderName + ' from STILO. One thought before we talk: ' + facts.proof.toLowerCase() + ' Does that match how you\'d judge it?' };
+        return { subject: null, body: t(lang, 'nurtureQuickThought', { who: who, sender: senderName, proof: facts.proof }) };
     }
     if (stepKey === 'what_to_expect') {
-        return { subject: null, body: 'Morning' + (who ? ' ' + who : '') + '. Quick note on today: about 20 minutes, I\'ll show you the ' + facts.label + ' running live, and we\'ll work out what it\'s worth for ' + biz + ' using your numbers. You\'ll leave with a straight answer either way.' };
+        return { subject: null, body: t(lang, 'nurtureWhatToExpect', { who: who, label: facts.label, biz: biz }) };
     }
+    // The remaining four are long-form email bodies assembled out of AGENT_FACTS,
+    // which are English source text. Translating them here would produce half
+    // Spanish, half English, so a Spanish lead gets the generated version or
+    // nothing: send-nurture-value skips a touch whose content came back null.
+    if (lang === 'es') return { subject: null, body: null };
     const bodies = {
         how_it_works: hi + '\n\nBefore we talk, here\'s how the ' + facts.label + ' actually works.\n\n' + facts.how + '\n\n' + facts.proof + '\n\nI\'ll show you the whole thing running on our call.\n\n' + senderName,
         the_numbers: hi + '\n\nA bit of context on the numbers before we meet.\n\n' + facts.benchmark + '\n\nThat\'s an industry benchmark, not your number. We\'ll work out yours together on the call, using figures from your business rather than my guesses.\n\n' + senderName,
@@ -418,6 +428,9 @@ async function generateTouch(stepKey, lead, sender) {
         touch.channel === 'sms'
             ? '- Under 250 characters.'
             : '- 350 to 500 words. Short paragraphs, two or three sentences each. This is meant to be a genuinely useful read, not a note. Do not pad: if you run out of substance before 350 words, add another concrete detail about their industry rather than another adjective.',
+        // The facts above are English source text. Without this the model happily
+        // writes an English email to a Spanish-speaking owner.
+        t(langForLead(lead), 'nurturePromptLang', {}),
         '',
         'Write it now.',
     ].filter(Boolean).join('\n');
@@ -426,6 +439,11 @@ async function generateTouch(stepKey, lead, sender) {
     const fb = fallbackContent(stepKey, lead, facts, senderName);
 
     let body = generated || fb.body;
+    // A Spanish lead has no hand-written fallback for the four long-form emails
+    // (see fallbackContent). If generation also failed we send nothing rather
+    // than an English email to someone who does not read English. The caller
+    // treats null as "skip this touch", and it retries on the next tick.
+    if (!body) return null;
     body = body.replace(/—|–/g, ',').replace(/!/g, '.').trim();
     if (touch.channel === 'sms' && body.length > 300) {
         body = body.slice(0, 297).replace(/\s+\S*$/, '') + '...';
@@ -433,9 +451,11 @@ async function generateTouch(stepKey, lead, sender) {
 
     let subject = null;
     if (touch.channel === 'email') {
-        subject = fb.subject;
-        const bizShort = (lead.name || '').slice(0, 40);
-        if (stepKey === 'use_case' && bizShort) subject = 'What this looks like for ' + bizShort;
+        // Resolved from _lang so a Spanish body cannot arrive under an English
+        // subject line, which is what the inbox actually shows first.
+        subject = t(langForLead(lead), 'nurtureSubject', {
+            stepKey: stepKey, label: facts.label, biz: (lead.name || '').slice(0, 40),
+        });
     }
 
     return { subject: subject, body: body, generated: !!generated, agent_key: key };

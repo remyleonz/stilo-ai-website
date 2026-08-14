@@ -23,6 +23,7 @@ const BASE = (process.env.PUBLIC_BASE_URL || 'https://stiloaipartners.com').repl
 // that still ask for a slug keep resolving; it now returns a niche via _vsl.js.
 const { agentKey, confirmUrlFor } = require('./_vsl');
 const { firstName: canonicalFirstName } = require('./_names');
+const { langForLead, t } = require('./_lang');
 function slugFor(name) {
     return agentKey(name);   // null when the niche cannot be determined
 }
@@ -46,11 +47,10 @@ function fmtWhen(iso) {
 // inbox, and it makes a REBOOKING a genuinely different subject. The 24h
 // duplicate guard keys on subject, so a fixed string made a legitimate second
 // meeting look like a resend loop and silently suppressed it.
-function buildSubject(whenIso) {
-    if (!whenIso) return 'You are booked, quick confirm';
-    return 'You are booked, quick confirm for ' + new Intl.DateTimeFormat('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York'
-    }).format(new Date(whenIso));
+// `lang` defaults to English so the older callers that pass only a date keep
+// working unchanged. buildConfirmation always passes the lead's language.
+function buildSubject(whenIso, lang) {
+    return t(lang || 'en', 'confirmSubject', { whenIso: whenIso });
 }
 
 /**
@@ -67,7 +67,6 @@ function buildConfirmation(opts) {
     const slug = slugFor(opts.agent || ld.niche || ld.category);
     const whenIso = opts.whenIso || ld.meeting_scheduled_at || null;
     const first = firstName(ld.owner_name, ld.name, ld.address);
-    const when = fmtWhen(whenIso);
     const repName = opts.repName || 'Remy';
     const to = ld.owner_email || ld.email || null;
 
@@ -76,24 +75,18 @@ function buildConfirmation(opts) {
     // talks about pricing gave them no reason to show up (65% show rate).
     const link = confirmUrlFor(opts.agent ? { niche: opts.agent } : ld, ld.id);
 
-    const body = [
-        'Hi ' + first + ',',
-        '',
-        'You are on the calendar for ' + when + '.',
-        '',
-        'Confirm you are still good here. Same page has a short walkthrough of exactly how we '
-            + 'fill a calendar for a business like ' + (ld.name || 'yours') + ', so you can see what '
-            + 'we will actually be talking about:',
-        link,
-        '',
-        'Cannot make it? Just reply and we will find a better time.',
-        '',
-        'See you then,',
-        repName,
-        'STILO AI Partners',
-    ].join('\n');
+    // A Spanish-speaking owner who cannot read this email cannot confirm and
+    // cannot watch the video. See _lang.js for the incident that prompted this.
+    const lang = langForLead(ld);
+    const body = t(lang, 'confirmBody', {
+        first: first, whenIso: whenIso, biz: ld.name || (lang === 'es' ? 'el suyo' : 'yours'),
+        link: link, rep: repName,
+    });
 
-    return { subject: buildSubject(whenIso), body: body, slug: slug, link: link, to: to };
+    return {
+        subject: buildSubject(whenIso, lang), body: body,
+        slug: slug, link: link, to: to, lang: lang,
+    };
 }
 
 module.exports = { buildConfirmation, buildSubject, slugFor, firstName, fmtWhen };

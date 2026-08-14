@@ -211,38 +211,28 @@ function escapeHtml(s) {
 // actually see it. Kept the name buildConfirmEmailHtml -> buildConfirmEmailText
 // so nothing silently keeps passing HTML.
 function buildConfirmEmailText(opts) {
-    const fmt = new Intl.DateTimeFormat('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric',
-        hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York'
-    });
-    const whenStr = opts.whenIso ? fmt.format(new Date(opts.whenIso)) : 'the time we set';
+    const { t } = require('./_lang');
+    // opts.lang is resolved by the caller from the lead. Defaults to English so
+    // any caller that has no lead in hand keeps its current behavior.
+    const lang = opts.lang || 'en';
     const senderName = process.env.STILO_SENDER_NAME || 'Remy Leon';
     const confirmUrl = baseUrl() + '/api/prospects/confirm-meeting?token=' + encodeURIComponent(opts.token);
-    return [
-        'Hi ' + (opts.firstName || 'there') + ',',
-        '',
-        'Good talking with you. I have us down for ' + whenStr + '.',
-        '',
-        'One quick thing so I know you are still good for it. Confirm here, and the same page has a '
-            + 'short video of me running through exactly what happens on the call, how we charge, and '
-            + 'who you are actually dealing with:',
-        confirmUrl,
-        '',
-        'Worth three minutes before we talk. It means we can skip the background and spend our time on '
-            + (opts.businessName || 'your business') + '.',
-        '',
-        'Cannot make it anymore? Just reply and we will find a better time.',
-        '',
-        'Talk soon,',
-        senderName,
-        'STILO AI Partners',
-    ].join('\n');
+    return t(lang, 'vslConfirmBody', {
+        first: opts.firstName || (lang === 'es' ? 'que tal' : 'there'),
+        whenIso: opts.whenIso,
+        confirmUrl: confirmUrl,
+        biz: opts.businessName || (lang === 'es' ? 'su negocio' : 'your business'),
+        sender: senderName,
+    });
 }
 
 async function sendConfirmEmail(opts) {
-    // opts: { toEmail, firstName, businessName, whenIso, agent, leadId }
+    // opts: { toEmail, firstName, businessName, whenIso, agent, leadId, lead?, lang? }
     if (!isEnabled()) return { skipped: 'vsl_flow_disabled' };
     if (!opts.toEmail) return { skipped: 'no_lead_email' };
+    // Prefer an explicit lang, else derive it from the lead when one was passed.
+    const { langForLead, t: tr } = require('./_lang');
+    const lang = opts.lang || (opts.lead ? langForLead(opts.lead) : 'en');
     // The confirmation video is the same for every prospect (who I am / how we
     // charge / what happens on the call), so unlike the niche VSLs it never needs
     // a niche to resolve. The old guard that skipped 'Booked Meetings' is gone
@@ -258,11 +248,13 @@ async function sendConfirmEmail(opts) {
     const replyTo = process.env.STILO_REPLY_TO || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const r = await sendTransactional({
         to: opts.toEmail,
-        subject: 'Quick confirm for our call, ' + (opts.firstName || 'there'),
-        text: buildConfirmEmailText({ ...opts, token: token }),
+        subject: tr(lang, 'vslConfirmSubject', {
+            first: opts.firstName || (lang === 'es' ? 'que tal' : 'there'),
+        }),
+        text: buildConfirmEmailText({ ...opts, token: token, lang: lang }),
         replyTo: replyTo,
     });
-    return { status: r.status, id: r.id, error: r.err || null, via: r.via };
+    return { status: r.status, id: r.id, error: r.err || null, via: r.via, lang: lang };
 }
 
 module.exports = {

@@ -26,6 +26,7 @@ const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { sendSms } = require('./_sms');
 const { firstName, greet } = require('./_names');
+const { LANG_COL, langForLead, t } = require('./_lang');
 
 const REMY_LINE = '+17868376639';
 
@@ -48,7 +49,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,address,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr')
+        .select('id,name,address,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr,' + LANG_COL)
         .is('day_before_sms_sent_at', null)
         .not('meeting_scheduled_at', 'is', null);
     if (explicitIds.length) {
@@ -75,11 +76,13 @@ module.exports = async function handler(req, res) {
         const fromLine = (rep && rep.openphone_number) || REMY_LINE;
         // Fall back to "your business" rather than printing an empty string or a
         // raw null into a text the prospect actually reads.
-        const biz = (ld.name || '').trim() || 'your business';
+        const lang = langForLead(ld);
+        const biz = (ld.name || '').trim() || (lang === 'es' ? 'su negocio' : 'your business');
 
-        const sms = greet('Hey', first) + 'looking forward to the meeting tomorrow. '
-            + 'I had a deep look at ' + biz + ' with my team, and we have a plan set that you will find valuable. '
-            + 'Anything in particular you want me and my team to look at before the meeting?';
+        const sms = t(lang, 'dayBeforeSms', {
+            greet: greet(lang === 'es' ? 'Hola' : 'Hey', first),
+            biz: biz,
+        });
 
         if (dry) { results.push({ id: ld.id, to_phone: phone, when: ld.meeting_scheduled_at, sms_preview: sms }); continue; }
 

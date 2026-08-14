@@ -20,16 +20,20 @@
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { sendSms } = require('./_sms');
+const { LANG_COL, langForLead, t } = require('./_lang');
 
 const REMY_LINE = '+17868376639';
 
-function fmtDay(iso) {
-    if (!iso) return 'the day we set';
-    return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'America/New_York' }).format(new Date(iso));
+// Weekday only, matching the sentence shape of the text ("down for Tuesday at 3").
+function fmtDayL(iso, lang) {
+    if (!iso) return lang === 'es' ? 'el día acordado' : 'the day we set';
+    return new Intl.DateTimeFormat(lang === 'es' ? 'es-US' : 'en-US',
+        { weekday: 'long', timeZone: 'America/New_York' }).format(new Date(iso));
 }
-function fmtTime(iso) {
-    if (!iso) return 'the time we set';
-    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(new Date(iso));
+function fmtTimeL(iso, lang) {
+    if (!iso) return lang === 'es' ? 'la hora acordada' : 'the time we set';
+    return new Intl.DateTimeFormat(lang === 'es' ? 'es-US' : 'en-US',
+        { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/New_York' }).format(new Date(iso));
 }
 
 module.exports = async function handler(req, res) {
@@ -76,7 +80,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr')
+        .select('id,name,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr,' + LANG_COL)
         .is('vsl_followup_sms_sent_at', null)
         .gt('meeting_scheduled_at', nowIso)
         .in('id', explicitIds.length ? explicitIds : leadIds);
@@ -95,12 +99,13 @@ module.exports = async function handler(req, res) {
         const phone = ld.owner_phone || ld.phone || null;
         const rep = roster[String(ld.meeting_booked_by_sdr || '').toLowerCase()] || null;
         const fromLine = (rep && rep.openphone_number) || REMY_LINE;
-        const day = fmtDay(ld.meeting_scheduled_at);
-        const time = fmtTime(ld.meeting_scheduled_at);
+        // Text them in the language they did the call in. A Spanish speaker who
+        // just watched the video should not get an English follow-up.
+        const lang = langForLead(ld);
+        const day = fmtDayL(ld.meeting_scheduled_at, lang);
+        const time = fmtTimeL(ld.meeting_scheduled_at, lang);
 
-        const sms = 'Glad you got a chance to watch the video. I hope it gave you an idea of how we can help your business. '
-            + 'I\'ve got you down for ' + day + ' at ' + time + '. '
-            + 'The meeting will explain exactly how we can make you money and answer any questions you may have. Talk soon.';
+        const sms = t(lang, 'vslFollowupSms', { day: day, time: time });
 
         if (dry) { results.push({ id: ld.id, to_phone: phone, viewed_at: seen[ld.id], sms_preview: sms }); continue; }
 
