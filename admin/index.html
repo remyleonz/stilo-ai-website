@@ -5441,6 +5441,8 @@
             // Pool-wide [{niche, count}] from /api/prospects/niches. Drives the
             // niche dropdown so it does not depend on which rows loaded.
             niches: [],
+            // Callable leads with no category at all. Counted into Other.
+            nicheBlank: 0,
             // null = default (tier/score) order; 'desc' = newest last-touch first;
             // 'asc' = oldest first. Persisted so the rep's "Last touch" sort
             // survives every re-render (logging a call, advancing, cache refresh)
@@ -5919,6 +5921,8 @@
                     ? '?assigned_to=' + encodeURIComponent(prospectState.filters.sdr) : '';
                 var data = await prospectFetchJSON('/api/prospects/niches' + qs);
                 prospectState.niches = (data && data.niches) || [];
+                // Leads with no category. They belong to Other; see niches.js.
+                prospectState.nicheBlank = (data && data.blank) || 0;
                 populateNicheFilter();
             } catch (e) {
                 // Non-fatal: populateNicheFilter falls back to the loaded rows.
@@ -5929,26 +5933,59 @@
         function populateNicheFilter(stats) {
             var sel = document.getElementById('prospectNicheFilter');
             if (!sel) return;
-            // Options come from /api/prospects/niches (the whole callable pool),
-            // NOT from the loaded rows. Inferring them from rows meant a niche
-            // past PostgREST's 1000-row response cap could not be selected, and
-            // it could not be seen without selecting it. prospectNiches is
-            // refreshed by loadProspectNiches(); fall back to the loaded rows
-            // only until that first response lands.
-            var seen = {};
-            if (prospectState.niches && prospectState.niches.length) {
-                prospectState.niches.forEach(function (n) { if (n.niche) seen[n.niche] = true; });
-            } else {
-                (prospectState.rows || []).forEach(function (r) {
-                    var n = r.category || r.niche;
-                    if (n) seen[n] = true;
-                });
-            }
+            // SIX fixed options: the five niches we sell to, plus Other. This
+            // used to be built from the distinct values of leads.category, which
+            // is a raw Google Maps category, so it listed hundreds of entries
+            // ("Crane service", "Playground equipment supplier", "Nursing
+            // agency") and there was no way to ask for "all the staffing leads".
+            // The grouping lives in assets/vsl-agents.js so the browser and
+            // api/prospects/callable.js classify a lead the same way.
+            var picker = window.VSL_NICHE_PICKER || window.VSL_AGENT_PICKER;
+            if (!picker || !picker.NICHE_FILTER_ORDER) return;
+
+            // Counts roll up client-side from the facets /api/prospects/niches
+            // already returns for the whole callable pool. No extra round trip,
+            // and because it is the pool and not the loaded page, the numbers do
+            // not move when the list is capped.
+            var counts = {}, total = 0;
+            (prospectState.niches || []).forEach(function (n) {
+                if (!n || !n.niche) return;
+                var g = picker.nicheGroup(n.niche);
+                counts[g] = (counts[g] || 0) + (n.count || 0);
+                total += (n.count || 0);
+            });
+            var blank = prospectState.nicheBlank || 0;
+            counts.other = (counts.other || 0) + blank;
+            total += blank;
+            var haveCounts = total > 0;
+
             var current = sel.value;
-            var keys = Object.keys(seen).sort();
-            sel.innerHTML = '<option value="">All niches</option>' + keys.map(function (n) {
-                return '<option value="' + escapeAdminHtml(n) + '"' + (n === current ? ' selected' : '') + '>' + escapeAdminHtml(n) + '</option>';
-            }).join('');
+            var html = '<option value="">All niches' + (haveCounts ? ' (' + total + ')' : '') + '</option>';
+            picker.NICHE_FILTER_ORDER.forEach(function (slug) {
+                var g = picker.groupBySlug(slug);
+                if (!g) return;
+                var label = g.label + (haveCounts ? ' (' + (counts[slug] || 0) + ')' : '');
+                html += '<option value="' + escapeAdminHtml(slug) + '"' + (slug === current ? ' selected' : '') + '>'
+                    + escapeAdminHtml(label) + '</option>';
+            });
+            sel.innerHTML = html;
+        }
+
+        // Does a lead belong to the niche group currently selected in the filter?
+        // Mirrors applyNicheFilter() in api/prospects/callable.js. Only used for
+        // rows that arrive from an endpoint the filter was not applied to; the
+        // lead list itself is filtered server-side, because the board caps its
+        // response and filtering a truncated page hides leads.
+        function matchesNicheFilter(row) {
+            var want = prospectState.filters.niche;
+            if (!want) return true;
+            var picker = window.VSL_NICHE_PICKER || window.VSL_AGENT_PICKER;
+            if (!picker) return true;
+            // A raw category is still accepted for back-compat; compare it as-is.
+            if (!picker.groupBySlug(want)) {
+                return String(row.category || row.niche || '') === want;
+            }
+            return picker.nicheGroupForLead(row) === want;
         }
 
         function buildProspectQuery() {
@@ -6165,6 +6202,11 @@
                             return String(r.id != null ? r.id : r.lead_id);
                         }));
                         dialedRaw.forEach(function(r) {
+                            // dialed-today takes no niche param, so without this
+                            // check a niche-filtered board still showed today's
+                            // dials from every other niche. It read as the filter
+                            // being broken.
+                            if (!matchesNicheFilter(r)) return;
                             if (!callableIds.has(String(r.id != null ? r.id : r.lead_id))) {
                                 r._dialedNow = true;
                                 raw.push(r);
@@ -6199,6 +6241,14 @@
             try {
                 var data = await prospectFetchJSON('/api/prospects/emailable' + buildProspectQuery());
                 var raw = data.results || data.leads || data.prospects || data || [];
+                // NOTE: the niche filter does nothing on this tab. Cold Email is
+                // the one lead list still served by David's Cloud Run backend,
+                // and that backend ignores ?niche= (checked 2026-08-14: byte
+                // identical response with and without it). Not filtered in the
+                // browser instead, because it also caps limit at 1000 of the
+                // 1,981 emailable leads, so a client-side filter would quietly
+                // return part of a niche and look like the whole of it. Fixing
+                // this properly means teaching that backend the niche groups.
                 prospectState.cache.emailable = raw;
                 var rows = applyClientFilters(raw);
                 prospectState.rows = rows;

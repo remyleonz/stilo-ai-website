@@ -68,6 +68,86 @@
         return null;
     }
 
+    // ---- Leads FILTER groups ------------------------------------------------
+    //
+    // The admin Leads niche dropdown used to list every distinct value of
+    // leads.category, which is a raw Google Maps category: hundreds of options
+    // like "Crane service", "Playground equipment supplier", "Nursing agency".
+    // These collapse that long tail into the five niches we actually sell to,
+    // plus Other for the whole pre-pivot book (dentists, insurance, auto).
+    //
+    // Same include terms, in the same precedence order, as nicheSlug() above.
+    // What this adds is the EXCLUSION list, lifted from the campaign ICP regex
+    // in prospecting.outbound_campaigns.icp_pattern: a pool service, a dry
+    // cleaner and a carpet cleaner all contain "clean" but none of them is a
+    // commercial cleaning company, and letting them through is the specific
+    // mistake that has put the wrong leads on a rep's board twice. Anything
+    // matching an exclusion drops to Other before any include term is tried.
+    //
+    // The regex writes some terms with an optional space ("house ?clean"). The
+    // server matches with ILIKE, not a regex, so both spellings are spelled out.
+    //
+    // MUST stay identical to NICHE_GROUP_EXCLUDE / NICHE_GROUPS in
+    // api/prospects/callable.js, which turns these same terms into the
+    // server-side PostgREST filter. Drift means the count shown next to an
+    // option disagrees with the rows that option actually returns.
+    var NICHE_GROUP_EXCLUDE = [
+        'pool', 'maid', 'house clean', 'houseclean', 'carpet',
+        'pressure wash', 'pressurewash', 'car wash', 'carwash',
+        'laundry', 'dry clean', 'dryclean', 'alteration'
+    ];
+
+    // PRECEDENCE order, not display order. "Janitorial equipment supplier"
+    // matches both 'janitor' and 'equipment'; cleaning comes first, so it lands
+    // in cleaning, exactly as nicheSlug() resolves it. Reordering this array
+    // silently reclassifies leads. Display order is NICHE_FILTER_ORDER below.
+    var NICHE_GROUPS = [
+        { slug: 'commercial-cleaning', label: 'Commercial cleaning', terms: ['clean', 'janitor'] },
+        { slug: 'commercial-roofing', label: 'Commercial roofing', terms: ['roof'] },
+        { slug: 'staffing', label: 'Staffing', terms: ['staff', 'recruit', 'employment', 'temp agency', 'talent', 'nursing agency', 'executive search', 'headhunt'] },
+        { slug: 'freight', label: 'Freight and logistics', terms: ['freight', 'truck', 'logistic', 'carrier', '3pl', 'shipping'] },
+        { slug: 'industrial-supplies', label: 'Industrial supplies and equipment', terms: ['equipment', 'forklift', 'industrial', 'suppl', 'material handling', 'crane'] }
+    ];
+
+    // Order the dropdown renders in. Cleaning, roofing and staffing are the
+    // three niches with a live campaign, so they sit at the top.
+    var NICHE_FILTER_ORDER = [
+        'commercial-cleaning', 'commercial-roofing', 'staffing',
+        'industrial-supplies', 'freight', 'other'
+    ];
+
+    var OTHER_GROUP = { slug: 'other', label: 'Other', terms: [] };
+
+    function groupBySlug(slug) {
+        if (slug === 'other') return OTHER_GROUP;
+        for (var i = 0; i < NICHE_GROUPS.length; i++) if (NICHE_GROUPS[i].slug === slug) return NICHE_GROUPS[i];
+        return null;
+    }
+
+    // Raw category string to a group slug. Never returns null: everything we do
+    // not sell to is 'other', which is what makes the six options a partition.
+    function nicheGroup(raw) {
+        var s = String(raw || '').toLowerCase().trim();
+        if (!s) return 'other';
+        for (var e = 0; e < NICHE_GROUP_EXCLUDE.length; e++) {
+            if (s.indexOf(NICHE_GROUP_EXCLUDE[e]) !== -1) return 'other';
+        }
+        for (var i = 0; i < NICHE_GROUPS.length; i++) {
+            var terms = NICHE_GROUPS[i].terms;
+            for (var j = 0; j < terms.length; j++) {
+                if (s.indexOf(terms[j]) !== -1) return NICHE_GROUPS[i].slug;
+            }
+        }
+        return 'other';
+    }
+
+    // Same niche-then-category resolution defaultSlugFor() uses.
+    function nicheGroupForLead(lead) {
+        var d = lead || {};
+        var n = String(d.niche || '').trim();
+        return nicheGroup(n || d.category);
+    }
+
     // Pre-selected option, read straight off the lead. niche is David's field and
     // is the source of truth; category is the older Google-Places string.
     function defaultSlugFor(lead) {
@@ -117,6 +197,13 @@
         agentSlug: nicheSlug,   // legacy name
         nicheSlug: nicheSlug,
         defaultSlugFor: defaultSlugFor,
+        // Leads filter groups (see the block above defaultSlugFor).
+        NICHE_GROUPS: NICHE_GROUPS,
+        NICHE_GROUP_EXCLUDE: NICHE_GROUP_EXCLUDE,
+        NICHE_FILTER_ORDER: NICHE_FILTER_ORDER,
+        groupBySlug: groupBySlug,
+        nicheGroup: nicheGroup,
+        nicheGroupForLead: nicheGroupForLead,
         selectHtml: selectHtml,
         readSelect: readSelect
     };

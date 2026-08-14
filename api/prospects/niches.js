@@ -49,12 +49,20 @@ module.exports = async function handler(req, res) {
     // apply the same way: page through until the pool is exhausted.
     const counts = new Map();
     let total = 0;
+    let blank = 0;
     for (let from = 0; ; from += 1000) {
         const { data, error } = await sel.range(from, from + 999);
         if (error) return res.status(500).json({ error: error.message });
         for (const r of data) {
             const n = (r.category || '').trim();
-            if (!n) continue;
+            // Leads with no category at all are still leads. They used to be
+            // dropped silently, which was harmless while the dropdown listed raw
+            // categories. Now the dashboard rolls these facets up into the six
+            // niche groups, and an uncategorized lead belongs to Other, so it has
+            // to be counted somewhere or the option label undercounts the rows
+            // the filter returns. Reported separately rather than as a nameless
+            // niche entry so nothing renders a blank option.
+            if (!n) { blank++; continue; }
             counts.set(n, (counts.get(n) || 0) + 1);
         }
         total += data.length;
@@ -64,6 +72,7 @@ module.exports = async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
     return res.status(200).json({
         total,
+        blank,
         niches: [...counts.entries()]
             .map(([niche, count]) => ({ niche, count }))
             .sort((a, b) => b.count - a.count || a.niche.localeCompare(b.niche))

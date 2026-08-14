@@ -13,6 +13,102 @@ const { createClient } = require('@supabase/supabase-js');
 // admin sees from his backend.
 const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
 
+// ---- Niche GROUPS (what the Leads dropdown filters by) ----------------------
+//
+// leads.category is a raw Google Maps category, so the pool holds ~750 distinct
+// values. The dropdown offers six: the five niches we sell to, plus Other. This
+// is the server side of that collapse.
+//
+// The terms and their ORDER are copied from agentKey() in _vsl.js and
+// nicheSlug() in assets/vsl-agents.js, which are already required to stay
+// identical to each other. The exclusions come from the campaign ICP regex in
+// prospecting.outbound_campaigns.icp_pattern: a pool service, a dry cleaner and
+// a carpet cleaner all contain "clean" and none of them is a commercial
+// cleaning company. Exclusions win over every include term.
+//
+// The ICP regex spells some terms with an optional space ("house ?clean").
+// PostgREST filters here with ILIKE, not a regex, so both spellings are listed.
+//
+// MUST stay identical to NICHE_GROUP_EXCLUDE / NICHE_GROUPS in
+// assets/vsl-agents.js, which classifies the same strings in the browser to
+// label each option with a count. Drift means the count disagrees with the rows.
+const NICHE_GROUP_EXCLUDE = [
+    'pool', 'maid', 'house clean', 'houseclean', 'carpet',
+    'pressure wash', 'pressurewash', 'car wash', 'carwash',
+    'laundry', 'dry clean', 'dryclean', 'alteration'
+];
+
+// PRECEDENCE order, not display order. "Janitorial equipment supplier" matches
+// both 'janitor' and 'equipment' and must resolve to cleaning, the same way
+// agentKey() resolves it. Reordering silently reclassifies leads.
+const NICHE_GROUPS = [
+    { slug: 'commercial-cleaning', terms: ['clean', 'janitor'] },
+    { slug: 'commercial-roofing', terms: ['roof'] },
+    { slug: 'staffing', terms: ['staff', 'recruit', 'employment', 'temp agency', 'talent', 'nursing agency', 'executive search', 'headhunt'] },
+    { slug: 'freight', terms: ['freight', 'truck', 'logistic', 'carrier', '3pl', 'shipping'] },
+    { slug: 'industrial-supplies', terms: ['equipment', 'forklift', 'industrial', 'suppl', 'material handling', 'crane'] }
+];
+
+// One leaf of a PostgREST logic tree. `*` is PostgREST's ILIKE wildcard.
+function likeTerm(col, term, negate) {
+    return col + (negate ? '.not' : '') + '.ilike.*' + term + '*';
+}
+
+// "this column resolves to NICHE_GROUPS[i]": no exclusion hit, no
+// higher-precedence group's term, and at least one of this group's terms.
+function groupClause(col, i) {
+    const parts = NICHE_GROUP_EXCLUDE.map(t => likeTerm(col, t, true));
+    for (let j = 0; j < i; j++) {
+        for (const t of NICHE_GROUPS[j].terms) parts.push(likeTerm(col, t, true));
+    }
+    parts.push('or(' + NICHE_GROUPS[i].terms.map(t => likeTerm(col, t, false)).join(',') + ')');
+    return 'and(' + parts.join(',') + ')';
+}
+
+// "this column resolves to no group at all": it is NULL, or it hits an
+// exclusion, or it matches none of the five groups' terms. NULL has to be
+// listed on its own because `NOT (NULL ILIKE '%x%')` is NULL, not true, so a
+// lead with no category would otherwise fall out of every option including
+// Other. Returns the inside of an or(...), for q.or().
+function otherClause(col) {
+    const alts = [col + '.is.null'];
+    for (const t of NICHE_GROUP_EXCLUDE) alts.push(likeTerm(col, t, false));
+    const none = [];
+    for (const g of NICHE_GROUPS) for (const t of g.terms) none.push(likeTerm(col, t, true));
+    alts.push('and(' + none.join(',') + ')');
+    return alts.join(',');
+}
+
+/**
+ * Apply the Leads niche filter to a leads query.
+ *
+ * `value` is normally a GROUP slug. Filtering has to happen here rather than in
+ * the browser because the board caps its response, so a client-side filter of
+ * an already-truncated page silently hides leads.
+ *
+ * Both columns are checked. leads.niche is David's field and leads.category is
+ * the older Google-Places string, and canonically nicheForLead() reads niche
+ * first and falls back to category. Measured 2026-08-14 across the 21,611 active
+ * leads: the two are byte-identical in all 21,447 rows where niche is set, and
+ * the other 164 have neither, so an OR over both is exactly that fallback and
+ * no lead can land in two groups. If David ever starts writing one without the
+ * other, this needs the explicit "niche resolves to nothing" guard instead.
+ *
+ * Anything that is not a group slug is treated as a raw category for
+ * back-compat, which is the behavior this filter had before.
+ */
+function applyNicheFilter(q, value) {
+    const v = String(value || '').trim();
+    if (!v) return q;
+    if (v === 'other') {
+        // Neither column may resolve to a group. Two or= params AND together.
+        return q.or(otherClause('niche')).or(otherClause('category'));
+    }
+    const i = NICHE_GROUPS.findIndex(g => g.slug === v);
+    if (i === -1) return q.eq('category', v);
+    return q.or(groupClause('niche', i) + ',' + groupClause('category', i));
+}
+
 // The board shows ONLY leads briefed under the offer we currently sell.
 // CURRENT_OFFER / gateToCurrentOffer live in _shared.js so the dial board and the
 // callback queue cannot drift apart. See the comment there for the full reasoning.
@@ -66,7 +162,8 @@ async function callableFromSupabase(opts) {
             q = q.eq('prospect_tier', opts.tier);
         }
     }
-    if (opts.niche)     q = q.eq('category', opts.niche); // leads has `category`, not `niche` — filtering on niche 400s
+    // Group slug ('staffing', 'other', ...) or, for back-compat, a raw category.
+    if (opts.niche)     q = applyNicheFilter(q, opts.niche);
     if (opts.minScore)  q = q.gte('prospect_score', opts.minScore);
     if (opts.search)    q = q.ilike('name', `%${opts.search}%`);
 
@@ -128,3 +225,8 @@ module.exports = async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
     return res.status(200).json(result);
 };
+
+// Exported for reuse and for the parity test against assets/vsl-agents.js.
+module.exports.NICHE_GROUPS = NICHE_GROUPS;
+module.exports.NICHE_GROUP_EXCLUDE = NICHE_GROUP_EXCLUDE;
+module.exports.applyNicheFilter = applyNicheFilter;
