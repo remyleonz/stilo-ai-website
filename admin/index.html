@@ -6234,15 +6234,11 @@
 
         async function loadProspectEmailable(opts) {
             opts = opts || {};
-            // Same fire-and-forget facet load the Cold Call tab does, so the
-            // niche dropdown is populated when the user lands here first.
-            loadProspectNiches();
             var host = document.getElementById('prospectTableEmailable');
             var cached = !opts.force && prospectState.cache.emailable;
             if (cached) {
                 prospectState.rows = applyClientFilters(cached);
                 host.innerHTML = renderProspectTable(prospectState.rows, 'emailable');
-                populateNicheFilter();
             } else {
                 host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>';
             }
@@ -6257,7 +6253,6 @@
                 var rows = applyClientFilters(raw);
                 prospectState.rows = rows;
                 host.innerHTML = renderProspectTable(rows, 'emailable');
-                populateNicheFilter();
             } catch (e) {
                 console.error('[prospects/emailable]', e);
                 if (!cached) {

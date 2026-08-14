@@ -360,10 +360,10 @@ module.exports.LEAD_LIST_COLUMNS = LEAD_LIST_COLUMNS;
  *
  * Two shapes of the same list, because they get used in two different places:
  *
- *   ROLE_INBOX_PREFIXES — for a PostgREST `not.ilike.<prefix>@*` filter, so the
+ *   ROLE_INBOX_PREFIXES: for a PostgREST `not.ilike.<prefix>@*` filter, so the
  *     exclusion happens in Postgres and the endpoint never pays egress for rows
  *     it is going to throw away.
- *   ROLE_INBOX_RE — the same list as a regex, which also catches the separator
+ *   ROLE_INBOX_RE: the same list as a regex, which also catches the separator
  *     variants ILIKE cannot express cheaply (info.miami@, contact_us@). Measured
  *     2026-08-14: only 3 addresses in the whole pool need it, so it runs as a
  *     JS pass over the rows the SQL filter already narrowed.
