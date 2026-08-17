@@ -185,7 +185,12 @@ function describeSend(msg) {
  *   1. NEVER cite the tracking. "I saw you watched my video" is creepy and it
  *      also hands them a reason to feel watched. The video is the reason for
  *      the timing, never the reason given on the call.
- *   2. ONE number, said the same way every time: $250 per meeting held.
+ *   2. NEVER QUOTE A PRICE. Not on a call, not in a text, not in an email.
+ *      A number said before they have told us what a customer is worth to them
+ *      is just a cost, and the whole conversation turns into haggling over it.
+ *      The price step is therefore a QUESTION, not a quote: how many meetings a
+ *      month do they want, and what is one new client actually worth. Their two
+ *      answers are what the price is built from, afterwards, by a human.
  *   3. Ask for the close, not for another meeting. Every one of these leads has
  *      already had the offer explained.
  */
@@ -193,31 +198,31 @@ const NICHE_SCRIPT = {
     'commercial-cleaning': {
         them: 'buildings and property managers looking to switch cleaners',
         unit: 'walkthrough',
-        math: 'One $3,000/month building kept three years is over $100k',
+        worth: 'what is one building worth to you a year, roughly?',
         probe: 'are you taking on new buildings right now, or are you full?',
     },
     'commercial-roofing': {
         them: 'facility and property managers with roofs coming up for work',
         unit: 'roof inspection',
-        math: 'One $150k re-roof at 30% is about $45k gross on a $2,500 spend',
+        worth: 'what does a re-roof job typically run you, and what do you keep on it?',
         probe: 'is your bottleneck getting in front of facility managers, or crew capacity?',
     },
     staffing: {
         them: 'companies in your area that are actively hiring',
         unit: 'meeting with a hiring manager',
-        math: 'One placement usually covers the whole block',
+        worth: 'what is one placement worth to you?',
         probe: 'are you looking for more client accounts, or more people to fill the ones you have?',
     },
     'industrial-supplies': {
         them: 'shops and plants that buy what you sell',
         unit: 'meeting',
-        math: 'Your deals are five figures, so one order covers it twice',
+        worth: 'what does one new account spend with you in a year?',
         probe: 'are you trying to open new accounts right now, or protect the ones you have?',
     },
     freight: {
         them: 'shippers moving freight on your lanes',
         unit: 'meeting',
-        math: 'One steady shipper pays for the block many times over',
+        worth: 'what is one steady shipper worth to you a year?',
         probe: 'are you looking for more shippers, or more capacity?',
     },
 };
@@ -227,12 +232,18 @@ function scriptFor(opts) {
     const n = NICHE_SCRIPT[key] || {
         them: 'companies in your area that fit what you sell',
         unit: 'meeting',
-        math: 'One deal covers the whole block',
+        worth: 'what is one new customer worth to you in a year?',
         probe: 'are you trying to bring on new customers right now?',
     };
     const who = firstName(opts.ownerName);
     const hi = who ? who : 'there';
     const said = opts.event === 'play' ? 'started the video' : 'opened the page';
+
+    // The one answer to "what does it cost", used verbatim wherever the
+    // question comes up. Never a number.
+    const priceDeflect = '"It depends on two things: how many ' + n.unit
+        + 's a month you want, and what a new client is actually worth to you. So let me ask, '
+        + n.worth + '"';
 
     return {
         open: '"' + hi + ', it\'s Remy from STILO. Caught you at a bad time?"',
@@ -245,13 +256,15 @@ function scriptFor(opts) {
         probeNote: 'Shut up here. Whatever they answer is what you sell to.',
         pitch: '"We go find ' + n.them + ', we work them by phone, email and text, '
             + 'and when one of them is ready we put them on your calendar. You just show up."',
-        price: '"It\'s $250 per ' + n.unit + ' that actually happens, and nothing for the ones that don\'t. '
-            + 'Ten of them is $2,500. ' + n.math + '."',
-        close: '"Want me to start pulling your list this week?"',
+        price: priceDeflect,
+        priceNote: 'NEVER say a number here. Get their two numbers first: how many a month, '
+            + 'and what one client is worth. You price it after that, not on this call.',
+        close: '"How many of those would you want in a month?"',
         objections: [
+            ['"How much is it?"', priceDeflect],
+            ['"Just give me a ballpark"', '"I could, but I would be making it up until I know what a client is worth to you. Give me that number and I will have something real for you today."'],
             ['"Send me some info"', '"I will, but the email is the same thing I just said. If the ' + n.unit + 's show up with real decision makers, is this a yes? Or is it a no and I should stop calling?"'],
-            ['"Let me think about it"', '"Fair. Which part, whether the ' + n.unit + 's will be real, or the $2,500?"'],
-            ['"Too expensive"', '"Start with five then. $1,250. You\'ll know in three weeks whether I\'m real."'],
+            ['"Let me think about it"', '"Fair. Which part, whether the ' + n.unit + 's will be real, or whether it is worth the money?"'],
             ['"I already have someone"', '"Good, keep them. This doesn\'t replace anything, and there\'s no monthly, so there\'s nothing to cancel."'],
         ],
     };
@@ -330,7 +343,7 @@ async function sendWatchAlert(opts) {
         scriptLine('2. Reason', S.reason, null),
         scriptLine('3. Ask', S.probe, S.probeNote),
         scriptLine('4. Pitch', S.pitch, null),
-        scriptLine('5. Price', S.price, null),
+        scriptLine('5. Price', S.price, S.priceNote),
         scriptLine('6. Close', S.close, 'Then stop talking. First one to speak loses.'),
         '<p style="margin:16px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6B7280;font-weight:700">If they push back</p>',
         S.objections.map(function (o) {
@@ -366,6 +379,7 @@ async function sendWatchAlert(opts) {
         '           (' + S.probeNote + ')',
         '4. PITCH:  ' + S.pitch,
         '5. PRICE:  ' + S.price,
+        '           (' + S.priceNote + ')',
         '6. CLOSE:  ' + S.close,
         '           (Then stop talking. First one to speak loses.)',
         '',
