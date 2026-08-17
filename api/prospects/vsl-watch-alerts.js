@@ -266,7 +266,8 @@ async function sendWatchAlert(opts) {
     // (remyleon11@gmail.com), which meant every watch alert arrived twice on the
     // same phone. Duplicate alerts train you to ignore alerts, which is worse
     // than not sending them.
-    const to = [String(process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com').toLowerCase().trim()];
+    const owner = String(process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com').toLowerCase().trim();
+    const to = [owner];
 
     const who = firstName(opts.ownerName);
     const verb = opts.event === 'play' ? 'just played the video' : 'just opened the video page';
