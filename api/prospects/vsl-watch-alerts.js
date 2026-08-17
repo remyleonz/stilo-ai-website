@@ -193,31 +193,31 @@ const NICHE_SCRIPT = {
     'commercial-cleaning': {
         them: 'buildings and property managers looking to switch cleaners',
         unit: 'walkthrough',
-        math: 'one $3,000/month building kept three years is over $100k',
+        math: 'One $3,000/month building kept three years is over $100k',
         probe: 'are you taking on new buildings right now, or are you full?',
     },
     'commercial-roofing': {
         them: 'facility and property managers with roofs coming up for work',
         unit: 'roof inspection',
-        math: 'one $150k re-roof at 30% is about $45k gross on a $2,500 spend',
+        math: 'One $150k re-roof at 30% is about $45k gross on a $2,500 spend',
         probe: 'is your bottleneck getting in front of facility managers, or crew capacity?',
     },
     staffing: {
         them: 'companies in your area that are actively hiring',
         unit: 'meeting with a hiring manager',
-        math: 'one placement usually covers the whole block',
+        math: 'One placement usually covers the whole block',
         probe: 'are you looking for more client accounts, or more people to fill the ones you have?',
     },
     'industrial-supplies': {
         them: 'shops and plants that buy what you sell',
         unit: 'meeting',
-        math: 'your deals are five figures, so one order covers it twice',
+        math: 'Your deals are five figures, so one order covers it twice',
         probe: 'are you trying to open new accounts right now, or protect the ones you have?',
     },
     freight: {
         them: 'shippers moving freight on your lanes',
         unit: 'meeting',
-        math: 'one steady shipper pays for the block many times over',
+        math: 'One steady shipper pays for the block many times over',
         probe: 'are you looking for more shippers, or more capacity?',
     },
 };
@@ -227,7 +227,7 @@ function scriptFor(opts) {
     const n = NICHE_SCRIPT[key] || {
         them: 'companies in your area that fit what you sell',
         unit: 'meeting',
-        math: 'one deal covers the whole block',
+        math: 'One deal covers the whole block',
         probe: 'are you trying to bring on new customers right now?',
     };
     const who = firstName(opts.ownerName);
