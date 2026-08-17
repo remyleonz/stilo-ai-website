@@ -70,6 +70,20 @@ const SCANNER_WINDOW_SEC = 60;
 // agent inside this many seconds is the same burst.
 const SCANNER_BURST_SEC = 600;
 
+// A scanner fetches the page twice back to back (prefetch then render, or two
+// nodes sharing a queue). A human physically cannot.
+//
+// The Cleaning Company (lead 28063, 2026-08-17) is the shape: three different
+// user agents, each firing a PAIR of views 19ms, 277ms, 397ms and 477ms apart,
+// on a metronomic 26-second cadence, zero plays. Two of those agents never
+// landed inside SCANNER_WINDOW_SEC, so neither the timing filter nor the burst
+// filter touched them and the lead alerted as a hot prospect.
+//
+// Deliberately not keyed on the UA version string: Chrome's UA reduction ships
+// real browsers as "Chrome/143.0.0.0", so a "looks synthetic" test would throw
+// away genuine humans. The double fetch is behaviour, and behaviour does not lie.
+const DOUBLE_FETCH_MS = 2000;
+
 // Never alert on an event older than this. The table already holds months of
 // history, and "they watched it in July" is not a reason to pick up the phone
 // right now.
@@ -159,23 +173,113 @@ function describeSend(msg) {
  * the work inbox and sat unread; a speed-to-lead alert that lands somewhere
  * nobody refreshes is worth nothing.
  */
+/**
+ * The call script, built for THIS lead, to go in the alert itself.
+ *
+ * Remy calls these the moment the alert lands, so the script has to be on the
+ * screen he is already looking at. Opening the dashboard, reading the niche, and
+ * improvising is how the July calls got lost: improvised pricing and a vague ask
+ * were two of the five structural close-killers.
+ *
+ * Three rules baked in, because they are the ones that get broken live:
+ *   1. NEVER cite the tracking. "I saw you watched my video" is creepy and it
+ *      also hands them a reason to feel watched. The video is the reason for
+ *      the timing, never the reason given on the call.
+ *   2. ONE number, said the same way every time: $250 per meeting held.
+ *   3. Ask for the close, not for another meeting. Every one of these leads has
+ *      already had the offer explained.
+ */
+const NICHE_SCRIPT = {
+    'commercial-cleaning': {
+        them: 'buildings and property managers looking to switch cleaners',
+        unit: 'walkthrough',
+        math: 'one $3,000/month building kept three years is over $100k',
+        probe: 'are you taking on new buildings right now, or are you full?',
+    },
+    'commercial-roofing': {
+        them: 'facility and property managers with roofs coming up for work',
+        unit: 'roof inspection',
+        math: 'one $150k re-roof at 30% is about $45k gross on a $2,500 spend',
+        probe: 'is your bottleneck getting in front of facility managers, or crew capacity?',
+    },
+    staffing: {
+        them: 'companies in your area that are actively hiring',
+        unit: 'meeting with a hiring manager',
+        math: 'one placement usually covers the whole block',
+        probe: 'are you looking for more client accounts, or more people to fill the ones you have?',
+    },
+    'industrial-supplies': {
+        them: 'shops and plants that buy what you sell',
+        unit: 'meeting',
+        math: 'your deals are five figures, so one order covers it twice',
+        probe: 'are you trying to open new accounts right now, or protect the ones you have?',
+    },
+    freight: {
+        them: 'shippers moving freight on your lanes',
+        unit: 'meeting',
+        math: 'one steady shipper pays for the block many times over',
+        probe: 'are you looking for more shippers, or more capacity?',
+    },
+};
+
+function scriptFor(opts) {
+    const key = String(opts.agent || '').toLowerCase();
+    const n = NICHE_SCRIPT[key] || {
+        them: 'companies in your area that fit what you sell',
+        unit: 'meeting',
+        math: 'one deal covers the whole block',
+        probe: 'are you trying to bring on new customers right now?',
+    };
+    const who = firstName(opts.ownerName);
+    const hi = who ? who : 'there';
+    const said = opts.event === 'play' ? 'started the video' : 'opened the page';
+
+    return {
+        open: '"' + hi + ', it\'s Remy from STILO. Caught you at a bad time?"',
+        openNote: 'Let them say "no, go ahead." Never mention the video or that they ' + said + '.',
+        // Raw text, never pre-escaped: the HTML renderer escapes it once, and
+        // the plain-text alternative uses the same strings verbatim.
+        reason: '"Reason I\'m calling, I sent you something earlier and I\'d rather just tell you '
+            + 'in thirty seconds than make you read it."',
+        probe: '"' + n.probe + '"',
+        probeNote: 'Shut up here. Whatever they answer is what you sell to.',
+        pitch: '"We go find ' + n.them + ', we work them by phone, email and text, '
+            + 'and when one of them is ready we put them on your calendar. You just show up."',
+        price: '"It\'s $250 per ' + n.unit + ' that actually happens, and nothing for the ones that don\'t. '
+            + 'Ten of them is $2,500. ' + n.math + '."',
+        close: '"Want me to start pulling your list this week?"',
+        objections: [
+            ['"Send me some info"', '"I will, but the email is the same thing I just said. If the ' + n.unit + 's show up with real decision makers, is this a yes? Or is it a no and I should stop calling?"'],
+            ['"Let me think about it"', '"Fair. Which part, whether the ' + n.unit + 's will be real, or the $2,500?"'],
+            ['"Too expensive"', '"Start with five then. $1,250. You\'ll know in three weeks whether I\'m real."'],
+            ['"I already have someone"', '"Good, keep them. This doesn\'t replace anything, and there\'s no monthly, so there\'s nothing to cancel."'],
+        ],
+    };
+}
+
 async function sendWatchAlert(opts) {
     if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
 
     const fromName = process.env.STILO_SENDER_NAME || 'STILO Outbound';
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
-    const owner = process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com';
-    const alertInbox = process.env.HEALTH_ALERT_TO || 'remyleon11@gmail.com';
-
-    const to = Array.from(new Set(
-        [alertInbox, owner]
-            .map(function (e) { return String(e || '').toLowerCase().trim(); })
-            .filter(function (e) { return e && /.+@.+\..+/.test(e); })
-    ));
+    // ONE recipient: the work inbox. This used to also copy HEALTH_ALERT_TO
+    // (remyleon11@gmail.com), which meant every watch alert arrived twice on the
+    // same phone. Duplicate alerts train you to ignore alerts, which is worse
+    // than not sending them.
+    const to = [String(process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com').toLowerCase().trim()];
 
     const who = firstName(opts.ownerName);
     const verb = opts.event === 'play' ? 'just played the video' : 'just opened the video page';
     const headline = (who ? who + ' at ' + opts.business : opts.business) + ' ' + verb;
+
+    const S = scriptFor(opts);
+    function scriptLine(label, line, note) {
+        return '<p style="margin:0 0 12px;font-size:15px;line-height:1.5">'
+            + '<span style="display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6B7280;font-weight:700;margin-bottom:2px">' + esc(label) + '</span>'
+            + '<span style="color:#111">' + esc(line) + '</span>'
+            + (note ? '<span style="display:block;font-size:13px;color:#6B7280;font-style:italic;margin-top:3px">' + esc(note) + '</span>' : '')
+            + '</p>';
+    }
 
     const adminUrl = 'https://stiloaipartners.com/admin/?lead=' + opts.leadId;
     const digits = String(opts.phone || '').replace(/[^\d+]/g, '');
@@ -203,6 +307,24 @@ async function sendWatchAlert(opts) {
         '<tr><td style="padding:5px 0;color:#6B7280">Assigned to</td><td style="padding:5px 0">' + esc(opts.assignedTo || '') + '</td></tr>',
         '</table>',
 
+        // The script, inline. This is the whole point of the alert: he dials
+        // straight off this email without opening anything.
+        '<div style="border:2px solid #2563EB;border-radius:6px;padding:18px;margin:0 0 20px">',
+        '<p style="margin:0 0 14px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;font-weight:700">Your script</p>',
+        scriptLine('1. Open', S.open, S.openNote),
+        scriptLine('2. Reason', S.reason, null),
+        scriptLine('3. Ask', S.probe, S.probeNote),
+        scriptLine('4. Pitch', S.pitch, null),
+        scriptLine('5. Price', S.price, null),
+        scriptLine('6. Close', S.close, 'Then stop talking. First one to speak loses.'),
+        '<p style="margin:16px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6B7280;font-weight:700">If they push back</p>',
+        S.objections.map(function (o) {
+            return '<p style="margin:0 0 8px;font-size:14px;line-height:1.5"><span style="color:#6B7280">' + esc(o[0]) + '</span><br>'
+                + '<span style="color:#111">' + esc(o[1]) + '</span></p>';
+        }).join(''),
+        '<p style="margin:14px 0 0;font-size:12px;color:#B91C1C;font-weight:600">Do not tell them you saw them open it.</p>',
+        '</div>',
+
         '<a href="' + adminUrl + '" style="display:inline-block;background:#111;color:#fff;padding:11px 20px;border-radius:4px;text-decoration:none;font-weight:600;font-size:15px">Open the lead</a>',
         '<p style="margin:18px 0 0;font-size:12px;color:#9CA3AF">You get this for any lead we have emailed, the moment a real person lands on their video page. Mail-scanner opens are filtered out.</p>',
         '</div>',
@@ -221,8 +343,25 @@ async function sendWatchAlert(opts) {
         'When: ' + opts.whenET + ' (' + opts.ago + ')',
         'We sent: ' + opts.lastSent,
         '',
+        '--- YOUR SCRIPT ---',
+        '1. OPEN:   ' + S.open,
+        '           (' + S.openNote + ')',
+        '2. REASON: ' + S.reason,
+        '3. ASK:    ' + S.probe,
+        '           (' + S.probeNote + ')',
+        '4. PITCH:  ' + S.pitch,
+        '5. PRICE:  ' + S.price,
+        '6. CLOSE:  ' + S.close,
+        '           (Then stop talking. First one to speak loses.)',
+        '',
+        'IF THEY PUSH BACK',
+    ].concat(S.objections.map(function (o) { return o[0] + '  ->  ' + o[1]; }))
+     .concat([
+        '',
+        'Do not tell them you saw them open it.',
+        '',
         adminUrl,
-    ].join('\n');
+    ]).join('\n');
 
     const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -320,6 +459,32 @@ module.exports = async function handler(req, res) {
 
     const results = [];
 
+    // GLOBAL scanner pre-pass. A scanner is one machine chewing through one
+    // BATCH of our mail, so it lands on many different leads. scannerHits below
+    // is declared inside the per-lead loop, which means it resets on every lead
+    // and only ever catches the scanner's FIRST victim.
+    //
+    // 2026-08-17 is what that costs: a send batch went out at 16:15, and one
+    // agent (Chrome/142.0.7444.162, Windows) hit ISAACS Roofing at +43s and was
+    // correctly caught by the window. The same agent then hit HireQuest at +94s
+    // and A&R Supply at +143s. Both cleared the 60s window, both had an empty
+    // per-lead scannerHits, and both fired "hot lead watched the video" alerts
+    // for a machine. Three false alarms in six minutes.
+    //
+    // So identify scanner agents across the WHOLE run first, then let the
+    // per-lead pass consult that. Same burst window, same rule that a 'play'
+    // is never killed this way; only the scope changes.
+    const globalScannerHits = [];
+    for (const ev of (events || [])) {
+        if (botReason(ev.ua)) continue;
+        const at = new Date(ev.created_at).getTime();
+        const near = (sendsByLead[ev.lead_id] || []).find(function (m) {
+            const d = at - new Date(m.sent_at).getTime();
+            return d >= 0 && d <= SCANNER_WINDOW_SEC * 1000;
+        });
+        if (near) globalScannerHits.push(ev);
+    }
+
     for (const lead of (watched || [])) {
         const mine = (events || []).filter(function (e) { return e.lead_id === lead.id; });
         const leadSends = sendsByLead[lead.id] || [];
@@ -365,20 +530,55 @@ module.exports = async function handler(req, res) {
             qualifying.push(ev);
         }
 
+        // Which user agents double-fetched this lead's page. Computed over ALL
+        // of this lead's events, not just the qualifying ones, so a pair split
+        // across the window boundary still identifies the agent.
+        const doubleFetchAgents = new Set();
+        const byAgent = {};
+        for (const ev of mine) {
+            if (ev.event !== 'view') continue;
+            (byAgent[String(ev.ua || '')] = byAgent[String(ev.ua || '')] || []).push(new Date(ev.created_at).getTime());
+        }
+        Object.keys(byAgent).forEach(function (ua) {
+            const ts = byAgent[ua].sort(function (a, b) { return a - b; });
+            for (let i = 1; i < ts.length; i++) {
+                if (ts[i] - ts[i - 1] <= DOUBLE_FETCH_MS) { doubleFetchAgents.add(ua); return; }
+            }
+        });
+
         // Second pass: drop what's left of an identified scanner's burst. Only a
         // 'view' can be killed this way. If a 'play' shows up on the same agent
         // a human is at the keyboard, because a link checker does not press play.
         for (let i = qualifying.length - 1; i >= 0; i--) {
             const ev = qualifying[i];
             if (ev.event === 'play') continue;
+            if (doubleFetchAgents.has(String(ev.ua || ''))) {
+                rejected.push({
+                    event_id: ev.id, event: ev.event, at: ev.created_at,
+                    reason: 'this user agent loaded the page twice within '
+                        + DOUBLE_FETCH_MS + 'ms, machine double-fetch',
+                });
+                qualifying.splice(i, 1);
+                continue;
+            }
+            // Check this lead's own scanner hits first (cheap, and gives the
+            // clearest dry-run reason), then every scanner hit in the run
+            // regardless of which lead it landed on.
             const burst = scannerHits.find(function (s) {
                 return String(s.ua || '') === String(ev.ua || '')
+                    && Math.abs(new Date(ev.created_at) - new Date(s.created_at)) <= SCANNER_BURST_SEC * 1000;
+            }) || globalScannerHits.find(function (s) {
+                return s.lead_id !== ev.lead_id
+                    && String(s.ua || '') === String(ev.ua || '')
                     && Math.abs(new Date(ev.created_at) - new Date(s.created_at)) <= SCANNER_BURST_SEC * 1000;
             });
             if (burst) {
                 rejected.push({
                     event_id: ev.id, event: ev.event, at: ev.created_at,
-                    reason: 'same user agent as the scanner hit at ' + burst.created_at + ', same burst',
+                    reason: burst.lead_id === ev.lead_id
+                        ? 'same user agent as the scanner hit at ' + burst.created_at + ', same burst'
+                        : 'same user agent as a scanner hit on lead ' + burst.lead_id
+                          + ' at ' + burst.created_at + ', one machine working a send batch',
                 });
                 qualifying.splice(i, 1);
             }
@@ -417,6 +617,9 @@ module.exports = async function handler(req, res) {
             assignedTo: lead.assigned_to,
             event: best.event,
             path: best.path,
+            // Which of the five niche VSLs they landed on. scriptFor() keys the
+            // call script off this, falling back to a generic script.
+            agent: best.agent,
             whenET: etStamp(best.created_at),
             ago: minutesAgo(best.created_at, now),
             lastSent: describeSend(lastSend),
