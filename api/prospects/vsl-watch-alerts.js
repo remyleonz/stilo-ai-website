@@ -267,7 +267,21 @@ async function sendWatchAlert(opts) {
     // same phone. Duplicate alerts train you to ignore alerts, which is worse
     // than not sending them.
     const owner = String(process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com').toLowerCase().trim();
-    const to = [owner];
+
+    // The owner inbox plus the rep the lead is assigned to. The rep is the one
+    // whose email produced the watch, so they should see it land, and they are
+    // usually the right person to make the call. They get the identical mail,
+    // script included, rather than a watered-down "FYI" version.
+    //
+    // Deliberately NOT copying HEALTH_ALERT_TO (remyleon11@gmail.com) any more:
+    // every alert used to arrive twice on the same phone, and duplicate alerts
+    // train you to ignore alerts. Set() also covers the case where the lead is
+    // assigned to the owner, so that never doubles either.
+    const to = Array.from(new Set(
+        [owner, opts.assignedTo]
+            .map(function (e) { return String(e || '').toLowerCase().trim(); })
+            .filter(function (e) { return e && /.+@.+\..+/.test(e); })
+    ));
 
     const who = firstName(opts.ownerName);
     const verb = opts.event === 'play' ? 'just played the video' : 'just opened the video page';
