@@ -117,9 +117,60 @@ module.exports = async function handler(req, res) {
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
 
     // ── Bounce guard (runs before Resend) ──────────────────────────────────
-    // 1. Never re-send to an address that already hard-bounced.
-    if (lead.bounced_at) {
-        return res.status(409).json({ error: 'recipient_bounced', detail: to + ' previously bounced and will not be re-emailed.' });
+    // Scoped to the ADDRESS, not the lead.
+    //
+    // This used to be `if (lead.bounced_at) return 409`, a flag the Resend
+    // webhook sets on the whole lead. One bad guessed address therefore
+    // poisoned every other address at that company, permanently. Lead 27523
+    // (Rello Search) is the case that exposed it: bhartman@rellosearch.com was
+    // a guess and hard-bounced on 2026-08-13, which then blocked
+    // bobhartmann@rellosearch.com, a different address the rep had just
+    // confirmed with the client by phone. Guessing an address wrong is the
+    // normal case in prospecting; it must not burn the company.
+    //
+    // lead_messages already records the bounce per recipient (to_address +
+    // bounced_at), which is what emailable.js reads, so the correct check was
+    // already sitting in the data.
+    let bouncedHere = false;
+    try {
+        const { data: b } = await sb.from('lead_messages')
+            .select('id').eq('lead_id', id).eq('channel', 'email')
+            .ilike('to_address', to).not('bounced_at', 'is', null).limit(1);
+        bouncedHere = !!(b && b.length);
+    } catch (_) {
+        // Fail CLOSED to the old behaviour if we cannot read the per-address
+        // history: an unreadable bounce table is not evidence the address is
+        // good, and re-mailing a hard bounce is a reputation hit.
+        bouncedHere = !!lead.bounced_at;
+    }
+
+    // The override Remy asked for: a rep who has confirmed the address on the
+    // phone can send to it anyway. Deliberately NOT available for unsubscribes
+    // or spam complaints further down; those are consent, and consent has no
+    // "but I called them" exception. A hard bounce is only ever a delivery
+    // fact, so a human with better information is allowed to overrule it.
+    const overrideBounce = body.override_bounce === true;
+    const overrideReason = String(body.override_reason || '').trim();
+    if (bouncedHere && !overrideBounce) {
+        return res.status(409).json({
+            error: 'recipient_bounced',
+            detail: to + ' hard-bounced on a previous send.',
+            can_override: true,
+            address: to,
+        });
+    }
+    if (bouncedHere && overrideBounce) {
+        if (overrideReason.length < 4) {
+            return res.status(400).json({ error: 'override_reason_required', detail: 'Say how you confirmed this address.' });
+        }
+        console.warn('[send-email] BOUNCE OVERRIDE by ' + gate.email + ' lead=' + id
+            + ' to=' + to + ' reason=' + overrideReason.slice(0, 200));
+        try {
+            const stamp = '\n[' + new Date().toISOString().slice(0, 10) + '] Bounce override: '
+                + gate.email + ' emailed ' + to + ' after it hard-bounced. Reason: ' + overrideReason.slice(0, 200);
+            const { data: cur } = await sb.from('leads').select('rep_notes').eq('id', id).maybeSingle();
+            await sb.from('leads').update({ rep_notes: (cur && cur.rep_notes ? cur.rep_notes : '') + stamp }).eq('id', id);
+        } catch (_) { /* audit note is best effort, never blocks the send */ }
     }
     // 2. Inline MX / disposable check on the recipient domain. Blocks only a
     //    domain that literally cannot receive mail (no MX) or a disposable inbox.

@@ -7462,22 +7462,44 @@
             } catch (e) { status.style.color = 'var(--red)'; status.textContent = 'Could not re-draft: ' + (e.message || 'unknown'); }
         }
         function closeEmailComposer() { document.getElementById('emailComposerModal').style.display = 'none'; }
-        async function sendComposerEmail() {
+        async function sendComposerEmail(override) {
             var to = document.getElementById('ecTo').value.trim();
             var subject = document.getElementById('ecSubject').value.trim();
             var body = document.getElementById('ecBody').value.trim();
             var msg = document.getElementById('ecMsg');
             if (!ecValidEmail(to)) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter a valid email address.'; document.getElementById('ecTo').focus(); return; }
             if (body.length < 20) { msg.style.color = 'var(--red)'; msg.textContent = 'The message looks empty.'; return; }
+
+            // Bounce override, same contract as the SDR composer.
+            var payload = { id: emailComposerLeadId, to: to, subject: subject, body: body, variant: emailComposerVariant };
+            if (override) {
+                var why = window.prompt('This exact address hard-bounced before. How did you confirm it is correct?\n\n(e.g. "called the office 8/17, receptionist spelled it out")');
+                if (why == null) return;
+                why = why.trim();
+                if (why.length < 4) { msg.style.color = 'var(--red)'; msg.textContent = 'Give a short reason so it is on the record.'; return; }
+                payload.override_bounce = true;
+                payload.override_reason = why;
+            }
+
             setEcSending(true); msg.style.color = 'var(--text-muted)'; msg.textContent = 'Sending…';
             try {
-                await prospectFetchJSON('/api/prospects/send-email', { method: 'POST', body: JSON.stringify({ id: emailComposerLeadId, to: to, subject: subject, body: body, variant: emailComposerVariant }) });
+                await prospectFetchJSON('/api/prospects/send-email', { method: 'POST', body: JSON.stringify(payload) });
                 msg.style.color = 'var(--green,#10b981)'; msg.textContent = 'Sent to ' + to + '.';
                 setTimeout(closeEmailComposer, 1300);
             } catch (e) {
                 setEcSending(false);
                 var detail = (e.body && e.body.detail) ? (' (' + e.body.detail + ')') : '';
-                msg.style.color = 'var(--red)'; msg.textContent = 'Send failed: ' + (e.message || 'unknown') + detail;
+                msg.style.color = 'var(--red)';
+                msg.textContent = 'Send failed: ' + (e.message || 'unknown') + detail;
+                if (e.body && e.body.can_override) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn';
+                    btn.style.cssText = 'margin-top:8px;display:block';
+                    btn.textContent = 'Send anyway, I confirmed this address';
+                    btn.onclick = function () { sendComposerEmail(true); };
+                    msg.appendChild(btn);
+                }
             }
         }
         function copyComposerEmail() {

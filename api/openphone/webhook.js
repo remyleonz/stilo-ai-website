@@ -22,6 +22,7 @@
 
 const { verifySignature, readRawBody, serviceClient, publicClient, normalizePhone, openphoneFetch } = require('./_shared');
 const outboundReplies = require('../prospects/_outbound_reply');
+const missedCall = require('../prospects/_missed_call_alert');
 
 // Quo ships TWO direction vocabularies depending on the event:
 //   call.completed                      -> 'incoming' / 'outgoing'
@@ -411,6 +412,13 @@ module.exports = async function handler(req, res) {
         try {
             const { error: msgErr } = await sb.from('lead_messages').insert(messageRow);
             if (msgErr && msgErr.code !== '23505') throw msgErr; // ignore dup-on-key collisions
+            // 23505 here means the unique index on provider_message_id rejected a
+            // redelivery, so we have already processed this exact message. That
+            // is now the ONE place redelivery is filtered, which is what lets the
+            // reply alert fire on every genuinely new message instead of once per
+            // target. Quo retries any non-2xx, so without this a retry storm
+            // would re-alert on the same text.
+            const isRedelivery = !!msgErr;
 
             // Outbound campaign reply handling runs INLINE, not on a cron. The
             // campaign promises a callback inside ~4 minutes, and a 5-minute
@@ -421,7 +429,7 @@ module.exports = async function handler(req, res) {
             // Wrapped so a failure can never 500 the webhook: Quo retries any
             // non-2xx, and a retry loop would re-insert messages and re-alert.
             let outboundReply = null;
-            if (direction === 'inbound') {
+            if (direction === 'inbound' && !isRedelivery) {
                 try {
                     outboundReply = await outboundReplies.handleInboundSms(
                         messageRow.from_address, messageRow.to_address, body
@@ -834,7 +842,30 @@ module.exports = async function handler(req, res) {
             await sb.from('leads').update(updates).eq('id', callRow.lead_id);
         }
 
-        return res.status(200).json({ ok: true, call_id: openphoneCallId, lead_id: callRow.lead_id });
+        // A prospect dialing our number and not getting through is the strongest
+        // buying signal in the system and until 2026-08-17 it raised nothing at
+        // all. Runs after the lead stamp so the email carries the current stage,
+        // and wrapped so a Resend outage can never 500 the webhook: Quo retries
+        // any non-2xx, and a retry loop here would re-alert on the same call.
+        let missedAlert = null;
+        if (inboundCall) {
+            try {
+                missedAlert = await missedCall.alertMissedInbound(sb, {
+                    callId: openphoneCallId,
+                    leadId: mayStampLead ? callRow.lead_id : null,
+                    phone: baseFields.from_number || callRow.from_number,
+                    outcome: baseFields.outcome || callRow.outcome,
+                    calledAt: baseFields.called_at,
+                    repEmail: baseFields.logged_by || callRow.logged_by,
+                    transcript: baseFields.transcript || callRow.transcript,
+                    summary: baseFields.transcript_summary || callRow.transcript_summary,
+                });
+            } catch (e) {
+                console.error('[openphone/webhook] missed-call alert failed', e && e.message);
+            }
+        }
+
+        return res.status(200).json({ ok: true, call_id: openphoneCallId, lead_id: callRow.lead_id, missed_alert: missedAlert });
     } catch (e) {
         console.error('[openphone/webhook] processing error:', e);
         return res.status(500).json({ error: 'webhook_processing_failed', detail: String(e.message || e) });

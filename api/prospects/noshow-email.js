@@ -62,7 +62,19 @@ module.exports = async function handler(req, res) {
 
     const to = (body.to && String(body.to).trim()) || lead.owner_email || lead.email || null;
     if (!validEmail(to)) return res.status(400).json({ error: 'no_valid_email', detail: 'This lead has no email on file. Add one to the lead first.' });
-    if (lead.bounced_at) return res.status(409).json({ error: 'recipient_bounced', detail: to + ' previously bounced and will not be re-emailed.' });
+    // Per-ADDRESS, not per-lead. See the long note in send-email.js: the old
+    // `if (lead.bounced_at)` let one wrong guessed address block every other
+    // address at the same company forever.
+    try {
+        const { data: b } = await sb.from('lead_messages')
+            .select('id').eq('lead_id', id).eq('channel', 'email')
+            .ilike('to_address', to).not('bounced_at', 'is', null).limit(1);
+        if (b && b.length) {
+            return res.status(409).json({ error: 'recipient_bounced', detail: to + ' hard-bounced on a previous send.', address: to });
+        }
+    } catch (_) {
+        if (lead.bounced_at) return res.status(409).json({ error: 'recipient_bounced', detail: to + ' previously bounced and will not be re-emailed.' });
+    }
 
     // Never email an opted-out address (honors the one-click unsubscribe list).
     try {

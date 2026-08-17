@@ -242,10 +242,22 @@ async function handleInboundSms(fromPhone, toPhone, text) {
     }
     await sb.from('outbound_targets').update(patch).eq('id', t.id);
 
-    // Alert once per target. A second message from the same person before
-    // anyone has called back is the same lead, not a new one.
-    if (t.reply_alert_sent_at) return { action: 'replied', lead_id: t.lead_id, alerted: false };
-
+    // ALERT ON EVERY REPLY, not once per target.
+    //
+    // This used to bail out whenever reply_alert_sent_at was already set, on the
+    // theory that a second message before anyone called back is "the same lead,
+    // not a new one." That theory is wrong the moment the conversation actually
+    // starts, and it cost us a deal on 2026-08-12: Neville Walters (lead 17339)
+    // replied "I don't understand your book sales" at 1:37pm, which alerted.
+    // Marcus texted back, and then Neville sent "Yes call me tomorrow morning at
+    // 9am" at 7:29pm. That message raised no email, nobody called at 9am, and
+    // two days later he was still texting and re-opening the VSL. His most
+    // valuable message was the one the idempotency gate threw away.
+    //
+    // Redelivery protection now lives where it belongs: a unique index on
+    // lead_messages.provider_message_id, so the webhook only reaches this
+    // function for a genuinely new message. Every new inbound message from a
+    // live prospect is worth an email.
     const { data: lead } = await sb.from('leads')
         .select('id,name,owner_name,niche,category').eq('id', t.lead_id).maybeSingle();
 
