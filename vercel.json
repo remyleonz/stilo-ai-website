@@ -138,7 +138,7 @@
       "schedule": "*/15 * * * *"
     },
     {
-      "path": "/api/prospects/email-sequence?cap=15",
+      "path": "/api/prospects/email-sequence?cap=40",
       "schedule": "15 * * * *"
     },
     {
