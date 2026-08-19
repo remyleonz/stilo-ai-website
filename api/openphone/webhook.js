@@ -410,7 +410,69 @@ module.exports = async function handler(req, res) {
             raw_payload: evt
         };
         try {
-            const { error: msgErr } = await sb.from('lead_messages').insert(messageRow);
+            // OUTBOUND MERGE.
+            //
+            // We log our own sends at send time (outbound-tick.js, _send_confirmation.js,
+            // send-meeting-reminders.js) with the lead_id already resolved but no
+            // provider_message_id. Quo then delivers message.delivered for that same
+            // text, and a blind insert here created a SECOND row: same recipient, same
+            // body, one second apart, but with lead_id NULL because the counterparty
+            // lookup below cannot match a lead the sender already knew.
+            //
+            // The old comment on the sender said Quo's webhook "never has" delivered
+            // campaign sends. It does now, and roughly a third of all outbound SMS rows
+            // since 2026-08-11 were these orphan echoes, inflating every send count by
+            // about 50%. Nothing was ever double-SENT; it was double-LOGGED.
+            //
+            // So for outbound we enrich our own row instead of adding one. That keeps
+            // the lead_id, and it upgrades status 'sent' -> 'delivered' with the
+            // provider id, which is strictly better than what either row had alone.
+            let merged = false;
+            let msgErr = null;
+            if (direction === 'outbound' && messageRow.to_address) {
+                const providerId = messageRow.provider_message_id;
+
+                // Already enriched by an earlier delivery event => this is a redelivery.
+                if (providerId) {
+                    const { data: seen } = await sb.from('lead_messages')
+                        .select('id').eq('provider_message_id', providerId).limit(1);
+                    if (seen && seen.length) {
+                        msgErr = { code: '23505' };   // same meaning as the unique-index path
+                        merged = true;
+                    }
+                }
+
+                if (!merged) {
+                    // Our own un-enriched row for this exact text. Bounded to 6h so a
+                    // genuinely new message with identical copy is never swallowed.
+                    const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+                    const { data: ours } = await sb.from('lead_messages')
+                        .select('id')
+                        .eq('direction', 'outbound').eq('channel', 'sms')
+                        .eq('to_address', messageRow.to_address)
+                        .eq('body_preview', body.slice(0, 280))
+                        .is('provider_message_id', null)
+                        .gte('sent_at', since)
+                        .order('sent_at', { ascending: false })
+                        .limit(1);
+                    if (ours && ours.length) {
+                        const { error: upErr } = await sb.from('lead_messages')
+                            .update({
+                                provider_message_id: providerId,
+                                status: messageRow.status,
+                                raw_payload: evt,
+                            })
+                            .eq('id', ours[0].id);
+                        if (upErr) throw upErr;
+                        merged = true;
+                    }
+                }
+            }
+
+            if (!merged) {
+                const ins = await sb.from('lead_messages').insert(messageRow);
+                msgErr = ins.error;
+            }
             if (msgErr && msgErr.code !== '23505') throw msgErr; // ignore dup-on-key collisions
             // 23505 here means the unique index on provider_message_id rejected a
             // redelivery, so we have already processed this exact message. That
