@@ -122,7 +122,7 @@ module.exports = async function handler(req, res) {
     // which carry the same /vsl/ substring but are not this flow.
     const anchorSince = new Date(now - ANCHOR_LOOKBACK_DAYS * 864e5).toISOString();
     const { data: anchorRows, error: aErr } = await sb.from('lead_messages')
-        .select('lead_id, sent_at, sent_by, variant')
+        .select('lead_id, sent_at, sent_by, variant, to_address')
         .eq('direction', 'outbound').eq('channel', 'email')
         .gte('sent_at', anchorSince)
         .like('body', '%/vsl/%')
@@ -135,7 +135,11 @@ module.exports = async function handler(req, res) {
         if (!r.lead_id) continue;
         const v = String(r.variant || '');
         if (v.startsWith('seq_') || v === 'meeting_confirm') continue;
-        if (!anchors.has(r.lead_id)) anchors.set(r.lead_id, { at: r.sent_at, by: r.sent_by || null });
+        // to_address is carried so the follow-up replies to the SAME inbox the
+        // rep actually used. leads.owner_email drifts from it (the rep often
+        // corrects the address on the call), and mailing the stale one starts a
+        // second thread with someone who never saw the first.
+        if (!anchors.has(r.lead_id)) anchors.set(r.lead_id, { at: r.sent_at, by: r.sent_by || null, to: r.to_address || null });
     }
     if (!anchors.size) {
         return res.status(200).json({ ok: true, dry, window: win, due_now: 0, sent: 0, skipped, note: 'no VSL emails in lookback' });
@@ -218,7 +222,8 @@ module.exports = async function handler(req, res) {
         }
 
         const rep = repBy[anc.by] || repBy[l.assigned_to] || null;
-        const to = String(l.owner_email || l.email || '').trim();
+        // Prefer the address the anchor email actually went to.
+        const to = String(anc.to || l.owner_email || l.email || '').trim();
         const slug = niche;
         const link = baseUrl() + '/vsl/' + slug + '?lid=' + l.id + '&t=' + signLead(l.id);
 
@@ -240,7 +245,11 @@ module.exports = async function handler(req, res) {
             plan.push({ id: l.id, step: 2, channel: 'sms', to: toPhone, niche,
                 from: (rep && rep.active && rep.openphone_number) || null, body: rendered.body, anchor_at: anc.at });
         } else {
-            if (!to || suppressed.has(to.toLowerCase())) { skipped.no_email++; continue; }
+            // Shape check. Some scraped addresses carry a URL-encoded leading
+            // space ("%20info@noblelg.com") or other junk; those are a
+            // guaranteed Resend 422, and 422s cost sending reputation.
+            const wellFormed = /^[^\s@%]+@[^\s@%]+\.[a-z]{2,}$/i.test(to);
+            if (!to || !wellFormed || suppressed.has(to.toLowerCase())) { skipped.no_email++; continue; }
             const rendered = step === 1 ? copy.step1(ctx) : copy.step3(ctx);
             const bad = copy.validate(step, rendered);
             if (bad.length) { skipped.copy_rejected++; continue; }
