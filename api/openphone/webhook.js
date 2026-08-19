@@ -570,7 +570,15 @@ module.exports = async function handler(req, res) {
         const ourLines = new Set(Object.keys(OWNER_LINE_TO_EMAIL).map(normalizePhone).filter(Boolean));
         try {
             const pubLines = publicClient();
-            const { data: _lns, error: _lnsErr } = await pubLines.from('sdr_users').select('openphone_number').eq('active', true).not('openphone_number', 'is', null);
+            // NOT filtered on active. This set answers "is this number ours?",
+            // which is a different question from "which rep owns it?" (see the
+            // attribution block below, which does still require active). A
+            // departed rep's line keeps receiving replies to texts they already
+            // sent: when Marcus was offboarded 2026-08-18 his line still held a
+            // live thread with a lead who had replied three times. Dropping the
+            // line here made resolveCounterpartyLead read OUR number as the
+            // prospect and stub a junk "Unknown caller" lead on every reply.
+            const { data: _lns, error: _lnsErr } = await pubLines.from('sdr_users').select('openphone_number').not('openphone_number', 'is', null);
             // Log it. Falling back to owner lines alone silently means every SDR
             // line stops being recognised as ours, so resolveCounterpartyLead
             // starts treating OUR number as the prospect and stubs junk leads.
