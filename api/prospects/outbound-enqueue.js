@@ -119,6 +119,15 @@ module.exports = async function handler(req, res) {
             'owner_phone_e164,owner_phone,phone,do_not_call,meeting_booked_at,last_called_at,' +
             'last_called_outcome,has_cold_call_script,scrub_status,scrub_phone'
         );
+        // ARCHIVE IS AUTHORITATIVE. archived_batch is how a lead is retired, and
+        // until 2026-08-19 this endpoint ignored it entirely, so every retired
+        // lead stayed textable. That is how the pre-pivot book (dentists, CPAs,
+        // insurance agents) kept reappearing in SMS campaigns months after the
+        // Aug 2026 pivot: 230 of the first 259 targets enqueued for campaign 3
+        // were retired leads. Retiring a lead now removes it from outbound as
+        // well as from the dial boards, which is what everyone already assumed
+        // archiving did.
+        q = q.is('archived_batch', null);
         if (audience === 'scripted') q = q.eq('has_cold_call_script', true);
         if (audience === 'dialed') q = q.not('last_called_at', 'is', null);
         const { data, error } = await q.order('id', { ascending: true }).range(from, from + 999);
