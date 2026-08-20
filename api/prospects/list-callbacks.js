@@ -68,7 +68,13 @@ module.exports = async function handler(req, res) {
             .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
             .is('callback_dismissed_at', null)
             .eq('pitch_agent', require('./_shared').CURRENT_OFFER)
-            .neq('do_not_call', true);
+            // do_not_call is a nullable boolean and most rows are NULL, not
+            // false. PostgREST's neq drops NULL rows (NULL != true is NULL, not
+            // true), so the old .neq('do_not_call', true) hid every callback
+            // that had never been explicitly marked callable: the admin tab
+            // showed 4 of 20 while /sdr/ showed all of them. Match callbacks.js,
+            // which always used the null-safe form.
+            .or('do_not_call.is.null,do_not_call.eq.false');
         if (assignedTo) q = q.eq('assigned_to', assignedTo);
         if (dueToday) {
             q = q.lte('next_action_due_at', endOfDay.toISOString());

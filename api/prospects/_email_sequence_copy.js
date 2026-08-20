@@ -62,7 +62,7 @@ const NICHE_SLOTS = {
         vsl_link: VSL_BASE + 'commercial-roofing',
     },
     'staffing': {
-        hook_line: 'Usually the recruiters are not the problem, the order book is.',
+        hook_line: 'The firms that grow past a handful of accounts stopped waiting on referrals to bring them.',
         vsl_link: VSL_BASE + 'staffing',
     },
     'freight': {
@@ -90,7 +90,7 @@ const COPY = {
             body: body([
                 'Hi {{first_name}},',
                 '',
-                "Most staffing firms I talk to have the same math problem: plenty of candidates, not enough client orders to run them against. The fill rate looks fine until you notice it's the same six accounts you've had for years, and one of them just took hiring in-house.",
+                "Most staffing firms I talk to are running on the same six or seven client accounts they have had for years. It works right up until one of them takes hiring in-house or switches vendors, and a serious piece of the month leaves with it.",
                 '',
                 '{{hook_line}}',
                 '',
@@ -102,7 +102,7 @@ const COPY = {
             body: body([
                 'Hi {{first_name}},',
                 '',
-                'Most staffing firms I talk to have plenty of candidates and not enough client orders to run them against. {{hook_line}}',
+                'Most staffing firms I talk to are running on the same handful of client accounts they have had for years, and replacing one takes months. {{hook_line}}',
                 '',
                 "That's the part we handle: we put qualified hiring-manager meetings on your calendar, and one pricing option is per meeting delivered, so if nothing books you pay nothing.",
                 '',
@@ -116,7 +116,7 @@ const COPY = {
             body: body([
                 'Hi {{first_name}},',
                 '',
-                "Following up on my note from the other day. The firms growing this year aren't winning on sourcing, they're winning on new client logos. One account with steady orders beats any candidate database.",
+                "Following up on my note from the other day. The firms growing this year are winning new client logos. One more account ordering steadily changes the shape of a year more than anything else you can do.",
                 '',
                 "That's the part we handle. We book sales meetings for staffing agencies with hiring managers who have open reqs and a budget. You run the pitch. Every meeting comes with notes on headcount, timeline, and who you're talking to.",
                 '',
@@ -134,7 +134,7 @@ const COPY = {
                 '',
                 "We book those meetings, you close them. If month one doesn't earn its keep, you walk.",
                 '',
-                "This is my last note either way. If new client accounts aren't the priority this quarter, no hard feelings, I'll get out of your inbox. But if your recruiters are sitting on candidates they can't place because the orders aren't there, that's fixable. Reply \"call\" and I'll ring you this week.",
+                "This is my last note either way. If new client accounts aren't the priority this quarter, no hard feelings, I'll get out of your inbox. But if you could take on more work than the orders currently coming in, that's fixable. Reply \"call\" and I'll ring you this week.",
             ]),
         },
     },

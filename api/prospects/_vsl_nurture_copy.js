@@ -43,7 +43,7 @@ const NICHE = {
     },
     'staffing': {
         noun: 'client accounts',
-        problem: 'Plenty of candidates, not enough client orders to run them against. The fill rate looks fine until you notice it is the same six accounts you have had for years, and one of them just took hiring in-house. Usually the recruiters are not the problem, the order book is.',
+        problem: 'Most firms are running on the same six or seven client accounts they have had for years. It works right up until one takes hiring in-house or switches vendors, and a serious piece of the month leaves with it. Replacing an account on referrals alone takes months.',
         question: 'are you actively taking on new client accounts right now, or pretty much at capacity?',
         meeting: 'which hiring managers with open reqs we would go after, and how they end up on your calendar',
     },
@@ -171,6 +171,19 @@ function played2(ctx) {
 // it can be sent; vsl-nurture.js refuses to send anything that fails.
 const BANNED_PRICE = /\$|\bprice\b|\bpricing\b|\bcost[s]?\b|\bfee\b|per meeting|per month|monthly|retainer|starting at/i;
 const BANNED_AI = /\bA\.?I\.?\b|\bagent\b|automat|\bbot\b|\bsoftware\b|\balgorithm/i;
+
+// SUPPLY-SIDE LANGUAGE IS BANNED OUTRIGHT, in every niche.
+//
+// We sell booked meetings with new CLIENTS. We have never sourced a candidate
+// for anyone. Every time the copy reached for "plenty of candidates, not enough
+// orders" it invited the prospect to talk about a service we do not offer, and
+// the rep then had to walk it back mid-call. Raul Pena spent his whole call on
+// the worker shortage because our own copy raised it first.
+//
+// Words about the client's demand are fine ("open reqs", "placements", "orders"),
+// because those are what a new account buys. Words about supplying people are
+// not.
+const BANNED_SUPPLY_SIDE = /\bcandidates?\b|\brecruiters?\b|\bsourcing\b|\bfill rate\b|\btalent pool\b|\bbench\b|\bworker shortage\b|\bfind(ing)? (you )?workers?\b/i;
 const STEP3_BANNED_WATCH = /\bwatch\b|\bvideo\b|\bvsl\b/i;
 
 function validate(step, rendered) {
@@ -178,6 +191,7 @@ function validate(step, rendered) {
     const problems = [];
     if (BANNED_PRICE.test(text)) problems.push('price_mentioned');
     if (BANNED_AI.test(text)) problems.push('ai_word');
+    if (BANNED_SUPPLY_SIDE.test(text)) problems.push('supply_side_language');
     if (/\{\{|\bundefined\b|\bnull\b|\[object/i.test(text)) problems.push('unrendered_token');
     if (step === 3 && STEP3_BANNED_WATCH.test(text)) problems.push('step3_still_asks_for_the_watch');
     // The post-play messages must never reveal that we tracked the play.
