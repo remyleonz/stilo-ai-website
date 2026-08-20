@@ -24,11 +24,15 @@ const { createClient } = require('@supabase/supabase-js');
 const storage = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 const leadsDb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });
 
-// 2026-08-11: rep-a (the only SDR folder with rep-facing GCS scripts) went to
-// George, who is dialling now; rep-d (250 briefs, no scripts yet) went to
-// Marcus, the new hire. One folder per rep keeps each rep on two niches.
-const REP_EMAIL = { 'rep-a': 'georgegutierrez446@gmail.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'ayesjorge911@gmail.com', 'rep-d': 'marcuslindsey8@gmail.com', 'dc': 'davidcoira@stiloaipartners.com', 'rl': 'remyleon@stiloaipartners.com' };
-const REP_NAME = { 'rep-a': 'George', 'rep-b': 'Alejandro', 'rep-c': 'Jorge', 'rep-d': 'Marcus', 'dc': 'David', 'rl': 'Remy' };
+// 2026-08-20: George holds BOTH rep-a and rep-d. rep-d is his original book
+// (David created it for him 2026-08-03); it detoured through Marcus after the
+// 08-11 swap and then to Remy on Marcus's 08-19 offboarding, which left George's
+// board at 53 leads with no brief file behind any of them. rep-a is empty today
+// but stays mapped to him so a future push there still lands.
+// NEVER map a folder to an inactive rep: outbound-enqueue drops leads whose
+// assigned_to has no active sdr_users row, silently killing the book.
+const REP_EMAIL = { 'rep-a': 'georgegutierrez446@gmail.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'ayesjorge911@gmail.com', 'rep-d': 'georgegutierrez446@gmail.com', 'dc': 'davidcoira@stiloaipartners.com', 'rl': 'remyleon@stiloaipartners.com' };
+const REP_NAME = { 'rep-a': 'George', 'rep-b': 'Alejandro', 'rep-c': 'Jorge', 'rep-d': 'George', 'dc': 'David', 'rl': 'Remy' };
 const NAME_BY_EMAIL = {}; Object.keys(REP_EMAIL).forEach(f => NAME_BY_EMAIL[REP_EMAIL[f]] = REP_NAME[f]);
 const SDR_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d'];
 const ALL_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'dc', 'rl'];

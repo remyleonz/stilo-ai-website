@@ -35,10 +35,16 @@ const BRIEF_BUCKET = 'cold-call-briefs';
 const GCS_BUCKET = 'stilo-cold-call-scripts';
 const GCS_PREFIX = 'cold-call/';
 
-// Same folder map the rest of the app uses. rep-a moved from Luke to Marcus on
-// 2026-08-10; dc/rl are the owner brief folders.
+// 2026-08-20: rep-d points back at GEORGE. The 08-19 offboarding routing sent
+// it to Remy (and this file still said Marcus), but rep-d was never Marcus's
+// book: David created it FOR George on 2026-08-03 and Marcus held it eight days
+// after the 08-11 swap. That detour left George's board at 53 dead leads with no
+// brief file behind any of them. rep-a stays on George too; it is empty today.
+// NEVER point a folder at an inactive rep: outbound-enqueue drops any lead whose
+// assigned_to has no active sdr_users row, so the book silently stops being
+// callable or textable. Keep in sync with prospecting.reconcile_brief_assignments().
 const FOLDER_TO_REP = {
-    'rep-a': 'marcuslindsey8@gmail.com',
+    'rep-a': 'georgegutierrez446@gmail.com',
     'rep-b': 'aleb1027@gmail.com',
     'rep-c': 'ayesjorge911@gmail.com',
     'rep-d': 'georgegutierrez446@gmail.com',

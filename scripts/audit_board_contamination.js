@@ -27,11 +27,19 @@ fs.readFileSync(path.join(__dirname, '..', '.env.local'), 'utf8').split('\n').fo
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 });
 
+// 2026-08-20: rep-d points back at GEORGE. The 08-19 offboarding routing sent
+// it to Remy (and this file still said Marcus), but rep-d was never Marcus's
+// book: David created it FOR George on 2026-08-03 and Marcus held it eight days
+// after the 08-11 swap. That detour left George's board at 53 dead leads with no
+// brief file behind any of them. rep-a stays on George too; it is empty today.
+// NEVER point a folder at an inactive rep: outbound-enqueue drops any lead whose
+// assigned_to has no active sdr_users row, so the book silently stops being
+// callable or textable. Keep in sync with prospecting.reconcile_brief_assignments().
 const FOLDER_TO_REP = {
     'rep-a': 'georgegutierrez446@gmail.com',
     'rep-b': 'aleb1027@gmail.com',
     'rep-c': 'ayesjorge911@gmail.com',
-    'rep-d': 'marcuslindsey8@gmail.com',
+    'rep-d': 'georgegutierrez446@gmail.com',
     'rl': 'remyleon@stiloaipartners.com',
     'dc': 'davidcoira@stiloaipartners.com'
 };
