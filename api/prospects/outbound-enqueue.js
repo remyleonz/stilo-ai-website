@@ -60,6 +60,46 @@ async function connectedLeadIds(sb) {
     return ids;
 }
 
+/**
+ * lead_id -> email of the rep who most recently DIALLED that lead.
+ *
+ * The campaign texts from the assigned rep's line, but the person actually
+ * working a lead is often someone else, and then the prospect gets a call from
+ * one number and a text from another about the same thing. On 2026-08-20
+ * Leonardo Miraldi had six missed calls from Remy's line and then a text from
+ * Alejandro's line, because the lead was assigned to Alejandro. Two strangers,
+ * one conversation.
+ *
+ * Whoever is on their caller ID is the voice the text should come from, so the
+ * last dialler wins over the assignment. Assignment still decides ownership and
+ * commission; this only decides which number the message leaves from.
+ */
+async function lastDialerByLead(sb) {
+    const map = new Map();
+    const seen = new Map();
+    let from = 0;
+    for (;;) {
+        const { data, error } = await sb.from('lead_calls')
+            .select('lead_id, logged_by, called_at, direction')
+            .eq('direction', 'outbound')
+            .order('called_at', { ascending: false })
+            .range(from, from + 999);
+        if (error) throw new Error('lead_calls read failed: ' + error.message);
+        if (!data.length) break;
+        for (const r of data) {
+            if (!r.lead_id || !r.logged_by) continue;
+            const t = new Date(r.called_at).getTime();
+            if (!seen.has(r.lead_id) || t > seen.get(r.lead_id)) {
+                seen.set(r.lead_id, t);
+                map.set(r.lead_id, r.logged_by);
+            }
+        }
+        if (data.length < 1000) break;
+        from += 1000;
+    }
+    return map;
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
     // Same auth shape as sync-scripts.js and outbound-tick.js: a Vercel cron /
@@ -98,13 +138,17 @@ module.exports = async function handler(req, res) {
         catch (e) { return res.status(500).json({ error: 'calls_read_failed', detail: e.message }); }
     }
 
+    let lastDialer;
+    try { lastDialer = await lastDialerByLead(sb); }
+    catch (e) { return res.status(500).json({ error: 'calls_read_failed', detail: e.message }); }
+
     // Reasons are counted, not just filtered, so a small result set is
     // explainable instead of mysterious.
     const held = {
         no_phone: 0, do_not_call: 0, already_booked: 0, bad_outcome: 0,
         not_scrubbed: 0, scrub_blocked: 0, scrub_phone_mismatch: 0,
         no_rep_line: 0, not_in_audience: 0, already_in_campaign: 0,
-        scrub_waived_prior_contact: 0,
+        scrub_waived_prior_contact: 0, line_followed_last_dialer: 0,
     };
 
     const { data: existing } = await sb.from('outbound_targets')
@@ -161,13 +205,19 @@ module.exports = async function handler(req, res) {
                 held.scrub_waived_prior_contact = (held.scrub_waived_prior_contact || 0) + 1;
             }
 
-            const rep = reps[l.assigned_to];
+            // One voice per prospect: text from the number already on their
+            // caller ID. Falls back to the assigned rep when nobody has dialled,
+            // or when the last dialler has no active line.
+            const dialer = lastDialer.get(l.id);
+            const voice = (dialer && reps[dialer]) ? dialer : l.assigned_to;
+            const rep = reps[voice];
             if (!rep) { held.no_rep_line++; continue; }
+            if (voice !== l.assigned_to) held.line_followed_last_dialer++;
 
             rows.push({
                 campaign_id: campaignId,
                 lead_id: l.id,
-                assigned_to: l.assigned_to,
+                assigned_to: voice,
                 from_line: rep.line,
                 to_phone: to,
                 stage: 'queued',
