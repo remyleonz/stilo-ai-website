@@ -126,6 +126,46 @@ function step3(ctx) {
     };
 }
 
+
+// ---------------------------------------------------------------------------
+// POST-PLAY BOOKING TRACK
+//
+// They watched the video. Until 2026-08-20 that made them EXIT the sequence and
+// get handed to a rep, which meant the most engaged people got the least
+// follow-up: when a gatekeeper blocked the call, nothing happened at all. Noble
+// Entertainment played the VSL on 19 Aug, the CEO's gatekeeper refused to
+// transfer on 20 Aug, and there was no next step.
+//
+// Two rules make this copy different from steps 1-3 above:
+//   - NEVER say we know they watched. Citing tracking data back at a prospect
+//     reads as surveillance and kills the reply.
+//   - NEVER re-explain the offer. They have seen it. A follow-up to someone who
+//     already heard the pitch is acknowledgement plus ONE question.
+// So these two messages assume knowledge and ask only for the meeting.
+
+function played1(ctx) {
+    const n = NICHE[ctx.niche];
+    return {
+        subject: n.noun + ' at ' + ctx.company,
+        body: join([
+            'Hi ' + ctx.first + ',',
+            '',
+            'Short one. Now that you have had a look at what we do, the only thing left is whether it is a fit for ' + ctx.company + ', and that is a twenty minute conversation, not an email.',
+            '',
+            'I would walk you through ' + n.meeting + '. No slides.',
+            '',
+            'Does later this week work, or is next week easier?',
+        ]),
+    };
+}
+
+function played2(ctx) {
+    return {
+        body: 'hey ' + ctx.firstLower + ', ' + ctx.repFirstLower + ' here. following up on the note i sent about ' + ctx.company
+            + '. worth twenty minutes this week to see if it is a fit, or should i leave it for now?',
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Fences. A brief is not a guarantee, so every rendered body is checked before
 // it can be sent; vsl-nurture.js refuses to send anything that fails.
@@ -140,8 +180,10 @@ function validate(step, rendered) {
     if (BANNED_AI.test(text)) problems.push('ai_word');
     if (/\{\{|\bundefined\b|\bnull\b|\[object/i.test(text)) problems.push('unrendered_token');
     if (step === 3 && STEP3_BANNED_WATCH.test(text)) problems.push('step3_still_asks_for_the_watch');
-    if (step === 2 && (rendered.body || '').length > 320) problems.push('sms_too_long');
+    // The post-play messages must never reveal that we tracked the play.
+    if ((step === 'played1' || step === 'played2') && /\bwatch|\bvideo\b|\bvsl\b|\bsaw\b|\bviewed\b/i.test(text)) problems.push('played_step_reveals_tracking');
+    if ((step === 2 || step === 'played2') && (rendered.body || '').length > 320) problems.push('sms_too_long');
     return problems;
 }
 
-module.exports = { NICHE, step1, step2, step3, validate };
+module.exports = { NICHE, step1, step2, step3, played1, played2, validate };

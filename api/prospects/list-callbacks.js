@@ -59,9 +59,14 @@ module.exports = async function handler(req, res) {
         // next_action_type='callback' doesn't qualify when the last outcome was
         // a machine one (voicemail / no_answer / missed_inbound): those stamps
         // came from auto-retry scheduling, not a rep promising a callback.
+        // Dismissed callbacks are hidden, never deleted — same filter as
+        // callbacks.js, and it has to be here too or a lead removed in /sdr/
+        // would still show in /admin/. See set-callback.js for why a dismissal
+        // column is the only safe way off this list.
         let q = sb.from('leads')
             .select(SELECT_COLS)
             .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
+            .is('callback_dismissed_at', null)
             .eq('pitch_agent', require('./_shared').CURRENT_OFFER)
             .neq('do_not_call', true);
         if (assignedTo) q = q.eq('assigned_to', assignedTo);

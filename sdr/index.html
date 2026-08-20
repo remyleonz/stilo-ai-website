@@ -1633,6 +1633,7 @@
                     html += '</tbody></table>';
                 } else if (sub === 'callbacks') {
                     STATE.cbRows = rows;
+                    STATE.cbMsg = null;   // a fresh load clears the last edit's banner
                     try { var _bk = await fetchJSON('/api/prospects/list-booked?limit=200'); STATE.cbMeetings = (_bk && (_bk.results || _bk.leads)) || []; } catch (_) { STATE.cbMeetings = []; }
                     html = '<div id="cbCalHost">' + callbackCalendarHtml() + '</div>';
                 } else if (sub === 'booked') {
@@ -1646,9 +1647,11 @@
             }
         }
 
-        // Callbacks table: sorted by the actual callback time (soonest / most
-        // overdue first). The time lives in next_action_due_at or the legacy
-        // next_callback_at, so coalesce; rows with neither sort last.
+        // Callbacks table: the calendar's List view. Sorted by the actual
+        // callback time (soonest / most overdue first). The time lives in
+        // next_action_due_at or the legacy next_callback_at, so coalesce; rows
+        // with neither sort last. This is the surface for editing a callback
+        // that isn't on the day you're looking at.
         function callbackTableHtml(rows) {
             var FAR = 8640000000000000;
             var sorted = (rows || []).slice().sort(function (a, b) {
@@ -1658,7 +1661,8 @@
                 return ax - bx;
             });
             var now = Date.now();
-            var html = '<table><thead><tr><th>Due</th><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Last call</th></tr></thead><tbody>';
+            if (!sorted.length) return '<div class="cbcal-empty">No callbacks on the list.</div>';
+            var html = '<table><thead><tr><th>Due (ET)</th><th>Business</th><th>Owner</th><th>Phone</th><th>Last call</th><th>Edit</th></tr></thead><tbody>';
             sorted.slice(0, 200).forEach(function (r) {
                 var due = r.next_action_due_at || r.next_callback_at || null;
                 var dms = tsToMs(due);
@@ -1668,8 +1672,8 @@
                     + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
                     + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
                     + '<td style="white-space:nowrap;">' + escapeHtml(leadPhone(r) || '—') + '</td>'
-                    + '<td>' + escapeHtml(r.niche || '—') + '</td>'
                     + '<td style="white-space:nowrap;">' + fmtET(r.last_called_at) + '</td>'
+                    + '<td class="cbl-act">' + cbActionsHtml(r) + '</td>'
                     + '</tr>';
             });
             return html + '</tbody></table>';
@@ -1722,6 +1726,17 @@
           + '.cbd-bn{font-size:14px;font-weight:600;color:var(--text-primary,#f4f4f6)}'
           + '.cbd-bm{font-size:12px;color:var(--text-secondary,#a7a7b4)}'
           + '.cbcal-empty{padding:40px;text-align:center;color:var(--text-tertiary,#6c6c79)}'
+          // Edit controls on a callback item (day view + list view). Same three
+          // actions in both places, same markup, one set of handlers.
+          + '.cbact{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}'
+          + '.cbact input[type=datetime-local]{background:var(--bg-base,#0d0d10);border:1px solid var(--border-medium,#2a2a33);color:var(--text-primary,#f4f4f6);border-radius:6px;padding:5px 7px;font-size:11.5px;font-family:inherit;color-scheme:dark}'
+          + '.cbact button{background:var(--bg-elevated,#151519);border:1px solid var(--border-medium,#2a2a33);color:var(--text-secondary,#a7a7b4);border-radius:6px;padding:5px 9px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}'
+          + '.cbact button:hover{border-color:var(--blue,#2563EB);color:var(--text-primary,#f4f4f6)}'
+          + '.cbact button.pri{background:var(--blue,#2563EB);border-color:var(--blue,#2563EB);color:#fff}'
+          + '.cbact button.dgr:hover{border-color:var(--red,#ef4444);color:var(--red,#ef4444)}'
+          + '.cbd-block.acted{min-width:300px}'
+          + '.cbcal-msg{margin:0 0 12px;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid}'
+          + '.cbl-act .cbact{margin-top:0}'
           + '</style>';
 
         function cbET(ms) {
@@ -1731,6 +1746,42 @@
         }
         function cbTimeLabel(h, mi) { var ap = h < 12 ? 'a' : 'p'; var hh = h % 12; if (hh === 0) hh = 12; return hh + (mi ? (':' + String(mi).padStart(2, '0')) : '') + ap; }
         function cbDueMs(r) { return tsToMs(r.next_action_due_at || r.next_callback_at || null); }
+        // ── ET <-> <input type="datetime-local"> ──
+        // Every callback time in this business is Eastern, but datetime-local
+        // carries no timezone and renders whatever the rep's laptop is set to.
+        // So we convert both ways by hand instead of trusting the local clock.
+        function cbEtOffsetMs(ms) {
+            var d = new Date(ms);
+            var u = new Date(d.toLocaleString('sv-SE', { timeZone: 'UTC' }).replace(' ', 'T') + 'Z').getTime();
+            var e = new Date(d.toLocaleString('sv-SE', { timeZone: 'America/New_York' }).replace(' ', 'T') + 'Z').getTime();
+            return u - e;
+        }
+        function cbToEtInput(ms) {
+            if (ms == null) return '';
+            var p = cbET(ms);
+            return p.iso + 'T' + String(p.hour).padStart(2, '0') + ':' + String(p.min).padStart(2, '0');
+        }
+        function cbFromEtInput(v) {
+            if (!v || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) return null;
+            var wall = new Date(v.slice(0, 16) + ':00Z').getTime();
+            if (isNaN(wall)) return null;
+            var real = wall + cbEtOffsetMs(wall);
+            real = wall + cbEtOffsetMs(real);   // second pass settles DST edges
+            return isNaN(real) ? null : new Date(real).toISOString();
+        }
+        // The three edit controls. Rendered for callbacks only — a booked
+        // meeting on this calendar belongs to the booking flow, not here.
+        function cbActionsHtml(r) {
+            var id = r.id;
+            if (id == null) return '';
+            var val = cbToEtInput(cbDueMs(r));
+            return '<div class="cbact" onclick="event.stopPropagation()">'
+                + '<input type="datetime-local" id="cbdt-' + id + '" value="' + val + '" aria-label="Callback date and time (ET)">'
+                + '<button class="pri" onclick="cbReschedule(' + id + ')">Reschedule</button>'
+                + '<button onclick="cbMarkCalled(' + id + ')">Mark called</button>'
+                + '<button class="dgr" onclick="cbRemove(' + id + ')">Remove</button>'
+                + '</div>';
+        }
         // Callback state -> chip color: called (green) if we called at/after the
         // scheduled callback time, overdue (red) if past-due and not called, else
         // upcoming (blue). Booked meetings render as a solid accent chip.
@@ -1779,12 +1830,23 @@
             if (v === 'day') { var d = new Date(Date.UTC(f.y, f.m - 1, f.d, 12)); title = wdays[d.getUTCDay()] + ', ' + months[f.m - 1] + ' ' + f.d; }
             else title = months[f.m - 1] + ' ' + f.y;
             var kind = v;
+            if (v === 'list') title = 'All callbacks';
+            // The date arrows mean nothing in List view, which shows every
+            // callback at once, so they come out of the bar there.
+            var nav = v === 'list'
+                ? '<div class="cbcal-nav"><span class="cbcal-title" style="margin-left:0;">' + escapeHtml(title) + '</span></div>'
+                : '<div class="cbcal-nav"><button onclick="cbShift(\'' + kind + '\',-1)">&lsaquo;</button><button class="cbcal-today" onclick="cbToday()">Today</button><button onclick="cbShift(\'' + kind + '\',1)">&rsaquo;</button><span class="cbcal-title">' + escapeHtml(title) + '</span></div>';
+            var m = STATE.cbMsg;
+            var msg = m
+                ? '<div class="cbcal-msg" style="color:' + m.color + ';border-color:' + m.color + ';background:rgba(255,255,255,0.03);">' + escapeHtml(m.text) + '</div>'
+                : '';
             return CBCAL_STYLE
                 + '<div class="cbcal-bar">'
-                + '<div class="cbcal-nav"><button onclick="cbShift(\'' + kind + '\',-1)">&lsaquo;</button><button class="cbcal-today" onclick="cbToday()">Today</button><button onclick="cbShift(\'' + kind + '\',1)">&rsaquo;</button><span class="cbcal-title">' + escapeHtml(title) + '</span></div>'
-                + '<div class="cbcal-views"><button class="' + (v === 'month' ? 'on' : '') + '" onclick="cbSetView(\'month\')">Month</button><button class="' + (v === 'week' ? 'on' : '') + '" onclick="cbSetView(\'week\')">Week</button><button class="' + (v === 'day' ? 'on' : '') + '" onclick="cbSetView(\'day\')">Day</button></div>'
+                + nav
+                + '<div class="cbcal-views"><button class="' + (v === 'month' ? 'on' : '') + '" onclick="cbSetView(\'month\')">Month</button><button class="' + (v === 'week' ? 'on' : '') + '" onclick="cbSetView(\'week\')">Week</button><button class="' + (v === 'day' ? 'on' : '') + '" onclick="cbSetView(\'day\')">Day</button><button class="' + (v === 'list' ? 'on' : '') + '" onclick="cbSetView(\'list\')">List</button></div>'
                 + '</div>'
-                + '<div class="cbcal-legend"><span class="lg up">Callback</span><span class="lg cx">Called</span><span class="lg od">Overdue</span><span class="lg mtg">Meeting confirmed</span><span class="lg mtgx">Meeting, needs confirm call</span></div>';
+                + msg
+                + (v === 'list' ? '' : '<div class="cbcal-legend"><span class="lg up">Callback</span><span class="lg cx">Called</span><span class="lg od">Overdue</span><span class="lg mtg">Meeting confirmed</span><span class="lg mtgx">Meeting, needs confirm call</span></div>');
         }
         function cbMonthHtml() {
             var f = STATE.cbFocus, bucket = cbBucket(), todayIso = cbET(Date.now()).iso, now = Date.now();
@@ -1831,7 +1893,8 @@
             var rows = '';
             for (var h = minH; h <= maxH; h++) {
                 var blocks = items.filter(function (it) { return it.hour === h; }).map(function (it) {
-                    return '<div class="cbd-block' + cbCls(it) + '" onclick="openLeadDrawer(' + (it.r.id || 'null') + ')"><div class="cbd-bt">' + cbTimeLabel(it.hour, it.min) + (it.type === 'meeting' ? (cbNeedsConfirm(it.r) ? ' · MEETING · CONFIRM' : ' · MEETING') : '') + '</div><div class="cbd-bn">' + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div><div class="cbd-bm">' + escapeHtml(it.r.owner_name || '') + (it.r.owner_phone ? ' · ' + escapeHtml(it.r.owner_phone) : '') + '</div></div>';
+                    var acts = it.type === 'callback' ? cbActionsHtml(it.r) : '';
+                    return '<div class="cbd-block' + cbCls(it) + (acts ? ' acted' : '') + '" onclick="openLeadDrawer(' + (it.r.id || 'null') + ')"><div class="cbd-bt">' + cbTimeLabel(it.hour, it.min) + (it.type === 'meeting' ? (cbNeedsConfirm(it.r) ? ' · MEETING · CONFIRM' : ' · MEETING') : '') + '</div><div class="cbd-bn">' + escapeHtml(it.r.business_name || it.r.name || 'Lead') + '</div><div class="cbd-bm">' + escapeHtml(it.r.owner_name || '') + (it.r.owner_phone ? ' · ' + escapeHtml(it.r.owner_phone) : '') + '</div>' + acts + '</div>';
                 }).join('');
                 rows += '<div class="cbd-row"><div class="cbd-hr">' + cbTimeLabel(h, 0) + '</div><div class="cbd-slot">' + blocks + '</div></div>';
             }
@@ -1839,8 +1902,100 @@
         }
         function callbackCalendarHtml() {
             cbFocusInit();
-            var v = STATE.cbView, body = v === 'day' ? cbDayHtml() : v === 'week' ? cbWeekHtml() : cbMonthHtml();
+            var v = STATE.cbView;
+            var body = v === 'day' ? cbDayHtml()
+                : v === 'week' ? cbWeekHtml()
+                : v === 'list' ? callbackTableHtml(STATE.cbRows)
+                : cbMonthHtml();
             return cbToolbar() + body;
+        }
+
+        // ── Editing a callback ──
+        // Every write goes through /api/prospects/set-callback, which is the
+        // only thing that can take a lead off this list safely: a lead can be
+        // here because of last_called_outcome alone, and that column is real
+        // call history, so the endpoint stamps a dismissal instead of rewriting
+        // history. See api/prospects/set-callback.js.
+        //
+        // All three actions update the row locally first and revert on failure.
+        // A row that looks removed but is not would send the rep to call the
+        // same prospect twice, so a failed write has to be loud.
+        function cbFindRowIdx(id) {
+            return (STATE.cbRows || []).map(function (r) { return String(r.id); }).indexOf(String(id));
+        }
+        function cbSetMsg(text, color) {
+            STATE.cbMsg = text ? { text: text, color: color || 'var(--red, #ef4444)' } : null;
+            cbRerender();
+        }
+        // Counts on the Callbacks stat card come from the server, so refresh
+        // them after a write rather than guessing.
+        function cbAfterWrite() {
+            cbRerender();
+            try { loadLeadsStats(); } catch (_) {}
+        }
+        async function cbPost(payload) {
+            return fetchJSON('/api/prospects/set-callback', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
+        async function cbReschedule(id) {
+            var el = document.getElementById('cbdt-' + id);
+            var iso = cbFromEtInput(el && el.value);
+            if (!iso) { cbSetMsg('Pick a date and time before rescheduling.'); return; }
+            var idx = cbFindRowIdx(id);
+            if (idx === -1) return;
+            var row = STATE.cbRows[idx];
+            var prev = { due: row.next_action_due_at, legacy: row.next_callback_at, type: row.next_action_type };
+            row.next_action_due_at = iso;
+            row.next_callback_at = null;
+            row.next_action_type = 'callback';
+            STATE.cbMsg = null;
+            cbRerender();
+            try {
+                await cbPost({ id: id, action: 'reschedule', when_iso: iso });
+                STATE.cbMsg = { text: 'Callback moved to ' + fmtET(iso) + ' ET.', color: '#10b981' };
+                cbAfterWrite();
+            } catch (e) {
+                row.next_action_due_at = prev.due;
+                row.next_callback_at = prev.legacy;
+                row.next_action_type = prev.type;
+                cbSetMsg('Could not move that callback: ' + (e.message || 'unknown') + '. It is still at the old time.');
+            }
+        }
+        async function cbMarkCalled(id) {
+            var idx = cbFindRowIdx(id);
+            if (idx === -1) return;
+            var row = STATE.cbRows[idx];
+            var name = row.business_name || row.name || 'That lead';
+            STATE.cbRows.splice(idx, 1);
+            STATE.cbMsg = null;
+            cbRerender();
+            try {
+                await cbPost({ id: id, action: 'called' });
+                STATE.cbMsg = { text: name + ' marked called. The dial was logged and it left the list.', color: '#10b981' };
+                cbAfterWrite();
+            } catch (e) {
+                STATE.cbRows.splice(idx, 0, row);
+                cbSetMsg('Could not mark that callback called: ' + (e.message || 'unknown') + '. It is still on the list.');
+            }
+        }
+        async function cbRemove(id) {
+            var idx = cbFindRowIdx(id);
+            if (idx === -1) return;
+            var row = STATE.cbRows[idx];
+            var name = row.business_name || row.name || 'That lead';
+            STATE.cbRows.splice(idx, 1);
+            STATE.cbMsg = null;
+            cbRerender();
+            try {
+                await cbPost({ id: id, action: 'dismiss' });
+                STATE.cbMsg = { text: name + ' removed from the callback list. Call history is untouched.', color: '#10b981' };
+                cbAfterWrite();
+            } catch (e) {
+                STATE.cbRows.splice(idx, 0, row);
+                cbSetMsg('Could not remove that callback: ' + (e.message || 'unknown') + '. It is still on the list.');
+            }
         }
 
         // The agent a meeting was booked for. pitch_agent is free text from

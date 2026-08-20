@@ -160,6 +160,12 @@ module.exports = async function handler(req, res) {
             if (callbackAt && (body.outcome === 'callback_requested' || body.outcome === 'interested_followup')) {
                 update.next_action_type = 'callback';
                 update.next_action_due_at = callbackAt;
+                // Scheduling a new callback un-dismisses the lead. Without this
+                // a lead removed from the Callbacks tab once would never come
+                // back, no matter how many callbacks a rep booked afterwards.
+                // See set-callback.js.
+                update.callback_dismissed_at = null;
+                update.callback_dismissed_by = null;
             } else if (body.outcome !== 'callback_requested' && body.outcome !== 'interested_followup') {
                 // Any other human-logged outcome clears the callback slot:
                 // terminal outcomes end the thread, and attempt outcomes

@@ -49,9 +49,17 @@ module.exports = async function handler(req, res) {
     // as a due-today callback. Keep in sync with list-callbacks.js.
     // List columns only. The callback calendar renders a chip per lead
     // (time, business, owner, phone) and nothing else off the row.
+    // callback_dismissed_at: the rep (or Remy) took this one off the list from
+    // the Callbacks tab. It is a dismissal, not a delete — call history,
+    // outcomes and commissions are untouched, and set-callback.js clears the
+    // stamp the moment anyone reschedules or re-adds the lead. It has to live
+    // here rather than in a next_action_type reset because the OR above puts a
+    // lead on this list via last_called_outcome alone. Keep in sync with
+    // list-callbacks.js.
     let q = sb.from('leads')
         .select(LEAD_LIST_COLUMNS)
         .or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
+        .is('callback_dismissed_at', null)
         .or('do_not_call.is.null,do_not_call.eq.false');
     // All 128 callbacks on the boards at the pivot were legacy agent pitches and
     // every one was overdue (Jun 3 - Jul 29), so none was a live promise to a

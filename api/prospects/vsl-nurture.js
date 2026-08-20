@@ -39,9 +39,25 @@
  * "they watched."
  *
  * ---------------------------------------------------------------------------
- * EXITS. Permanent, recorded in leads.vsl_nurture_exit_reason:
- *   played        they pressed play. Sequence stops and the rep calls them.
- *                 A robot must not keep texting someone who is ready to talk.
+ * THE POST-PLAY BOOKING TRACK (added 2026-08-20)
+ *
+ *   played 1  play +1d   EMAIL  ask for the meeting, two options
+ *   played 2  play +4d   SMS    one question from the rep's own line
+ *
+ * A play used to END the sequence and hand the lead to a rep. That gave the most
+ * engaged people the least follow-up, and when a gatekeeper blocked the rep's
+ * call there was no next step at all: Noble Entertainment played the VSL on
+ * 19 Aug, the CEO's gatekeeper refused to transfer on 20 Aug, and the lead just
+ * sat there. A play now switches tracks instead of exiting.
+ *
+ * Keyed to vsl_played_anchor_at, the timestamp of the PLAY, so a second play
+ * weeks later starts a fresh booking sequence rather than being skipped.
+ *
+ * That copy must never reveal we tracked the play and never re-explain the
+ * offer; validate() rejects a body that does either.
+ *
+ * ---------------------------------------------------------------------------
+ * EXITS. Permanent:
  *   replied       any inbound message after the anchor. A human took over.
  *   booked        meeting_booked_at set.
  *   do_not_call / suppressed / bounced
@@ -75,6 +91,8 @@ const SEND_ENABLED = String(process.env.VSL_NURTURE_ENABLED || '').toLowerCase()
 const SENDER_EMAIL = process.env.VSL_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
 
 const OFFSET_DAYS = { 1: 1, 2: 3, 3: 5 };
+// Post-play booking track, offsets measured from the PLAY, not the anchor email.
+const PLAYED_OFFSET_DAYS = { 1: 1, 2: 4 };
 const WINDOW = { tz: 'America/New_York', startMin: 9 * 60, endMin: 18 * 60 };
 
 // How far back to look for an anchor. A VSL email from two months ago is not a
@@ -150,7 +168,8 @@ module.exports = async function handler(req, res) {
     const { data: leads, error: lErr } = await sb.from('leads')
         .select('id,name,owner_name,niche,category,address,assigned_to,owner_email,email,'
             + 'owner_phone_e164,owner_phone,phone,do_not_call,meeting_booked_at,'
-            + 'vsl_nurture_anchor_at,vsl_nurture_1_sent_at,vsl_nurture_2_sent_at,vsl_nurture_3_sent_at')
+            + 'vsl_nurture_anchor_at,vsl_nurture_1_sent_at,vsl_nurture_2_sent_at,vsl_nurture_3_sent_at,'
+            + 'vsl_played_anchor_at,vsl_played_1_sent_at,vsl_played_2_sent_at')
         .in('id', ids);
     if (lErr) return res.status(500).json({ error: 'leads_read_failed', detail: lErr.message });
 
@@ -198,12 +217,58 @@ module.exports = async function handler(req, res) {
 
         if (l.do_not_call) { skipped.exit_dnc++; continue; }
         if (l.meeting_booked_at) { skipped.exit_booked++; continue; }
-        if ((playAt.get(l.id) || 0) > ancMs) { skipped.exit_played++; continue; }
         if ((replyAt.get(l.id) || 0) > ancMs) { skipped.exit_replied++; continue; }
         if (bouncedSet.has(l.id)) { skipped.exit_dnc++; continue; }
 
         const niche = nicheForLead(l);
         if (!niche || !copy.NICHE[niche]) { skipped.no_niche++; continue; }
+
+        // ── PLAYED: switch to the booking track instead of exiting.
+        // A play used to end the sequence and hand the lead to a rep, which meant
+        // the most engaged people got the least follow-up. When a gatekeeper
+        // blocked the rep's call there was no next step at all.
+        const played = playAt.get(l.id) || 0;
+        if (played > ancMs) {
+            const pStored = l.vsl_played_anchor_at ? new Date(l.vsl_played_anchor_at).getTime() : 0;
+            const freshPlay = played > pStored + 1000;
+            const pSent = freshPlay ? { 1: null, 2: null }
+                                    : { 1: l.vsl_played_1_sent_at, 2: l.vsl_played_2_sent_at };
+            let pStep = null;
+            for (const s of [1, 2]) {
+                if (pSent[s]) continue;
+                if (now < played + PLAYED_OFFSET_DAYS[s] * 864e5) { skipped.not_due++; break; }
+                pStep = s; break;
+            }
+            if (!pStep) { skipped.exit_played++; continue; }
+
+            const rep = repBy[anc.by] || repBy[l.assigned_to] || null;
+            const ctx = {
+                first: firstName(l.owner_name, { business: l.name, address: l.address }) || 'there',
+                company: l.name, niche: niche, link: '',
+                repFirstLower: String((rep && rep.display_name) || 'remy').split(' ')[0].toLowerCase(),
+            };
+            ctx.firstLower = String(ctx.first).toLowerCase();
+
+            if (pStep === 2) {
+                const toPhone = l.owner_phone_e164 || l.owner_phone || l.phone;
+                if (!toPhone) { skipped.no_sms_number++; continue; }
+                const r = copy.played2(ctx);
+                if (copy.validate('played2', r).length) { skipped.copy_rejected++; continue; }
+                plan.push({ id: l.id, step: 'played2', col: 'vsl_played_2_sent_at', channel: 'sms',
+                    to: toPhone, niche, from: (rep && rep.active && rep.openphone_number) || null,
+                    body: r.body, anchor_at: anc.at, played_at: new Date(played).toISOString() });
+            } else {
+                const to = String(anc.to || l.owner_email || l.email || '').trim();
+                if (!to || !/^[^\s@%]+@[^\s@%]+\.[a-z]{2,}$/i.test(to) || suppressed.has(to.toLowerCase())) { skipped.no_email++; continue; }
+                const r = copy.played1(ctx);
+                if (copy.validate('played1', r).length) { skipped.copy_rejected++; continue; }
+                plan.push({ id: l.id, step: 'played1', col: 'vsl_played_1_sent_at', channel: 'email',
+                    to, niche, subject: r.subject, body: r.body,
+                    anchor_at: anc.at, played_at: new Date(played).toISOString() });
+            }
+            if (plan.length >= cap) break;
+            continue;
+        }
 
         // First unsent step whose offset has elapsed.
         let step = null;
@@ -275,8 +340,9 @@ module.exports = async function handler(req, res) {
     let sent = 0;
     const errors = [];
     for (const p of sendable) {
-        const col = 'vsl_nurture_' + p.step + '_sent_at';
+        const col = p.col || ('vsl_nurture_' + p.step + '_sent_at');
         const patch = { [col]: new Date().toISOString(), vsl_nurture_anchor_at: p.anchor_at };
+        if (p.played_at) patch.vsl_played_anchor_at = p.played_at;
         const { data: claimed, error: cErr } = await sb.from('leads')
             .update(patch).eq('id', p.id).is(col, null).select('id');
         if (cErr) { errors.push({ id: p.id, error: 'claim_failed: ' + cErr.message }); continue; }
@@ -315,7 +381,7 @@ module.exports = async function handler(req, res) {
                     subject: p.subject, body: p.body, body_preview: p.body.slice(0, 280),
                     sent_at: new Date().toISOString(), to_address: p.to, from_address: SENDER_EMAIL,
                     provider: 'resend', provider_message_id: j.id || null,
-                    variant: 'vslnur_' + p.niche + '_s' + p.step, status: 'sent',
+                    variant: (String(p.step).startsWith('played') ? 'vslplay_' : 'vslnur_') + p.niche + '_' + p.step, status: 'sent',
                 });
             }
             sent++;
