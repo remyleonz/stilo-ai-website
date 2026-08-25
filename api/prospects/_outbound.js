@@ -439,6 +439,14 @@ function preSendCheck(campaign, target, lead) {
     if (campaign.status !== 'running') return { ok: false, reason: 'campaign_' + campaign.status };
     if (!target.from_line) return { ok: false, reason: 'no_from_line' };
     if (!target.to_phone) return { ok: false, reason: 'no_to_phone' };
+
+    // Our own numbers (SDR personal cells + every Quo line) skip the prospect
+    // gates entirely — connected-call, scrub, ICP, staleness. Those guards
+    // exist for strangers; a rep's own phone in a campaign is a test send, and
+    // starving it is how internal alerts silently die. The caller passes
+    // teamNumbers (a Set) because this function is sync; outbound-tick
+    // resolves it once per tick. do_not_call stays checked below anyway.
+    if (target.__is_team_number === true) return { ok: true, waived: 'team_number' };
     if (['blocked', 'opted_out', 'dead', 'booked'].includes(target.stage)) {
         return { ok: false, reason: 'stage_' + target.stage };
     }

@@ -217,6 +217,14 @@ async function resolveCounterpartyLead(sb, ourLines, counterparty, fromN, toN) {
         counter = [fromN, toN].find(function (n) { return n && !ourLines.has(n); }) || counter;
     }
     if (counter && !ourLines.has(counter)) {
+        // A rep's PERSONAL cell is ours too, even though it is not a Quo line.
+        // Without this, an SDR replying "ok" to the 6pm stats text stubs their
+        // own phone into prospecting.leads as "Unknown caller" and the reply
+        // machinery starts treating a teammate as a prospect.
+        try {
+            const { isTeamNumber } = require('../prospects/_team_numbers');
+            if (await isTeamNumber(counter)) return { leadId: null, resolvedBy: 'team_number' };
+        } catch (_) { /* never let the allowlist break call ingestion */ }
         const id = await matchLeadByPhone(sb, counter);
         if (id) return { leadId: id, resolvedBy: 'phone' };
         const hist = await leadForCounterpartyHistory(sb, counter);

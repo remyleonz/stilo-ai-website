@@ -61,6 +61,8 @@ module.exports = async function handler(req, res) {
     if (!cronOk) { const gate = await assertAdminOrSdr(req, res); if (!gate.ok) return; }
 
     const dry = String((req.query || {}).dry || '') === '1';
+    const { teamNumberSet } = require('./_team_numbers');
+    const teamSet = await teamNumberSet();
     const sb = ob.serviceClient();
     const now = new Date();
 
@@ -176,6 +178,7 @@ module.exports = async function handler(req, res) {
             const { data: lead } = await sb.from('leads')
                 .select('id,name,niche,category,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
 
+            t.__is_team_number = teamSet.has(require('../openphone/_shared').normalizePhone(t.to_phone) || '');
             const check = ob.preSendCheck(campaign, t, lead);
             if (!check.ok) {
                 results.skipped[check.reason] = (results.skipped[check.reason] || 0) + 1;

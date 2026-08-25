@@ -92,7 +92,14 @@ async function sendSms(from, to, content, opts) {
     if (!to) return { skip: 'no_phone' };
 
     const leadId = opts && opts.leadId;
-    const guard = await guardrail(leadId, content);
+    // Our own people are exempt from every prospect guard. The dedupe and
+    // 24h cap exist to protect prospects from us; an SDR's personal cell or a
+    // rep's Quo line is not a prospect, and rep-facing alerts routed through
+    // here (reminders, internal notifications) must never be starved by lead
+    // machinery. See _team_numbers.js.
+    const { isTeamNumber } = require('./_team_numbers');
+    const internal = await isTeamNumber(to);
+    const guard = internal ? { ok: true, waived: 'team_number' } : await guardrail(leadId, content);
     if (!guard.ok) {
         console.error('[sms] BLOCKED lead=' + leadId + ' reason=' + guard.reason + (guard.count ? ' count=' + guard.count : ''));
         return { skip: guard.reason, blocked: true };

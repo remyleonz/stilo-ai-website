@@ -27,13 +27,10 @@
 const { createClient } = require('@supabase/supabase-js');
 const { openphoneFetch, normalizePhone } = require('../openphone/_shared');
 
-// email (sdr_users) -> the rep's PERSONAL cell, from Remy 2026-08-24.
-const PERSONAL = {
-    'aleb1027@gmail.com': '+13057759522',
-    'ayesjorge911@gmail.com': '+13033377495',
-    'georgegutierrez446@gmail.com': '+17867975869',
-    'melanyealtuve12@gmail.com': '+17865806735'
-};
+// The personal-number map lives in _team_numbers.js now — one list feeds the
+// alerts here AND the allowlist that exempts these numbers from every
+// prospect guard. Add a rep in one place.
+const { PERSONAL } = require('./_team_numbers');
 
 const DIAL_TARGET = 200; // Remy's stated daily quota for the call blocks
 
@@ -169,7 +166,7 @@ async function jobEvening(dry) {
         const a = act[email];
         let text;
         if (a.today > 0) {
-            text = 'Nice work today, ' + a.today + ' dials in. Drop your stats in the STILO groupchat before you log off.';
+            text = 'Nice work today, ' + a.today + (a.today === 1 ? ' dial' : ' dials') + ' in. Drop your stats in the STILO groupchat before you log off.';
         } else {
             const mins = Math.round(a.week_talk_sec / 60);
             text = 'No dials logged today. This week so far: ' + a.week + ' dials, ' + mins + ' min on the phone'
