@@ -40,6 +40,7 @@ const FOLDER_TO_REP = {
     'rep-b': 'aleb1027@gmail.com',
     'rep-c': 'ayesjorge911@gmail.com',
     'rep-d': 'georgegutierrez446@gmail.com',
+    'rep-e': 'melanyealtuve12@gmail.com',
     'rl': 'remyleon@stiloaipartners.com',
     'dc': 'davidcoira@stiloaipartners.com'
 };
@@ -47,7 +48,7 @@ const NAME = {
     'georgegutierrez446@gmail.com': 'George',
     'aleb1027@gmail.com': 'Alejandro',
     'ayesjorge911@gmail.com': 'Jorge',
-    'marcuslindsey8@gmail.com': 'Marcus',
+    'melanyealtuve12@gmail.com': 'Melanye',
     'remyleon@stiloaipartners.com': 'Remy',
     'davidcoira@stiloaipartners.com': 'David'
 };

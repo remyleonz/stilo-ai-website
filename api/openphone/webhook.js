@@ -759,6 +759,22 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // Last resort: nothing above matched. This is exactly how the six May-2026
+    // rows ended up as "no actor recorded" and cost an OpenPhone-API
+    // archaeology session to attribute months later. We still write NULL (a
+    // guess would be worse — the Team tab now REPORTS unattributed work
+    // instead of hiding it), but we stamp the raw Quo userId into notes so the
+    // fix is one map entry, not an investigation, and we log loudly because an
+    // unknown userId usually means a new hire is missing from
+    // QUO_USER_ID_TO_EMAIL above.
+    if (!baseFields.logged_by && !(existingRow && existingRow.logged_by) && call.userId) {
+        console.warn('[openphone/webhook] UNATTRIBUTED call ' + (call.id || '?')
+            + ' from unknown Quo userId ' + call.userId
+            + ' — add them to QUO_USER_ID_TO_EMAIL');
+        const tagline = '[unattributed] Quo userId ' + call.userId;
+        baseFields.notes = baseFields.notes ? (baseFields.notes + '\n' + tagline) : tagline;
+    }
+
     // Try every shape Quo / OpenPhone has shipped a recording URL in. If
     // they ever change the schema or finally start sending recordings (which
     // requires enabling recordings on each number + subscribing to the

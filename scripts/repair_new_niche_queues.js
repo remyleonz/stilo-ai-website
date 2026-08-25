@@ -39,7 +39,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const APPLY = process.argv.includes('--apply');
 const BRIEFS_BUCKET = 'cold-call-briefs';
-const FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'rl', 'dc'];
+const FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'rep-e', 'rl', 'dc'];
 
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 const pro = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });

@@ -36,7 +36,7 @@ const BRIEFS_BUCKET = 'cold-call-briefs';
 // rep-d (George Gutierrez) added 2026-08-04 with his first brief push. A folder
 // missing from this map is invisible: the lookup never lists it, so the rep sees
 // "no script" on a lead David actually briefed.
-const REP_FOLDERS = { a: 'rep-a', b: 'rep-b', c: 'rep-c', d: 'rep-d', dc: 'dc', rl: 'rl' };
+const REP_FOLDERS = { a: 'rep-a', b: 'rep-b', c: 'rep-c', d: 'rep-d', e: 'rep-e', dc: 'dc', rl: 'rl' };
 
 // Find the newest brief for a slug in Supabase Storage. Searches the rep folder
 // matching the tag hint first (fast), then the others. Returns

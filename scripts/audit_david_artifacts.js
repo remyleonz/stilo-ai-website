@@ -48,6 +48,7 @@ const FOLDER_TO_REP = {
     'rep-b': 'aleb1027@gmail.com',
     'rep-c': 'ayesjorge911@gmail.com',
     'rep-d': 'georgegutierrez446@gmail.com',
+    'rep-e': 'melanyealtuve12@gmail.com',
     'dc': 'davidcoira@stiloaipartners.com',
     'rl': 'remyleon@stiloaipartners.com'
 };

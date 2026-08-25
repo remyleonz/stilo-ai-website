@@ -14,6 +14,7 @@
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
+    <link rel="stylesheet" href="/assets/stilo-dashboard.css?v=2026-08-24">
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -695,7 +696,7 @@
                 <div class="sdr-avatar" id="sidebarAvatar" style="background:var(--blue);">?</div>
                 <div style="min-width:0;flex:1;">
                     <div class="sdr-name" id="sidebarName">Loading…</div>
-                    <div class="sdr-role">SDR · click to edit profile</div>
+                    <div class="sdr-role" id="sidebarRole">SDR · click to edit profile</div>
                 </div>
             </button>
             <button class="signout-btn" onclick="signOut()">
@@ -743,7 +744,7 @@
                     <div style="color:var(--text-secondary);font-size:13px;margin-top:6px;" id="bigQuotaRemaining">— remaining</div>
                 </div>
                 <div style="margin-left:auto;text-align:right;">
-                    <div class="stat-label">Close rate</div>
+                    <div class="stat-label">Booked per dial</div>
                     <div style="font-family:var(--font-display);font-weight:600;font-size:1.8rem;letter-spacing:-0.025em;" id="overviewCloseRate">—</div>
                     <div class="stat-meta" id="overviewCloseRateMeta">meetings / dials</div>
                 </div>
@@ -861,7 +862,7 @@
                     <div class="stat-meta">All time</div>
                 </div>
                 <div class="stat-card accent-purple">
-                    <div class="stat-label">Close Rate</div>
+                    <div class="stat-label">Booked per dial</div>
                     <div class="stat-value" id="perfCloseRate">0%</div>
                     <div class="stat-meta">Meetings / Dials</div>
                 </div>
@@ -1292,6 +1293,17 @@
             sb_av.textContent = sdr.initials || '?';
             sb_av.style.background = sdr.avatar_color || '#2563EB';
             sb_nm.textContent = sdr.display_name || sdr.email;
+
+            // A client-account rep dials a PAYING CLIENT's list, against that
+            // client's ICP, onto that client's calendar. Naming the account in
+            // the sidebar is what stops a rep who has worn both hats opening a
+            // call with the wrong company's pitch.
+            const sb_role = document.getElementById('sidebarRole');
+            if (sb_role) {
+                sb_role.textContent = (sdr.sdr_type === 'client_account' && sdr.client_account)
+                    ? ('Dialing for ' + sdr.client_account)
+                    : 'SDR · click to edit profile';
+            }
         }
 
         async function saveProfile() {
@@ -1395,7 +1407,10 @@
                     perf.quota.today_remaining + ' more to hit today\'s target';
                 document.getElementById('topbarQuotaToday').textContent = perf.quota.today_progress;
                 document.getElementById('topbarQuotaTarget').textContent = perf.quota.daily;
-                document.getElementById('overviewCloseRate').textContent = (perf.rates && perf.rates.close_rate_pct != null) ? perf.rates.close_rate_pct + '%' : '—';
+                // Meetings booked per dial. Was labelled "Close rate", which made a healthy
+                // booking rate look like a 1% disaster.
+                var bpd = perf.rates && (perf.rates.booked_per_dial_pct != null ? perf.rates.booked_per_dial_pct : perf.rates.close_rate_pct);
+                document.getElementById('overviewCloseRate').textContent = (bpd != null) ? bpd + '%' : '—';
 
                 // Commission preview
                 const earn = await fetchJSON('/api/sdr/earnings');
@@ -3317,7 +3332,7 @@
                 // Call funnel KPIs
                 document.getElementById('perfDialsAll').textContent = perf.dials.all;
                 document.getElementById('perfMeetingsAll').textContent = perf.meetings_booked.all;
-                document.getElementById('perfCloseRate').textContent = perf.rates.close_rate_pct + '%';
+                document.getElementById('perfCloseRate').textContent = (perf.rates.booked_per_dial_pct != null ? perf.rates.booked_per_dial_pct : perf.rates.close_rate_pct) + '%';
                 document.getElementById('perfConversion').textContent = perf.rates.conversion_rate_pct + '%';
                 document.getElementById('funnelDials').textContent = perf.dials.all;
                 document.getElementById('funnelUnique').textContent = perf.unique_leads.all;

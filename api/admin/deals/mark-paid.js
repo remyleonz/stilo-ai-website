@@ -126,7 +126,12 @@ async function provisionFromDeal(sb, deal, paidAt) {
             upfront_fee_cents: deal.upfront_fee_cents || 0,
             monthly_retainer_cents: deal.monthly_retainer_cents || 0,
             commission_pct: pct,
-            payout_status: 'unpaid',      // deal is paid by client → SDR is owed
+            // The DB check on payout_status allows exactly ('pending','paid'):
+            // it describes the PAYOUT to the SDR, not the client's payment.
+            // 'unpaid' violates the constraint — this insert has been silently
+            // dying, which is why no commission row would have appeared when
+            // the first real deal was marked paid.
+            payout_status: 'pending',     // client paid → payout to SDR is owed
             payout_pending_cents: commissionTotal,
             payout_paid_cents: 0,
             stripe_customer_id: deal.stripe_customer_id || null,
@@ -146,6 +151,11 @@ async function provisionFromDeal(sb, deal, paidAt) {
     await sb.from('deals').update({
         client_id: clientId,
         paid_at: paidAt,
+        // A deal is closed when the client pays. This was only ever stamped on
+        // the attribution row, never on the deal itself, so the Team tab's
+        // revenue buckets (which key on deals.closed_at) would have put every
+        // real deal in NO period at all.
+        closed_at: paidAt,
         stage: 'ONBOARDING',
         updated_at: new Date().toISOString()
     }).eq('id', deal.id);

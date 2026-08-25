@@ -91,6 +91,11 @@ const REP_EMAIL = {
     'rep-b': 'aleb1027@gmail.com',
     'rep-c': 'ayesjorge911@gmail.com',
     'rep-d': 'georgegutierrez446@gmail.com',
+    // 2026-08-24: rep-e is NEW, created for Melanye Altuve (hired 08-25). It has
+    // no objects until David's first push. Listing it before the push is the
+    // point: a folder missing from any one of the six consumers fails silently,
+    // and the rep just sees an empty board with nothing to diagnose.
+    'rep-e': 'melanyealtuve12@gmail.com',
     'dc':    'davidcoira@stiloaipartners.com',
     'rl':    'remyleon@stiloaipartners.com'
 };

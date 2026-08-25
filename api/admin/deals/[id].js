@@ -65,7 +65,12 @@ module.exports = async function handler(req, res) {
             if (body.lost_reason) update.lost_reason = body.lost_reason;
             if (body.churn_reason) update.churn_reason = body.churn_reason;
             if (body.stage === 'CHURNED') update.churned_at = new Date().toISOString();
-            if (body.stage === 'PAID') update.paid_at = update.paid_at || new Date().toISOString();
+            if (body.stage === 'PAID') {
+                update.paid_at = update.paid_at || new Date().toISOString();
+                // A deal is closed when the client pays — the analytics
+                // revenue buckets key on closed_at (see mark-paid.js).
+                update.closed_at = existing.closed_at || update.paid_at;
+            }
             // stage_change event auto-logged by trigger; we add a body note if there is one
             if (body.notes_for_change) {
                 events.push({ event_type: 'note', body: body.notes_for_change });

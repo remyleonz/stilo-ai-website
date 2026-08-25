@@ -181,7 +181,7 @@ async function handleList(sb, req, res) {
     return res.status(200).json({ deals: data || [] });
 }
 
-async function handleCreate(sb, userId, req, res) {
+async function handleCreate(sb, userId, callerEmail, req, res) {
     const body = await readJsonBody(req);
 
     // New cart flow: line_items with per-deal prices replaces
@@ -222,6 +222,40 @@ async function handleCreate(sb, userId, req, res) {
         }
     }
 
+    // Who closed it. deals.closed_by carries a FOREIGN KEY to auth.users, so
+    // the only valid value is an auth uuid — verified the hard way: writing an
+    // sdr_users.id here violates deals_closed_by_fkey and the insert dies.
+    // The historical bug was on the OTHER side of the join: closer-analytics
+    // compared closed_by against sdr_users.id, an id space this column can
+    // never contain, so no deal would ever have attributed to a closer.
+    //
+    // The modal sends closed_by_sdr_id (a roster id, because that is what the
+    // picker lists); we resolve it to that closer's auth_user_id and store
+    // that. No picker value -> resolve the signed-in admin's email through the
+    // identity aliases to their roster row. closer-analytics now matches on
+    // auth_user_id.
+    let closerId = null;
+    {
+        const { makeResolver } = require('../../sdr/_identity');
+        const { data: roster } = await sb.from('sdr_users').select('id, email, auth_user_id');
+        const idres = makeResolver(roster || []);
+        let hit = null;
+        if (body.closed_by_sdr_id) {
+            hit = (roster || []).find(function (r) { return String(r.id) === String(body.closed_by_sdr_id); });
+            if (!hit) return res.status(400).json({ error: 'unknown_closer', detail: 'closed_by_sdr_id is not on the sdr_users roster' });
+        } else {
+            const canon = idres.canonical(callerEmail);
+            if (canon) hit = (roster || []).find(function (r) { return String(r.email).toLowerCase() === canon; });
+        }
+        if (hit) {
+            if (!hit.auth_user_id) return res.status(400).json({ error: 'closer_has_no_auth_account', detail: hit.email + ' has no auth_user_id on their roster row' });
+            closerId = hit.auth_user_id;
+        } else {
+            // Fall back to the signed-in auth user rather than losing the stamp.
+            closerId = userId;
+        }
+    }
+
     // Insert the deal
     const dealPayload = {
         source_lead_id: body.source_lead_id || null,
@@ -236,7 +270,7 @@ async function handleCreate(sb, userId, req, res) {
         discount_pct: body.discount_pct ? Number(body.discount_pct) : 0,
         payment_method: body.payment_method,
         notes: body.notes ? String(body.notes).slice(0, 5000) : null,
-        closed_by: userId,
+        closed_by: closerId,
         stage: 'PROPOSAL_SENT'
     };
     if (lineItems) dealPayload.line_items = lineItems;
@@ -380,6 +414,6 @@ module.exports = async function handler(req, res) {
     const gate = await assertAdmin(req, res);
     if (!gate.ok) return;
     if (req.method === 'GET') return handleList(gate.sb, req, res);
-    if (req.method === 'POST') return handleCreate(gate.sb, gate.userId, req, res);
+    if (req.method === 'POST') return handleCreate(gate.sb, gate.userId, gate.email, req, res);
     return methodNotAllowed(res, 'GET, POST');
 };

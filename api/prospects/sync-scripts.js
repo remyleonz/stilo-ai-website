@@ -48,7 +48,7 @@ const BRIEFS_BUCKET = 'cold-call-briefs';
 // consumer of this bucket had a hardcoded folder list, so his leads were never
 // flagged, never assigned, and never rendered a script. When a rep is hired,
 // grep for 'rep-c' and add the new folder to every hit.
-const BRIEF_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'rl', 'dc'];
+const BRIEF_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'rep-e', 'rl', 'dc'];
 const GENERATED_BUCKET = 'cold-call-scripts-generated';
 
 // The agent David states in a script, mapped to a canonical name. Kept in sync

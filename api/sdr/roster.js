@@ -16,14 +16,21 @@ module.exports = async function handler(req, res) {
 
     const includeInactive = caller.isAdmin && (req.query && req.query.include_inactive === 'true');
 
-    let q = caller.sb
-        .from('sdr_users')
-        .select('id, email, sdr_key, display_name, initials, avatar_color, commission_pct, commission_mrr_pct, daily_call_quota, openphone_number, active, hired_at, auth_user_id')
-        .order('hired_at', { ascending: true });
+    // sdr_type / client_account arrive with api/migrations/sdr_type_and_rep_e.sql.
+    // Vercel deploys and Supabase migrations are two separate manual steps here,
+    // so whichever lands first must not take the roster down: a missing column
+    // is a 42703 from PostgREST, and without this the whole SDR dashboard 500s
+    // on load. Drop the fallback once the migration is applied everywhere.
+    const BASE_COLS = 'id, email, sdr_key, display_name, initials, avatar_color, commission_pct, commission_mrr_pct, daily_call_quota, openphone_number, active, hired_at, auth_user_id';
 
-    if (!includeInactive) q = q.eq('active', true);
+    async function pull(cols) {
+        let q = caller.sb.from('sdr_users').select(cols).order('hired_at', { ascending: true });
+        if (!includeInactive) q = q.eq('active', true);
+        return q;
+    }
 
-    const { data, error } = await q;
+    let { data, error } = await pull(BASE_COLS + ', sdr_type, client_account');
+    if (error && error.code === '42703') ({ data, error } = await pull(BASE_COLS));
     if (error) return res.status(500).json({ error: error.message });
 
     return res.status(200).json({ sdrs: data || [] });

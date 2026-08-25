@@ -82,26 +82,26 @@ module.exports = async function handler(req, res) {
         const commissionUpfront = Math.round(upfront * pct);
         const commissionMonthly = Math.round(retainer * mrrPct);
 
-        // payout_status === 'pending' means client hasn't paid yet → commission is "awaiting payment"
-        // (visibility-only on SDR dashboard, no dollar amount per Remy's choice).
-        // Any other status (unpaid|paid) means client paid → commission is real.
-        const clientPaid = r.payout_status && r.payout_status !== 'pending';
-
+        // Attribution rows are only ever created at the moment the client
+        // pays (stripe-webhook on checkout completion, mark-paid in admin), so
+        // every row here represents money that arrived. payout_status
+        // describes the PAYOUT to the SDR — the DB check allows exactly
+        // ('pending','paid'). The old reading treated 'pending' as
+        // "client hasn't paid", which meant an owed commission showed $0
+        // until AFTER it had already been paid out.
         const clientActive = r.clients && r.clients.status !== 'cancelled' && r.clients.status !== 'paused';
-        if (r.role === 'primary' && clientActive && clientPaid) {
+        if (r.role === 'primary' && clientActive) {
             mrrCents += retainer;
         }
-        if (r.role === 'primary' && clientPaid) {
+        if (r.role === 'primary') {
             revenueCents += upfront;
         }
 
         const paid = r.payout_paid_cents || 0;
-        if (clientPaid) {
-            const owedNow = (r.payout_pending_cents || 0);
-            commissionPaidCents += paid;
-            commissionPendingCents += Math.max(0, owedNow);
-            commissionLifetimeCents += paid + Math.max(0, owedNow);
-        }
+        const owedNow = r.payout_status === 'pending' ? Math.max(0, r.payout_pending_cents || 0) : 0;
+        commissionPaidCents += paid;
+        commissionPendingCents += owedNow;
+        commissionLifetimeCents += paid + owedNow;
 
         return {
             id: r.id,

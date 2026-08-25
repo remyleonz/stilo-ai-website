@@ -167,7 +167,14 @@ module.exports = async function handler(req, res) {
     if (scope.sdrId) closedQ = closedQ.eq('sdr_id', scope.sdrId);
     const { count: closedClients } = await closedQ;
 
-    const closeRate = dialsAll > 0 ? (meetingsAll / dialsAll) * 100 : 0;
+    // This was published as `close_rate_pct` and rendered under the label
+    // "Close rate" on both the admin card and the rep's own dashboard. It is
+    // meetings booked per dial — a BOOKING rate, and nothing to do with closing.
+    // Alejandro's 12 meetings over 1,157 dials rendered as a "1% close rate",
+    // which reads like a catastrophe rather than a normal booking rate.
+    // Published under its real name; close_rate_pct is kept as an alias so a
+    // cached front end does not break, and both are labelled correctly now.
+    const bookedPerDial = dialsAll > 0 ? (meetingsAll / dialsAll) * 100 : 0;
     const conversionRate = meetingsAll > 0 ? ((closedClients || 0) / meetingsAll) * 100 : 0;
 
     const dailyQuota = scope.sdr && scope.sdr.daily_call_quota ? scope.sdr.daily_call_quota : 50;
@@ -200,7 +207,10 @@ module.exports = async function handler(req, res) {
         },
         closed_clients: closedClients || 0,
         rates: {
-            close_rate_pct: Math.round(closeRate * 10) / 10,
+            booked_per_dial_pct: Math.round(bookedPerDial * 1000) / 1000,
+            // Deprecated alias — same number, wrong name. Read
+            // booked_per_dial_pct instead.
+            close_rate_pct: Math.round(bookedPerDial * 10) / 10,
             conversion_rate_pct: Math.round(conversionRate * 10) / 10
         },
         quota: {

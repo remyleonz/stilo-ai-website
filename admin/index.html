@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/stilo-dashboard.css?v=2026-08-24">
     <style>
         /* ============================================================
            CSS Custom Properties
@@ -2076,63 +2077,71 @@
             <div class="page-content" id="page-team" style="display:none;">
                 <div class="stilo-page-header-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                     <span class="stilo-page-meta">SDR performance · commissions</span>
-                    <div id="teamRangeFilter" style="display:inline-flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(37,99,235,0.18);border-radius:10px;padding:3px;">
-                      <button type="button" data-range="today" onclick="setTeamRange('today')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Today</button>
-                      <button type="button" data-range="week" onclick="setTeamRange('week')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">This week</button>
-                      <button type="button" data-range="last_week" onclick="setTeamRange('last_week')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Last week</button>
-                      <button type="button" data-range="month" onclick="setTeamRange('month')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">This month</button>
-                      <button type="button" data-range="last_month" onclick="setTeamRange('last_month')" style="padding:6px 13px;border:none;background:transparent;color:var(--text-secondary);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Last month</button>
+                    <div class="s-rangeswitch" id="teamRangeFilter" role="group" aria-label="Reporting period">
+                      <button type="button" data-range="today" aria-pressed="false" onclick="setTeamRange('today')">Today</button>
+                      <button type="button" data-range="week" aria-pressed="true" onclick="setTeamRange('week')">This week</button>
+                      <button type="button" data-range="last_week" aria-pressed="false" onclick="setTeamRange('last_week')">Last week</button>
+                      <button type="button" data-range="month" aria-pressed="false" onclick="setTeamRange('month')">This month</button>
+                      <button type="button" data-range="last_month" aria-pressed="false" onclick="setTeamRange('last_month')">Last month</button>
+                      <button type="button" data-range="all" aria-pressed="false" onclick="setTeamRange('all')">All time</button>
                     </div>
-                    <button type="button" id="teamExportBtn" onclick="exportTeamForClaude()" title="Copy a full performance snapshot to paste into Claude for analysis" style="padding:7px 14px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.35);border-radius:9px;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background 150ms;" onmouseover="this.style.background='rgba(37,99,235,0.2)'" onmouseout="this.style.background='rgba(37,99,235,0.12)'">&#8599; Export for Claude</button>
+                    <button type="button" id="teamExportBtn" onclick="exportTeamForClaude()" title="Copy a full performance snapshot to paste into Claude for analysis" style="padding:7px 14px;background:var(--s-accent-dim);border:1px solid var(--s-accent-line);border-radius:9px;color:var(--s-accent-hi);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">&#8599; Export for Claude</button>
                 </div>
 
-                <section class="stilo-section" id="teamKpiSection">
-                    <div class="stilo-section-header">
-                        <h3 class="stilo-section-title">COMPANY PERFORMANCE</h3>
-                        <span class="stilo-section-count" id="teamKpiRangeLabel"></span>
+                <!-- Company band. A slim hairline strip, not a wall of tiles:
+                     the team cards below are the subject of this page. -->
+                <section class="s-section" id="teamKpiSection">
+                    <div class="s-section__head">
+                        <h3 class="s-section__title">Company</h3>
+                        <span class="s-section__meta" id="teamKpiRangeLabel"></span>
                     </div>
-                    <div id="teamKpiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;">
-                        <div class="stilo-empty">Loading company KPIs…</div>
+                    <div class="s-kpistrip" id="teamKpiGrid"></div>
+                </section>
+
+                <!-- Closers first: what happens after a meeting is booked is
+                     the number that decides whether the company makes money. -->
+                <section class="s-section" id="teamClosersSection">
+                    <div class="s-section__head">
+                        <h3 class="s-section__title">Closers</h3>
+                        <span class="s-section__meta" id="teamClosersCount"></span>
+                    </div>
+                    <div class="s-cardgrid s-cardgrid--closer" id="teamClosersGrid"></div>
+                    <div id="teamClosersNoteBox" style="margin-top:var(--s-3);"></div>
+                </section>
+
+                <section class="s-section">
+                    <div class="s-section__head">
+                        <h3 class="s-section__title">SDRs</h3>
+                        <span class="s-section__meta" id="teamGridCount"></span>
+                    </div>
+                    <div class="s-cardgrid s-cardgrid--sdr" id="teamGrid"></div>
+                </section>
+
+                <section class="s-section" id="teamFunnelSection">
+                    <div class="s-section__head">
+                        <h3 class="s-section__title">SDR funnel</h3>
+                        <span class="s-section__meta" id="teamFunnelRange"></span>
+                    </div>
+                    <div class="s-tablewrap">
+                        <div class="s-tablescroll" id="teamFunnelPanel"></div>
                     </div>
                 </section>
 
-                <section class="stilo-section" id="teamFunnelSection">
-                    <div class="stilo-section-header">
-                        <h3 class="stilo-section-title">SDR FUNNEL</h3>
-                        <span class="stilo-section-count" id="teamFunnelRange"></span>
+                <section class="s-section" id="teamTimingSection">
+                    <div class="s-section__head">
+                        <h3 class="s-section__title">When the phone gets answered</h3>
+                        <span class="s-section__meta">all time · ET</span>
                     </div>
-                    <div id="teamFunnelPanel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
-                        <div class="stilo-empty" style="padding:14px;">Loading funnel…</div>
-                    </div>
+                    <div id="teamTimingPanel"></div>
                 </section>
 
-                <section class="stilo-section" id="teamClosersSection">
-                    <div class="stilo-section-header">
-                        <h3 class="stilo-section-title">CLOSERS</h3>
-                        <span class="stilo-section-count" id="teamClosersNote"></span>
+                <section class="s-section" id="teamNicheSection">
+                    <div class="s-section__head">
+                        <h3 class="s-section__title">Performance by niche</h3>
+                        <span class="s-section__meta" id="teamNicheCount"></span>
                     </div>
-                    <div id="teamClosersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;">
-                        <div class="stilo-empty">Loading closers…</div>
-                    </div>
-                </section>
-
-                <section class="stilo-section">
-                    <div class="stilo-section-header">
-                        <h3 class="stilo-section-title">SDRS</h3>
-                        <span class="stilo-section-count" id="teamGridCount"></span>
-                    </div>
-                    <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">
-                        <div class="stilo-empty">Loading SDRs…</div>
-                    </div>
-                </section>
-
-                <section class="stilo-section" id="teamNicheSection">
-                    <div class="stilo-section-header">
-                        <h3 class="stilo-section-title">PERFORMANCE BY NICHE</h3>
-                        <span class="stilo-section-count" id="teamNicheCount"></span>
-                    </div>
-                    <div id="teamNichePanel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
-                        <div class="stilo-empty" style="padding:14px;">Loading niche performance…</div>
+                    <div class="s-tablewrap">
+                        <div class="s-tablescroll" id="teamNichePanel"></div>
                     </div>
                 </section>
 
@@ -4474,84 +4483,200 @@
             teamRange = range;
             var f = document.getElementById('teamRangeFilter');
             if (f) Array.prototype.forEach.call(f.querySelectorAll('button'), function (b) {
-                var on = b.getAttribute('data-range') === range;
-                b.style.background = on ? 'var(--blue)' : 'transparent';
-                b.style.color = on ? '#fff' : 'var(--text-secondary)';
+                b.setAttribute('aria-pressed', b.getAttribute('data-range') === range ? 'true' : 'false');
             });
-            renderTeamGrid();
             renderCompanyKpis();
-            renderFunnel();
-            // Closers were left out, so their cards kept showing all-time
-            // numbers under whatever range label was selected.
             renderClosers();
+            renderTeamGrid();
+            renderFunnel();
+            renderNicheTable();
         }
 
+        /* ── SDR CARDS ─────────────────────────────────────────────────────────
+           Driven entirely by teamAnalytics.per_rep.
+
+           These cards used to mix three sources on one surface: /sdr/performance
+           for dials and close rate, /sdr/earnings for money, and team-analytics
+           for the little KPI strip. All three computed the same words
+           differently, so a card could print 77.1% connect while the funnel row
+           directly above it printed 100% for the same rep in the same period —
+           one was all-time, the other was the selected range. One source now
+           feeds both, and every field respects the range.
+
+           Dropping the per-rep fan-out also removed 16 HTTP calls (8 reps x 2
+           endpoints) from the tab load. Earnings is still fetched, for
+           commission only. */
         function renderTeamGrid() {
             var grid = document.getElementById('teamGrid');
+            var cnt = document.getElementById('teamGridCount');
             if (!grid) return;
-            var rk = teamRange;
-            var label = TEAM_RANGE_LABEL[rk] || 'Today';
+            if (!teamAnalytics || !teamAnalytics.per_rep) { grid.innerHTML = skelCards(3, 'sdr'); return; }
 
-            // Closers (0% commission owners) render in the CLOSERS section above.
-            // Leaving them here showed Remy and David as SDRs with 0 dials.
-            var sdrsOnly = teamData.filter(function (x) { return Number(x.sdr.commission_pct) > 0; });
-            grid.innerHTML = sdrsOnly.map(function (x) {
-                var sdr = x.sdr;
-                var p = x.perf || {};
-                var e = x.earn || {};
-                var avatar = sdr.initials || '?';
-                var color = sdr.avatar_color || '#2563EB';
-                var dials = (p.dials && p.dials[rk]) || 0;
-                var quota = (p.quota && p.quota.daily) || sdr.daily_call_quota || 50;
-                var pct = (p.quota && p.quota.today_pct) || 0;
-                var meetings = (p.meetings_booked && p.meetings_booked[rk]) || 0;
-                var closeRate = (p.rates && p.rates.close_rate_pct) || 0;
-                var commissionOwed = (e.totals && e.totals.commission_pending_cents) || 0;
-                var mrr = (e.totals && e.totals.mrr_closed_cents) || 0;
-                var clientCount = (e.totals && e.totals.client_count) || 0;
-                // The "/quota" and the progress bar only make sense for Today.
-                var dialsCell = (rk === 'today')
-                    ? dials + '<span style="color:var(--text-tertiary);font-size:13px;font-weight:500;"> / ' + quota + '</span>'
-                    : '' + dials;
+            var rk = teamArRange();
+            var label = TEAM_RANGE_LABEL[rk] || 'Today';
+            var sdrs = teamAnalytics.per_rep.filter(function (r) { return !r.is_closer; });
+            // Reps with no history at all are noise; reps who are simply quiet
+            // this period still belong on screen, greyed rather than hidden.
+            var shown = sdrs.filter(function (r) { return r.active || r.dials.all > 0; });
+            if (cnt) cnt.textContent = shown.length + ' reps · ' + label.toLowerCase();
+            if (!shown.length) { grid.innerHTML = '<div class="s-empty">No SDRs on the roster.</div>'; return; }
+
+            shown.sort(function (x, y) {
+                return (y.meetings[rk] - x.meetings[rk]) || (y.dials[rk] - x.dials[rk]) || (y.dials.all - x.dials.all);
+            });
+
+            /* Two jobs on one roster. A new-client rep dials our list to win
+               STILO clients. A client-account rep dials a PAYING CLIENT's list
+               and books onto that client's calendar, so their meetings are the
+               client's pipeline, not ours. Adding the two together produces a
+               "meetings booked this week" that nobody can act on.
+
+               Group instead of sum, and only draw the headings once somebody is
+               actually on a client account — while the whole roster is
+               new-client, the tab looks exactly as it did before. */
+            var ours = shown.filter(function (r) { return (r.sdr_type || 'new_client') !== 'client_account'; });
+            var onAccounts = shown.filter(function (r) { return (r.sdr_type || 'new_client') === 'client_account'; });
+
+            if (!onAccounts.length) {
+                grid.innerHTML = shown.map(function (r) { return sdrCardHtml(r, rk, label); }).join('');
+            } else {
+                var html = teamGroupHead('New client pipeline', 'Winning STILO clients', ours, rk);
+                html += ours.map(function (r) { return sdrCardHtml(r, rk, label); }).join('');
+
+                // One block per client, so two accounts never blend into each other.
+                var byAccount = {};
+                onAccounts.forEach(function (r) {
+                    var k = r.client_account || 'Unassigned account';
+                    (byAccount[k] = byAccount[k] || []).push(r);
+                });
+                Object.keys(byAccount).sort().forEach(function (name) {
+                    html += teamGroupHead(name, 'Client account · books onto their calendar', byAccount[name], rk);
+                    html += byAccount[name].map(function (r) { return sdrCardHtml(r, rk, label); }).join('');
+                });
+                grid.innerHTML = html;
+            }
+
+            teamAgencyMrrCents = shown.reduce(function (a, r) { return a + earnFor(r.email).mrr; }, 0);
+            teamAgencyOwedCents = shown.reduce(function (a, r) { return a + earnFor(r.email).owed; }, 0);
+        }
+
+        /* Full-width banner between card groups. Spans every column so the
+           auto-fill grid does not try to seat it as a card. */
+        function teamGroupHead(title, sub, rows, rk) {
+            var dials = rows.reduce(function (a, r) { return a + (r.dials[rk] || 0); }, 0);
+            var mtgs = rows.reduce(function (a, r) { return a + (r.meetings[rk] || 0); }, 0);
+            return ''
+                + '<div style="grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;'
+                + 'gap:var(--s-4);padding-bottom:var(--s-2);margin-top:var(--s-4);'
+                + 'border-bottom:1px solid var(--s-line);">'
+                  + '<div>'
+                    + '<div style="font-family:var(--font-display,system-ui,sans-serif);font-weight:700;'
+                      + 'font-size:0.95rem;letter-spacing:-0.01em;color:var(--s-text);">' + escapeAdminHtml(title) + '</div>'
+                    + '<div style="font-size:0.72rem;color:var(--s-text-4);margin-top:2px;">' + escapeAdminHtml(sub) + '</div>'
+                  + '</div>'
+                  + '<div style="font-family:var(--font-mono,ui-monospace,monospace);font-size:0.66rem;'
+                    + 'letter-spacing:0.14em;text-transform:uppercase;color:var(--s-text-4);white-space:nowrap;">'
+                    + rows.length + ' rep' + (rows.length === 1 ? '' : 's')
+                    + ' &middot; ' + dials.toLocaleString() + ' dials'
+                    + ' &middot; ' + mtgs + ' booked'
+                  + '</div>'
+                + '</div>';
+        }
+
+        function sdrCardHtml(r, rk, label) {
+            return (function (r) {
+                var e = earnFor(r.email);
+                var dials = r.dials[rk] || 0;
+                var idle = dials === 0;
+                // Quota is a daily target, so the bar only means something for
+                // Today. For every other range it is replaced by pipeline runway.
+                var quotaPct = Math.min(100, r.quota_attainment_pct[rk] || 0);
+
+                var meterTone = quotaPct >= 100 ? ' s-meter__fill--pos' : quotaPct >= 60 ? '' : ' s-meter__fill--warn';
+                var runway = r.pipeline_days_left;
+                var runwayTone = runway === null ? 's-stat--muted' : runway < 5 ? 's-stat--neg' : runway < 15 ? 's-stat--warn' : 's-stat--pos';
 
                 return ''
-                    + '<div onclick="openSdrDetailDrawer(\'' + sdr.id + '\')" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:18px;cursor:pointer;transition:background 150ms;" onmouseover="this.style.background=\'rgba(37,99,235,0.06)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.02)\'">'
-                    + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">'
-                        + '<div style="width:40px;height:40px;border-radius:50%;background:' + color + ';display:inline-flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;">' + escapeAdminHtml(avatar) + '</div>'
-                        + '<div style="flex:1;">'
-                            + '<div style="font-size:14px;font-weight:600;color:var(--text-primary);">' + escapeAdminHtml(sdr.display_name) + '</div>'
-                            + '<div style="font-size:11px;color:var(--text-tertiary);">' + escapeAdminHtml(sdr.email) + '</div>'
-                        + '</div>'
+                + '<div class="s-person s-person--link" role="button" tabindex="0"'
+                  + ' style="--s-person-accent:' + escapeAdminHtml(r.color || '#2563eb') + ';"'
+                  + ' onclick="openSdrByEmail(\'' + escapeAdminHtml(r.email) + '\')"'
+                  + ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openSdrByEmail(\'' + escapeAdminHtml(r.email) + '\');}">'
+                  + '<div class="s-person__head">'
+                    + '<div class="s-avatar" style="background:' + escapeAdminHtml(r.color || '#2563eb') + ';">' + escapeAdminHtml(r.initials || initialsOf(r.name)) + '</div>'
+                    + '<div class="s-person__id">'
+                      + '<div class="s-person__name">' + escapeAdminHtml(r.name) + '</div>'
+                      + '<div class="s-person__role">' + (r.active ? (r.sdr_type === 'client_account' ? escapeAdminHtml(r.client_account || 'Client account') : 'SDR') : 'Inactive') + ' &middot; ' + escapeAdminHtml(label) + '</div>'
                     + '</div>'
-                    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
-                        + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">' + escapeAdminHtml(label) + ' dials</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;">' + dialsCell + '</div></div>'
-                        + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Meetings</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;">' + meetings + '</div></div>'
-                        + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Clients</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;">' + clientCount + '</div></div>'
-                        + '<div><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Close Rate</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;">' + closeRate + '%</div></div>'
-                    + '</div>'
-                    + repKpiStrip(sdr.email)
-                    + ((rk === 'today')
-                        ? ('<div style="height:4px;background:rgba(255,255,255,0.05);border-radius:999px;margin-bottom:12px;"><div style="height:100%;width:' + Math.min(100, pct) + '%;background:' + color + ';border-radius:999px;"></div></div>')
-                        : '<div style="height:16px;"></div>')
-                    + '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
-                        + '<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">MRR closed</div>'
-                        + '<div style="font-family:var(--font-display);font-weight:700;font-size:14px;">' + formatMoneyCents(mrr) + '</div>'
-                    + '</div>'
-                    + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">'
-                        + '<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Commission owed</div>'
-                        + '<div style="font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--orange);">' + formatMoneyCents(commissionOwed) + '</div>'
-                    + '</div>'
-                    + '</div>';
-            }).join('');
+                    + (idle ? '<span class="s-badge s-badge--dim">idle</span>' : '<span class="s-person__go">View &rsaquo;</span>')
+                  + '</div>'
 
-            var totalDials = sdrsOnly.reduce(function (acc, x) { return acc + ((x.perf.dials && x.perf.dials[rk]) || 0); }, 0);
-            var totalMeetings = sdrsOnly.reduce(function (acc, x) { return acc + ((x.perf.meetings_booked && x.perf.meetings_booked[rk]) || 0); }, 0);
-            var totalMrr = sdrsOnly.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.mrr_closed_cents) || 0); }, 0);
-            var totalOwed = sdrsOnly.reduce(function (acc, x) { return acc + ((x.earn.totals && x.earn.totals.commission_pending_cents) || 0); }, 0);
-            // Hero strip removed; stash the agency MRR + commission totals so the
-            // Company Performance band can render them as tiles.
-            teamAgencyMrrCents = totalMrr;
-            teamAgencyOwedCents = totalOwed;
+                  + '<div class="s-statrow">'
+                    + stat(dials, 'Dials', idle ? 's-stat--muted' : '')
+                    + stat(r.dial_time_label[rk] || '0m', 'On phone', idle ? 's-stat--muted' : '')
+                    + stat(r.meetings[rk] || 0, 'Booked', r.meetings[rk] ? 's-stat--pos' : 's-stat--muted')
+                    + stat(pctStr(r.connect_rate_pct[rk]), 'Connect', idle ? 's-stat--muted' : '')
+                  + '</div>'
+
+                  // Quota is a daily target scaled to the period. Over "all
+                  // time" there is no target to be at, so the bar would sit
+                  // pinned at 100% for everyone and mean nothing.
+                  + (rk === 'all' ? '<div style="height:var(--s-3);"></div>'
+                      : '<div class="s-meter" title="' + Math.round(r.quota_attainment_pct[rk] || 0) + '% of the ' + (rk === 'today' ? 'daily' : 'period') + ' dial target">'
+                        + '<div class="s-meter__fill' + meterTone + '" style="width:' + quotaPct + '%;"></div>'
+                      + '</div>')
+
+                  + '<div class="s-tray">'
+                    + tray(fmtDur(r.avg_call_sec[rk]), 'Avg call')
+                    + tray(pctStr(r.conversation_rate_pct[rk]), 'Conv')
+                    + tray(r.dials_per_meeting[rk] != null ? r.dials_per_meeting[rk] : '—', 'Dials/mtg')
+                    + tray(r.active_days[rk] || 0, 'Days on')
+                    + tray(r.emails[rk] || 0, 'Emails')
+                  + '</div>'
+
+                  + '<div class="s-kv"><span class="s-kv__k">Callable left</span>'
+                    + '<span class="s-kv__v ' + (runway !== null && runway < 5 ? 's-kv__v--warn' : '') + '">'
+                    + (r.pipeline_remaining || 0).toLocaleString()
+                    + (runway ? ' <span style="color:var(--s-text-4);font-weight:500;">&middot; ~' + runway + 'd</span>'
+                              : (r.pipeline_remaining ? '' : ' <span style="color:var(--s-neg);font-weight:500;">&middot; empty</span>'))
+                    + '</span></div>'
+                  + '<div class="s-kv"><span class="s-kv__k">MRR closed</span><span class="s-kv__v">' + formatMoneyCents(e.mrr) + '</span></div>'
+                  + '<div class="s-kv"><span class="s-kv__k">Commission owed</span><span class="s-kv__v ' + (e.owed ? 's-kv__v--warn' : '') + '">' + formatMoneyCents(e.owed) + '</span></div>'
+                + '</div>';
+            })(r);
+        }
+
+        /* Commission is the one figure team-analytics does not own — it comes
+           from client_attribution via /api/sdr/earnings. Keyed by email so the
+           card does not care what order the fetches finished in. */
+        var teamEarnings = {};
+        function earnFor(email) {
+            var e = teamEarnings[String(email || '').toLowerCase()] || {};
+            var t = e.totals || {};
+            return { mrr: t.mrr_closed_cents || 0, owed: t.commission_pending_cents || 0, clients: t.client_count || 0 };
+        }
+        function initialsOf(name) {
+            return String(name || '?').split(/\s+/).slice(0, 2).map(function (w) { return w.charAt(0); }).join('').toUpperCase();
+        }
+        function stat(value, label, cls) {
+            return '<div class="s-stat ' + (cls || '') + '"><div class="s-stat__value">' + value + '</div>'
+                 + '<div class="s-stat__label">' + label + '</div></div>';
+        }
+        function tray(value, label) {
+            return '<div class="s-tray__cell"><div class="s-tray__value">' + value + '</div>'
+                 + '<div class="s-tray__label">' + label + '</div></div>';
+        }
+        function pctStr(v) { return (v === null || v === undefined ? 0 : v) + '%'; }
+        function skelCards(n, kind) {
+            var out = '';
+            for (var i = 0; i < n; i++) out += '<div class="s-skel s-skel--card"></div>';
+            return out;
+        }
+        // The drawer is keyed by sdr id; the cards now carry email.
+        function openSdrByEmail(email) {
+            var row = (teamData || []).filter(function (x) {
+                return String(x.sdr.email).toLowerCase() === String(email).toLowerCase();
+            })[0];
+            if (row) openSdrDetailDrawer(row.sdr.id);
         }
 
         /* ── CLOSERS ──────────────────────────────────────────────────────────
@@ -4560,6 +4685,8 @@
            the header rather than hidden, because the meeting record has no closer
            field and a guessed split would invent a close rate. */
         var closerData = null;
+        // Kept for callers outside the Team tab. The tab itself fetches this
+        // in parallel with everything else inside loadTeamPage.
         async function loadClosers() {
             var grid = document.getElementById('teamClosersGrid');
             if (!grid) return;
@@ -4568,7 +4695,7 @@
                 closerData = await fetch('/api/sdr/closer-analytics', { headers: headers }).then(function (r) { return r.json(); });
                 renderClosers();
             } catch (e) {
-                grid.innerHTML = '<div class="stilo-empty">Could not load closers: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                grid.innerHTML = '<div class="s-empty">Could not load closers: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
             }
         }
         function closerStat(label, value, tone) {
@@ -4587,69 +4714,94 @@
 
         function renderClosers() {
             var grid = document.getElementById('teamClosersGrid');
-            var note = document.getElementById('teamClosersNote');
-            if (!grid || !closerData) return;
-            if (note) {
-                note.textContent = [closerData.data_note, closerData.attribution_note]
-                    .filter(Boolean).join('  ');
-            }
+            var cnt = document.getElementById('teamClosersCount');
+            var noteBox = document.getElementById('teamClosersNoteBox');
+            if (!grid) return;
+            if (!closerData) { grid.innerHTML = skelCards(2, 'closer'); return; }
+
             var rows = closerData.closers || [];
-            if (!rows.length) { grid.innerHTML = '<div class="stilo-empty">No closers on the roster.</div>'; return; }
             var label = TEAM_RANGE_LABEL[teamRange] || 'All time';
+            if (cnt) cnt.textContent = rows.length + ' closers · ' + label.toLowerCase();
+
+            // The attribution caveat is a note under the cards, not a paragraph
+            // of grey capitals wedged into the section header where it competed
+            // with the heading for attention.
+            if (noteBox) {
+                noteBox.innerHTML = closerData.attribution_note
+                    ? '<div class="s-note' + (closerData.unattributed_meetings ? ' s-note--warn' : '') + '">'
+                        + '<div><strong>Attribution.</strong> ' + escapeAdminHtml(closerData.attribution_note)
+                        + ' <span style="color:var(--s-text-4);">' + escapeAdminHtml(closerData.data_note || '') + '</span></div></div>'
+                    : '';
+            }
+            if (!rows.length) { grid.innerHTML = '<div class="s-empty">No closers on the roster.</div>'; return; }
 
             grid.innerHTML = rows.map(function (x, idx) {
                 var c = x.closer, b = x.stats, r = x.rates;
-                var color = c.avatar_color || '#2563EB';
                 var held = cv(b.meetings_held), unknown = cv(b.outcome_unknown);
+                var show = cv(r.show_rate_pct), close = cv(r.close_rate_pct);
+                var color = c.avatar_color || '#2563eb';
+
                 var recent = (x.recent || []).filter(function (m) { return inTeamRange(m.occurred_at); })
                     .slice(0, 5).map(function (m) {
-                    var oc = (m.outcome || '').split(/[.—]/)[0].slice(0, 34) || 'no outcome logged';
-                    var tone = /won|closed_won/i.test(oc) ? 'var(--green,#3fbf8f)'
-                             : /lost/i.test(oc) ? 'var(--red,#f87171)'
-                             : /no_show/i.test(oc) ? 'var(--orange,#f59e0b)' : 'var(--text-tertiary)';
-                    var d = m.occurred_at ? new Date(m.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-                    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--border-subtle);font-size:12px;">'
-                        + '<span style="color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;">' + escapeAdminHtml(m.business) + '</span>'
-                        + '<span style="color:' + tone + ';white-space:nowrap;">' + escapeAdminHtml(oc) + ' &middot; ' + d + '</span>'
-                        + '</div>';
-                }).join('') || '<div style="font-size:12px;color:var(--text-tertiary);padding-top:8px;border-top:1px solid var(--border-subtle);">No meetings in ' + escapeAdminHtml(label.toLowerCase()) + '.</div>';
+                        var oc = (m.outcome || '').split(/[.—]/)[0].slice(0, 32) || 'no outcome logged';
+                        var tone = /won/i.test(oc) ? 's-badge--pos'
+                                 : /lost|not interested/i.test(oc) ? 's-badge--neg'
+                                 : /no.?show/i.test(oc) ? 's-badge--warn' : 's-badge--dim';
+                        var d = m.occurred_at ? new Date(m.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--s-line);">'
+                            + '<span style="font-size:0.76rem;color:var(--s-text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeAdminHtml(m.business) + '</span>'
+                            + '<span style="display:flex;gap:6px;align-items:center;flex:none;">'
+                              + '<span class="s-badge ' + tone + '">' + escapeAdminHtml(oc) + '</span>'
+                              + '<span style="font-size:0.68rem;color:var(--s-text-4);font-variant-numeric:tabular-nums;">' + d + '</span>'
+                            + '</span></div>';
+                    }).join('')
+                    || '<div style="padding:9px 0 0;border-top:1px solid var(--s-line);font-size:0.74rem;color:var(--s-text-4);">No meetings ' + escapeAdminHtml(label.toLowerCase()) + '.</div>';
 
                 return ''
-                + '<div onclick="openCloserDetail(' + idx + ')" style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.18);border-radius:14px;padding:20px;cursor:pointer;transition:border-color .15s,background .15s;" '
-                  + 'onmouseover="this.style.borderColor=\'rgba(37,99,235,0.45)\';this.style.background=\'rgba(255,255,255,0.035)\'" '
-                  + 'onmouseout="this.style.borderColor=\'rgba(37,99,235,0.18)\';this.style.background=\'rgba(255,255,255,0.02)\'">'
-                  + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">'
-                    + '<div style="width:42px;height:42px;border-radius:50%;background:' + color + ';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;">' + escapeAdminHtml(c.initials || '?') + '</div>'
-                    + '<div style="flex:1;">'
-                      + '<div style="font-size:15px;font-weight:600;">' + escapeAdminHtml(c.display_name) + '</div>'
-                      + '<div style="font-size:11px;color:var(--text-tertiary);">Closer &middot; ' + escapeAdminHtml(label) + '</div>'
+                + '<div class="s-person s-person--link" role="button" tabindex="0" style="--s-person-accent:' + escapeAdminHtml(color) + ';"'
+                  + ' onclick="openCloserDetail(' + idx + ')"'
+                  + ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openCloserDetail(' + idx + ');}">'
+                  + '<div class="s-person__head">'
+                    + '<div class="s-avatar s-avatar--lg" style="background:' + escapeAdminHtml(color) + ';">' + escapeAdminHtml(c.initials || initialsOf(c.display_name)) + '</div>'
+                    + '<div class="s-person__id">'
+                      + '<div class="s-person__name">' + escapeAdminHtml(c.display_name) + '</div>'
+                      + '<div class="s-person__role">Closer &middot; ' + escapeAdminHtml(label) + '</div>'
                     + '</div>'
-                    + '<div style="font-size:11px;color:var(--text-tertiary);">View &rsaquo;</div>'
+                    + '<span class="s-person__go">View &rsaquo;</span>'
                   + '</div>'
-                  + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">'
-                    + closerStat('Meetings held', held)
-                    + closerStat('Show rate', cv(r.show_rate_pct) + '%', cv(r.show_rate_pct) >= 70 ? 'good' : 'warn')
-                    + closerStat('Closed won', cv(b.won), cv(b.won) ? 'good' : null)
-                    + closerStat('Close rate', cv(r.close_rate_pct) + '%', cv(r.close_rate_pct) >= 20 ? 'good' : 'warn')
+
+                  + '<div class="s-statrow">'
+                    + stat(held, 'Held', held ? '' : 's-stat--muted')
+                    + stat(show + '%', 'Show rate', !held ? 's-stat--muted' : show >= 70 ? 's-stat--pos' : 's-stat--warn')
+                    + stat(cv(b.won), 'Closed won', cv(b.won) ? 's-stat--pos' : 's-stat--muted')
+                    + stat(close + '%', 'Close rate', !held ? 's-stat--muted' : close >= 20 ? 's-stat--pos' : 's-stat--warn')
                   + '</div>'
-                  + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);margin-bottom:12px;font-size:12px;">'
-                    + closerMini('Upcoming', cv(b.upcoming))
-                    + closerMini('No-shows', cv(b.no_shows), cv(b.no_shows) ? 'var(--orange,#f59e0b)' : null)
-                    + closerMini('Still open', cv(b.open))
-                    + closerMini('Avg meeting', cv(r.avg_meeting_min) + 'm')
+
+                  + '<div class="s-tray">'
+                    + tray(cv(b.upcoming), 'Upcoming')
+                    + tray(cv(b.no_shows), 'No-shows')
+                    + tray(cv(b.open), 'Open')
+                    + tray(cv(r.avg_meeting_min) + 'm', 'Avg mtg')
+                    + tray(cv(r.meeting_min) + 'm', 'In mtgs')
                   + '</div>'
-                  + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;font-size:12px;">'
-                    + closerMini('Own dials', cv(b.dials))
-                    + closerMini('Conv. rate', cv(r.conversation_rate_pct) + '%')
-                    + closerMini('Emails', cv(b.emails_sent))
-                    + closerMini('Time in mtgs', cv(r.meeting_min) + 'm')
+                  + '<div class="s-tray">'
+                    + tray(cv(b.dials), 'Own dials')
+                    + tray(cv(r.dial_time_min) + 'm', 'On phone')
+                    + tray(cv(r.connect_rate_pct) + '%', 'Connect')
+                    + tray(cv(r.conversation_rate_pct) + '%', 'Conv')
+                    + tray(cv(b.emails_sent), 'Emails')
                   + '</div>'
-                  // Unlogged meetings are shown, not folded into "held", because
-                  // hiding them is what made show rate read ~100%.
-                  + (unknown ? '<div style="font-size:11px;color:var(--orange,#f59e0b);margin-bottom:10px;">'
-                      + unknown + ' past meeting' + (unknown === 1 ? '' : 's') + ' with no outcome logged, excluded from show and close rates.</div>' : '')
-                  + '<div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Last meetings</div>'
-                  + recent
+
+                  // Unlogged meetings are surfaced, never folded into "held".
+                  // Hiding them is what made show rate read ~100%.
+                  + (unknown ? '<div class="s-note s-note--warn" style="margin:var(--s-3) 0;"><div>'
+                      + unknown + ' past meeting' + (unknown === 1 ? '' : 's') + ' with no outcome logged, excluded from show and close rates.'
+                      + '</div></div>' : '')
+
+                  + '<div style="margin-top:var(--s-4);">'
+                    + '<div class="s-stat__label" style="margin-bottom:var(--s-1);">Last meetings</div>'
+                    + recent
+                  + '</div>'
                 + '</div>';
             }).join('');
         }
@@ -4790,31 +4942,16 @@
             return teamAnalytics.per_rep.filter(function (r) { return String(r.email).toLowerCase() === e; })[0] || null;
         }
         // Small KPI row shown on each SDR card.
-        function repKpiStrip(email) {
-            var r = repAnalytics(email);
-            if (!r) return '';
-            var rk = teamArRange();
-            var cell = function (lbl, val) {
-                return '<div style="flex:1;text-align:center;"><div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + val + '</div><div style="font-size:9px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px;">' + lbl + '</div></div>';
-            };
-            return '<div style="display:flex;gap:6px;margin:10px 0 12px;padding:9px 4px;background:rgba(255,255,255,0.02);border-radius:8px;">'
-                + cell('Connect', rv(r.connect_rate_pct) + '%')
-                + cell('Avg call', fmtDur(r.avg_call_sec))
-                + cell('Dials/mtg', r.dials_per_meeting != null ? r.dials_per_meeting : '—')
-                + cell('Close', rv(r.meeting_close_rate_pct) + '%')
-                + '</div>';
+        function kpi(label, value, sub, accent) {
+            return '<div class="s-kpi' + (accent ? ' s-kpi--accent' : '') + '">'
+                 + '<div class="s-kpi__label">' + label + '</div>'
+                 + '<div class="s-kpi__value">' + value + '</div>'
+                 + (sub ? '<div class="s-kpi__sub">' + sub + '</div>' : '')
+                 + '</div>';
         }
-
-        function kpiTile(label, value, sub, accent) {
-            return '<div style="background:var(--bg-card);border:1px solid ' + (accent ? 'rgba(37,99,235,0.35)' : 'var(--border-subtle)') + ';border-radius:12px;padding:15px 16px;">'
-                + '<div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.07em;">' + label + '</div>'
-                + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.55rem;letter-spacing:-0.02em;color:' + (accent ? 'var(--blue)' : 'var(--text-primary)') + ';margin-top:3px;line-height:1.1;">' + value + '</div>'
-                + (sub ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + sub + '</div>' : '')
-                + '</div>';
-        }
-        // Rates from team-analytics are now per-range objects. rv() reads them
-        // through the active range and still tolerates a plain number, so any
-        // field not yet converted keeps rendering instead of showing [object].
+        // Reads a per-range object through the active range. Every rate from
+        // team-analytics is now a range object; the plain-number fallback is
+        // kept only so a stale cached response still renders.
         function rv(v) {
             if (v === null || v === undefined) return 0;
             if (typeof v === 'object') { var k = teamArRange(); return v[k] !== undefined ? v[k] : (v.all || 0); }
@@ -4825,129 +4962,313 @@
             var grid = document.getElementById('teamKpiGrid');
             if (!grid) return;
             var lbl = document.getElementById('teamKpiRangeLabel');
-            if (!teamAnalytics) { grid.innerHTML = '<div class="stilo-empty">No data.</div>'; return; }
+            if (!teamAnalytics) {
+                grid.innerHTML = '<div class="s-skel s-skel--kpi" style="grid-column:1/-1;"></div>';
+                return;
+            }
             var c = teamAnalytics.company, rk = teamArRange();
-            // Must cover every key in _ranges.RANGE_KEYS. It was missing
-            // last_week/last_month, which only surfaced once teamArRange stopped
-            // folding them onto week/month: the tiles read "Dials · undefined".
-            var rangeLabel = ({
-                today: 'today', week: 'this week', month: 'this month',
-                last_week: 'last week', last_month: 'last month', all: 'all time'
-            })[rk] || 'all time';
+            var rangeLabel = (TEAM_RANGE_LABEL[rk] || 'All time').toLowerCase();
             if (lbl) lbl.textContent = rangeLabel;
+
+            var u = teamAnalytics.unattributed || {};
             grid.innerHTML = [
-                kpiTile('Dials · ' + rangeLabel, (c.dials[rk] || 0), 'outbound only', true),
-                kpiTile('Connect rate', rv(c.connect_rate_pct) + '%', c.connects[rk] + ' connected'),
-                kpiTile('Avg call time', fmtDur(c.avg_call_sec), c.talk_hours + 'h talk time'),
-                kpiTile('Meetings · ' + rangeLabel, (c.meetings[rk] || 0), null, true),
-                kpiTile('Dials / meeting', c.dials_per_meeting != null ? c.dials_per_meeting : '—', 'efficiency'),
-                kpiTile('Meeting close', rv(c.meeting_close_rate_pct) + '%', rv(c.meetings_showed) + ' showed'),
-                kpiTile('No-show rate', rv(c.no_show_rate_pct) + '%', rv(c.meetings_noshow) + ' of ' + rv(c.meetings_occurred)),
-                kpiTile('Emails · ' + rangeLabel, (c.emails[rk] || 0), null),
-                kpiTile('Clients closed', c.closed_clients, null),
-                kpiTile('MRR', formatMoneyCents(c.mrr_cents), 'live retainers'),
-                kpiTile('Lifetime MRR', formatMoneyCents(teamAgencyMrrCents), 'closed by the team'),
-                kpiTile('Commission owed', formatMoneyCents(teamAgencyOwedCents), 'pending payout')
+                kpi('Dials', (c.dials[rk] || 0).toLocaleString(), c.active_days[rk] + ' active day' + (c.active_days[rk] === 1 ? '' : 's'), true),
+                // THE GAP THIS TAB HAD: total time on the phone for the period.
+                // The old strip showed an all-time 34.5h under a weekly label.
+                kpi('On the phone', c.dial_time_label[rk] || '0m', c.talk_time_label[rk] + ' talking'),
+                kpi('Connect rate', rv(c.connect_rate_pct) + '%', (c.contacts[rk] || 0) + ' reached'),
+                kpi('Conversations', (c.conversations[rk] || 0).toLocaleString(), rv(c.conversation_rate_pct) + '% of dials'),
+                kpi('Avg call', fmtDur(c.avg_call_sec[rk]), 'per conversation'),
+                kpi('Meetings', (c.meetings[rk] || 0), 'booked in period', true),
+                kpi('Dials / meeting', c.dials_per_meeting[rk] != null ? c.dials_per_meeting[rk] : '—',
+                    c.hours_per_meeting[rk] != null ? c.hours_per_meeting[rk] + 'h of phone each' : 'no meetings yet'),
+                kpi('Show rate', rv(c.show_rate_pct) + '%', (c.meetings_showed[rk] || 0) + ' of ' + ((c.meetings_showed[rk] || 0) + (c.meetings_noshow[rk] || 0)) + ' resolved'),
+                kpi('Meeting close', rv(c.meeting_close_rate_pct) + '%', (c.meetings_won[rk] || 0) + ' won'),
+                kpi('Emails', (c.emails[rk] || 0).toLocaleString(), rv(c.email_reply_rate_pct) + '% replied'),
+                kpi('MRR', formatMoneyCents(c.mrr_cents[rk] || 0), (c.closed_clients[rk] || 0) + ' closed'),
+                kpi('Commission owed', formatMoneyCents(teamAgencyOwedCents), 'pending payout')
             ].join('');
+
+            // A company total that does not equal the sum of its reps destroys
+            // trust in every other number on the page, so the gap is named.
+            var box = document.getElementById('teamUnattribBox');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'teamUnattribBox';
+                box.style.marginTop = 'var(--s-3)';
+                grid.parentNode.appendChild(box);
+            }
+            var bits = [];
+            if (u.dials) bits.push(u.dials + ' dial' + (u.dials === 1 ? '' : 's') + ' (' + Object.keys(u.dial_actors || {}).join(', ') + ')');
+            if (u.meetings) bits.push(u.meetings + ' meeting' + (u.meetings === 1 ? '' : 's') + ' (' + Object.keys(u.meeting_actors || {}).join(', ') + ')');
+            box.innerHTML = bits.length
+                ? '<div class="s-note"><div><strong>Not credited to any rep:</strong> ' + escapeAdminHtml(bits.join(' · '))
+                  + '. Counted in the company totals above, excluded from the cards below.</div></div>'
+                : '';
         }
+
         function renderNicheTable() {
             var panel = document.getElementById('teamNichePanel');
             var cnt = document.getElementById('teamNicheCount');
             if (!panel) return;
-            if (!teamAnalytics || !teamAnalytics.by_niche) { panel.innerHTML = '<div class="stilo-empty" style="padding:14px;">No data.</div>'; return; }
-            var rows = teamAnalytics.by_niche.filter(function (n) { return n.dials > 0 || n.meetings > 0 || n.callable_remaining > 0; });
-            if (cnt) cnt.textContent = rows.length + ' niches';
-            var th = 'text-align:left;padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);white-space:nowrap;';
-            var tdN = 'padding:10px 14px;font-size:13px;color:var(--text-primary);white-space:nowrap;';
-            var head = '<tr style="background:rgba(37,99,235,0.05);"><th style="' + th + '">Niche</th><th style="' + th + 'text-align:right;">Dials</th><th style="' + th + 'text-align:right;">Connect %</th><th style="' + th + 'text-align:right;">Leads called</th><th style="' + th + 'text-align:right;">Meetings</th><th style="' + th + 'text-align:right;">Callable left</th></tr>';
+            if (!teamAnalytics || !teamAnalytics.by_niche) { panel.innerHTML = skelRows(6); return; }
+            var rk = teamArRange();
+            // The niche table used to be all-time no matter what the range said.
+            var rows = teamAnalytics.by_niche.filter(function (n) {
+                return n.dials[rk] > 0 || n.meetings[rk] > 0;
+            });
+            if (cnt) cnt.textContent = rows.length + ' niches · ' + (TEAM_RANGE_LABEL[rk] || '').toLowerCase();
+            if (!rows.length) {
+                panel.innerHTML = '<div class="s-empty">No dials in this period.</div>';
+                return;
+            }
+            // 208 niches rendered in full made this one section 6,300px tall and
+            // buried everything above it. The tail is a long list of niches with
+            // a handful of dials each; the head is where the decisions are.
+            var max = Math.max.apply(null, rows.map(function (n) { return n.dials[rk]; }));
+            var total = rows.length;
+            if (!teamNicheExpanded && total > NICHE_PREVIEW) rows = rows.slice(0, NICHE_PREVIEW);
             var body = rows.map(function (n) {
-                return '<tr style="border-top:1px solid var(--border-subtle);">'
-                    + '<td style="' + tdN + 'font-weight:600;">' + escapeAdminHtml(n.niche) + '</td>'
-                    + '<td style="' + tdN + 'text-align:right;font-family:var(--font-mono);">' + n.dials + '</td>'
-                    + '<td style="' + tdN + 'text-align:right;">' + rv(n.connect_rate_pct) + '%</td>'
-                    + '<td style="' + tdN + 'text-align:right;font-family:var(--font-mono);">' + n.leads_called + '</td>'
-                    + '<td style="' + tdN + 'text-align:right;font-weight:700;color:' + (n.meetings ? 'var(--green,#10b981)' : 'var(--text-muted)') + ';">' + n.meetings + '</td>'
-                    + '<td style="' + tdN + 'text-align:right;color:var(--text-muted);font-family:var(--font-mono);">' + n.callable_remaining + '</td>'
+                var w = max ? Math.round((n.dials[rk] / max) * 100) : 0;
+                return '<tr>'
+                    + '<td class="s-t--name">' + escapeAdminHtml(n.niche) + '</td>'
+                    + '<td class="s-t--r"><span class="s-bar"><span class="s-bar__fill" style="width:' + w + '%"></span></span>' + n.dials[rk] + '</td>'
+                    + '<td class="s-t--r">' + n.connect_rate_pct[rk] + '%</td>'
+                    + '<td class="s-t--r">' + n.leads_called[rk] + '</td>'
+                    + '<td class="s-t--r ' + (n.meetings[rk] ? 's-t--pos' : 's-t--dim') + '">' + n.meetings[rk] + '</td>'
+                    + '<td class="s-t--r ' + (n.dials_per_meeting[rk] != null ? '' : 's-t--dim') + '">' + (n.dials_per_meeting[rk] != null ? n.dials_per_meeting[rk] : '—') + '</td>'
+                    + '<td class="s-t--r s-t--dim">' + n.callable_remaining.toLocaleString() + '</td>'
                     + '</tr>';
             }).join('');
-            panel.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:640px;">' + head + body + '</table>';
+            panel.innerHTML = '<table class="s-table" style="min-width:680px;">'
+                + '<thead><tr><th>Niche</th><th class="s-t--r">Dials</th><th class="s-t--r">Connect</th>'
+                + '<th class="s-t--r">Leads called</th><th class="s-t--r">Meetings</th>'
+                + '<th class="s-t--r">Dials/mtg</th><th class="s-t--r">Callable left</th></tr></thead>'
+                + '<tbody>' + body + '</tbody></table>'
+                + (total > NICHE_PREVIEW
+                    ? '<div class="s-tablenote" style="text-align:center;cursor:pointer;color:var(--s-accent-hi);" onclick="toggleNiches()">'
+                      + (teamNicheExpanded ? 'Show top ' + NICHE_PREVIEW + ' only' : 'Show all ' + total + ' niches')
+                      + '</div>'
+                    : '');
         }
-        // The six-stage SDR funnel (per rep + team total), for the selected range.
-        // Dials/booked are range counts; the top-4 rates are computed per range
-        // from range counts; held/close are all-time (outcome-dependent).
+        var NICHE_PREVIEW = 15;
+        var teamNicheExpanded = false;
+        function toggleNiches() { teamNicheExpanded = !teamNicheExpanded; renderNicheTable(); }
+
+        /* The SDR funnel: one row per rep, every column on the selected range. */
         function renderFunnel() {
             var panel = document.getElementById('teamFunnelPanel');
             var rl = document.getElementById('teamFunnelRange');
             if (!panel) return;
-            if (!teamAnalytics) { panel.innerHTML = '<div class="stilo-empty" style="padding:14px;">No data.</div>'; return; }
+            if (!teamAnalytics) { panel.innerHTML = skelRows(6); return; }
             var rk = teamArRange();
-            if (rl) rl.textContent = ({
-                today: 'today', week: 'this week', month: 'this month',
-                last_week: 'last week', last_month: 'last month', all: 'all time'
-            })[rk] || 'all time';
-            var pct = function (n, d) { return d > 0 ? Math.round((n / d) * 1000) / 10 : 0; };
-            var th = 'text-align:left;padding:10px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);white-space:nowrap;';
-            var td = 'padding:10px 12px;font-size:13px;white-space:nowrap;';
-            var tdR = td + 'text-align:right;font-family:var(--font-mono);';
-            var head = '<tr style="background:rgba(37,99,235,0.05);">'
-                + '<th style="' + th + '">Rep</th><th style="' + th + 'text-align:right;">Dials</th>'
-                + '<th style="' + th + 'text-align:right;">Connect%</th><th style="' + th + 'text-align:right;">Conv%</th>'
-                + '<th style="' + th + 'text-align:right;">Booked</th><th style="' + th + 'text-align:right;">Bkd/Conv</th>'
-                + '<th style="' + th + 'text-align:right;">Bkd/Dial</th><th style="' + th + 'text-align:right;">Showed%</th>'
-                + '<th style="' + th + 'text-align:right;">Close%</th></tr>';
-            var mkRow = function (name, o, bold) {
-                var w = bold ? 'font-weight:800;' : 'font-weight:600;';
-                var bg = bold ? 'background:rgba(37,99,235,0.06);' : '';
-                var d = o.dials[rk], conn = o.connects[rk], conv = o.conversations[rk], bk = o.meetings[rk];
-                return '<tr style="border-top:1px solid var(--border-subtle);' + bg + '">'
-                    + '<td style="' + td + w + 'color:var(--text-primary);">' + escapeAdminHtml(name) + '</td>'
-                    + '<td style="' + tdR + '">' + d + '</td>'
-                    + '<td style="' + tdR + '">' + pct(conn, d) + '%</td>'
-                    + '<td style="' + tdR + 'color:#5A7BE8;">' + pct(conv, d) + '%</td>'
-                    + '<td style="' + tdR + 'font-weight:700;">' + bk + '</td>'
-                    + '<td style="' + tdR + '">' + pct(bk, conv) + '%</td>'
-                    + '<td style="' + tdR + '">' + pct(bk, d) + '%</td>'
-                    + '<td style="' + tdR + '">' + rv(o.show_rate_pct) + '%</td>'
-                    + '<td style="' + tdR + 'color:#10b981;font-weight:700;">' + rv(o.meeting_close_rate_pct) + '%</td>'
+            if (rl) rl.textContent = (TEAM_RANGE_LABEL[rk] || 'All time').toLowerCase();
+
+            var head = '<thead><tr><th>Rep</th>'
+                + '<th class="s-t--r">Dials</th><th class="s-t--r">On phone</th>'
+                + '<th class="s-t--r">Connect</th><th class="s-t--r">Conv</th>'
+                + '<th class="s-t--r">Booked</th><th class="s-t--r">Bkd/conv</th>'
+                + '<th class="s-t--r">Dials/mtg</th><th class="s-t--r">Showed</th>'
+                + '<th class="s-t--r">Close</th></tr></thead>';
+
+            var row = function (o, name, cls) {
+                var d = o.dials[rk], bk = o.meetings[rk];
+                var idle = !d && !bk;
+                return '<tr class="' + (cls || (idle ? 's-tr--idle' : '')) + '">'
+                    + '<td class="s-t--name">' + escapeAdminHtml(name) + '</td>'
+                    + '<td class="s-t--r s-t--strong">' + d + '</td>'
+                    + '<td class="s-t--r">' + (o.dial_time_label[rk] || '0m') + '</td>'
+                    + '<td class="s-t--r">' + o.connect_rate_pct[rk] + '%</td>'
+                    + '<td class="s-t--r s-t--accent">' + o.conversation_rate_pct[rk] + '%</td>'
+                    + '<td class="s-t--r s-t--strong">' + bk + '</td>'
+                    + '<td class="s-t--r">' + o.booked_per_conversation_pct[rk] + '%</td>'
+                    + '<td class="s-t--r">' + (o.dials_per_meeting[rk] != null ? o.dials_per_meeting[rk] : '—') + '</td>'
+                    + '<td class="s-t--r">' + o.show_rate_pct[rk] + '%</td>'
+                    + '<td class="s-t--r ' + (o.meeting_close_rate_pct[rk] ? 's-t--pos' : '') + '">' + o.meeting_close_rate_pct[rk] + '%</td>'
                     + '</tr>';
             };
-            var body = mkRow('Team total', teamAnalytics.company, true);
-            (teamAnalytics.per_rep || []).forEach(function (r) { body += mkRow(r.name, r, false); });
-            panel.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:800px;">' + head + body + '</table>'
-                + '<div style="padding:8px 12px;font-size:10px;color:var(--text-muted);border-top:1px solid var(--border-subtle);">Conversation = an answered call over 2 minutes (past the gatekeeper). Showed% = of the meetings this rep booked that have since come round, how many the prospect turned up to. Both follow the range above and depend on outcomes being logged.</div>';
+
+            var body = row(teamAnalytics.company, 'Team total', 's-tr--total');
+            (teamAnalytics.per_rep || []).forEach(function (r) { body += row(r, r.name); });
+
+            panel.innerHTML = '<table class="s-table" style="min-width:880px;">' + head + '<tbody>' + body + '</tbody></table>'
+                + '<div class="s-tablenote"><strong>Connect</strong> = a human picked up, with evidence the call happened (line time, a recording or a transcript). '
+                + '<strong>Conv</strong> = a connect longer than 2 minutes, i.e. past the gatekeeper. '
+                + '<strong>Showed</strong> = of the meetings this rep booked that have since come round, how many the prospect attended. '
+                + 'Every column follows the period selected above.</div>';
         }
+
+        /* When the phone actually gets answered. Deliberately all-time: a single
+           week of dials is far too thin to say anything about what hour works.
+           This has been sitting in lead_calls since day one and was never shown. */
+        function renderTiming() {
+            var panel = document.getElementById('teamTimingPanel');
+            if (!panel) return;
+            if (!teamAnalytics || !teamAnalytics.by_hour) { panel.innerHTML = skelRows(3); return; }
+            var hours = teamAnalytics.by_hour.filter(function (h) { return h.dials >= 20; });
+            var dows = teamAnalytics.by_dow || [];
+            if (!hours.length) { panel.innerHTML = '<div class="s-empty">Not enough dials yet to read a pattern.</div>'; return; }
+
+            var best = hours.slice().sort(function (a, b) { return b.connect_rate_pct - a.connect_rate_pct; })[0];
+            var busiest = hours.slice().sort(function (a, b) { return b.dials - a.dials; })[0];
+            var maxDials = Math.max.apply(null, hours.map(function (h) { return h.dials; }));
+            var maxRate = Math.max.apply(null, hours.map(function (h) { return h.connect_rate_pct; }));
+
+            // Column chart: bar height = dial volume, tint = connect rate. Reads
+            // "are we dialling when people answer?" in one glance.
+            var cols = hours.map(function (h) {
+                var vh = Math.max(4, Math.round((h.dials / maxDials) * 100));
+                var hot = h.connect_rate_pct >= maxRate - 4;
+                return '<div style="flex:1;min-width:34px;display:flex;flex-direction:column;align-items:center;gap:6px;" title="'
+                    + h.label + ' — ' + h.dials + ' dials, ' + h.connect_rate_pct + '% connect">'
+                    + '<div style="font-size:0.62rem;color:' + (hot ? 'var(--s-pos)' : 'var(--s-text-3)') + ';font-variant-numeric:tabular-nums;font-weight:' + (hot ? '700' : '500') + ';">' + h.connect_rate_pct + '%</div>'
+                    + '<div style="width:100%;height:88px;display:flex;align-items:flex-end;">'
+                      + '<div style="width:100%;height:' + vh + '%;border-radius:3px 3px 0 0;background:' + (hot ? 'var(--s-pos)' : 'var(--s-accent)') + ';opacity:' + (hot ? 0.9 : 0.42) + ';"></div>'
+                    + '</div>'
+                    + '<div style="font-size:0.6rem;color:var(--s-text-4);font-variant-numeric:tabular-nums;">' + h.label + '</div>'
+                    + '</div>';
+            }).join('');
+
+            var dayRow = dows.map(function (d) {
+                return '<div class="s-tray__cell"><div class="s-tray__value">' + d.connect_rate_pct + '%</div>'
+                     + '<div class="s-tray__label">' + d.day + ' · ' + d.dials + '</div></div>';
+            }).join('');
+
+            var mismatch = best.label !== busiest.label;
+            panel.innerHTML = '<div class="s-tablewrap" style="padding:var(--s-5);">'
+                + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--s-4);margin-bottom:var(--s-4);flex-wrap:wrap;">'
+                  + '<div class="s-stat__label">Bar height = dials placed &nbsp;·&nbsp; number above = connect rate</div>'
+                  + '<div style="display:flex;gap:var(--s-4);align-items:center;">'
+                    + '<span style="display:inline-flex;align-items:center;gap:6px;font-size:0.64rem;color:var(--s-text-4);">'
+                      + '<span style="width:9px;height:9px;border-radius:2px;background:var(--s-pos);"></span>best hours</span>'
+                    + '<span style="display:inline-flex;align-items:center;gap:6px;font-size:0.64rem;color:var(--s-text-4);">'
+                      + '<span style="width:9px;height:9px;border-radius:2px;background:var(--s-accent);opacity:0.42;"></span>everything else</span>'
+                  + '</div></div>'
+                + '<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:var(--s-4);overflow-x:auto;">' + cols + '</div>'
+                + '<div class="s-stat__label" style="margin-bottom:var(--s-2);">Connect rate by weekday &nbsp;·&nbsp; day and dial count below</div>'
+                + '<div class="s-tray" style="margin-bottom:' + (mismatch ? 'var(--s-3)' : '0') + ';">' + dayRow + '</div>'
+                + (mismatch
+                    ? '<div class="s-note"><div><strong>' + best.label + ' answers best</strong> at ' + best.connect_rate_pct
+                      + '%, but the team dials hardest at ' + busiest.label + ' (' + busiest.dials + ' dials, '
+                      + busiest.connect_rate_pct + '%). Moving volume toward ' + best.label + ' is free connect rate.</div></div>'
+                    : '')
+                + '</div>';
+        }
+        function skelRows(n) {
+            var out = '<div style="padding:var(--s-4);">';
+            for (var i = 0; i < n; i++) out += '<div class="s-skel s-skel--line" style="height:' + (i === 0 ? 12 : 10) + 'px;"></div>';
+            return out + '</div>';
+        }
+
+        /* A snapshot to paste into Claude.
+
+           Rewritten alongside the endpoint: talk_hours, dials_per_meeting,
+           closed_clients, mrr_cents and every niche field became per-range
+           objects, so the old string concatenation would have written
+           "[object Object]" into half the report. It now prints the range grid
+           explicitly, which is more useful anyway — the interesting question is
+           almost always "compared with last week". */
         function exportTeamForClaude() {
             if (!teamAnalytics) { alert('Analytics still loading — try again in a moment.'); return; }
             var c = teamAnalytics.company;
             var money = function (cents) { return '$' + Math.round((cents || 0) / 100).toLocaleString(); };
+            var COLS = ['today', 'week', 'last_week', 'month', 'last_month', 'all'];
+            var HDR = 'today | this wk | last wk | this mo | last mo | all time';
+            // One metric across every range, so trends read straight off the line.
+            var grid = function (label, obj, suffix) {
+                if (obj === null || obj === undefined) return '- ' + label + ': n/a';
+                var vals = COLS.map(function (k) {
+                    var v = (typeof obj === 'object') ? obj[k] : obj;
+                    return (v === null || v === undefined) ? '—' : (v + (suffix || ''));
+                });
+                return '- ' + label + ': ' + vals.join(' | ');
+            };
             var L = [];
-            L.push('# STILO SDR team performance snapshot');
-            L.push('Generated ' + new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET. Dials are OUTBOUND only.');
+            L.push('# STILO sales performance snapshot');
+            L.push('Generated ' + new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET.');
             L.push('');
-            L.push('## Company (today / week / month / all-time)');
-            L.push('- Dials: ' + c.dials.today + ' / ' + c.dials.week + ' / ' + c.dials.month + ' / ' + c.dials.all);
-            L.push('- Connect rate: ' + rv(c.connect_rate_pct) + '% | Avg call: ' + fmtDur(c.avg_call_sec) + ' | Talk time: ' + c.talk_hours + 'h');
-            L.push('- Meetings booked: ' + c.meetings.today + ' / ' + c.meetings.week + ' / ' + c.meetings.month + ' / ' + c.meetings.all + ' | Dials/meeting: ' + c.dials_per_meeting);
-            L.push('- Meetings showed: ' + rv(c.meetings_showed) + ' of ' + rv(c.meetings_occurred) + ' | Meeting close rate: ' + rv(c.meeting_close_rate_pct) + '% | No-show: ' + rv(c.no_show_rate_pct) + '%');
-            L.push('- FUNNEL (all-time): dials ' + c.dials.all + ' -> connect ' + rv(c.connect_rate_pct) + '% -> conversation ' + rv(c.conversation_rate_pct) + '% -> booked/dial ' + rv(c.booked_per_dial_pct) + '% (booked/conv ' + rv(c.booked_per_conversation_pct) + '%) -> showed ' + rv(c.show_rate_pct) + '% -> close ' + rv(c.meeting_close_rate_pct) + '%');
-            L.push('- Emails sent: ' + c.emails.all + ' | Clients closed: ' + c.closed_clients + ' | MRR: ' + money(c.mrr_cents));
+            L.push('## Definitions');
+            Object.keys(teamAnalytics.definitions || {}).forEach(function (k) {
+                L.push('- **' + k + '**: ' + teamAnalytics.definitions[k]);
+            });
             L.push('');
-            L.push('## Per SDR (all-time unless noted)');
+            L.push('## Company — every metric across ' + HDR);
+            L.push(grid('Dials', c.dials));
+            L.push(grid('Time on the phone', c.dial_time_label));
+            L.push(grid('Talk time (conversations only)', c.talk_time_label));
+            L.push(grid('Contacts (human picked up)', c.contacts));
+            L.push(grid('Connect rate', c.connect_rate_pct, '%'));
+            L.push(grid('Conversations (>2 min)', c.conversations));
+            L.push(grid('Conversation rate', c.conversation_rate_pct, '%'));
+            L.push(grid('Avg call (sec)', c.avg_call_sec));
+            L.push(grid('Active days', c.active_days));
+            L.push(grid('Dials per active day', c.dials_per_active_day));
+            L.push(grid('Distinct leads touched', c.leads_touched));
+            L.push(grid('Meetings booked', c.meetings));
+            L.push(grid('Dials per meeting', c.dials_per_meeting));
+            L.push(grid('Phone hours per meeting', c.hours_per_meeting, 'h'));
+            L.push(grid('Booked per conversation', c.booked_per_conversation_pct, '%'));
+            L.push(grid('Meetings that came round', c.meetings_occurred));
+            L.push(grid('Show rate', c.show_rate_pct, '%'));
+            L.push(grid('No-show rate', c.no_show_rate_pct, '%'));
+            L.push(grid('Meeting close rate', c.meeting_close_rate_pct, '%'));
+            L.push(grid('Emails sent', c.emails));
+            L.push(grid('Email reply rate', c.email_reply_rate_pct, '%'));
+            L.push(grid('Email bounce rate', c.email_bounce_rate_pct, '%'));
+            L.push(grid('Clients closed', c.closed_clients));
+            L.push('- MRR (live retainers, all time): ' + money(c.mrr_cents.all));
+            L.push('- Callable leads remaining: ' + c.pipeline_remaining);
+            L.push('');
+
+            var u = teamAnalytics.unattributed || {};
+            if (u.dials || u.meetings) {
+                L.push('## Not credited to any rep');
+                L.push('These are in the company totals but in nobody\'s per-rep numbers.');
+                if (u.dials) L.push('- Dials: ' + u.dials + ' — ' + JSON.stringify(u.dial_actors));
+                if (u.meetings) L.push('- Meetings: ' + u.meetings + ' — ' + JSON.stringify(u.meeting_actors));
+                L.push('');
+            }
+
+            L.push('## Per person — ' + HDR);
             (teamAnalytics.per_rep || []).forEach(function (r) {
-                L.push('### ' + r.name);
-                L.push('- Dials: ' + r.dials.all + ' (today ' + r.dials.today + ', week ' + r.dials.week + ', ~' + r.avg_dials_per_day + '/active day over ' + r.active_days + ' days)');
-                L.push('- Connect rate: ' + rv(r.connect_rate_pct) + '% | Avg call: ' + fmtDur(r.avg_call_sec) + ' | Talk: ' + r.talk_min + ' min');
-                L.push('- Meetings booked: ' + r.meetings.all + ' | Dials/meeting: ' + (r.dials_per_meeting != null ? r.dials_per_meeting : 'n/a'));
-                L.push('- Funnel: dials ' + r.dials.all + ' -> connect ' + rv(r.connect_rate_pct) + '% -> conversation ' + rv(r.conversation_rate_pct) + '% -> booked/dial ' + rv(r.booked_per_dial_pct) + '% (booked/conv ' + rv(r.booked_per_conversation_pct) + '%) -> showed ' + rv(r.show_rate_pct) + '% -> close ' + rv(r.meeting_close_rate_pct) + '%');
-                L.push('- Meetings showed: ' + rv(r.meetings_showed) + ' of ' + rv(r.meetings_occurred) + ' | Close rate: ' + rv(r.meeting_close_rate_pct) + '% | No-show: ' + rv(r.no_show_rate_pct) + '%');
-                L.push('- Outcomes: won ' + r.meeting_outcomes.closed_won + ', lost ' + r.meeting_outcomes.closed_lost + ', no-show ' + r.meeting_outcomes.no_show + ', rescheduled ' + r.meeting_outcomes.rescheduled + ', interested ' + r.meeting_outcomes.interested + ', needs-time ' + r.meeting_outcomes.needs_time);
-                L.push('- Clients closed: ' + r.closed_clients + ' | MRR: ' + money(r.mrr_cents));
+                L.push('### ' + r.name + (r.is_closer ? ' (closer)' : '') + (r.active ? '' : ' — INACTIVE'));
+                L.push(grid('Dials', r.dials));
+                L.push(grid('Time on the phone', r.dial_time_label));
+                L.push(grid('Connect rate', r.connect_rate_pct, '%'));
+                L.push(grid('Conversation rate', r.conversation_rate_pct, '%'));
+                L.push(grid('Avg call (sec)', r.avg_call_sec));
+                L.push(grid('Active days', r.active_days));
+                L.push(grid('Dials per active day', r.dials_per_active_day));
+                L.push(grid('Meetings booked', r.meetings));
+                L.push(grid('Dials per meeting', r.dials_per_meeting));
+                L.push(grid('Booked per conversation', r.booked_per_conversation_pct, '%'));
+                L.push(grid('Show rate of what they booked', r.show_rate_pct, '%'));
+                L.push(grid('Emails sent', r.emails));
+                L.push('- Callable leads left: ' + r.pipeline_remaining
+                    + (r.pipeline_days_left != null ? ' (~' + r.pipeline_days_left + ' days at current pace)' : ''));
                 L.push('');
             });
-            L.push('## Performance by niche');
-            (teamAnalytics.by_niche || []).forEach(function (n) {
-                L.push('- ' + n.niche + ': ' + n.dials + ' dials, ' + n.connect_rate_pct + '% connect, ' + n.leads_called + ' leads called, ' + n.meetings + ' meetings, ' + n.callable_remaining + ' callable left');
+
+            L.push('## When the phone gets answered (all time, ET)');
+            (teamAnalytics.by_hour || []).filter(function (h) { return h.dials >= 20; }).forEach(function (h) {
+                L.push('- ' + h.label + ': ' + h.dials + ' dials, ' + h.connect_rate_pct + '% connect, ' + h.avg_talk_sec + 's avg talk');
             });
+            L.push('');
+            L.push('## By weekday (all time, ET)');
+            (teamAnalytics.by_dow || []).forEach(function (d) {
+                L.push('- ' + d.day + ': ' + d.dials + ' dials, ' + d.connect_rate_pct + '% connect');
+            });
+            L.push('');
+
+            var rk = teamArRange();
+            L.push('## Performance by niche (' + (TEAM_RANGE_LABEL[rk] || 'all time').toLowerCase() + ')');
+            (teamAnalytics.by_niche || []).filter(function (n) { return n.dials[rk] > 0 || n.meetings[rk] > 0; }).forEach(function (n) {
+                L.push('- ' + n.niche + ': ' + n.dials[rk] + ' dials, ' + n.connect_rate_pct[rk] + '% connect, '
+                    + n.leads_called[rk] + ' leads called, ' + n.meetings[rk] + ' meetings, '
+                    + (n.dials_per_meeting[rk] != null ? n.dials_per_meeting[rk] + ' dials/mtg, ' : '')
+                    + n.callable_remaining + ' callable left');
+            });
+
             var text = L.join('\n');
             var btn = document.getElementById('teamExportBtn');
             var done = function (ok) {
@@ -5004,39 +5325,79 @@
             }
         }
 
+        /* One wave of requests, not four.
+
+           This used to run as four strictly sequential stages: roster, then a
+           fan-out of 2 calls per rep, then team-analytics, then closers. Each
+           stage waited on the one before it even though none of them needed the
+           previous result, and the two analytics endpoints between them spent
+           ~13s inside Supabase (closer-analytics alone paged the entire 27,054
+           row leads table, 28 sequential round trips, to derive two numbers).
+
+           The endpoints were fixed separately; this fixes the waterfall. The
+           roster is still first because the earnings fan-out needs the ids, but
+           everything else now goes out together and each section paints as its
+           own data lands. */
         async function loadTeamPage() {
             var grid = document.getElementById('teamGrid');
             if (!grid) return;
-            grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);padding:18px;font-size:13px;">Loading SDRs…</div>';
+
+            // Skeletons keep the layout stable so nothing jumps when data lands.
+            grid.innerHTML = skelCards(3, 'sdr');
+            var cg = document.getElementById('teamClosersGrid');
+            if (cg) cg.innerHTML = skelCards(2, 'closer');
+            renderCompanyKpis();
             loadDataHealth();
+
             try {
                 var { data: { session } } = await sb.auth.getSession();
                 var headers = { 'Authorization': 'Bearer ' + (session && session.access_token || '') };
-                var rosterRes = await fetch('/api/sdr/roster', { headers });
-                var roster = await rosterRes.json();
-                if (!roster.sdrs || !roster.sdrs.length) {
-                    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);padding:18px;font-size:13px;">No active SDRs yet.</div>';
-                    return;
-                }
-                // Fetch once, render per range with no refetch.
-                teamData = await Promise.all(roster.sdrs.map(async function (sdr) {
-                    var [perfR, earnR] = await Promise.all([
-                        fetch('/api/sdr/performance?sdr_id=' + sdr.id, { headers }).then(r => r.json()),
-                        fetch('/api/sdr/earnings?sdr_id=' + sdr.id, { headers }).then(r => r.json())
-                    ]);
-                    return { sdr: sdr, perf: perfR, earn: earnR };
-                }));
-                // Richer KPIs (connect rate, avg call, niche, meeting close) come
-                // from one analytics call. Fetch alongside; don't block the grid.
-                try {
-                    teamAnalytics = await fetch('/api/sdr/team-analytics', { headers }).then(r => r.json());
-                    loadClosers();   // owners render in their own CLOSERS section
-                } catch (_) { teamAnalytics = null; }
-                setTeamRange(teamRange); // highlights the active button and renders grid + KPIs
-                renderNicheTable();
+
+                var analyticsP = fetch('/api/sdr/team-analytics', { headers })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        if (d && d.error) throw new Error(d.error);
+                        teamAnalytics = d;
+                        renderCompanyKpis(); renderFunnel(); renderNicheTable(); renderTiming(); renderTeamGrid();
+                    })
+                    .catch(function (e) {
+                        console.error('[team-analytics]', e);
+                        teamAnalytics = null;
+                        grid.innerHTML = '<div class="s-empty">Could not load analytics: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                    });
+
+                var closersP = fetch('/api/sdr/closer-analytics', { headers })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) { closerData = d; renderClosers(); })
+                    .catch(function (e) {
+                        console.error('[closer-analytics]', e);
+                        if (cg) cg.innerHTML = '<div class="s-empty">Could not load closers: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+                    });
+
+                // Earnings is the only figure team-analytics does not own.
+                // /api/sdr/performance is no longer called here at all: every
+                // number it fed the cards now comes from team-analytics, on the
+                // selected range instead of all-time.
+                var earningsP = fetch('/api/sdr/roster', { headers })
+                    .then(function (r) { return r.json(); })
+                    .then(function (roster) {
+                        var sdrs = (roster && roster.sdrs) || [];
+                        teamData = sdrs.map(function (sdr) { return { sdr: sdr }; });
+                        return Promise.all(sdrs.map(function (sdr) {
+                            return fetch('/api/sdr/earnings?sdr_id=' + sdr.id, { headers })
+                                .then(function (r) { return r.json(); })
+                                .then(function (e) { teamEarnings[String(sdr.email).toLowerCase()] = e; })
+                                .catch(function () {});
+                        }));
+                    })
+                    .then(function () { renderTeamGrid(); renderCompanyKpis(); })
+                    .catch(function (e) { console.error('[earnings]', e); });
+
+                setTeamRange(teamRange);
+                await Promise.all([analyticsP, closersP, earningsP]);
             } catch (e) {
                 console.error('[loadTeamPage]', e);
-                grid.innerHTML = '<div style="grid-column:1/-1;color:#ef4444;padding:18px;font-size:13px;">Failed to load team: ' + (e.message || 'unknown') + '</div>';
+                grid.innerHTML = '<div class="s-empty">Failed to load team: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
             }
         }
 
@@ -10253,6 +10614,27 @@
                 return '<option value="' + s.id + '"' + sel + '>' + escapeAdminHtml(s.display_name) + ' (' + Math.round(Number(s.commission_pct || 0.25) * 100) + '% setup / ' + Math.round(Number(s.commission_mrr_pct != null ? s.commission_mrr_pct : 0.10) * 100) + '% MRR)</option>';
             }).join('');
 
+            // Who is closing this deal. Closers are the 0%-commission roster
+            // rows (Remy and David). Explicit, because "whoever happens to be
+            // signed in" is how a meeting ends up credited to nobody: this used
+            // to be stamped silently with the auth uuid of the logged-in
+            // session, which closer-analytics could never match. Defaults to
+            // the signed-in admin resolved through the same alias map the
+            // analytics use (remyleon11@gmail.com -> Remy's roster row).
+            var CLOSER_ALIASES = { 'remyleon11@gmail.com': 'remyleon@stiloaipartners.com', 'stiloaiconsulting@gmail.com': 'remyleon@stiloaipartners.com' };
+            var myEmail = '';
+            try {
+                var sess = (await sb.auth.getSession()).data.session;
+                myEmail = ((sess && sess.user && sess.user.email) || '').toLowerCase();
+            } catch (_) {}
+            myEmail = CLOSER_ALIASES[myEmail] || myEmail;
+            var closers = sdrRoster.filter(function (s) { return Number(s.commission_pct) === 0; });
+            if (!closers.length) closers = sdrRoster; // never render an empty picker
+            var closerOptions = closers.map(function (s) {
+                var sel = String(s.email || '').toLowerCase() === myEmail ? ' selected' : '';
+                return '<option value="' + s.id + '"' + sel + '>' + escapeAdminHtml(s.display_name) + '</option>';
+            }).join('');
+
             var modalHtml = ''
                 + '<form id="closeDealForm" onsubmit="return submitCloseDeal(event)" style="padding:0 4px;">'
                 + '<input type="hidden" name="source_lead_id" value="' + (lead.id || '') + '">'
@@ -10279,8 +10661,13 @@
                   + '<div style="padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:9px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Monthly · starts build + 14d</div><div id="dealTotalMonthly" style="font-family:var(--font-mono);font-weight:800;font-size:18px;color:var(--text-primary);margin-top:2px;">$0/mo</div></div>'
                 + '</div>'
 
-                + '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">SDR credit</label>'
-                  + '<select name="sdr_id" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">' + sdrOptions + '</select></div>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">SDR credit</label>'
+                    + '<select name="sdr_id" style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">' + sdrOptions + '</select></div>'
+                  + '<div><label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;">Closed by *</label>'
+                    + '<select name="closed_by_sdr_id" required style="width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;">' + closerOptions + '</select>'
+                    + '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Drives the closer cards on the Team tab. Pick who actually ran the closing call.</div></div>'
+                + '</div>'
 
                 + '<div style="margin-bottom:14px;"><label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" name="manual_billing" style="margin:0;"> Manual billing (wire / check / Zelle) — create the deal without Stripe invoices</label></div>'
 
@@ -10393,6 +10780,7 @@
                 contact_email: fd.get('contact_email'),
                 contact_phone: fd.get('contact_phone'),
                 sdr_id: fd.get('sdr_id') || null,
+                closed_by_sdr_id: fd.get('closed_by_sdr_id') || null,
                 notes: fd.get('notes')
             };
             if (manual) {

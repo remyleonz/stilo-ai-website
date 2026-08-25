@@ -31,11 +31,11 @@ const leadsDb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERV
 // but stays mapped to him so a future push there still lands.
 // NEVER map a folder to an inactive rep: outbound-enqueue drops leads whose
 // assigned_to has no active sdr_users row, silently killing the book.
-const REP_EMAIL = { 'rep-a': 'georgegutierrez446@gmail.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'ayesjorge911@gmail.com', 'rep-d': 'georgegutierrez446@gmail.com', 'dc': 'davidcoira@stiloaipartners.com', 'rl': 'remyleon@stiloaipartners.com' };
-const REP_NAME = { 'rep-a': 'George', 'rep-b': 'Alejandro', 'rep-c': 'Jorge', 'rep-d': 'George', 'dc': 'David', 'rl': 'Remy' };
+const REP_EMAIL = { 'rep-a': 'georgegutierrez446@gmail.com', 'rep-b': 'aleb1027@gmail.com', 'rep-c': 'ayesjorge911@gmail.com', 'rep-d': 'georgegutierrez446@gmail.com', 'rep-e': 'melanyealtuve12@gmail.com', 'dc': 'davidcoira@stiloaipartners.com', 'rl': 'remyleon@stiloaipartners.com' };
+const REP_NAME = { 'rep-a': 'George', 'rep-b': 'Alejandro', 'rep-c': 'Jorge', 'rep-d': 'George', 'rep-e': 'Melanye', 'dc': 'David', 'rl': 'Remy' };
 const NAME_BY_EMAIL = {}; Object.keys(REP_EMAIL).forEach(f => NAME_BY_EMAIL[REP_EMAIL[f]] = REP_NAME[f]);
-const SDR_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d'];
-const ALL_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'dc', 'rl'];
+const SDR_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'rep-e'];
+const ALL_FOLDERS = ['rep-a', 'rep-b', 'rep-c', 'rep-d', 'rep-e', 'dc', 'rl'];
 
 function slugify(s) {
     return String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
