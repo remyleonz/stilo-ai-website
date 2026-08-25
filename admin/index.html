@@ -4523,9 +4523,11 @@
             var rk = teamArRange();
             var label = TEAM_RANGE_LABEL[rk] || 'Today';
             var sdrs = teamAnalytics.per_rep.filter(function (r) { return !r.is_closer; });
-            // Reps with no history at all are noise; reps who are simply quiet
-            // this period still belong on screen, greyed rather than hidden.
-            var shown = sdrs.filter(function (r) { return r.active || r.dials.all > 0; });
+            // CURRENT team only (Remy, 2026-08-25). Departed reps kept getting
+            // cards because "has history" kept them visible; their history
+            // still lives in the company totals and the funnel's all-time
+            // rows, but the card grid is the roster you manage today.
+            var shown = sdrs.filter(function (r) { return r.active; });
             if (cnt) cnt.textContent = shown.length + ' reps · ' + label.toLowerCase();
             if (!shown.length) { grid.innerHTML = '<div class="s-empty">No SDRs on the roster.</div>'; return; }
 
@@ -5097,7 +5099,13 @@
             };
 
             var body = row(teamAnalytics.company, 'Team total', 's-tr--total');
-            (teamAnalytics.per_rep || []).forEach(function (r) { body += row(r, r.name); });
+            (teamAnalytics.per_rep || []).forEach(function (r) {
+                // Departed reps appear only in ranges where they actually did
+                // something — their 876 all-time dials matter, six zero rows
+                // under "Today" do not.
+                if (!r.active && !(r.dials[rk] || r.meetings[rk])) return;
+                body += row(r, r.name + (r.active ? '' : ' (departed)'));
+            });
 
             panel.innerHTML = '<table class="s-table" style="min-width:880px;">' + head + '<tbody>' + body + '</tbody></table>'
                 + '<div class="s-tablenote"><strong>Connect</strong> = a human picked up, with evidence the call happened (line time, a recording or a transcript). '
@@ -5594,7 +5602,12 @@
         }
 
         function closeSdrDetailDrawer() {
-            document.getElementById('sdrDetailDrawer').style.right = '-820px';
+            // Park it past its own width, whatever that width is. The drawer
+            // grew from 820px to 880px for the full stat sheet and this
+            // hardcoded -820px left a 60px sliver on the right edge of the
+            // screen after dismiss.
+            var d = document.getElementById('sdrDetailDrawer');
+            d.style.right = '-' + Math.max(d.offsetWidth + 40, 920) + 'px';
             document.getElementById('sdrDetailOverlay').style.display = 'none';
         }
 
