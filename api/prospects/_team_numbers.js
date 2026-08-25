@@ -29,7 +29,7 @@ const { normalizePhone } = require('../openphone/_shared');
 // email (sdr_users) -> personal cell. From Remy 2026-08-24/25.
 const PERSONAL = {
     'aleb1027@gmail.com': '+13057759522',
-    'ayesjorge911@gmail.com': '+13033377495',
+    'ayesjorge911@gmail.com': '+13053377495',   // was +1303… (typo) — carrier-rejected 8/25
     'georgegutierrez446@gmail.com': '+17867975869',
     'melanyealtuve12@gmail.com': '+17865806735'
 };
