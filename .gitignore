@@ -17,3 +17,9 @@ site-audit/
 
 # One-off diagnostic script: reads .env.local and /tmp/sa.json at runtime
 _fullscan.js
+
+# Minted auth sessions written by verification scripts. These hold a live
+# access_token for a real user; one of these reaching the repo is a credential
+# leak, and it was sitting untracked-but-committable on 2026-08-24.
+__session.json
+*.session.json

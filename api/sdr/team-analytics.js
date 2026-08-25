@@ -42,19 +42,9 @@ function lc() { return createClient(process.env.SUPABASE_URL, process.env.SUPABA
 // forever.
 const { pullAll: pullPages } = require('./_pull');
 
-// sdr_type / client_account arrive with api/migrations/sdr_type_and_rep_e.sql.
-// Deploys and migrations are separate manual steps here, so whichever lands
-// first must not take the Team tab down. A missing column is a 42703; fall back
-// to the columns that have always existed and let per_rep default to
-// 'new_client'. Drop this once the migration is applied everywhere.
-const ROSTER_BASE = 'email, display_name, sdr_key, initials, avatar_color, daily_call_quota, active, hired_at, commission_pct';
-
-async function rosterPull(pub) {
-    const withType = await pub.from('sdr_users')
-        .select(ROSTER_BASE + ', sdr_type, client_account').order('display_name');
-    if (!withType.error || withType.error.code !== '42703') return withType;
-    return pub.from('sdr_users').select(ROSTER_BASE).order('display_name');
-}
+// sdr_type / client_account: see api/migrations/sdr_type_and_rep_e.sql,
+// applied 2026-08-24.
+const ROSTER_COLS = 'email, display_name, sdr_key, initials, avatar_color, daily_call_quota, active, hired_at, commission_pct, sdr_type, client_account';
 function pullAll(build) {
     return pullPages(function (from, to) {
         return build().range(from, to);
@@ -99,7 +89,7 @@ module.exports = async function handler(req, res) {
     // used to be five sequential awaits plus a 28-page full-table scan; the tab
     // spent ~13s waiting on round trips it never needed to serialise.
     const [rosterRes, calls, bookedLeads, callableLeads, occRows, emailMsgs, dealsRes, sdrIdRes] = await Promise.all([
-        rosterPull(pub),
+        pub.from('sdr_users').select(ROSTER_COLS).order('display_name'),
         pullAll(function () {
             return prospect.from('lead_calls')
                 .select('logged_by, direction, outcome, duration_seconds, called_at, lead_id, transcript, recording_url', { count: 'exact' })
