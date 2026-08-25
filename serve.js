@@ -151,4 +151,7 @@ const server = http.createServer((req, res) => {
     res.end(data);
   });
 });
-server.listen(8081, () => console.log('Server running on http://localhost:8081'));
+// PORT env first so a second session can run its own instance while 8081 is
+// held by another one (the launch.json entry sets autoPort for exactly that).
+const PORT = parseInt(process.env.PORT, 10) || 8081;
+server.listen(PORT, () => console.log('Server running on http://localhost:' + PORT));

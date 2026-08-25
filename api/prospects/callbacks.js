@@ -12,7 +12,7 @@
  * SDR scoping: SDR callers are force-scoped to their own email; admins may
  * pass ?assigned_to=<sdr_key|email>.
  */
-const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer, LEAD_LIST_COLUMNS } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer, resolveClientScope, LEAD_LIST_COLUMNS } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
@@ -66,7 +66,9 @@ module.exports = async function handler(req, res) {
     // prospect. Dialing one would have opened a script for a retired product.
     // Hidden, not deleted: history, call logs and commissions are untouched, and
     // they return the moment David re-briefs them under the current offer.
-    q = gateToCurrentOffer(q);
+    // Client-account reps get their client's callbacks instead (same gate as
+    // the dial board, so the two can never drift).
+    q = gateToCurrentOffer(q, await resolveClientScope(sdrEmail));
     if (sdrEmail) q = q.eq('assigned_to', sdrEmail);
 
     const { data, error } = await q

@@ -81,6 +81,8 @@ module.exports = async function handler(req, res) {
 
     let q = sb.from('leads')
         .select('id,name,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr,' + LANG_COL)
+        // VSL content is STILO's pitch; never for client-account leads.
+        .is('client_id', null)
         .is('vsl_followup_sms_sent_at', null)
         .gt('meeting_scheduled_at', nowIso)
         .in('id', explicitIds.length ? explicitIds : leadIds);

@@ -300,13 +300,40 @@ module.exports.startOfDayET = startOfDayET;
 // CALLABLE_OFFER=* disables the gate everywhere at once.
 // Set 2026-08-04 with the sales-agency pivot. See api/prospects/callable.js.
 const CURRENT_OFFER = process.env.CALLABLE_OFFER || 'Booked Meetings';
-function gateToCurrentOffer(q) {
+function gateToCurrentOffer(q, clientId) {
+    // Client-account mode: the board IS the client's lead pool. Client leads
+    // never carry a STILO pitch_agent (they're not being sold a STILO offer),
+    // so the pitch gate is replaced, not stacked, with the client_id filter.
+    if (clientId) return q.eq('client_id', clientId);
     return CURRENT_OFFER === '*' ? q : q.eq('pitch_agent', CURRENT_OFFER);
+}
+
+/**
+ * Which client does this rep dial for? Returns the clients.id uuid for a
+ * sdr_users row with sdr_type='client_account', else null (a STILO rep).
+ *
+ * Every board/queue endpoint calls this with the EFFECTIVE assigned_to email
+ * (the SDR themselves, or the rep an admin is impersonating), so a client rep
+ * sees their client's pool and everyone else sees STILO's, from one gate.
+ */
+async function resolveClientScope(email) {
+    if (!email) return null;
+    try {
+        const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+            auth: { persistSession: false }
+        });
+        const { data } = await sb.from('sdr_users')
+            .select('sdr_type, client_id')
+            .eq('email', String(email).toLowerCase()).maybeSingle();
+        if (data && data.sdr_type === 'client_account' && data.client_id) return data.client_id;
+    } catch (_) { /* on error, behave like a STILO rep — never 500 a board */ }
+    return null;
 }
 
 module.exports.normalizeLead = normalizeLead;
 module.exports.CURRENT_OFFER = CURRENT_OFFER;
 module.exports.gateToCurrentOffer = gateToCurrentOffer;
+module.exports.resolveClientScope = resolveClientScope;
 
 /**
  * The columns a LEAD LIST needs. Nothing else.
@@ -345,7 +372,10 @@ const LEAD_LIST_COLUMNS = [
     // Lifecycle: stage badge, SDR scoping, dialed-today dimming, last-touch sort.
     'stage', 'assigned_to', 'last_called_at', 'last_called_outcome', 'call_attempts',
     // Callback + meeting stamps the calendars and the Booked column read.
-    'next_action_due_at', 'meeting_scheduled_at', 'meeting_confirmed_at'
+    'next_action_due_at', 'meeting_scheduled_at', 'meeting_confirmed_at',
+    // Client-account scoping: which client's pool this lead belongs to
+    // (null = STILO's own prospect). Read by the client CRM and board gates.
+    'client_id'
 ].join(', ');
 
 module.exports.LEAD_LIST_COLUMNS = LEAD_LIST_COLUMNS;

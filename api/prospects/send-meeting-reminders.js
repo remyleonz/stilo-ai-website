@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,owner_phone,phone,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_booked_by_sdr,' + LANG_COL)
+        .select('id,name,owner_name,owner_email,email,owner_phone,phone,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_booked_by_sdr,client_id,' + LANG_COL)
         .is('meeting_reminder_sent_at', null)
         .not('meeting_scheduled_at', 'is', null);
     if (explicitIds.length) {
@@ -111,6 +111,18 @@ module.exports = async function handler(req, res) {
         (sdrs || []).forEach(function (s) { if (s.email) roster[s.email.toLowerCase()] = s; });
     } catch (_) { /* fall back to Remy */ }
 
+    // Client-account leads get the reminder under the CLIENT's name, never
+    // STILO's — the prospect booked a call with (e.g.) Blason Spa Equipment and
+    // has no idea who STILO is. Resolve business names for the few client ids.
+    const clientNames = {};
+    try {
+        const cids = [...new Set((leads || []).map(function (l) { return l.client_id; }).filter(Boolean))];
+        if (cids.length) {
+            const { data: cl } = await pub.from('clients').select('id,business_name').in('id', cids);
+            (cl || []).forEach(function (c) { clientNames[c.id] = c.business_name; });
+        }
+    } catch (_) { /* default to STILO wording */ }
+
     const results = [];
     for (const ld of (leads || [])) {
         const first = firstName(ld.owner_name);
@@ -125,13 +137,14 @@ module.exports = async function handler(req, res) {
 
         // Plain text. No button, no card. The Meet link has to be the plainest
         // thing in the message so it survives every client.
+        const company = ld.client_id ? (clientNames[ld.client_id] || null) : null;
         const joinLine = t(lang, 'reminderEmailJoin', { meet: meet, rep: repName });
         const body = t(lang, 'reminderEmailBody', {
-            first: first, time: when, joinLines: joinLine, rep: repName,
+            first: first, time: when, joinLines: joinLine, rep: repName, company: company,
         });
-        const reminderSubject = t(lang, 'reminderEmailSubject', {});
+        const reminderSubject = t(lang, 'reminderEmailSubject', { company: company });
         const sms = t(lang, 'reminderSms', {
-            first: first, rep: repName, time: when, meet: meet,
+            first: first, rep: repName, time: when, meet: meet, company: company,
         });
 
         if (dry) { results.push({ id: ld.id, to_email: email, to_phone: phone, when: when, meet: !!meet, sms_preview: sms }); continue; }

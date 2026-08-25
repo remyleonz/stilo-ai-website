@@ -50,6 +50,9 @@ module.exports = async function handler(req, res) {
 
     let q = sb.from('leads')
         .select('id,name,address,owner_name,owner_phone,phone,meeting_scheduled_at,meeting_booked_by_sdr,' + LANG_COL)
+        // No client-account leads: "I had a deep look at your business with my
+        // team" is STILO's framing, not the client's. See send-confirmations.
+        .is('client_id', null)
         .is('day_before_sms_sent_at', null)
         .not('meeting_scheduled_at', 'is', null);
     if (explicitIds.length) {

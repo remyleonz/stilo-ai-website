@@ -37,12 +37,15 @@ module.exports = async function handler(req, res) {
 
     let sel = sb.from('leads')
         .select('category')
-        .eq('has_cold_call_script', true)
-        .not('pitch_agent', 'is', null)
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false')
         .is('archived_batch', null);
-    sel = gateToCurrentOffer(sel);
+    // Mirror callable.js exactly: STILO mode gates on per-lead script + pitch,
+    // client-account mode swaps both for the client_id filter so the dropdown
+    // counts the same rows the board returns.
+    const clientId = await require('./_shared').resolveClientScope(assignedTo);
+    if (!clientId) sel = sel.eq('has_cold_call_script', true).not('pitch_agent', 'is', null);
+    sel = gateToCurrentOffer(sel, clientId);
     if (assignedTo) sel = sel.eq('assigned_to', assignedTo);
 
     // One narrow column, so the 1000-row cap that broke the dropdown does not

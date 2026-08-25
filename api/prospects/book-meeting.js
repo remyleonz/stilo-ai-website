@@ -101,10 +101,26 @@ module.exports = async function handler(req, res) {
         // meeting_event_id is load-bearing: the reschedule path needs it to
         // cancel the previous calendar event. It was missing here, so a
         // reschedule left the old event orphaned on the calendar.
-        .select('id,name,owner_name,owner_email,email,owner_phone,phone,call_attempts,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_event_id')
+        .select('id,name,owner_name,owner_email,email,owner_phone,phone,call_attempts,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_event_id,client_id')
         .eq('id', leadId).maybeSingle();
     if (leadErr) return res.status(500).json({ error: 'lead_read_failed', detail: leadErr.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
+
+    // Client-account lead: the meeting is between the prospect and the CLIENT
+    // (e.g. a medspa owner meeting Manuel at Blason), not a STILO discovery
+    // call. The client's contact rides the invite so it lands on their
+    // calendar, the event is branded to the client, and none of STILO's
+    // pitch content (VSL confirmation email) goes anywhere near the prospect.
+    let clientCo = null;
+    if (lead.client_id) {
+        try {
+            const pubSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+            const { data: c } = await pubSb.from('clients')
+                .select('id,business_name,contact_name,email')
+                .eq('id', lead.client_id).maybeSingle();
+            if (c) clientCo = c;
+        } catch (_) { /* fall back to STILO branding rather than block a booking */ }
+    }
 
     // Follow-up booking (a client wants a 2nd/3rd meeting): unlike a reschedule,
     // which MOVES the current meeting, a follow-up must KEEP the prior one. Snapshot
@@ -164,17 +180,24 @@ module.exports = async function handler(req, res) {
             ownerPhone ? 'Phone: ' + ownerPhone : null,
             ownerEmail ? 'Email: ' + ownerEmail : null,
             '',
-            'Discovery call to walk through the AI agent fit for ' + businessName + '. Booked from the STILO SDR dashboard.'
+            clientCo
+                ? 'Sales call with ' + clientCo.business_name + (clientCo.contact_name ? ' (' + clientCo.contact_name + ')' : '') + ' for ' + businessName + '. Booked from the STILO SDR dashboard.'
+                : 'Discovery call to walk through the AI agent fit for ' + businessName + '. Booked from the STILO SDR dashboard.'
         ].filter(function (l) { return l !== null; });
         const eventBody = {
-            summary: 'STILO AI Partners discovery · ' + businessName,
+            summary: clientCo
+                ? clientCo.business_name + ' · ' + businessName
+                : 'STILO AI Partners discovery · ' + businessName,
             description: contactLines.join('\n'),
             start: { dateTime: startIso, timeZone: 'America/New_York' },
             end: { dateTime: endIso, timeZone: 'America/New_York' },
             // David Coira (cofounder) rides every booked meeting so it lands on
             // his calendar and he can join, without sharing the whole calendar.
             // Pre-accepted so it shows confirmed on his side, not "needs response".
+            // Client-account meetings ALSO invite the client's contact (the
+            // meeting is theirs to run — e.g. Manuel at Blason).
             attendees: [{ email: 'davidcoira@stiloaipartners.com', displayName: 'David Coira (STILO)', responseStatus: 'accepted' }]
+                .concat(clientCo && clientCo.email ? [{ email: clientCo.email, displayName: (clientCo.contact_name || clientCo.business_name) + ' (' + clientCo.business_name + ')' }] : [])
                 .concat(ownerEmail ? [{ email: ownerEmail, displayName: ownerName || businessName }] : []),
             conferenceData: { createRequest: { requestId: 'stilo-' + leadId + '-' + Date.now(), conferenceSolutionKey: { type: 'hangoutsMeet' } } },
             reminders: { useDefault: true }
@@ -263,10 +286,13 @@ module.exports = async function handler(req, res) {
         // so this stays dark until the VSL videos are filmed and the flow is flipped on.
         // Agent defaults to 'echo' when the SDR hasn't set which one we're selling.
         try {
-            await sendVslConfirmEmail({
-                leadId: leadId, toEmail: ownerEmail, firstName: ownerFirstName,
-                businessName: businessName, whenIso: startIso, agent: body.agent
-            });
+            // Never for client-account leads: the VSL is STILO's pitch.
+            if (!clientCo) {
+                await sendVslConfirmEmail({
+                    leadId: leadId, toEmail: ownerEmail, firstName: ownerFirstName,
+                    businessName: businessName, whenIso: startIso, agent: body.agent
+                });
+            }
         } catch (e) { /* never block booking on the VSL email */ }
 
         // Internal heads-up so the STILO team gets an email on every booking too

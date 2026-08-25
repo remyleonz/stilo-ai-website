@@ -384,6 +384,10 @@ module.exports = async function handler(req, res) {
                 + 'email_1_sent_at,email_2_sent_at,email_3_sent_at')
             .eq('email_search_status', 'found')
             .not('owner_email', 'is', null)
+            // STILO's cold-email sequence must never touch a client's lead
+            // pool (they'd get STILO offer emails while a rep dials them as
+            // the client). Same class of bug as the stale-copy incident.
+            .is('client_id', null)
             .is('archived_batch', null)
             .is('meeting_booked_at', null)   // permanent exit: booked
             .is('reply_received_at', null)   // permanent exit: replied

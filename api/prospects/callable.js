@@ -4,7 +4,7 @@
  * recently-called leads. Pass-through query params: limit, niche, tier,
  * min_score, q.
  */
-const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer, LEAD_LIST_COLUMNS } = require('./_shared');
+const { assertAdminOrSdr, resolveAssignedTo, methodNotAllowed, normalizeLead, gateToCurrentOffer, resolveClientScope, LEAD_LIST_COLUMNS } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 // "Callable" = lead has owner_name + owner_phone, not on the DNC list, not
@@ -131,13 +131,6 @@ async function callableFromSupabase(opts) {
     // nothing on this screen renders. See LEAD_LIST_COLUMNS in _shared.js.
     let q = sb.from('leads')
         .select(LEAD_LIST_COLUMNS)
-        .eq('has_cold_call_script', true)
-        // A lead is only dial-ready if David actually stated an agent to pitch
-        // (pitch_agent, set at ingest from his script). No agent = the rep would
-        // be dialing with nothing to sell, so it drops from the queue until David
-        // briefs it. Self-healing: sync-scripts sets pitch_agent when he does, and
-        // the lead reappears. This is what keeps un-briefed leads off the boards.
-        .not('pitch_agent', 'is', null)
         .or('owner_phone.not.is.null,phone.not.is.null')
         .or('do_not_call.is.null,do_not_call.eq.false')
         // Bulk-retired leads never come back into a dial queue on their own.
@@ -147,7 +140,17 @@ async function callableFromSupabase(opts) {
         // UPDATE that clears the column, not an accident of reassignment.
         .is('archived_batch', null);
 
-    q = gateToCurrentOffer(q);
+    // STILO mode keeps the per-lead script + pitch gates: a lead is only
+    // dial-ready once David briefed it (has_cold_call_script, set at ingest,
+    // self-healing via sync-scripts) AND stated an agent to pitch (pitch_agent).
+    // Client-account mode drops BOTH on purpose — a client campaign runs one
+    // shared script for the whole pool, so the per-lead flag would blank the
+    // board exactly like the George cleaning-leads incident (250 briefs, 0
+    // scripts, "missing" queue). The client gate lives in gateToCurrentOffer.
+    if (!opts.clientId) {
+        q = q.eq('has_cold_call_script', true).not('pitch_agent', 'is', null);
+    }
+    q = gateToCurrentOffer(q, opts.clientId);
 
     if (opts.assignedTo) q = q.eq('assigned_to', opts.assignedTo);
     // Tier filter must match what the dashboard DISPLAYS: brief_tier first
@@ -207,6 +210,13 @@ module.exports = async function handler(req, res) {
         assignedTo = q.assigned_to ? await resolveAssignedTo(q.assigned_to) : null;
     }
 
+    // Client-account scope: a rep flagged sdr_type='client_account' dials their
+    // client's pool, not STILO's. Resolved from the EFFECTIVE rep so admin
+    // impersonation lands on the same board the rep sees. Admins can also ask
+    // for a client pool directly with ?client_id=<uuid> (the client CRM does).
+    let clientId = await resolveClientScope(assignedTo);
+    if (!clientId && gate.isAdmin && q.client_id) clientId = String(q.client_id);
+
     // Both SDR and admin views read straight from Supabase prospecting.leads —
     // the same data David's pipeline writes to. We dropped the Cloud Run
     // pass-through here because /api/prospects/callable on his service hangs
@@ -215,6 +225,7 @@ module.exports = async function handler(req, res) {
     // ~100ms with the exact same filter.
     const result = await callableFromSupabase({
         assignedTo: assignedTo,
+        clientId: clientId,
         tier: q.tier,
         niche: q.niche,
         minScore: q.min_score,

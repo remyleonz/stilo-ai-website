@@ -1632,6 +1632,146 @@
                 </section>
             </div>
 
+            <!-- Client CRM: the per-client workspace for sales-agency engagements
+                 (leads worked for the client, meetings booked with them, the
+                 sales they closed, and our commission). Opened from the
+                 Clients grid via the CRM button; state lives in crmClientId. -->
+            <div class="page-content" id="page-client-crm" style="display:none;">
+                <div class="stilo-page-header-row" style="align-items:center;gap:14px;">
+                    <button onclick="switchPage('clients')" style="padding:8px 14px;border:1px solid var(--border-subtle);border-radius:8px;background:transparent;color:inherit;font-size:0.85rem;cursor:pointer;">&larr; All clients</button>
+                    <div>
+                        <div id="crmClientName" style="font-size:1.15rem;font-weight:700;">&nbsp;</div>
+                        <div id="crmClientMeta" style="font-size:12px;color:var(--text-muted,#5a5a75);"></div>
+                    </div>
+                </div>
+
+                <div class="stilo-hero-grid" id="crmHero" style="margin-bottom:18px;">
+                    <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Leads</div><div class="stilo-hero-value" id="crmKpiLeads">—</div></div>
+                    <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Dials</div><div class="stilo-hero-value" id="crmKpiDials">—</div></div>
+                    <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Meetings booked</div><div class="stilo-hero-value" id="crmKpiBooked">—</div></div>
+                    <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Upcoming</div><div class="stilo-hero-value" id="crmKpiUpcoming">—</div></div>
+                    <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Sales closed</div><div class="stilo-hero-value" id="crmKpiSales">—</div></div>
+                    <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Our commission</div><div class="stilo-hero-value" id="crmKpiCommission">—</div></div>
+                </div>
+
+                <div style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:16px;">
+                    <button class="crm-subtab" data-crm-tab="leads" onclick="crmSwitchTab('leads')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid var(--blue);">Leads</button>
+                    <button class="crm-subtab" data-crm-tab="meetings" onclick="crmSwitchTab('meetings')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid transparent;opacity:0.55;">Meetings</button>
+                    <button class="crm-subtab" data-crm-tab="sales" onclick="crmSwitchTab('sales')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid transparent;opacity:0.55;">Sales</button>
+                    <button class="crm-subtab" data-crm-tab="revenue" onclick="crmSwitchTab('revenue')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid transparent;opacity:0.55;">Revenue</button>
+                </div>
+
+                <div id="crmTab-leads">
+                    <section class="stilo-section">
+                        <div class="stilo-section-header">
+                            <h3 class="stilo-section-title">LEAD POOL</h3>
+                            <span class="stilo-section-count" id="crmLeadsCount"></span>
+                            <div class="stilo-section-actions" style="margin-left:auto;">
+                                <input id="crmLeadSearch" type="search" placeholder="Search…" oninput="crmRenderLeads()" style="padding:7px 12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.83rem;width:200px;">
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="stilo-table">
+                                <thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Last called</th><th>Outcome</th><th>Meeting</th></tr></thead>
+                                <tbody id="crmLeadsBody"><tr><td colspan="7" class="stilo-empty">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="crmTab-meetings" style="display:none;">
+                    <section class="stilo-section">
+                        <div class="stilo-section-header">
+                            <h3 class="stilo-section-title">MEETINGS WITH THE CLIENT</h3>
+                            <span class="stilo-section-count" id="crmMeetingsCount"></span>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="stilo-table">
+                                <thead><tr><th>When</th><th>Business</th><th>Owner</th><th>Phone</th><th>Booked by</th><th>Status</th></tr></thead>
+                                <tbody id="crmMeetingsBody"><tr><td colspan="6" class="stilo-empty">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="crmTab-sales" style="display:none;">
+                    <section class="stilo-section">
+                        <div class="stilo-section-header">
+                            <h3 class="stilo-section-title">SALES LEDGER</h3>
+                            <span class="stilo-section-count" id="crmSalesCount"></span>
+                            <div class="stilo-section-actions" style="margin-left:auto;">
+                                <button onclick="crmOpenSaleModal()" style="padding:8px 16px;background:var(--blue,#2563EB);border:none;border-radius:8px;color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;">+ Log sale</button>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="stilo-table">
+                                <thead><tr><th>Date</th><th>Buyer</th><th>What sold</th><th style="text-align:right;">Sale</th><th style="text-align:right;">Our cut</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+                                <tbody id="crmSalesBody"><tr><td colspan="7" class="stilo-empty">No sales logged yet.</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="crmTab-revenue" style="display:none;">
+                    <section class="stilo-section">
+                        <div class="stilo-section-header">
+                            <h3 class="stilo-section-title">REVENUE BY MONTH</h3>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="stilo-table">
+                                <thead><tr><th>Month</th><th style="text-align:right;">Sales</th><th style="text-align:right;">Client gross</th><th style="text-align:right;">Our commission</th></tr></thead>
+                                <tbody id="crmRevenueBody"><tr><td colspan="4" class="stilo-empty">No revenue yet.</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <section class="stilo-section" style="margin-top:16px;">
+                        <div class="stilo-section-header"><h3 class="stilo-section-title">COLLECTION STATUS</h3></div>
+                        <div id="crmRevenueStatus" style="padding:8px 16px 16px;font-size:0.9rem;color:var(--text-secondary,#8a8aa0);"></div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Log-sale modal for the client CRM -->
+            <div id="crmSaleModal" style="display:none;position:fixed;inset:0;z-index:120;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;">
+                <div style="background:#0d0d14;border:1px solid rgba(37,99,235,0.25);border-radius:14px;padding:28px 30px;width:520px;max-width:92vw;max-height:90vh;overflow-y:auto;">
+                    <h3 style="margin:0 0 4px;font-size:1.05rem;" id="crmSaleModalTitle">Log a sale</h3>
+                    <p style="margin:0 0 18px;font-size:12.5px;color:var(--text-muted,#5a5a75);">A machine or package the client closed. Our commission is computed from the client's rate automatically.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <label style="font-size:12px;color:var(--text-muted,#5a5a75);">Sale date
+                            <input id="crmSaleDate" type="date" style="display:block;width:100%;margin-top:4px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.85rem;">
+                        </label>
+                        <label style="font-size:12px;color:var(--text-muted,#5a5a75);">Sale amount ($)
+                            <input id="crmSaleAmount" type="number" min="0" step="0.01" placeholder="12000" style="display:block;width:100%;margin-top:4px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.85rem;">
+                        </label>
+                    </div>
+                    <label style="display:block;margin-top:12px;font-size:12px;color:var(--text-muted,#5a5a75);">Buyer (business or person)
+                        <input id="crmSaleBuyer" type="text" placeholder="Glow Medspa Miami" style="display:block;width:100%;margin-top:4px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.85rem;">
+                    </label>
+                    <label style="display:block;margin-top:12px;font-size:12px;color:var(--text-muted,#5a5a75);">What was sold
+                        <input id="crmSaleDesc" type="text" placeholder="Scala Ice Modena diode laser" style="display:block;width:100%;margin-top:4px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.85rem;">
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+                        <label style="font-size:12px;color:var(--text-muted,#5a5a75);">Lead # (optional)
+                            <input id="crmSaleLeadId" type="number" placeholder="19613" style="display:block;width:100%;margin-top:4px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.85rem;">
+                        </label>
+                        <label style="font-size:12px;color:var(--text-muted,#5a5a75);">Status
+                            <select id="crmSaleStatus" style="display:block;width:100%;margin-top:4px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.85rem;">
+                                <option value="reported">Reported</option>
+                                <option value="invoiced">Invoiced</option>
+                                <option value="paid">Paid</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label style="display:block;margin-top:12px;font-size:12px;color:var(--text-muted,#5a5a75);">Notes
+                        <textarea id="crmSaleNotes" rows="2" style="display:block;width:100%;margin-top:4px;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.85rem;resize:vertical;"></textarea>
+                    </label>
+                    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                        <button onclick="crmCloseSaleModal()" style="padding:9px 16px;border:1px solid var(--border-subtle);border-radius:8px;background:transparent;color:inherit;font-size:0.85rem;cursor:pointer;">Cancel</button>
+                        <button id="crmSaleSaveBtn" onclick="crmSaveSale()" style="padding:9px 18px;background:var(--blue,#2563EB);border:none;border-radius:8px;color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;">Save sale</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Client drawer -->
             <div id="clientDrawer" style="position:fixed;top:0;right:-780px;width:780px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 36px;">
                 <button onclick="closeDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;line-height:1;">&times;</button>
@@ -2540,7 +2680,7 @@
         // Set of valid pages — used by switchPage() and by the hash-based
         // routing on initial load. Add new tabs here so the URL refresh
         // behavior picks them up automatically.
-        var VALID_PAGES = ['dashboard','clients','prospecting','outbound','agents','review','revenue','team','pipeline','deals','activity','emails','support','settings'];
+        var VALID_PAGES = ['dashboard','clients','client-crm','prospecting','outbound','agents','review','revenue','team','pipeline','deals','activity','emails','support','settings'];
 
         function switchPage(page, opts) {
             opts = opts || {};
@@ -2553,6 +2693,7 @@
             var navHighlightKey = page;
             if (page === 'pipeline' || page === 'deals' || page === 'activity' || page === 'emails') navHighlightKey = 'sales';
             if (page === 'review') navHighlightKey = 'agents';
+            if (page === 'client-crm') navHighlightKey = 'clients';
             var activeBtn = document.querySelector('.nav-item[data-page="' + navHighlightKey + '"]');
             if (activeBtn) activeBtn.classList.add('active');
 
@@ -2584,7 +2725,8 @@
                 emails: 'Sales · Emails',
                 support: 'Support',
                 review: 'Pending Review',
-                settings: 'Settings'
+                settings: 'Settings',
+                'client-crm': 'Client CRM'
             };
             var titleEl = document.getElementById('pageTitle');
             if (titleEl) titleEl.textContent = titles[page] || 'Dashboard';
@@ -2618,6 +2760,7 @@
             else if (page === 'settings') loadSettings();
             else if (page === 'prospecting') { loadProspectingPage(); loadAbResults(); }
             else if (page === 'outbound') obInitPage();
+            else if (page === 'client-crm') loadClientCrm();
 
             // Close sidebar on mobile after selection
             closeSidebar();
@@ -2921,9 +3064,285 @@
                   '<td style="padding:14px 16px;text-align:right;white-space:nowrap;">' +
                     '<a href="mailto:'+emailSafe+'?subject=STILO%20AI%20Partners" onclick="event.stopPropagation()" title="Email" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Email</a>' +
                     (c.phone ? '<a href="tel:'+phoneSafe+'" onclick="event.stopPropagation()" title="Call" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;text-decoration:none;margin-right:4px;">Call</a>' : '<button onclick="event.stopPropagation();showToast(\'No phone on file\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.1);border-radius:6px;font-size:12px;color:var(--text-muted,#5a5a75);background:transparent;cursor:pointer;margin-right:4px;">Call</button>') +
+                    '<button onclick="event.stopPropagation();openClientCrm(\''+c.id+'\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.45);border-radius:6px;font-size:12px;color:var(--blue,#2563EB);background:transparent;cursor:pointer;font-weight:600;margin-right:4px;">CRM</button>' +
                     '<button onclick="event.stopPropagation();openClientDrawer(\''+c.id+'\')" style="padding:6px 10px;border:1px solid rgba(37,99,235,0.2);border-radius:6px;font-size:12px;color:inherit;background:transparent;cursor:pointer;">View</button>' +
                   '</td></tr>';
             }).join('');
+        }
+
+        // ============================================================
+        // CLIENT CRM (per-client sales-agency workspace)
+        // ============================================================
+        // State + loaders for #page-client-crm. Data comes from three
+        // admin endpoints (crm-summary, crm-leads, clients/sales) so the
+        // browser never queries prospecting directly.
+
+        var crmClientId = null;
+        var crmClient = null;
+        var crmLeadsCache = [];
+        var crmSalesCache = [];
+        var crmEditingSaleId = null;
+
+        function crmEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        async function crmFetch(path, opts) {
+            var { data: { session } } = await sb.auth.getSession();
+            opts = opts || {};
+            opts.headers = Object.assign({}, opts.headers, {
+                'Authorization': 'Bearer ' + (session && session.access_token),
+                'Content-Type': 'application/json'
+            });
+            var r = await fetch(path, opts);
+            var j = await r.json().catch(function () { return {}; });
+            if (!r.ok) throw new Error(j.detail || j.error || ('HTTP ' + r.status));
+            return j;
+        }
+
+        function openClientCrm(clientId) {
+            crmClientId = clientId;
+            switchPage('client-crm');
+        }
+
+        async function loadClientCrm() {
+            // Opened via hash refresh with no client selected: bounce back.
+            if (!crmClientId) { switchPage('clients'); return; }
+            document.getElementById('crmClientName').textContent = 'Loading…';
+            document.getElementById('crmClientMeta').textContent = '';
+            try {
+                var sum = await crmFetch('/api/admin/clients/crm-summary?client_id=' + encodeURIComponent(crmClientId));
+                crmClient = sum.client;
+                document.getElementById('crmClientName').textContent = crmClient.business_name || 'Client';
+                var meta = [];
+                if (crmClient.contact_name) meta.push(crmClient.contact_name);
+                if (crmClient.engagement_model === 'commission_sales' && crmClient.commission_pct != null) {
+                    meta.push(Number(crmClient.commission_pct) + '% of every sale');
+                }
+                if (crmClient.status) meta.push(crmClient.status);
+                document.getElementById('crmClientMeta').textContent = meta.join(' · ');
+                var titleEl = document.getElementById('pageTitle');
+                if (titleEl) titleEl.textContent = crmClient.business_name || 'Client CRM';
+
+                document.getElementById('crmKpiLeads').textContent = sum.funnel.leads;
+                document.getElementById('crmKpiDials').textContent = sum.activity.dials;
+                document.getElementById('crmKpiBooked').textContent = sum.funnel.booked;
+                document.getElementById('crmKpiUpcoming').textContent = sum.funnel.upcoming;
+                document.getElementById('crmKpiSales').textContent = sum.money.sales_count;
+                document.getElementById('crmKpiCommission').textContent = fmtMoneyCents(sum.money.commission_cents);
+                crmRenderRevenue(sum.money);
+            } catch (e) {
+                document.getElementById('crmClientName').textContent = 'Could not load client';
+                document.getElementById('crmClientMeta').textContent = e.message;
+            }
+            crmLoadLeads();
+            crmLoadSales();
+        }
+
+        function crmSwitchTab(name) {
+            ['leads', 'meetings', 'sales', 'revenue'].forEach(function (t) {
+                var pane = document.getElementById('crmTab-' + t);
+                if (pane) pane.style.display = (t === name) ? '' : 'none';
+            });
+            document.querySelectorAll('.crm-subtab').forEach(function (btn) {
+                var isActive = btn.getAttribute('data-crm-tab') === name;
+                btn.style.borderBottom = isActive ? '3px solid var(--blue)' : '3px solid transparent';
+                btn.style.opacity = isActive ? '1' : '0.55';
+            });
+        }
+
+        async function crmLoadLeads() {
+            var body = document.getElementById('crmLeadsBody');
+            body.innerHTML = '<tr><td colspan="7" class="stilo-empty">Loading…</td></tr>';
+            try {
+                var j = await crmFetch('/api/admin/clients/crm-leads?client_id=' + encodeURIComponent(crmClientId));
+                crmLeadsCache = j.results || [];
+                crmRenderLeads();
+                crmRenderMeetings();
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="7" class="stilo-empty">Error: ' + crmEsc(e.message) + '</td></tr>';
+            }
+        }
+
+        function crmRenderLeads() {
+            var body = document.getElementById('crmLeadsBody');
+            var q = (document.getElementById('crmLeadSearch').value || '').toLowerCase();
+            var rows = crmLeadsCache.filter(function (l) {
+                if (!q) return true;
+                return ((l.business_name || l.name || '') + ' ' + (l.owner_name || '')).toLowerCase().includes(q);
+            });
+            document.getElementById('crmLeadsCount').textContent = rows.length + ' of ' + crmLeadsCache.length;
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="7" class="stilo-empty">No leads in this client\'s pool yet. Import them with scripts/import_client_leads.js.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(function (l) {
+                var phone = l.owner_phone_e164 || l.owner_phone || l.phone || '';
+                var last = l.last_called_at ? new Date(l.last_called_at).toLocaleDateString() : '—';
+                var mtg = l.meeting_scheduled_at
+                    ? new Date(l.meeting_scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                    : '—';
+                return '<tr onclick="openProspectDrawer(\'' + l.id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);">' +
+                    '<td style="padding:12px 16px;"><strong>' + crmEsc(l.business_name || l.name || '—') + '</strong></td>' +
+                    '<td style="padding:12px 16px;">' + crmEsc(l.owner_name || '—') + '</td>' +
+                    '<td style="padding:12px 16px;white-space:nowrap;">' + crmEsc(phone || '—') + '</td>' +
+                    '<td style="padding:12px 16px;">' + crmEsc(l.niche || '—') + '</td>' +
+                    '<td style="padding:12px 16px;">' + last + '</td>' +
+                    '<td style="padding:12px 16px;">' + crmEsc(l.last_called_outcome || '—') + '</td>' +
+                    '<td style="padding:12px 16px;white-space:nowrap;">' + mtg + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        function crmRenderMeetings() {
+            var body = document.getElementById('crmMeetingsBody');
+            var rows = crmLeadsCache.filter(function (l) { return l.meeting_scheduled_at; })
+                .sort(function (a, b) { return new Date(b.meeting_scheduled_at) - new Date(a.meeting_scheduled_at); });
+            document.getElementById('crmMeetingsCount').textContent = rows.length + ' booked';
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="6" class="stilo-empty">No meetings booked with this client yet.</td></tr>';
+                return;
+            }
+            var now = Date.now();
+            body.innerHTML = rows.map(function (l) {
+                var when = new Date(l.meeting_scheduled_at);
+                var status = when.getTime() > now
+                    ? '<span style="color:#22c55e;font-weight:600;">Upcoming</span>'
+                    : (l.meeting_confirmed_at ? 'Held' : 'Past');
+                return '<tr onclick="openProspectDrawer(\'' + l.id + '\', \'callable\')" style="cursor:pointer;border-top:1px solid var(--border-subtle);">' +
+                    '<td style="padding:12px 16px;white-space:nowrap;">' + when.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</td>' +
+                    '<td style="padding:12px 16px;"><strong>' + crmEsc(l.business_name || l.name || '—') + '</strong></td>' +
+                    '<td style="padding:12px 16px;">' + crmEsc(l.owner_name || '—') + '</td>' +
+                    '<td style="padding:12px 16px;white-space:nowrap;">' + crmEsc(l.owner_phone_e164 || l.owner_phone || l.phone || '—') + '</td>' +
+                    '<td style="padding:12px 16px;">' + crmEsc((l.assigned_to || '—').split('@')[0]) + '</td>' +
+                    '<td style="padding:12px 16px;">' + status + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        async function crmLoadSales() {
+            try {
+                var j = await crmFetch('/api/admin/clients/sales?client_id=' + encodeURIComponent(crmClientId));
+                crmSalesCache = j.results || [];
+                crmRenderSales();
+            } catch (e) {
+                document.getElementById('crmSalesBody').innerHTML =
+                    '<tr><td colspan="7" class="stilo-empty">Error: ' + crmEsc(e.message) + '</td></tr>';
+            }
+        }
+
+        function crmRenderSales() {
+            var body = document.getElementById('crmSalesBody');
+            document.getElementById('crmSalesCount').textContent = crmSalesCache.length + ' sale' + (crmSalesCache.length === 1 ? '' : 's');
+            if (!crmSalesCache.length) {
+                body.innerHTML = '<tr><td colspan="7" class="stilo-empty">No sales logged yet. When the client closes one, hit + Log sale.</td></tr>';
+                return;
+            }
+            var statusColors = { reported: '#f59e0b', invoiced: '#3b82f6', paid: '#22c55e' };
+            body.innerHTML = crmSalesCache.map(function (s) {
+                var color = statusColors[s.status] || '#8a8aa0';
+                var next = s.status === 'reported' ? 'invoiced' : (s.status === 'invoiced' ? 'paid' : null);
+                return '<tr style="border-top:1px solid var(--border-subtle);">' +
+                    '<td style="padding:12px 16px;white-space:nowrap;">' + crmEsc(s.sale_date || '—') + '</td>' +
+                    '<td style="padding:12px 16px;">' + crmEsc(s.buyer_name || '—') + (s.lead_id ? '<div style="font-size:11px;color:var(--text-muted,#5a5a75);">lead #' + s.lead_id + '</div>' : '') + '</td>' +
+                    '<td style="padding:12px 16px;">' + crmEsc(s.description || '—') + (s.notes ? '<div style="font-size:11px;color:var(--text-muted,#5a5a75);">' + crmEsc(s.notes) + '</div>' : '') + '</td>' +
+                    '<td style="padding:12px 16px;text-align:right;white-space:nowrap;">' + fmtMoneyCents(s.sale_amount_cents) + '</td>' +
+                    '<td style="padding:12px 16px;text-align:right;white-space:nowrap;font-weight:600;">' + fmtMoneyCents(s.commission_cents) + '<div style="font-size:11px;color:var(--text-muted,#5a5a75);font-weight:400;">' + Number(s.commission_pct) + '%</div></td>' +
+                    '<td style="padding:12px 16px;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:' + color + ';"><span style="width:6px;height:6px;border-radius:50%;background:' + color + ';"></span>' + crmEsc(s.status) + '</span></td>' +
+                    '<td style="padding:12px 16px;text-align:right;white-space:nowrap;">' +
+                    (next ? '<button onclick="crmMarkSale(\'' + s.id + '\',\'' + next + '\')" style="padding:5px 10px;border:1px solid rgba(37,99,235,0.3);border-radius:6px;font-size:11.5px;color:inherit;background:transparent;cursor:pointer;margin-right:4px;">Mark ' + next + '</button>' : '') +
+                    '<button onclick="crmDeleteSale(\'' + s.id + '\')" style="padding:5px 10px;border:1px solid rgba(239,68,68,0.35);border-radius:6px;font-size:11.5px;color:#ef4444;background:transparent;cursor:pointer;">Delete</button>' +
+                    '</td></tr>';
+            }).join('');
+        }
+
+        function crmRenderRevenue(money) {
+            var body = document.getElementById('crmRevenueBody');
+            var months = Object.keys(money.by_month || {}).sort().reverse();
+            if (!months.length) {
+                body.innerHTML = '<tr><td colspan="4" class="stilo-empty">No revenue yet. It shows up the moment the first sale is logged.</td></tr>';
+            } else {
+                var rows = months.map(function (mo) {
+                    var m = money.by_month[mo];
+                    var label = mo === 'unknown' ? 'Unknown' : new Date(mo + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    return '<tr style="border-top:1px solid var(--border-subtle);">' +
+                        '<td style="padding:12px 16px;">' + label + '</td>' +
+                        '<td style="padding:12px 16px;text-align:right;">' + m.sales + '</td>' +
+                        '<td style="padding:12px 16px;text-align:right;">' + fmtMoneyCents(m.gross_cents) + '</td>' +
+                        '<td style="padding:12px 16px;text-align:right;font-weight:600;">' + fmtMoneyCents(m.commission_cents) + '</td>' +
+                        '</tr>';
+                });
+                rows.push('<tr style="border-top:2px solid var(--border-subtle);font-weight:700;">' +
+                    '<td style="padding:12px 16px;">Total</td>' +
+                    '<td style="padding:12px 16px;text-align:right;">' + money.sales_count + '</td>' +
+                    '<td style="padding:12px 16px;text-align:right;">' + fmtMoneyCents(money.gross_cents) + '</td>' +
+                    '<td style="padding:12px 16px;text-align:right;">' + fmtMoneyCents(money.commission_cents) + '</td>' +
+                    '</tr>');
+                body.innerHTML = rows.join('');
+            }
+            var st = document.getElementById('crmRevenueStatus');
+            st.innerHTML = 'Awaiting invoice: <strong>' + fmtMoneyCents(money.commission_reported_cents) + '</strong> · ' +
+                'Invoiced, unpaid: <strong>' + fmtMoneyCents(money.commission_invoiced_cents) + '</strong> · ' +
+                'Collected: <strong style="color:#22c55e;">' + fmtMoneyCents(money.commission_paid_cents) + '</strong>';
+        }
+
+        function crmOpenSaleModal() {
+            crmEditingSaleId = null;
+            document.getElementById('crmSaleModalTitle').textContent = 'Log a sale';
+            document.getElementById('crmSaleDate').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('crmSaleAmount').value = '';
+            document.getElementById('crmSaleBuyer').value = '';
+            document.getElementById('crmSaleDesc').value = '';
+            document.getElementById('crmSaleLeadId').value = '';
+            document.getElementById('crmSaleStatus').value = 'reported';
+            document.getElementById('crmSaleNotes').value = '';
+            document.getElementById('crmSaleModal').style.display = 'flex';
+        }
+        function crmCloseSaleModal() {
+            document.getElementById('crmSaleModal').style.display = 'none';
+        }
+
+        async function crmSaveSale() {
+            var btn = document.getElementById('crmSaleSaveBtn');
+            btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                await crmFetch('/api/admin/clients/sales', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        client_id: crmClientId,
+                        sale_date: document.getElementById('crmSaleDate').value || null,
+                        sale_amount: document.getElementById('crmSaleAmount').value,
+                        buyer_name: document.getElementById('crmSaleBuyer').value,
+                        description: document.getElementById('crmSaleDesc').value,
+                        lead_id: document.getElementById('crmSaleLeadId').value || null,
+                        status: document.getElementById('crmSaleStatus').value,
+                        notes: document.getElementById('crmSaleNotes').value
+                    })
+                });
+                crmCloseSaleModal();
+                loadClientCrm();
+                if (typeof showToast === 'function') showToast('Sale logged');
+            } catch (e) {
+                alert('Could not save the sale: ' + e.message);
+            }
+            btn.disabled = false; btn.textContent = 'Save sale';
+        }
+
+        async function crmMarkSale(id, status) {
+            try {
+                await crmFetch('/api/admin/clients/sales', { method: 'PATCH', body: JSON.stringify({ id: id, status: status }) });
+                loadClientCrm();
+            } catch (e) { alert('Update failed: ' + e.message); }
+        }
+
+        async function crmDeleteSale(id) {
+            if (!confirm('Delete this sale row? This cannot be undone.')) return;
+            try {
+                await crmFetch('/api/admin/clients/sales?id=' + encodeURIComponent(id), { method: 'DELETE' });
+                loadClientCrm();
+            } catch (e) { alert('Delete failed: ' + e.message); }
         }
 
         // ============================================================

@@ -56,6 +56,11 @@ module.exports = async function handler(req, res) {
 
     let q = sb.from('leads')
         .select(CONFIRM_LEAD_COLS)
+        // Client-account leads (client_id set) are excluded: this template
+        // pitches STILO's offer, and a Blason machine buyer must never get it.
+        // Their confirmation is the calendar invite + the client-branded T-15
+        // reminder. A client-specific confirmation is a copy decision, not code.
+        .is('client_id', null)
         .is('meeting_confirmation_sent_at', null)
         .not('meeting_booked_at', 'is', null)
         .gt('meeting_scheduled_at', nowIso);

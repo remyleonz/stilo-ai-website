@@ -170,6 +170,9 @@ module.exports = async function handler(req, res) {
             + 'owner_phone_e164,owner_phone,phone,do_not_call,meeting_booked_at,'
             + 'vsl_nurture_anchor_at,vsl_nurture_1_sent_at,vsl_nurture_2_sent_at,vsl_nurture_3_sent_at,'
             + 'vsl_played_anchor_at,vsl_played_1_sent_at,vsl_played_2_sent_at')
+        // Belt-and-suspenders: client-account leads never get VSL links so they
+        // should never appear in vsl_events, but exclude them anyway.
+        .is('client_id', null)
         .in('id', ids);
     if (lErr) return res.status(500).json({ error: 'leads_read_failed', detail: lErr.message });
 

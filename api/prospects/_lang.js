@@ -229,22 +229,28 @@ const COPY = {
     },
 
     // -- T-15 reminder, SMS + email (send-meeting-reminders.js) --------------
+    // v.company: whose name the rep is calling under. 'STILO' for our own
+    // pipeline; the CLIENT's business name for client-account leads (a rep
+    // dialing for Blason says Blason, never STILO — the prospect has never
+    // heard of STILO and the meeting is with the client's owner).
     reminderSms: {
         en: function (v) {
+            var co = v.company || 'STILO';
             return v.meet
-                ? 'Hi ' + v.first + ', ' + v.rep + ' from STILO. Our meeting is at ' + v.time + ', about 15 min out. Join here: ' + v.meet
-                : 'Hi ' + v.first + ', ' + v.rep + ' from STILO. Our meeting is at ' + v.time + ', about 15 min out. I\'ll call you then.';
+                ? 'Hi ' + v.first + ', ' + v.rep + ' from ' + co + '. Our meeting is at ' + v.time + ', about 15 min out. Join here: ' + v.meet
+                : 'Hi ' + v.first + ', ' + v.rep + ' from ' + co + '. Our meeting is at ' + v.time + ', about 15 min out. I\'ll call you then.';
         },
         es: function (v) {
+            var co = v.company || 'STILO';
             return v.meet
-                ? 'Hola ' + v.first + ', habla ' + v.rep + ' de STILO. Nuestra reunión es a las ' + v.time + ', como en 15 minutos. Entre por aquí: ' + v.meet
-                : 'Hola ' + v.first + ', habla ' + v.rep + ' de STILO. Nuestra reunión es a las ' + v.time + ', como en 15 minutos. Lo llamo a esa hora.';
+                ? 'Hola ' + v.first + ', habla ' + v.rep + ' de ' + co + '. Nuestra reunión es a las ' + v.time + ', como en 15 minutos. Entre por aquí: ' + v.meet
+                : 'Hola ' + v.first + ', habla ' + v.rep + ' de ' + co + '. Nuestra reunión es a las ' + v.time + ', como en 15 minutos. Lo llamo a esa hora.';
         },
     },
 
     reminderEmailSubject: {
-        en: function () { return 'Your STILO meeting starts in ~15 minutes'; },
-        es: function () { return 'Su reunión con STILO empieza en ~15 minutos'; },
+        en: function (v) { return 'Your ' + ((v && v.company) || 'STILO') + ' meeting starts in ~15 minutes'; },
+        es: function (v) { return 'Su reunión con ' + ((v && v.company) || 'STILO') + ' empieza en ~15 minutos'; },
     },
 
     // The join line is built by the caller (it differs when there is no Meet
@@ -261,10 +267,12 @@ const COPY = {
 
     reminderEmailBody: {
         en: function (v) {
+            var co = v.company || 'STILO';
+            var sig = v.companyFull || (v.company ? v.company : 'STILO AI Partners');
             return [
                 'Hi ' + v.first + ',',
                 '',
-                'Quick reminder, your meeting with STILO is at ' + v.time + ', about 15 minutes from now.',
+                'Quick reminder, your meeting with ' + co + ' is at ' + v.time + ', about 15 minutes from now.',
                 '',
             ].concat(v.joinLines).concat([
                 '',
@@ -272,14 +280,16 @@ const COPY = {
                 '',
                 'See you shortly,',
                 v.rep,
-                'STILO AI Partners',
+                sig,
             ]).join('\n');
         },
         es: function (v) {
+            var co = v.company || 'STILO';
+            var sig = v.companyFull || (v.company ? v.company : 'STILO AI Partners');
             return [
                 'Hola ' + v.first + ',',
                 '',
-                'Un recordatorio rápido, su reunión con STILO es a las ' + v.time + ', como en 15 minutos.',
+                'Un recordatorio rápido, su reunión con ' + co + ' es a las ' + v.time + ', como en 15 minutos.',
                 '',
             ].concat(v.joinLines).concat([
                 '',
@@ -287,7 +297,7 @@ const COPY = {
                 '',
                 'Nos vemos ahorita,',
                 v.rep,
-                'STILO AI Partners',
+                sig,
             ]).join('\n');
         },
     },

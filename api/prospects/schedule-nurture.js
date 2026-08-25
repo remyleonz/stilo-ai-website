@@ -62,6 +62,10 @@ module.exports = async function handler(req, res) {
 
     let lq = sb.from('leads')
         .select('id,name,owner_name,owner_email,email,niche,category,address,pitch_agent,meeting_scheduled_at,meeting_booked_by_sdr,do_not_call,owner_phone_e164,owner_phone,phone,primary_language')
+        // Client-account leads never enter STILO's pre-meeting nurture: every
+        // touch is STILO offer content (VSL, value assets). Guarded at the
+        // PLANNER so no nurture_touches rows exist for them at all.
+        .is('client_id', null)
         .not('meeting_scheduled_at', 'is', null)
         .gte('meeting_scheduled_at', now.toISOString())
         .lte('meeting_scheduled_at', horizon.toISOString());
