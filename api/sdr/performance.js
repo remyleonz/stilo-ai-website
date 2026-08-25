@@ -207,7 +207,7 @@ module.exports = async function handler(req, res) {
         },
         closed_clients: closedClients || 0,
         rates: {
-            booked_per_dial_pct: Math.round(bookedPerDial * 1000) / 1000,
+            booked_per_dial_pct: Math.round(bookedPerDial * 10) / 10,
             // Deprecated alias — same number, wrong name. Read
             // booked_per_dial_pct instead.
             close_rate_pct: Math.round(bookedPerDial * 10) / 10,

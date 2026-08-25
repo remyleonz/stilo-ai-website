@@ -669,3 +669,214 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
     outline: 2px solid var(--s-accent-hi);
     outline-offset: 2px;
 }
+
+/* ============================================================================
+   TOKEN BRIDGE — the lever that restyles every tab at once
+   (added 2026-08-24, the all-dashboards design pass)
+
+   The admin, SDR and client pages carry thousands of inline style="" strings
+   built in JS template literals. CSS classes cannot override an inline style,
+   but almost every one of those strings takes its colors from the LEGACY
+   custom properties (--bg-card, --border-subtle, --text-primary, --blue,
+   --purple-primary…). Redefining those tokens here — and loading this file
+   AFTER each page's own <style> block so these definitions win the cascade —
+   moves the entire inline-styled surface onto the new palette without
+   touching a single template string.
+
+   Rule of thumb for future work: new components use the .s-* system directly;
+   this bridge exists so the legacy surface matches it, not as an excuse to
+   keep writing inline styles.
+   ========================================================================= */
+:root {
+    /* surfaces */
+    --bg-primary: var(--s-bg);
+    --bg-secondary: var(--s-surface);
+    --bg-card: var(--s-surface);
+    --bg-card-hover: var(--s-raised);
+    --bg-elevated: var(--s-overlay);
+    --bg-elev: var(--s-overlay);
+    --bg-input: var(--s-raised);
+    /* hairlines */
+    --border-subtle: var(--s-line);
+    --border-medium: var(--s-line-strong);
+    --border-focus: var(--s-accent-line);
+    /* text ramp */
+    --text-primary: var(--s-text);
+    --text-secondary: var(--s-text-2);
+    --text-tertiary: var(--s-text-3);
+    --text-muted: var(--s-text-4);
+    /* accent — the legacy names say purple; the value has been blue since the
+       rebrand and stays blue here. */
+    --purple-primary: var(--s-accent);
+    --purple-dark: var(--s-accent);
+    --purple-light: var(--s-accent-hi);
+    --purple-glow: var(--s-accent-dim);
+    --purple-subtle: var(--s-accent-dim);
+    --blue: var(--s-accent);
+    --blue-bg: var(--s-accent-dim);
+    /* semantic */
+    --green: var(--s-pos);
+    --green-bg: var(--s-pos-dim);
+    --yellow: var(--s-warn);
+    --yellow-bg: var(--s-warn-dim);
+    --orange: var(--s-warn);
+    --orange-bg: var(--s-warn-dim);
+    --red: var(--s-neg);
+    --red-bg: var(--s-neg-dim);
+    /* radii + shadows converge on the system's */
+    --radius-sm: var(--s-r-sm);
+    --radius-md: var(--s-r);
+    --radius-lg: var(--s-r-lg);
+    --radius-xl: var(--s-r-xl);
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.25);
+    --shadow-elevated: 0 10px 32px rgba(0,0,0,0.45);
+    --shadow-modal: 0 24px 80px rgba(0,0,0,0.6);
+}
+
+body { background: var(--s-bg); }
+
+/* ── .stilo-* scaffolding (admin) aligned with the .s-* system ───────────── */
+.stilo-page-h1 {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-transform: none;      /* SHOUTING page titles read dated */
+    font-size: 2rem;
+}
+.stilo-page-meta {
+    color: var(--s-text-4);
+    letter-spacing: 0.16em;
+}
+.stilo-section { margin-bottom: var(--s-10); }
+.stilo-section-header {
+    border-bottom: 1px solid var(--s-line);
+    padding-bottom: var(--s-3);
+    margin-bottom: var(--s-5);
+}
+.stilo-section-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--s-text-2);
+}
+.stilo-section-count {
+    font-size: 0.66rem;
+    color: var(--s-text-4);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.stilo-empty { color: var(--s-text-4); font-size: 0.82rem; }
+
+/* ── Sidebar / nav (all three dashboards share these names) ─────────────── */
+.sidebar, .side-nav, nav.sidebar {
+    background: var(--s-surface);
+    border-right: 1px solid var(--s-line);
+}
+.nav-item, .sidebar .nav-link {
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--s-text-2);
+}
+.nav-item.active, .sidebar .nav-link.active {
+    background: var(--s-accent-dim);
+    color: var(--s-accent-hi);
+    font-weight: 600;
+}
+.nav-badge {
+    background: var(--s-accent);
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Modals + drawers ────────────────────────────────────────────────────── */
+.modal, .stilo-modal, [id$="Modal"] > div {
+    border-radius: var(--s-r-lg);
+}
+.drawer, [id$="Drawer"] {
+    background: var(--s-surface);
+    border-left: 1px solid var(--s-line-strong);
+}
+
+/* ── Status chips used across admin tables (tier, stage, outcome) ────────── */
+.tier-chip, .stage-chip, .status-chip {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 3px 8px;
+}
+
+/* ── Generic table normalisation for tables NOT inside .s-tablewrap ──────── */
+.page-content table th {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--s-text-3);
+}
+.page-content table td { font-variant-numeric: tabular-nums; }
+
+/* ── SDR dashboard specifics ─────────────────────────────────────────────── */
+.stat-grid { gap: var(--s-4); }
+.stat-card { padding: var(--s-5); }
+.stat-card .stat-value { font-size: 1.6rem; }
+.leads-subtab { border-radius: var(--s-r-sm); }
+.hist-range button[aria-pressed="true"], .hist-range .active {
+    background: var(--s-accent);
+    color: #fff;
+}
+
+/* ── Client app specifics ────────────────────────────────────────────────── */
+.summary-card { padding: var(--s-5); }
+.agent-card, .invoice-row {
+    background: var(--s-surface);
+    border: 1px solid var(--s-line);
+    border-radius: var(--s-r-lg);
+}
+
+/* ── Admin hero strip (Dashboard tab) folded into the system ─────────────
+   The .stilo-hero-* markup stays; these overrides make the five boxes read
+   as one hairline band, the same anatomy as the Team tab's company strip. */
+.stilo-hero-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0;
+    background: var(--s-surface);
+    border: 1px solid var(--s-line);
+    border-radius: var(--s-r-lg);
+    overflow: hidden;
+    margin-bottom: var(--s-8);
+}
+.stilo-hero-card {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: inset -1px -1px 0 0 var(--s-line);
+    padding: var(--s-4) var(--s-5);
+}
+.stilo-hero-card.accent { border: 0; }
+.stilo-hero-card.accent::before {
+    content: '';
+    position: absolute; inset: 0 auto 0 0;
+    width: 2px; height: auto;
+    background: var(--s-accent);
+    border-radius: 0;
+    opacity: 1;
+}
+.stilo-hero-eyebrow {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--s-text-4);
+}
+.stilo-hero-value {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+}
+.stilo-hero-meta { color: var(--s-text-3); font-size: 0.68rem; }
+
+/* Agent-health mini badges were wrapping mid-badge on narrow cards. */
+.page-content .stilo-badge, .page-content [class*="badge"] { white-space: nowrap; }

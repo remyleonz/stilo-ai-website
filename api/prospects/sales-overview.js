@@ -15,6 +15,7 @@
  * Admin only.
  */
 const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
+const { makeResolver } = require('../sdr/_identity');
 const { createClient } = require('@supabase/supabase-js');
 
 function pc() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } }); }
@@ -175,9 +176,14 @@ module.exports = async function handler(req, res) {
 
     // Per-SDR leaderboard, keyed by rep email. Dials + emails + booked + closed.
     const board = {};
+    // Identity goes through the shared resolver so an alias never becomes its
+    // own leaderboard row. Before this, remyleon11@gmail.com sat on the board
+    // as a separate three-dial "rep" next to Remy Leon — the same alias bug
+    // the Team tab had, living independently here.
+    const idres = makeResolver(roster || []);
     const bump = function (email, k, n) {
         if (!email) return;
-        const e = String(email).toLowerCase();
+        const e = idres.canonical(email) || String(email).toLowerCase();
         if (!board[e]) board[e] = { sdr: e, name: nameByEmail[e] || e, dials: 0, emails: 0, booked: 0, closed: 0 };
         board[e][k] += (n || 1);
     };
@@ -208,7 +214,8 @@ module.exports = async function handler(req, res) {
     bookedLeads.forEach(function (l) { bump(l.meeting_booked_by_sdr, 'booked'); });
     // Closed per rep = paid deals (ONBOARDING/LIVE) attributed by sdr_id.
     (deals || []).forEach(function (d) {
-        if (d.stage !== 'ONBOARDING' && d.stage !== 'LIVE') return;
+        // Money has arrived from PAID onward — same rule as team-analytics.
+        if (d.stage !== 'PAID' && d.stage !== 'ONBOARDING' && d.stage !== 'LIVE') return;
         const em = emailById[d.sdr_id];
         if (em) bump(em, 'closed');
     });

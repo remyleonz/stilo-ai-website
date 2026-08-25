@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/stilo-dashboard.css?v=2026-08-24">
     <style>
         /* ============================================================
            CSS Custom Properties
@@ -1374,6 +1373,7 @@
 }
 </style>
 <style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
+    <link rel="stylesheet" href="/assets/stilo-dashboard.css?v=2026-08-25b">
 </head>
 <body>
     <!-- ============================================================
@@ -2156,7 +2156,7 @@
                 </section>
 
                 <!-- SDR detail drawer (admin view of an SDR's snapshot) -->
-                <div id="sdrDetailDrawer" style="position:fixed;top:0;right:-820px;width:820px;max-width:100vw;height:100vh;background:#0a0a0f;border-left:1px solid rgba(37,99,235,0.2);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:32px 36px;">
+                <div id="sdrDetailDrawer" style="position:fixed;top:0;right:-880px;width:880px;max-width:100vw;height:100vh;background:var(--s-surface);border-left:1px solid var(--s-line-strong);z-index:100;transition:right 0.3s ease;overflow-y:auto;padding:28px 32px;">
                     <button onclick="closeSdrDetailDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;">&times;</button>
                     <div id="sdrDetailContent">Loading…</div>
                 </div>
@@ -5407,80 +5407,164 @@
             return '$' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
         }
 
+        /* The rep drill-down. This is meant to be the MOST detailed view of a
+           rep in the whole admin — the card is the summary, this is the stat
+           sheet. It used to render eight tiles off the legacy performance
+           endpoint (including the mislabelled 1% "close rate") while the page
+           already held every per-range metric in teamAnalytics.per_rep. It now
+           renders the full range grid from that one source, plus the rep's
+           booked meetings, commission ledger and Quick DM. */
         async function openSdrDetailDrawer(sdrId) {
             var drawer = document.getElementById('sdrDetailDrawer');
             var overlay = document.getElementById('sdrDetailOverlay');
             drawer.style.right = '0';
             overlay.style.display = 'block';
             var body = document.getElementById('sdrDetailContent');
-            body.innerHTML = '<div style="color:var(--text-tertiary);">Loading…</div>';
+            body.innerHTML = skelCards(2) + '<div class="s-skel" style="height:260px;border-radius:var(--s-r-lg);margin-top:14px;"></div>';
             try {
                 var { data: { session } } = await sb.auth.getSession();
                 var headers = { 'Authorization': 'Bearer ' + (session && session.access_token || '') };
-                var [profileR, perfR, earnR, msgR] = await Promise.all([
+                var fetches = [
                     fetch('/api/sdr/profile?sdr_id=' + sdrId, { headers }).then(r => r.json()),
-                    fetch('/api/sdr/performance?sdr_id=' + sdrId, { headers }).then(r => r.json()),
                     fetch('/api/sdr/earnings?sdr_id=' + sdrId, { headers }).then(r => r.json()),
                     fetch('/api/sdr/messages?sdr_id=' + sdrId, { headers }).then(r => r.json())
-                ]);
-                var sdr = profileR.sdr || {};
-                var perf = perfR;
-                var earn = earnR;
-                var messages = (msgR && msgR.messages) || [];
+                ];
+                // The drawer can open before the Team tab finished loading (or
+                // from another tab); make sure the analytics are here.
+                if (!teamAnalytics) fetches.push(fetch('/api/sdr/team-analytics', { headers }).then(r => r.json()).then(function (d) { teamAnalytics = d; }));
+                var results = await Promise.all(fetches);
+                var sdr = results[0].sdr || {};
+                var earn = results[1] || {};
+                var messages = (results[2] && results[2].messages) || [];
+                var email = String(sdr.email || '').toLowerCase();
+                var r = (teamAnalytics && teamAnalytics.per_rep || []).filter(function (x) {
+                    return String(x.email).toLowerCase() === email;
+                })[0];
 
+                var RANGES = [['today', 'Today'], ['week', 'This wk'], ['last_week', 'Last wk'], ['month', 'This mo'], ['last_month', 'Last mo'], ['all', 'All time']];
+                var v = function (obj, k) { return (obj && obj[k] !== undefined && obj[k] !== null) ? obj[k] : '—'; };
+                var pctF = function (x) { return x === '—' ? x : x + '%'; };
+                var durF = function (x) { return x === '—' || x === null ? '—' : fmtDur(x); };
+                var moneyF = function (x) { return x === '—' ? x : formatMoneyCents(x); };
+                var idF = function (x) { return x; };
+
+                // One row of the range grid.
+                var row = function (label, obj, fmt, cls) {
+                    fmt = fmt || idF;
+                    return '<tr><td class="s-t--name" style="position:sticky;left:0;background:var(--s-surface);">' + label + '</td>'
+                        + RANGES.map(function (rg) { return '<td class="s-t--r ' + (cls || '') + '">' + fmt(v(obj, rg[0])) + '</td>'; }).join('')
+                        + '</tr>';
+                };
+                var gap = '<tr><td colspan="7" style="padding:3px 0;border-top:0;background:var(--s-raised);height:2px;"></td></tr>';
+
+                var grid = !r ? '<div class="s-empty">No analytics for this rep yet.</div>'
+                    : '<div class="s-tablewrap"><div class="s-tablescroll"><table class="s-table" style="min-width:660px;">'
+                    + '<thead><tr><th style="position:sticky;left:0;background:var(--s-raised);z-index:2;">Metric</th>'
+                    + RANGES.map(function (rg) { return '<th class="s-t--r">' + rg[1] + '</th>'; }).join('') + '</tr></thead><tbody>'
+                    + row('Dials', r.dials, idF, 's-t--strong')
+                    + row('Time on the phone', r.dial_time_label)
+                    + row('Talk time', r.talk_time_label)
+                    + row('Contacts reached', r.contacts)
+                    + row('Connect rate', r.connect_rate_pct, pctF)
+                    + row('Conversations (>2m)', r.conversations)
+                    + row('Conversation rate', r.conversation_rate_pct, pctF)
+                    + row('Avg call', r.avg_call_sec, durF)
+                    + gap
+                    + row('Active days', r.active_days)
+                    + row('Dials / active day', r.dials_per_active_day)
+                    + row('Leads touched', r.leads_touched)
+                    + row('Dials / lead', r.dials_per_lead)
+                    + gap
+                    + row('Meetings booked', r.meetings, idF, 's-t--strong')
+                    + row('Booked / conversation', r.booked_per_conversation_pct, pctF)
+                    + row('Dials / meeting', r.dials_per_meeting)
+                    + row('Phone hours / meeting', r.hours_per_meeting, function (x) { return x === '—' || x === null ? '—' : x + 'h'; })
+                    + row('Show rate (their bookings)', r.show_rate_pct, pctF)
+                    + row('No-shows', r.meetings_noshow)
+                    + gap
+                    + row('Emails sent', r.emails)
+                    + row('Email reply rate', r.email_reply_rate_pct, pctF)
+                    + row('Email bounce rate', r.email_bounce_rate_pct, pctF)
+                    + gap
+                    + row('Clients closed', r.closed_clients)
+                    + row('MRR closed', r.mrr_cents, moneyF)
+                    + '</tbody></table></div>'
+                    + '<div class="s-tablenote">Connect = a human picked up, with evidence the call happened. Meetings count in the period they were <strong>booked</strong>. Show rate = of this rep\'s bookings that have come round, how many the prospect attended.</div></div>';
+
+                // This rep's booked meetings, newest first, with outcomes.
+                var mtgs = (teamAnalytics && teamAnalytics.meetings || []).filter(function (m) {
+                    return String(m.booked_by || '').toLowerCase() === email;
+                }).slice(0, 12);
+                var mtgRows = mtgs.map(function (m) {
+                    var oc = m.outcome || (new Date(m.scheduled_at) > new Date() ? 'upcoming' : 'no outcome');
+                    var tone = /won/.test(oc) ? 's-badge--pos' : /lost/.test(oc) ? 's-badge--neg'
+                        : /no_show/.test(oc) ? 's-badge--warn' : /upcoming/.test(oc) ? 's-badge--accent' : 's-badge--dim';
+                    return '<tr><td class="s-t--name">' + escapeAdminHtml(m.business || '—') + '</td>'
+                        + '<td>' + escapeAdminHtml(m.niche || '—') + '</td>'
+                        + '<td class="s-t--r">' + (m.scheduled_at ? new Date(m.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—') + '</td>'
+                        + '<td class="s-t--r"><span class="s-badge ' + tone + '">' + escapeAdminHtml(oc) + '</span></td></tr>';
+                }).join('');
+
+                var pipeRunway = r && r.pipeline_days_left;
                 body.innerHTML = ''
-                    + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">'
-                        + '<div style="width:56px;height:56px;border-radius:50%;background:' + (sdr.avatar_color || '#2563EB') + ';display:inline-flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;">' + escapeAdminHtml(sdr.initials || '?') + '</div>'
-                        + '<div style="flex:1;min-width:0;"><div style="font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-0.02em;">' + escapeAdminHtml(sdr.display_name) + '</div>'
-                        + '<div style="color:var(--text-secondary);font-size:13px;">' + escapeAdminHtml(sdr.email) + ' · commission ' + Math.round(Number(sdr.commission_pct || 0.25) * 1000) / 10 + '% setup / ' + Math.round(Number(sdr.commission_mrr_pct != null ? sdr.commission_mrr_pct : 0.10) * 1000) / 10 + '% MRR · quota ' + (sdr.daily_call_quota || 50) + '/day</div></div>'
-                        // Open this SDR\'s dashboard in a new tab as them. Audited
-                        // server-side; banner on /sdr/ makes the impersonation
-                        // obvious. Mirrors the "Open as client" pattern on the
-                        // Clients tab.
-                        + '<a href="/sdr/?impersonate_sdr=' + encodeURIComponent(sdrId) + '" target="_blank" rel="noopener" title="Open this SDR\'s dashboard in a new tab as them. Every action is logged." style="padding:8px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;color:#ef4444;white-space:nowrap;">Open as SDR →</a>'
+                    + '<div class="s-person__head" style="margin-bottom:var(--s-5);">'
+                        + '<div class="s-avatar s-avatar--lg" style="background:' + escapeAdminHtml(sdr.avatar_color || '#2563eb') + ';width:52px;height:52px;font-size:1rem;">' + escapeAdminHtml(sdr.initials || '?') + '</div>'
+                        + '<div class="s-person__id">'
+                            + '<div class="s-person__name" style="font-size:1.2rem;">' + escapeAdminHtml(sdr.display_name) + (r && !r.active ? ' <span class="s-badge s-badge--dim">inactive</span>' : '') + '</div>'
+                            + '<div class="s-person__role">' + escapeAdminHtml(sdr.email) + ' &middot; ' + Math.round(Number(sdr.commission_pct || 0.25) * 100) + '% setup / ' + Math.round(Number(sdr.commission_mrr_pct != null ? sdr.commission_mrr_pct : 0.10) * 100) + '% MRR &middot; quota ' + (sdr.daily_call_quota || 50) + '/day</div>'
+                        + '</div>'
+                        + '<a href="/sdr/?impersonate_sdr=' + encodeURIComponent(sdrId) + '" target="_blank" rel="noopener" title="Open this SDR\'s dashboard as them. Every action is logged." style="padding:7px 13px;background:var(--s-neg-dim);border:1px solid rgba(248,113,113,0.3);border-radius:8px;font-size:0.74rem;font-weight:600;text-decoration:none;color:var(--s-neg);white-space:nowrap;">Open as SDR &rarr;</a>'
                     + '</div>'
-                    + '<h3 style="margin:0 0 12px 0;font-size:14px;">Performance</h3>'
-                    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;">'
-                        + perfCard('Today', (perf.dials && perf.dials.today) || 0)
-                        + perfCard('This week', (perf.dials && perf.dials.week) || 0)
-                        + perfCard('All dials', (perf.dials && perf.dials.all) || 0)
-                        + perfCard('Meetings', (perf.meetings_booked && perf.meetings_booked.all) || 0)
-                        + perfCard('Clients', perf.closed_clients || 0)
-                        + perfCard('Close rate', ((perf.rates && perf.rates.close_rate_pct) || 0) + '%')
-                        + perfCard('Conversion', ((perf.rates && perf.rates.conversion_rate_pct) || 0) + '%')
-                        + perfCard('MRR closed', formatMoneyCents((earn.totals && earn.totals.mrr_closed_cents) || 0))
-                    + '</div>'
-                    + '<h3 style="margin:0 0 12px 0;font-size:14px;">Closed clients</h3>'
+
+                    + (r ? '<div class="s-statrow" style="grid-template-columns:repeat(5,1fr);margin-bottom:var(--s-5);">'
+                        + stat(r.dials.week, 'Dials · wk', r.dials.week ? '' : 's-stat--muted')
+                        + stat(r.dial_time_label.week || '0m', 'On phone · wk')
+                        + stat(r.meetings.week, 'Booked · wk', r.meetings.week ? 's-stat--pos' : 's-stat--muted')
+                        + stat(pctStr(r.connect_rate_pct.week), 'Connect · wk')
+                        + stat((r.pipeline_remaining || 0).toLocaleString() + (pipeRunway != null ? ' · ' + pipeRunway + 'd' : ''), 'Callable left',
+                            pipeRunway != null && pipeRunway < 5 ? 's-stat--neg' : pipeRunway != null && pipeRunway < 15 ? 's-stat--warn' : '')
+                    + '</div>' : '')
+
+                    + '<div class="s-section__head"><h3 class="s-section__title">Full stat sheet</h3><span class="s-section__meta">every range</span></div>'
+                    + grid
+
+                    + '<div class="s-section__head" style="margin-top:var(--s-8);"><h3 class="s-section__title">Meetings they booked</h3><span class="s-section__meta">' + mtgs.length + ' most recent</span></div>'
+                    + (mtgRows
+                        ? '<div class="s-tablewrap"><div class="s-tablescroll"><table class="s-table" style="min-width:480px;"><thead><tr><th>Business</th><th>Niche</th><th class="s-t--r">Meeting</th><th class="s-t--r">Outcome</th></tr></thead><tbody>' + mtgRows + '</tbody></table></div></div>'
+                        : '<div class="s-empty">No meetings booked yet.</div>')
+
+                    + '<div class="s-section__head" style="margin-top:var(--s-8);"><h3 class="s-section__title">Commission ledger</h3><span class="s-section__meta">' + ((earn.clients || []).length) + ' clients</span></div>'
                     + (earn.clients && earn.clients.length
-                        ? '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;overflow:hidden;margin-bottom:24px;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Client</th><th style="text-align:right;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Monthly</th><th style="text-align:right;padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Commission</th><th style="padding:10px;font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Status</th></tr></thead><tbody>'
+                        ? '<div class="s-tablewrap"><div class="s-tablescroll"><table class="s-table" style="min-width:480px;"><thead><tr><th>Client</th><th class="s-t--r">Monthly</th><th class="s-t--r">Commission</th><th class="s-t--r">Payout</th></tr></thead><tbody>'
                             + earn.clients.map(function (c) {
                                 var totalComm = (c.commission_upfront_cents || 0) + (c.commission_monthly_cents || 0);
-                                return '<tr style="border-top:1px solid var(--border-subtle);"><td style="padding:10px;"><strong>' + escapeAdminHtml(c.business_name || '—') + '</strong></td><td style="padding:10px;text-align:right;">' + formatMoneyCents(c.monthly_retainer_cents) + '/mo</td><td style="padding:10px;text-align:right;">' + formatMoneyCents(totalComm) + '</td><td style="padding:10px;">' + escapeAdminHtml(c.payout_status || 'pending') + '</td></tr>';
+                                var tone = c.payout_status === 'paid' ? 's-badge--pos' : 's-badge--warn';
+                                return '<tr><td class="s-t--name">' + escapeAdminHtml(c.business_name || '—') + '</td>'
+                                    + '<td class="s-t--r">' + formatMoneyCents(c.monthly_retainer_cents) + '/mo</td>'
+                                    + '<td class="s-t--r s-t--strong">' + formatMoneyCents(totalComm) + '</td>'
+                                    + '<td class="s-t--r"><span class="s-badge ' + tone + '">' + escapeAdminHtml(c.payout_status || 'pending') + '</span></td></tr>';
                             }).join('')
-                            + '</tbody></table></div>'
-                        : '<div style="color:var(--text-tertiary);font-size:13px;margin-bottom:24px;">No closed clients yet.</div>')
-                    + '<h3 style="margin:0 0 12px 0;font-size:14px;">Quick DM</h3>'
-                    + '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:12px;padding:14px;">'
+                        + '</tbody></table></div></div>'
+                        : '<div class="s-empty">No closed clients yet.</div>')
+
+                    + '<div class="s-section__head" style="margin-top:var(--s-8);"><h3 class="s-section__title">Quick DM</h3></div>'
+                    + '<div style="background:var(--s-raised);border:1px solid var(--s-line);border-radius:var(--s-r-lg);padding:var(--s-4);">'
                         + (messages.length
-                            ? '<div style="max-height:180px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;">'
+                            ? '<div style="max-height:180px;overflow-y:auto;margin-bottom:var(--s-3);display:flex;flex-direction:column;gap:8px;">'
                                 + messages.slice(-10).map(function (m) {
                                     var who = m.sender_type === 'admin' ? 'You' : escapeAdminHtml(sdr.display_name);
-                                    return '<div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text-primary);">' + who + ':</strong> ' + escapeAdminHtml(m.body) + '</div>';
+                                    return '<div style="font-size:0.78rem;color:var(--s-text-2);"><strong style="color:var(--s-text);">' + who + ':</strong> ' + escapeAdminHtml(m.body) + '</div>';
                                 }).join('')
                             + '</div>'
-                            : '<div style="color:var(--text-tertiary);font-size:12px;margin-bottom:12px;">No messages yet.</div>')
+                            : '<div class="s-empty" style="padding:var(--s-2) 0;text-align:left;">No messages yet.</div>')
                         + '<form onsubmit="return adminSendSdrMessage(event, \'' + sdrId + '\')" style="display:flex;gap:8px;">'
-                            + '<input type="text" id="adminSdrMsgInput" placeholder="Send a quick message..." style="flex:1;padding:8px 12px;background:var(--bg-input,#1a1a25);color:var(--text-primary,#fff);border:1px solid var(--border-medium,rgba(255,255,255,0.12));border-radius:8px;font-size:13px;">'
-                            + '<button type="submit" class="quick-action-btn" style="padding:8px 14px;background:#2563EB;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Send</button>'
+                            + '<input type="text" id="adminSdrMsgInput" placeholder="Send a quick message..." style="flex:1;padding:9px 12px;background:var(--s-surface);color:var(--s-text);border:1px solid var(--s-line-strong);border-radius:8px;font-size:0.82rem;">'
+                            + '<button type="submit" style="padding:9px 16px;background:var(--s-accent);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.82rem;">Send</button>'
                         + '</form>'
                     + '</div>';
             } catch (e) {
-                body.innerHTML = '<div style="color:#ef4444;">Failed: ' + (e.message || 'unknown') + '</div>';
+                body.innerHTML = '<div class="s-empty" style="color:var(--s-neg);">Failed: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
             }
-        }
-
-        function perfCard(label, value) {
-            return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(37,99,235,0.14);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">' + label + '</div><div style="font-family:var(--font-display);font-weight:800;font-size:1.2rem;letter-spacing:-0.02em;margin-top:4px;">' + value + '</div></div>';
         }
 
         async function adminSendSdrMessage(event, sdrId) {
@@ -11014,10 +11098,14 @@
             ];
             cards.innerHTML = defs.map(function (x) {
                 var open = SALES_OPEN === x.k;
-                return '<button onclick="toggleSalesPanel(\'' + x.k + '\')" style="text-align:left;background:var(--bg-card);border:1px solid ' + (open ? x.color : 'var(--border-subtle)') + ';border-left:3px solid ' + x.color + ';border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color 120ms;">'
-                    + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">' + x.label + '</div>'
-                    + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.9rem;letter-spacing:-0.02em;margin-top:2px;color:var(--text-primary);">' + x.val + '</div>'
-                    + (x.sub ? '<div style="font-size:11px;color:' + x.color + ';font-weight:700;margin-top:2px;">' + x.sub + '</div>' : '<div style="font-size:11px;color:var(--text-tertiary);margin-top:2px;">' + (open ? 'tap to close' : 'tap to expand') + '</div>')
+                // System look: hairline card, mono label, tabular figure. The
+                // metric colour survives only as the open-state ring and the
+                // sub line, instead of six loud rainbow borders side by side.
+                return '<button onclick="toggleSalesPanel(\'' + x.k + '\')" style="text-align:left;background:var(--s-surface);border:1px solid ' + (open ? x.color : 'var(--s-line)') + ';border-radius:var(--s-r-lg);padding:15px 17px;cursor:pointer;transition:border-color 140ms, background 140ms;"'
+                    + ' onmouseover="if(!' + open + ')this.style.borderColor=\'var(--s-line-strong)\'" onmouseout="if(!' + open + ')this.style.borderColor=\'var(--s-line)\'">'
+                    + '<div style="font-family:var(--font-mono);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--s-text-4);">' + x.label + '</div>'
+                    + '<div style="font-family:var(--font-display);font-weight:700;font-size:1.55rem;letter-spacing:-0.025em;margin-top:5px;color:var(--s-text);font-variant-numeric:tabular-nums;">' + x.val + '</div>'
+                    + (x.sub ? '<div style="font-size:0.68rem;color:' + x.color + ';font-weight:600;margin-top:3px;">' + x.sub + '</div>' : '<div style="font-size:0.66rem;color:var(--s-text-4);margin-top:3px;">' + (open ? 'tap to close' : 'tap to expand') + '</div>')
                     + '</button>';
             }).join('');
         }
