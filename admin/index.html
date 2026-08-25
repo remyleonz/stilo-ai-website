@@ -1244,13 +1244,21 @@
     </style>
 <style id="crm-booked">
 /* Sales tab · booked-meetings CRM rows. Grid on desktop, stacked on mobile. */
-.crm-head, .crm-row { display:grid; grid-template-columns:minmax(0,1.5fr) 128px minmax(0,1fr) minmax(0,1.1fr) minmax(150px,1.3fr) 26px; gap:4px 14px; align-items:center; }
-.crm-head { padding:4px 0 8px; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); }
-.crm-row { padding:11px 0; border-top:1px solid var(--border-subtle); cursor:pointer; transition:background 100ms; }
-.crm-row:hover { background:rgba(37,99,235,0.05); }
+.crm-head, .crm-row { display:grid; grid-template-columns:minmax(0,1.5fr) 128px minmax(0,1fr) minmax(0,1.1fr) minmax(150px,1.3fr) 26px; gap:4px 14px;
+  /* start, not center: one tall cell (a long next-step note) used to push
+     every sibling cell to the vertical middle of a 500px row. */
+  align-items:start; }
+.crm-head { padding:4px 0 8px; font-family:var(--font-mono); font-size:0.58rem; font-weight:500; text-transform:uppercase; letter-spacing:.12em; color:var(--s-text-4); }
+.crm-row { padding:12px 6px; margin:0 -6px; border-top:1px solid var(--s-line); cursor:pointer; transition:background 120ms; border-radius:6px; }
+.crm-row:hover { background:rgba(255,255,255,0.025); }
+/* Long free-text next steps (the coaching notes) clamp to four lines; the
+   whole note lives in the expanded timeline and the Edit box. */
+.crm-note-clamp { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.crm-note-clamp.expanded { -webkit-line-clamp:unset; }
+.crm-note-more { font-family:var(--font-mono); font-size:0.56rem; letter-spacing:.08em; text-transform:uppercase; color:var(--s-accent-hi); cursor:pointer; margin-top:3px; display:inline-block; }
 .crm-caret { color:var(--text-muted); font-size:11px; text-align:right; transition:transform 150ms; }
 .crm-row.open .crm-caret { transform:rotate(90deg); }
-.crm-expand { border-top:1px dashed var(--border-subtle); padding:12px 4px 14px; }
+.crm-expand { border-top:1px solid var(--s-line); background:rgba(255,255,255,0.015); border-radius:0 0 8px 8px; padding:14px 12px 16px; margin:0 -6px; }
 @media (max-width: 760px) {
     .crm-head { display:none; }
     .crm-row { grid-template-columns:minmax(0,1fr) 26px; gap:6px 10px; }
@@ -11098,22 +11106,38 @@
             ];
             cards.innerHTML = defs.map(function (x) {
                 var open = SALES_OPEN === x.k;
-                // System look: hairline card, mono label, tabular figure. The
-                // metric colour survives only as the open-state ring and the
-                // sub line, instead of six loud rainbow borders side by side.
-                return '<button onclick="toggleSalesPanel(\'' + x.k + '\')" style="text-align:left;background:var(--s-surface);border:1px solid ' + (open ? x.color : 'var(--s-line)') + ';border-radius:var(--s-r-lg);padding:15px 17px;cursor:pointer;transition:border-color 140ms, background 140ms;"'
-                    + ' onmouseover="if(!' + open + ')this.style.borderColor=\'var(--s-line-strong)\'" onmouseout="if(!' + open + ')this.style.borderColor=\'var(--s-line)\'">'
-                    + '<div style="font-family:var(--font-mono);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--s-text-4);">' + x.label + '</div>'
-                    + '<div style="font-family:var(--font-display);font-weight:700;font-size:1.55rem;letter-spacing:-0.025em;margin-top:5px;color:var(--s-text);font-variant-numeric:tabular-nums;">' + x.val + '</div>'
-                    + (x.sub ? '<div style="font-size:0.68rem;color:' + x.color + ';font-weight:600;margin-top:3px;">' + x.sub + '</div>' : '<div style="font-size:0.66rem;color:var(--s-text-4);margin-top:3px;">' + (open ? 'tap to close' : 'tap to expand') + '</div>')
+                // Each metric wears its own colour — Remy's call (2026-08-24),
+                // reversing an earlier de-saturation. Done as a tinted wash +
+                // coloured figure rather than the old hard 3px rainbow rail, so
+                // the six cards read as one family that happens to be coloured,
+                // not six unrelated boxes. hexA() keeps every alpha derived from
+                // the single hex per metric.
+                var hexA = function (hex, a) {
+                    var n = parseInt(hex.slice(1), 16);
+                    return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+                };
+                return '<button onclick="toggleSalesPanel(\'' + x.k + '\')" style="position:relative;overflow:hidden;text-align:left;'
+                    + 'background:linear-gradient(180deg,' + hexA(x.color, open ? 0.16 : 0.09) + ',' + hexA(x.color, open ? 0.07 : 0.03) + ') , var(--s-surface);'
+                    + 'border:1px solid ' + hexA(x.color, open ? 0.75 : 0.32) + ';'
+                    + 'border-radius:var(--s-r-lg);padding:15px 17px;cursor:pointer;transition:border-color 140ms, transform 140ms, box-shadow 140ms;'
+                    + (open ? 'box-shadow:0 0 0 1px ' + hexA(x.color, 0.5) + ', 0 8px 24px ' + hexA(x.color, 0.12) + ';' : '') + '"'
+                    + ' onmouseover="this.style.borderColor=\'' + hexA(x.color, 0.6) + '\';this.style.transform=\'translateY(-1px)\'"'
+                    + ' onmouseout="this.style.borderColor=\'' + hexA(x.color, open ? 0.75 : 0.32) + '\';this.style.transform=\'none\'">'
+                    + '<span style="position:absolute;inset:0 auto 0 0;width:3px;background:' + x.color + ';opacity:' + (open ? 1 : 0.8) + ';"></span>'
+                    + '<div style="font-family:var(--font-mono);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:' + hexA(x.color, 0.95) + ';">' + x.label + '</div>'
+                    + '<div style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;letter-spacing:-0.025em;margin-top:5px;color:var(--s-text);font-variant-numeric:tabular-nums;">' + x.val + '</div>'
+                    + (x.sub ? '<div style="font-size:0.68rem;color:' + x.color + ';font-weight:600;margin-top:3px;">' + x.sub + '</div>' : '<div style="font-size:0.66rem;color:var(--s-text-3);margin-top:3px;">' + (open ? 'tap to close' : 'tap to expand') + '</div>')
                     + '</button>';
             }).join('');
         }
         function toggleSalesPanel(k) { SALES_OPEN = (SALES_OPEN === k) ? null : k; renderSalesCards(); renderSalesPanel(SALES_OPEN); }
 
-        function salesPanelWrap(title, inner) {
-            return '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;">'
-                + '<div style="font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px;">' + escapeAdminHtml(title) + '</div>'
+        function salesPanelWrap(title, inner, meta) {
+            return '<div style="background:var(--s-surface);border:1px solid var(--s-line);border-radius:var(--s-r-lg);padding:var(--s-5);">'
+                + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-4);border-bottom:1px solid var(--s-line);padding-bottom:var(--s-3);margin-bottom:var(--s-4);">'
+                    + '<div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--s-text-2);">' + escapeAdminHtml(title) + '</div>'
+                    + (meta ? '<div style="font-family:var(--font-mono);font-size:0.64rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--s-text-4);">' + meta + '</div>' : '')
+                + '</div>'
                 + inner + '</div>';
         }
         // VSL funnel analytics (view -> play -> confirm) shown under the Emails card.
@@ -11150,12 +11174,14 @@
             var on = VSL_DRILL[flow] === stage;
             var clickable = !!stage;
             return '<div ' + (clickable ? 'onclick="vslDrill(\'' + flow + '\',\'' + stage + '\')" ' : '')
-                + 'style="flex:1;min-width:96px;background:' + (on ? 'rgba(37,99,235,.14)' : 'var(--bg-input)') + ';'
-                + 'border:1px solid ' + (on ? '#2563eb' : 'var(--border-subtle)') + ';border-radius:10px;padding:12px;'
-                + (clickable ? 'cursor:pointer;' : '') + '">'
-                + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">' + lbl + '</div>'
-                + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:' + (color || 'var(--text-primary)') + ';">' + shown + '</div>'
-                + (sub ? '<div style="font-size:11px;color:var(--text-tertiary);">' + sub + '</div>' : '') + '</div>';
+                + 'style="flex:1;min-width:104px;background:' + (on ? 'var(--s-accent-dim)' : 'rgba(255,255,255,0.018)') + ';'
+                + 'border:1px solid ' + (on ? 'var(--s-accent)' : 'var(--s-line)') + ';border-radius:var(--s-r);padding:12px 13px;'
+                + 'transition:border-color 120ms;'
+                + (clickable ? 'cursor:pointer;' : '') + '"'
+                + (clickable && !on ? ' onmouseover="this.style.borderColor=\'var(--s-line-strong)\'" onmouseout="this.style.borderColor=\'var(--s-line)\'"' : '') + '>'
+                + '<div style="font-family:var(--font-mono);font-size:0.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--s-text-4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + lbl + '</div>'
+                + '<div style="font-family:var(--font-display);font-weight:700;font-size:1.4rem;letter-spacing:-0.02em;margin-top:3px;font-variant-numeric:tabular-nums;color:' + (color || 'var(--s-text)') + ';">' + shown + '</div>'
+                + (sub ? '<div style="font-size:0.64rem;color:var(--s-text-3);margin-top:2px;">' + sub + '</div>' : '') + '</div>';
         }
         function vslPct(n, d) { return (d && n != null) ? Math.round(n / d * 100) + '%' : '—'; }
 
@@ -11322,11 +11348,28 @@
                 p.innerHTML = crmBookedPanel();
             } else if (k === 'cold_calls' || k === 'emails_sent') {
                 var metric = k === 'cold_calls' ? 'dials' : 'emails';
-                var board = (SALES.leaderboard || []).slice().sort(function (a, b) { return (b[metric] || 0) - (a[metric] || 0); });
-                var inner = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><tbody>'
-                    + board.map(function (r) { return '<tr style="border-top:1px solid var(--border-subtle);"><td style="padding:8px 6px;">' + escapeAdminHtml(r.name || (r.sdr ? sdrFromEmail(r.sdr).displayName : '—')) + '</td><td style="padding:8px 6px;text-align:right;font-weight:700;">' + (r[metric] || 0) + '</td></tr>'; }).join('')
+                var board = (SALES.leaderboard || []).slice()
+                    .filter(function (r) { return (r[metric] || 0) > 0; })
+                    .sort(function (a, b) { return (b[metric] || 0) - (a[metric] || 0); });
+                var maxV = board.length ? (board[0][metric] || 1) : 1;
+                var totV = board.reduce(function (a, r) { return a + (r[metric] || 0); }, 0);
+                var inner = '<table class="s-table" style="min-width:380px;"><tbody>'
+                    + board.map(function (r, i) {
+                        var v = r[metric] || 0;
+                        var w = Math.max(2, Math.round((v / maxV) * 100));
+                        var share = totV ? Math.round((v / totV) * 100) : 0;
+                        return '<tr>'
+                            + '<td class="s-t--dim" style="width:28px;">' + (i + 1) + '</td>'
+                            + '<td class="s-t--name">' + escapeAdminHtml(r.name || (r.sdr ? sdrFromEmail(r.sdr).displayName : '—')) + '</td>'
+                            + '<td style="width:42%;"><span class="s-bar" style="width:100%;height:4px;"><span class="s-bar__fill" style="width:' + w + '%;"></span></span></td>'
+                            + '<td class="s-t--r s-t--strong">' + v.toLocaleString() + '</td>'
+                            + '<td class="s-t--r s-t--dim" style="width:52px;">' + share + '%</td>'
+                            + '</tr>';
+                    }).join('')
                     + '</tbody></table>';
-                var byRep = salesPanelWrap((k === 'cold_calls' ? 'Cold calls' : 'Emails') + ' by rep', board.length ? inner : '<div style="color:var(--text-muted);font-size:13px;">No activity yet.</div>');
+                var byRep = salesPanelWrap((k === 'cold_calls' ? 'Cold calls' : 'Emails') + ' by rep',
+                    board.length ? '<div style="overflow-x:auto;">' + inner + '</div>' : '<div class="s-empty" style="text-align:left;padding:var(--s-2) 0;">No activity yet.</div>',
+                    totV.toLocaleString() + ' total');
                 if (k === 'emails_sent') {
                     p.innerHTML = byRep + '<div style="height:14px;"></div>' + vslFunnelPanel();
                     if (VSL_ANALYTICS === null) loadVslAnalytics();
@@ -11425,12 +11468,19 @@
         function crmBookedPanel() {
             var bl = (SALES && SALES.booked_leads || []).slice();
             var bs = (SALES && SALES.booked_summary) || {};
-            var chip = function (n, lbl, color) { return '<span style="white-space:nowrap;"><b style="color:' + (color || 'var(--text-primary)') + ';">' + (n || 0) + '</b> <span style="color:var(--text-secondary);">' + lbl + '</span></span>'; };
-            var summary = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:2px 0 10px;font-size:12px;">'
-                + chip(bs.total, 'total') + chip(bs.upcoming, 'upcoming', '#5A7BE8') + chip(bs.held, 'held')
-                + chip(bs.won, 'won', '#10b981') + chip(bs.lost, 'lost', '#ef4444') + chip(bs.no_show, 'no-show', '#eab308')
-                + chip(bs.rescheduled, 'reschedules')
-                + '<span style="white-space:nowrap;margin-left:auto;"><b style="color:var(--text-primary);font-size:14px;">' + (bs.close_rate_pct || 0) + '%</b> <span style="color:var(--text-secondary);">meeting close rate</span></span>'
+            // The summary is the funnel readout for every booked meeting; it
+            // was a run-on line of coloured words. Now a tray of proper cells,
+            // the same anatomy as everywhere else.
+            var cell = function (n, lbl, color) {
+                return '<div style="flex:1;min-width:74px;text-align:center;">'
+                    + '<div style="font-family:var(--font-display);font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums;color:' + (color || 'var(--s-text)') + ';">' + (n || 0) + '</div>'
+                    + '<div style="font-family:var(--font-mono);font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--s-text-4);margin-top:2px;">' + lbl + '</div></div>';
+            };
+            var summary = '<div style="display:flex;gap:var(--s-2);align-items:center;flex-wrap:wrap;background:rgba(255,255,255,0.018);border:1px solid var(--s-line);border-radius:var(--s-r);padding:var(--s-3);margin-bottom:var(--s-2);">'
+                + cell(bs.total, 'Total') + cell(bs.upcoming, 'Upcoming', 'var(--s-accent-hi)') + cell(bs.held, 'Held')
+                + cell(bs.won, 'Won', 'var(--s-pos)') + cell(bs.lost, 'Lost', 'var(--s-neg)') + cell(bs.no_show, 'No-show', 'var(--s-warn)')
+                + cell(bs.rescheduled, 'Resched')
+                + cell((bs.close_rate_pct || 0) + '%', 'Close rate', (bs.close_rate_pct || 0) >= 20 ? 'var(--s-pos)' : 'var(--s-warn)')
                 + '</div>';
             var groups = { upcoming: [], action: [], closed: [] };
             bl.forEach(function (l) { groups[crmGroup(l)].push(l); });
@@ -11450,7 +11500,13 @@
             var head = '<div class="crm-head"><div>Lead</div><div>Meeting</div><div>Offer · booked by</div><div>Last touch · signals</div><div>Next step</div><div></div></div>';
             var section = function (title, color, rows) {
                 if (!rows.length) return '';
-                return '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:' + color + ';margin:18px 0 2px;">' + title + ' · ' + rows.length + '</div>'
+                // Group header reads as a rule with a coloured count badge, so
+                // the eye can jump between Upcoming / Needs action / Closed.
+                return '<div style="display:flex;align-items:center;gap:10px;margin:20px 0 4px;">'
+                    + '<span style="font-family:var(--font-mono);font-size:0.62rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:' + color + ';white-space:nowrap;">' + title + '</span>'
+                    + '<span style="font-family:var(--font-mono);font-size:0.6rem;font-weight:600;padding:1px 8px;border-radius:999px;color:' + color + ';background:rgba(255,255,255,0.05);">' + rows.length + '</span>'
+                    + '<span style="flex:1;height:1px;background:var(--s-line);"></span>'
+                    + '</div>'
                     + rows.map(crmRow).join('');
             };
             var body = bl.length
@@ -11533,12 +11589,24 @@
             if (!text) {
                 return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;color:var(--text-muted);">Nothing planned</span>' + editBtn + '</div>';
             }
+            // Notes can be whole call plans (the Blason one runs ~1,400
+            // characters). Clamp to four lines with an explicit expand, so one
+            // detailed note can never distort the whole board again.
+            var isLong = String(text).length > 220;
             return '<div style="display:flex;align-items:flex-start;gap:6px;">'
                 + '<div style="min-width:0;flex:1;">'
-                + '<div style="font-size:12px;color:' + (stored ? 'var(--text-primary)' : 'var(--text-secondary)') + ';' + (stored ? '' : 'font-style:italic;') + '">' + escapeAdminHtml(text)
+                + '<div class="crm-note-clamp" id="crmNoteTxt' + l.id + '" style="font-size:12px;line-height:1.5;color:' + (stored ? 'var(--text-primary)' : 'var(--text-secondary)') + ';' + (stored ? '' : 'font-style:italic;') + '">' + escapeAdminHtml(text)
                 + (stored ? '' : ' <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-style:normal;">suggested</span>') + '</div>'
+                + (isLong ? '<span class="crm-note-more" id="crmNoteMore' + l.id + '" onclick="crmNoteToggle(' + l.id + ')">Show all</span>' : '')
                 + (due ? '<div style="margin-top:3px;">' + due + '</div>' : '')
                 + '</div>' + editBtn + '</div>';
+        }
+        function crmNoteToggle(id) {
+            var el = document.getElementById('crmNoteTxt' + id);
+            var btn = document.getElementById('crmNoteMore' + id);
+            if (!el) return;
+            var expanded = el.classList.toggle('expanded');
+            if (btn) btn.textContent = expanded ? 'Show less' : 'Show all';
         }
         function crmFindLead(id) {
             var bl = (SALES && SALES.booked_leads) || [];
