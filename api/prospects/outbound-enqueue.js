@@ -132,11 +132,13 @@ module.exports = async function handler(req, res) {
     // which can apply to any audience. Computing it only for 'warm' would make
     // an exempt 'dialed' campaign silently stamp prior_contact=false on every
     // target and then hold them all back as unscrubbed.
-    let connected = null;
-    if (audience === 'warm' || campaign.scrub_exempt_prior_contact === true) {
-        try { connected = await connectedLeadIds(sb); }
-        catch (e) { return res.status(500).json({ error: 'calls_read_failed', detail: e.message }); }
-    }
+    // ALWAYS computed. Since 2026-08-24 a connected call is a hard entry
+    // condition for every audience, not just 'warm': cold SMS is banned
+    // outright (Quo AUP + TCPA), so an audience that would text someone no rep
+    // has ever spoken to is not an audience we can enqueue.
+    let connected;
+    try { connected = await connectedLeadIds(sb); }
+    catch (e) { return res.status(500).json({ error: 'calls_read_failed', detail: e.message }); }
 
     let lastDialer;
     try { lastDialer = await lastDialerByLead(sb); }
@@ -145,7 +147,7 @@ module.exports = async function handler(req, res) {
     // Reasons are counted, not just filtered, so a small result set is
     // explainable instead of mysterious.
     const held = {
-        no_phone: 0, do_not_call: 0, already_booked: 0, bad_outcome: 0,
+        no_phone: 0, do_not_call: 0, already_booked: 0, bad_outcome: 0, not_connected: 0,
         not_scrubbed: 0, scrub_blocked: 0, scrub_phone_mismatch: 0,
         no_rep_line: 0, not_in_audience: 0, already_in_campaign: 0,
         scrub_waived_prior_contact: 0, line_followed_last_dialer: 0,
@@ -181,7 +183,10 @@ module.exports = async function handler(req, res) {
         for (const l of data) {
             if (rows.length >= limit) break;
             if (already.has(l.id)) { held.already_in_campaign++; continue; }
-            if (audience === 'warm' && !connected.has(l.id)) { held.not_in_audience++; continue; }
+            // Hard compliance gate: no connected call on record, no SMS. Applies
+            // to every audience; preSendCheck enforces the same rule at send
+            // time for anything enqueued before this date.
+            if (!connected.has(l.id)) { held.not_connected = (held.not_connected || 0) + 1; continue; }
             if (l.do_not_call) { held.do_not_call++; continue; }
             if (l.meeting_booked_at) { held.already_booked++; continue; }
             if (OUT_OF_PIPELINE.includes(l.last_called_outcome || '')) { held.bad_outcome++; continue; }

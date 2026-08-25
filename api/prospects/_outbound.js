@@ -487,6 +487,16 @@ function preSendCheck(campaign, target, lead) {
     // covers "we have no scrub answer", not "the scrub said no".
     if (lead.scrub_status === 'blocked') return { ok: false, reason: 'scrub_blocked' };
 
+    // COLD SMS IS BANNED OUTRIGHT (Remy, 2026-08-24). A text may only go to
+    // someone a rep has actually reached on a cold call: prior_contact is
+    // stamped at enqueue time from the call log (a connected call of >= 20s).
+    // This is a send-time rule, not an enqueue filter, so targets enqueued
+    // before the rule — campaign 3's never-connected audience included —
+    // are refused here no matter what stage they sit in. Quo's AUP bans cold
+    // messaging and TCPA exposure is real; there is no campaign setting that
+    // overrides this.
+    if (target.prior_contact !== true) return { ok: false, reason: 'no_connected_call' };
+
     const s = scrub.assertScrubbedForSms(lead, target.to_phone);
     if (!s.ok) {
         // Both conditions required: the campaign opted in AND this specific

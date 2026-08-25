@@ -152,6 +152,18 @@
     {
       "path": "/api/prospects/vsl-nurture?cap=40",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/prospects/team-rituals?job=invite",
+      "schedule": "0 0 * * 2,4"
+    },
+    {
+      "path": "/api/prospects/team-rituals?job=morning",
+      "schedule": "0 13 * * 2,4"
+    },
+    {
+      "path": "/api/prospects/team-rituals?job=evening",
+      "schedule": "0 22 * * 1-5"
     }
   ],
   "headers": []
