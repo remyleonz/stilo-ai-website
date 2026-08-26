@@ -130,7 +130,7 @@ module.exports = async function handler(req, res) {
     const now = Date.now();
     const win = windowState();
     const skipped = {
-        no_niche: 0, no_email: 0, not_due: 0, already_sent: 0, window_closed: 0,
+        no_niche: 0, no_email: 0, not_due: 0, already_sent: 0, window_closed: 0, no_connected_call: 0,
         exit_played: 0, exit_replied: 0, exit_booked: 0, exit_dnc: 0,
         no_sms_number: 0, copy_rejected: 0, guard_blocked: 0,
     };
@@ -153,6 +153,18 @@ module.exports = async function handler(req, res) {
         if (!r.lead_id) continue;
         const v = String(r.variant || '');
         if (v.startsWith('seq_') || v === 'meeting_confirm') continue;
+        // ...and never anchor on OUR OWN follow-ups. Every step-1 body carries
+        // the /vsl/ link, so without this the sequence anchors on the email it
+        // just sent: ancMs jumps forward, isNewAnchor goes true, the ladder
+        // resets, and step 1 is re-planned forever. That is exactly why 25
+        // leads sat permanently "due" while nothing sent.
+        //
+        // The only thing stopping it from actually re-mailing all of them
+        // every 15 minutes is the claim's `.is(col, null)` guard in the send
+        // loop. That guard is LOAD-BEARING — do not relax it to "fix" a stuck
+        // sequence without fixing the anchor first, or you rebuild the
+        // 40-message loop from the SMS nurture postmortem.
+        if (v.startsWith('vslnur_') || v.startsWith('vslplay_')) continue;
         // to_address is carried so the follow-up replies to the SAME inbox the
         // rep actually used. leads.owner_email drifts from it (the rep often
         // corrects the address on the call), and mailing the stale one starts a
@@ -203,6 +215,27 @@ module.exports = async function handler(req, res) {
     const { data: sdrs } = await pub.from('sdr_users').select('email,display_name,openphone_number,active');
     const repBy = {};
     for (const s of (sdrs || [])) repBy[s.email] = s;
+
+    // Leads we have actually reached on the phone (>=20s of connected call).
+    // The cold-SMS ban is enforced in the campaign engine's preSendCheck, but
+    // this sequence sends its step-2/played-2 texts through sendSms directly,
+    // which only carries the dedupe/rate guard. Without this, a nurture text
+    // can reach someone no rep ever spoke to — exactly what the ban forbids.
+    const smsOk = new Set();
+    {
+        let from = 0;
+        for (;;) {
+            const { data } = await sb.from('lead_calls')
+                .select('lead_id, duration_seconds')
+                .in('lead_id', ids)
+                .in('direction', ['outbound', 'outgoing'])
+                .range(from, from + 999);
+            if (!data || !data.length) break;
+            for (const c of data) if (c.lead_id && (c.duration_seconds || 0) >= 20) smsOk.add(c.lead_id);
+            if (data.length < 1000) break;
+            from += 1000;
+        }
+    }
 
     // ── 3. Decide the due step for each lead.
     const plan = [];
@@ -255,6 +288,7 @@ module.exports = async function handler(req, res) {
             if (pStep === 2) {
                 const toPhone = l.owner_phone_e164 || l.owner_phone || l.phone;
                 if (!toPhone) { skipped.no_sms_number++; continue; }
+                if (!smsOk.has(l.id)) { skipped.no_connected_call++; continue; }
                 const r = copy.played2(ctx);
                 if (copy.validate('played2', r).length) { skipped.copy_rejected++; continue; }
                 plan.push({ id: l.id, step: 'played2', col: 'vsl_played_2_sent_at', channel: 'sms',
@@ -307,6 +341,7 @@ module.exports = async function handler(req, res) {
         if (step === 2) {
             const toPhone = l.owner_phone_e164 || l.owner_phone || l.phone;
             if (!toPhone) { skipped.no_sms_number++; continue; }
+            if (!smsOk.has(l.id)) { skipped.no_connected_call++; continue; }
             const rendered = copy.step2(ctx);
             const bad = copy.validate(2, rendered);
             if (bad.length) { skipped.copy_rejected++; continue; }
