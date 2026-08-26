@@ -29,6 +29,9 @@
  *      no lead. Re-runs the phone match; if it succeeds, the webhook linker has
  *      regressed. 45 of 53 inbound texts were orphaned this way before
  *      2026-08-26, including a live negotiation.
+ *   F. NO_TRANSCRIPTS    — a rep whose calls are not being recorded, measured
+ *      against the team so a single broken line reads differently from a
+ *      workspace outage. George lost a month of coachable calls this way.
  *   E. STALLED_SEQUENCE  — a drip whose newest stamp is older than its
  *      threshold while its cron is still scheduled. Catches a sequence that has
  *      gone quiet rather than idle, which is how the VSL ladder sat frozen for
@@ -108,7 +111,16 @@ module.exports = async function handler(req, res) {
             if (m.lead_id == null) return;
             byLead[m.lead_id] = byLead[m.lead_id] || { n: 0, bodies: {}, lastDupAt: null };
             byLead[m.lead_id].n++;
-            const k = (m.channel || '') + '|' + (m.channel === 'email' ? (m.subject || '') : (m.body_preview || ''));
+            // Email keys on subject AND the head of the body. Subject alone was
+            // the original rule (HTML bodies vary on a timestamp, so the subject
+            // is the stronger signal) but it collides whenever a prospect's
+            // auto-responder is stored against our own thread: two genuinely
+            // different emails share a subject and read as a resend loop. The
+            // body head keeps real duplicates matching while separating those.
+            const k = (m.channel || '') + '|'
+                + (m.channel === 'email'
+                    ? (m.subject || '') + '|' + String(m.body_preview || '').slice(0, 100)
+                    : (m.body_preview || ''));
             byLead[m.lead_id].bodies[k] = (byLead[m.lead_id].bodies[k] || 0) + 1;
             // Remember when the most recent duplicate landed. A 24h window keeps
             // reporting an incident for a full day AFTER it is fixed, which is
@@ -243,6 +255,61 @@ module.exports = async function handler(req, res) {
             }
         }
     } catch (e) { warnings.push('stalled-sequence check failed: ' + (e.message || e)); }
+
+    // ---- F. NO_TRANSCRIPTS ---------------------------------------------------
+    // A rep whose calls are not being recorded.
+    //
+    // Added 2026-08-26. George's OpenPhone line had call recording switched
+    // off, so 32 of his 33 real conversations produced no audio and no
+    // transcript. It surfaced only when David sat down to coach him and found
+    // nothing to review — a month of a new rep's calls, unrecoverable, because
+    // nothing was watching a number that only ever went down.
+    //
+    // Recording is a per-line setting in the OpenPhone UI and the API is
+    // read-only for it, so this cannot self-heal; it can only be noticed.
+    // Compares each active rep against the team, since a workspace-wide outage
+    // should read differently from one broken line.
+    try {
+        const since = new Date(Date.now() - 14 * 864e5).toISOString();
+        const { data: roster } = await pub.from('sdr_users')
+            .select('email, display_name, openphone_number').eq('active', true);
+        const { data: calls } = await pro.from('lead_calls')
+            .select('logged_by, transcript, duration_seconds, outcome')
+            .in('direction', ['outbound', 'outgoing'])
+            .gte('called_at', since).limit(5000);
+        const per = {};
+        for (const c of (calls || [])) {
+            // Only calls that SHOULD carry audio: a real conversation.
+            if ((c.duration_seconds || 0) < 30) continue;
+            if (['voicemail', 'no_answer'].indexOf(String(c.outcome || '')) !== -1) continue;
+            const e = String(c.logged_by || '').toLowerCase();
+            if (!e) continue;
+            per[e] = per[e] || { n: 0, t: 0 };
+            per[e].n++;
+            if (c.transcript) per[e].t++;
+        }
+        const teamN = Object.values(per).reduce(function (a, v) { return a + v.n; }, 0);
+        const teamT = Object.values(per).reduce(function (a, v) { return a + v.t; }, 0);
+        const teamPct = teamN ? (teamT / teamN) : 0;
+        for (const r of (roster || [])) {
+            const v = per[String(r.email).toLowerCase()];
+            if (!v || v.n < 10) continue;                    // too few calls to judge
+            const pct = v.t / v.n;
+            // Flag only when this rep is broken AND the team is not.
+            if (pct <= 0.25 && teamPct >= 0.5) {
+                alerts.push({
+                    check: 'NO_TRANSCRIPTS', subject_key: 'rep:' + r.email,
+                    title: (r.display_name || r.email) + ': ' + Math.round(pct * 100) + '% of calls transcribed (team is ' + Math.round(teamPct * 100) + '%)',
+                    detail: v.n + ' real conversations in 14 days, only ' + v.t + ' with a transcript. '
+                        + 'Call recording is almost certainly off on their line'
+                        + (r.openphone_number ? ' (' + r.openphone_number + ')' : '')
+                        + '. Turn it on in the OpenPhone UI: Settings > Phone Numbers > that number > '
+                        + 'Call recording > record all calls. The API cannot set it. '
+                        + 'Until it is on, every call that rep makes is unreviewable and cannot be recovered later.'
+                });
+            }
+        }
+    } catch (e) { warnings.push('transcript-coverage check failed: ' + (e.message || e)); }
 
     // ---- B + C. rep activity -------------------------------------------------
     if (isWeekday && et.hour >= SILENT_REP_AFTER_HOUR_ET) {
