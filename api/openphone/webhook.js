@@ -390,16 +390,34 @@ module.exports = async function handler(req, res) {
         const fromN = msg.from || (msg.participants && msg.participants[0]) || null;
         const toN   = msg.to   || (msg.participants && msg.participants[1]) || null;
         const counterparty = direction === 'inbound' ? fromN : toN;
+        // Resolve the lead through the SAME matcher the call handler uses.
+        // This block used to carry its own inline lookup that matched only the
+        // E.164 form and used .maybeSingle(). Both are wrong here:
+        //   - 26,636 of 28,084 leads store the formatted "(305) 541-5999",
+        //     which an E.164-only equality can never match;
+        //   - .maybeSingle() returns nothing when a number appears on two
+        //     duplicate rows, which is exactly why matchLeadByPhone uses
+        //     .limit(1) and says so in a comment.
+        // Net effect: 45 of 53 inbound replies were stored with lead_id NULL,
+        // so a prospect answering a rep's text was invisible on the lead panel,
+        // never exited a nurture sequence, and never raised a reply alert.
         let mLeadId = null;
         if (counterparty) {
             const normCounterparty = normalizePhone(counterparty);
             if (normCounterparty) {
-                const { data: lead } = await sb
-                    .from('leads')
-                    .select('id, assigned_to')
-                    .or('owner_phone.eq.' + normCounterparty + ',phone.eq.' + normCounterparty)
-                    .maybeSingle();
-                if (lead) mLeadId = lead.id;
+                // Our own people are not leads. Keeps a rep answering a team
+                // alert from being stubbed in as a prospect.
+                let isTeam = false;
+                try {
+                    const { isTeamNumber } = require('../prospects/_team_numbers');
+                    isTeam = await isTeamNumber(normCounterparty);
+                } catch (_) { /* never let the allowlist break ingestion */ }
+                if (!isTeam) {
+                    mLeadId = await matchLeadByPhone(sb, normCounterparty);
+                    // Same fallback the call path uses: if the number is not on
+                    // any lead, inherit the lead we already have history with.
+                    if (!mLeadId) mLeadId = await leadForCounterpartyHistory(sb, normCounterparty);
+                }
             }
         }
         const body = msg.body || msg.text || msg.content || '';

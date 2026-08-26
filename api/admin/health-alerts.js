@@ -25,6 +25,14 @@
  *   C. CLICKED_NOT_DIALED — dial-button stamps with no matching call row for the
  *      same rep and day. This is the Jorge case specifically: 19 clicks, zero
  *      calls, invisible for two weeks.
+ *   D. ORPHAN_INBOUND    — a prospect replied and the reply was filed against
+ *      no lead. Re-runs the phone match; if it succeeds, the webhook linker has
+ *      regressed. 45 of 53 inbound texts were orphaned this way before
+ *      2026-08-26, including a live negotiation.
+ *   E. STALLED_SEQUENCE  — a drip whose newest stamp is older than its
+ *      threshold while its cron is still scheduled. Catches a sequence that has
+ *      gone quiet rather than idle, which is how the VSL ladder sat frozen for
+ *      five days without erroring.
  *
  * Emails Remy only. Never contacts a prospect, so a bug here cannot become the
  * thing it is watching for.
@@ -37,6 +45,8 @@
  */
 const { assertAdminOrSdr } = require('../prospects/_shared');
 const { createClient } = require('@supabase/supabase-js');
+const { normalizePhone } = require('../openphone/_shared');
+const { isTeamNumber } = require('../prospects/_team_numbers');
 
 const ALERT_TO = process.env.HEALTH_ALERT_TO || 'remyleon11@gmail.com';
 const KV_KEY = 'health_alerts_fired';
@@ -141,6 +151,98 @@ module.exports = async function handler(req, res) {
             });
         }
     } catch (e) { warnings.push('runaway check failed: ' + (e.message || e)); }
+
+    // ---- D. ORPHAN_INBOUND ---------------------------------------------------
+    // A prospect replied and we filed the reply against nobody.
+    //
+    // Added 2026-08-26 after finding 45 of 53 inbound texts stored with
+    // lead_id NULL, including the entire Blason SMS negotiation and two live
+    // replies. Cause: the message branch of the OpenPhone webhook carried its
+    // own lead lookup that matched only the E.164 form, while 26,636 of 28,084
+    // leads store "(305) 541-5999". An unlinked reply is invisible on the lead
+    // panel, never exits a nurture sequence, and never raises a reply alert —
+    // the prospect is answering into a void.
+    //
+    // This check re-runs the match. If a NULL-lead inbound text can be matched
+    // to a lead, the linker has regressed.
+    try {
+        const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+        const { data: orphans } = await pro.from('lead_messages')
+            .select('id, from_address, body_preview, sent_at')
+            .eq('channel', 'sms').eq('direction', 'inbound')
+            .is('lead_id', null).gte('sent_at', dayAgo).limit(50);
+        let matchable = 0, sample = null;
+        for (const m of (orphans || [])) {
+            const norm = normalizePhone(m.from_address);
+            if (!norm) continue;
+            // Our own people are meant to be unlinked; not a defect.
+            let isTeam = false;
+            try { isTeam = await isTeamNumber(norm); } catch (_) {}
+            if (isTeam) continue;
+            const d10 = norm.startsWith('+1') ? norm.slice(2) : null;
+            const fmt = d10 && d10.length === 10
+                ? '(' + d10.slice(0, 3) + ') ' + d10.slice(3, 6) + '-' + d10.slice(6) : null;
+            const cond = fmt ? ',owner_phone.eq.' + JSON.stringify(fmt) + ',phone.eq.' + JSON.stringify(fmt) : '';
+            const { data: hit } = await pro.from('leads').select('id,name')
+                .or('owner_phone.eq.' + norm + ',phone.eq.' + norm + cond).order('id').limit(1);
+            if (hit && hit.length) { matchable++; if (!sample) sample = { lead: hit[0], msg: m }; }
+        }
+        if (matchable > 0) {
+            alerts.push({
+                check: 'ORPHAN_INBOUND', subject_key: 'orphan_inbound',
+                title: matchable + ' inbound repl' + (matchable === 1 ? 'y is' : 'ies are') + ' filed against no lead',
+                detail: 'These texts matched a lead on re-check, so the webhook linker is dropping them. '
+                    + (sample ? 'e.g. "' + String(sample.msg.body_preview || '').slice(0, 60).replace(/\n/g, ' ')
+                        + '" should be on ' + (sample.lead.name || ('lead ' + sample.lead.id)) + '. ' : '')
+                    + 'An unlinked reply is invisible on the lead panel and never exits a nurture sequence. '
+                    + 'Check matchLeadByPhone use in api/openphone/webhook.js.'
+            });
+        }
+    } catch (e) { warnings.push('orphan-inbound check failed: ' + (e.message || e)); }
+
+    // ---- E. STALLED_SEQUENCE -------------------------------------------------
+    // A drip that has stopped dripping.
+    //
+    // Added 2026-08-26 after the VSL nurture ladder sat frozen for five days:
+    // it anchored on its own sends, reset the ladder every tick, and every
+    // claim was rejected as already_sent. Nothing errored; it simply went
+    // quiet, and quiet is invisible. If a sequence's newest stamp is older
+    // than the threshold while its cron is still scheduled, say so.
+    try {
+        // Watch the LADDER, not one rung. Checking step 1 alone would cry wolf
+        // the moment a healthy sequence advances everyone to step 2 and step 1
+        // legitimately stops being written.
+        const SEQ = [
+            { label: 'VSL nurture', days: 4,
+              cols: ['vsl_nurture_1_sent_at', 'vsl_nurture_2_sent_at', 'vsl_nurture_3_sent_at'] },
+            { label: 'VSL played-track', days: 7,
+              cols: ['vsl_played_1_sent_at', 'vsl_played_2_sent_at'] },
+        ];
+        for (const q of SEQ) {
+            let lastMs = 0;
+            for (const col of q.cols) {
+                const { data: newest } = await pro.from('leads')
+                    .select('id,' + col).not(col, 'is', null)
+                    .order(col, { ascending: false }).limit(1);
+                if (newest && newest.length) {
+                    const t = new Date(newest[0][col]).getTime();
+                    if (t > lastMs) lastMs = t;
+                }
+            }
+            if (!lastMs) continue;                            // never ran; not a stall
+            const ageDays = Math.floor((Date.now() - lastMs) / 864e5);
+            if (ageDays >= q.days) {
+                alerts.push({
+                    check: 'STALLED_SEQUENCE', subject_key: 'seq:' + q.label,
+                    title: q.label + ' has sent nothing for ' + ageDays + ' days',
+                    detail: 'Its cron is still scheduled, so silence means it is stuck rather than idle. '
+                        + 'Run /api/prospects/vsl-nurture?dry=1 and compare due_now against what the send loop '
+                        + 'actually claims — a dry run does not apply the claim filter, so it can report work '
+                        + 'that can never happen. Check the anchor query before touching the claim guard.'
+                });
+            }
+        }
+    } catch (e) { warnings.push('stalled-sequence check failed: ' + (e.message || e)); }
 
     // ---- B + C. rep activity -------------------------------------------------
     if (isWeekday && et.hour >= SILENT_REP_AFTER_HOUR_ET) {
