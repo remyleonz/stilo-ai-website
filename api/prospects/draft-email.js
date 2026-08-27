@@ -158,7 +158,12 @@ module.exports = async function handler(req, res) {
         const cVariant = (body.variant === 'ctx' || body.variant === 'ask')
             ? body.variant
             : (parseInt(id, 10) % 2 === 0 ? 'ctx' : 'ask');
-        const hi = es ? ('Hola ' + (cfName || '') + ',') : ('Hi ' + (cfName || 'there') + ',');
+        // Spanish has no natural equivalent of "Hi there", so a nameless lead
+        // gets a bare "Hola," rather than the "Hola ," (stray space + comma)
+        // the naive concat produced.
+        const hi = es
+            ? ('Hola' + (cfName ? ' ' + cfName : '') + ',')
+            : ('Hi ' + (cfName || 'there') + ',');
         const SHOWROOM = '3110 W 84th St Unit 4, Hialeah';
         let cSubject, cBody;
 
