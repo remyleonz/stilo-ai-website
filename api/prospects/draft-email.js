@@ -152,33 +152,37 @@ module.exports = async function handler(req, res) {
         const local = !!zipM && ['330', '331', '332', '333'].indexOf(zipM[1].slice(0, 3)) !== -1;
         let cSubject, cBody;
         if (es && local) {
-            cSubject = (cfName ? cfName + ', ' : '') + 'su visita al showroom de Blason';
+            cSubject = (cfName ? cfName + ', ' : '') + 'venga a ver las máquinas funcionando';
             cBody = 'Hola ' + (cfName || '') + ',\n\n'
-                + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, aqui en Miami.\n\n'
-                + 'Como le comente, lo mejor es ver las maquinas funcionando antes de decidir nada. El showroom esta en Hialeah, 3110 W 84th St Unit 4, de lunes a sabado de 9 a 4. Manuel, el dueno, le muestra la maquina que le sirve para lo que usted quiere ofrecer y como la financia la gente.\n\n'
-                + 'Respondame con el dia y la hora que le quedan bien y le aparto el espacio. Si le queda mejor, Manuel tambien le hace una videollamada de 15 minutos con la maquina encendida.\n\n'
-                + 'Cualquier pregunta, me escribe directo a este correo.\n';
+                + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, aquí en Miami.\n\n'
+                + 'Como le comenté, una máquina no se compra por una hoja de especificaciones. En el showroom de Hialeah están puestas y funcionando. Manuel, el dueño, le enseña las que le sirven para lo que usted quiere ofrecer, usted las prueba con sus propias manos, y él le explica cómo otros spas las financian.\n\n'
+                + '3110 W 84th St Unit 4, Hialeah. De lunes a sábado, de 9 a 4.\n\n'
+                + 'Respóndame con el día y la hora que le sirven y se lo aparto. Si esta semana le queda difícil llegar, Manuel la llama y lo hablan por teléfono.\n\n'
+                + 'Cualquier pregunta, me escribe aquí.\n';
         } else if (es) {
-            cSubject = (cfName ? cfName + ', ' : '') + 'sus 15 minutos con Manuel de Blason';
+            cSubject = (cfName ? cfName + ', ' : '') + 'una llamada con Manuel, el dueño de Blason';
             cBody = 'Hola ' + (cfName || '') + ',\n\n'
                 + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, en Miami.\n\n'
-                + 'Como le comente, el siguiente paso es una videollamada de 15 minutos con Manuel, el dueno de Blason. Le ensena la maquina encendida, le explica como la financia la gente, y usted decide con calma. Blason es representante directo, con showroom en Miami y servicio en espanol por toda la Florida.\n\n'
-                + 'Respondame con dos horarios que le sirvan esta semana y le confirmo uno.\n\n'
-                + 'Cualquier pregunta, me escribe directo a este correo.\n';
+                + 'El siguiente paso es hablar directo con Manuel, el dueño. Él importa el equipo, así que le dice de frente cuál máquina le sirve para lo que usted quiere ofrecer y cuál no le conviene. Sin presión y sin vueltas.\n\n'
+                + 'Blason es representante directo: las piezas y el servicio salen de Miami, en español, no de un call center en otro país.\n\n'
+                + 'Respóndame con dos horarios que le sirvan esta semana y se la coordino. Y si prefiere verlas en persona, el showroom está en Hialeah y vale el viaje.\n\n'
+                + 'Cualquier pregunta, me escribe aquí.\n';
         } else if (local) {
-            cSubject = (cfName ? cfName + ', ' : '') + 'your showroom visit at Blason';
+            cSubject = (cfName ? cfName + ', ' : '') + 'come see the machines running';
             cBody = 'Hi ' + (cfName || 'there') + ',\n\n'
                 + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment here in Miami.\n\n'
-                + 'Like I said on the phone, the best next step is seeing the machines running before you decide anything. The showroom is in Hialeah at 3110 W 84th St Unit 4, open Monday through Saturday, 9 to 4. Manuel, the owner, will show you the machine that fits what you want to offer and how people finance them.\n\n'
-                + 'Reply with the day and time that work for you and I\'ll hold the spot. If it\'s easier, Manuel can also do a 15-minute video call with the machine running.\n\n'
-                + 'Any questions, just reply to this email.\n';
+                + 'Like I said on the phone, you don\'t buy one of these off a spec sheet. The showroom in Hialeah has them set up and running. Manuel, the owner, walks you through the ones that fit what you want to offer, you get your hands on them, and he explains how other spas finance them.\n\n'
+                + '3110 W 84th St Unit 4, Hialeah. Monday through Saturday, 9 to 4.\n\n'
+                + 'Reply with a day and time that work and I\'ll hold it for you. If getting over there is tough this week, Manuel can just call you instead.\n\n'
+                + 'Any questions, reply here.\n';
         } else {
-            cSubject = (cfName ? cfName + ', ' : '') + 'your 15 minutes with Manuel at Blason';
+            cSubject = (cfName ? cfName + ', ' : '') + 'a call with Manuel, the owner of Blason';
             cBody = 'Hi ' + (cfName || 'there') + ',\n\n'
                 + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment in Miami.\n\n'
-                + 'Like I said on the phone, the next step is a 15-minute video call with Manuel, the owner of Blason. He shows you the machine running, walks through how people finance them, and you decide from there. Blason is a direct distributor with a showroom in Miami and service across Florida.\n\n'
-                + 'Reply with two times that work this week and I\'ll confirm one.\n\n'
-                + 'Any questions, just reply to this email.\n';
+                + 'The next step is a straight conversation with Manuel, the owner. He imports the equipment himself, so he\'ll tell you which machine actually fits what you want to offer and which one isn\'t worth it for you. No pitch, no pressure.\n\n'
+                + 'Blason is a direct distributor, so parts and service come out of Miami, in English or Spanish, not a call center overseas.\n\n'
+                + 'Reply with two times that work this week and I\'ll set it up. And if you\'d rather put your hands on the machines, the showroom is in Hialeah and it\'s worth the trip.\n\n'
+                + 'Any questions, reply here.\n';
         }
         const cSender = await kit.getSenderIdentity(gate.email);
         return res.status(200).json({
@@ -188,7 +192,7 @@ module.exports = async function handler(req, res) {
             client_id: lead.client_id,
             client_campaign: 'Blason Spa Equipment',
             agents: [],
-            sender: { name: cSender.name, phone: cSender.phone, footer: kit.clientFooterText(cSender, 'Blason Spa Equipment', es) },
+            sender: { name: cSender.name, phone: cSender.phone, footer: kit.clientFooterText(cSender, 'Blason Spa Equipment', es, 'blasononline.com') },
             source: 'client_campaign'
         });
     }

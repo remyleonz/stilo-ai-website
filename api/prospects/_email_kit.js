@@ -406,8 +406,8 @@ function buildEmailHtml(opts) {
 // branding, the STILO calendar CTA, or VSL copy — the email is from the rep
 // on behalf of the CLIENT (content firewall, see client-crm-architecture).
 // Same clean shell as buildEmailHtml, different signature, no booking link.
-function clientFooterText(sender, clientName, es) {
-    return [sender.name, (es ? 'de parte de ' : 'for ') + clientName, sender.phone]
+function clientFooterText(sender, clientName, es, website) {
+    return [sender.name, (es ? 'de parte de ' : 'for ') + clientName, sender.phone, website || '']
         .filter(Boolean).join('\n');
 }
 function buildClientEmailHtml(opts) {
@@ -420,10 +420,12 @@ function buildClientEmailHtml(opts) {
             });
             return '<p style="margin:0 0 14px;">' + lines.join('<br>') + '</p>';
         }).join('');
+    const site = String(opts.website || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
     const sig = [
         escapeHtml(sender.name),
         escapeHtml((opts.es ? 'de parte de ' : 'for ') + opts.clientName),
-        (sender.phone ? escapeHtml(sender.phone) : '')
+        (sender.phone ? escapeHtml(sender.phone) : ''),
+        (site ? '<a href="https://' + escapeHtml(site) + '">' + escapeHtml(site) + '</a>' : '')
     ].filter(Boolean).join('<br>');
     return '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#222222;font-size:15px;line-height:1.6;">'
         + paras

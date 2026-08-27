@@ -201,24 +201,27 @@ module.exports = async function handler(req, res) {
     // calendar CTA, no STILO signature. Sent from the dedicated client
     // subdomain when BLASON_SENDER_EMAIL is configured, so client-campaign
     // volume never rides the same sending domain as STILO's own outreach.
-    let clientName = null, clientEs = false;
+    let clientName = null, clientEs = false, clientSite = '';
     try {
         const { data: lr } = await sb.from('leads').select('client_id, primary_language').eq('id', id).maybeSingle();
         if (lr && lr.client_id) {
             clientEs = lr.primary_language === 'es';
             const pub2 = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
-            const { data: c } = await pub2.from('clients').select('business_name').eq('id', lr.client_id).maybeSingle();
+            const { data: c } = await pub2.from('clients').select('business_name, website').eq('id', lr.client_id).maybeSingle();
             clientName = (c && c.business_name) || 'Blason Spa Equipment';
+            // clients.website drives the footer link, so a new client campaign
+            // needs no code change: set the column and the footer follows.
+            clientSite = (c && c.website) || '';
         }
     } catch (_) { /* on error treat as STILO — the draft copy still carries the client branding */ }
 
     const html = clientName
-        ? kit.buildClientEmailHtml({ bodyText: message, sender: sender, clientName: clientName, es: clientEs })
+        ? kit.buildClientEmailHtml({ bodyText: message, sender: sender, clientName: clientName, es: clientEs, website: clientSite })
         : kit.buildEmailHtml({ bodyText: message, sender: sender });
     // Plain-text alternative (multipart). Mirrors the HTML body, so the message
     // reads clean in text-only clients and looks less "marketing" to Gmail.
     const plainText = clientName
-        ? kit.sanitizeCopy(message) + '\n\n' + kit.clientFooterText(sender, clientName, clientEs)
+        ? kit.sanitizeCopy(message) + '\n\n' + kit.clientFooterText(sender, clientName, clientEs, clientSite)
         : kit.ensureBookingLink(kit.sanitizeCopy(message)) + '\n\n' + kit.footerText(sender);
 
     // Per-rep envelope address (alejandrobarrios@, jorgeayes@, ...). The rep who
