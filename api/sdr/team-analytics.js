@@ -129,7 +129,15 @@ module.exports = async function handler(req, res) {
             email: s.email, name: s.display_name, sdr_key: s.sdr_key,
             initials: s.initials, color: s.avatar_color,
             quota: s.daily_call_quota || 50, active: s.active !== false,
-            hired_at: s.hired_at, is_closer: Number(s.commission_pct) === 0,
+            hired_at: s.hired_at,
+            // Closer = 0% commission AND not assigned to a client account.
+            // The commission test alone is how the owners are modelled, but it
+            // misreads an owner who steps onto a client's dial list: Remy runs
+            // Blason's calls at 0% because he owns the company, not because he
+            // is closing STILO deals. Without the second clause he would sit in
+            // the Closers section forever, and his Blason dials would never
+            // appear under that account.
+            is_closer: Number(s.commission_pct) === 0 && (s.sdr_type || 'new_client') !== 'client_account',
             // Which pipeline this rep's numbers belong to. A client-account rep
             // dials a PAYING CLIENT's list and books onto the client's calendar,
             // so their meetings are not our new-business pipeline. The Team tab

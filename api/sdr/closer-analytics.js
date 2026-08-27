@@ -145,10 +145,17 @@ module.exports = async function handler(req, res) {
         // Closers = active roster entries on 0% commission, which is already how
         // the owners are modelled in sdr_users.
         const { data: roster, error: rErr } = await sb.from('sdr_users')
-            .select('id,email,display_name,initials,avatar_color,commission_pct,active,auth_user_id')
+            .select('id,email,display_name,initials,avatar_color,commission_pct,active,auth_user_id,sdr_type,client_account')
             .eq('active', true).eq('commission_pct', 0);
         if (rErr) throw new Error(rErr.message);
-        const closers = roster || [];
+        // Same rule as team-analytics: 0% commission marks an owner, but an
+        // owner working a client's account is an SDR for that account, not a
+        // closer. Filtered here rather than in the query so a pre-migration
+        // database (no sdr_type column) still returns closers instead of
+        // erroring.
+        const closers = (roster || []).filter(function (c) {
+            return (c.sdr_type || 'new_client') !== 'client_account';
+        });
 
         // These four are independent, so they run together. They used to be four
         // sequential awaits, and the second one pulled the ENTIRE leads table —
