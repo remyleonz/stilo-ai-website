@@ -9695,6 +9695,8 @@
 
         // Big, unmissable "this is what you're selling" badge at the top of the script.
         function psAgentBadge(agent) {
+            // 2026-08-27: agent talk removed from the rep-facing UI (see sdr).
+            return '';
             if (!agent) return '';
             return '<div style="margin:0 0 14px;border:1px solid var(--blue);background:rgba(37,99,235,0.16);border-radius:10px;padding:12px 16px;">'
                 + '<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--blue);text-transform:uppercase;margin-bottom:4px;">Pitching this agent</div>'
@@ -9766,7 +9768,7 @@
                 // agent the script actually leads with (the lead's
                 // matched_product_name is often "Unknown").
                 var resolvedAgent = psResolveAgentName(data.content_md, lead);
-                var pillEl = document.getElementById('prospectScriptPitch'); if (pillEl) pillEl.textContent = 'Pitch: ' + resolvedAgent;
+                var pillEl = document.getElementById('prospectScriptPitch'); if (pillEl) pillEl.textContent = '';
                 var recEl = document.getElementById('prospectRecAgent'); if (recEl) recEl.textContent = resolvedAgent;
                 if (meta) {
                     var when = data.generated_at ? new Date(data.generated_at).toLocaleDateString() : '';
@@ -10176,7 +10178,7 @@
                     ? '<div id="prospectScriptCard" style="margin-bottom:14px;padding:12px 14px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.22);border-radius:8px;">'
                         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">'
                           + '<span style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);">Sales script</span>'
-                          + (recProduct ? '<span id="prospectScriptPitch" style="font-size:11px;font-weight:700;color:var(--text-primary);background:rgba(255,255,255,0.06);border:1px solid var(--border-subtle);padding:2px 8px;border-radius:999px;">Pitch: ' + escapeAdminHtml(recProduct) + '</span>' : '<span id="prospectScriptPitch"></span>')
+                          + '<span id="prospectScriptPitch"></span>'
                         + '</div>'
                         + '<div id="prospectScriptBody" style="font-size:13px;color:var(--text-primary);line-height:1.55;">'
                           + '<div style="color:var(--text-muted);">Loading script…</div>'
