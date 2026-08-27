@@ -16,7 +16,7 @@
  * do-not-call list AND has not already moved out of the cold-call lifecycle
  * (booked / DNC / wrong-number / disconnected).
  */
-const { assertAdminOrSdr, scopedQuery, resolveAssignedTo, forwardToProspecting, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, scopedQuery, resolveAssignedTo, forwardToProspecting, methodNotAllowed, resolveClientScope } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
@@ -59,7 +59,7 @@ async function distinctLeadsByLoggedBy(sb, sdrEmail, predicate) {
     } catch (_) { return -1; }
 }
 
-async function localStats(sdrEmail) {
+async function localStats(sdrEmail, clientIdOverride) {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return null;
     try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -78,8 +78,18 @@ async function localStats(sdrEmail) {
         // backfilled via parity (even IDs → Remy, odd → David) matching the
         // callable batch split. lead_calls.logged_by is NOT used for counts
         // because it is sparse (old calls updated leads directly, not lead_calls).
+        //
+        // Client-account reps: every lead-table count additionally scopes to
+        // the client's pool, and the per-lead script gate is dropped (client
+        // campaigns run ONE shared script) — mirroring callable.js client
+        // mode. Without this the tiles counted the rep's whole historical
+        // STILO book while the list below showed only the client pool
+        // (the 1,590 / 1,663 counter incident, 2026-08-27).
+        const clientId = clientIdOverride || await resolveClientScope(sdrEmail);
         const scope = function (q) {
-            return sdrEmail ? q.eq('assigned_to', sdrEmail) : q;
+            let out = sdrEmail ? q.eq('assigned_to', sdrEmail) : q;
+            if (clientId) out = out.eq('client_id', clientId);
+            return out;
         };
 
         const callable = function (q) {
@@ -87,11 +97,13 @@ async function localStats(sdrEmail) {
             // phone, not DNC, still in the cold-call lifecycle. (The scripted
             // set is the callable queue; owner name not required.) Owners run
             // through the same gate on their loaned-in scripted leads.
-            return scope(q)
-                .eq('has_cold_call_script', true)
+            // Client mode: no per-lead script gate, same as callable.js.
+            let out = scope(q)
                 .or('owner_phone.not.is.null,phone.not.is.null')
                 .or('do_not_call.is.null,do_not_call.eq.false')
                 .or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
+            if (!clientId) out = out.eq('has_cold_call_script', true);
+            return out;
         };
         const C = function () { return leads().select('id', { count: 'exact', head: true }); };
 
@@ -213,9 +225,15 @@ module.exports = async function handler(req, res) {
         sdrEmail = await resolveAssignedTo(req.query.assigned_to);
     }
 
+    // Admin master view: ?client_id=<uuid> scopes every count to that
+    // client's pool (with or without a rep filter) — same override
+    // callable.js honors for the admin Account filter.
+    const clientIdOverride = (gate.isAdmin && req.query && req.query.client_id)
+        ? String(req.query.client_id) : null;
+
     try {
         const [local, upstream] = await Promise.all([
-            localStats(sdrEmail),
+            localStats(sdrEmail, clientIdOverride),
             statsFromUpstream()
         ]);
 

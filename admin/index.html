@@ -2024,6 +2024,9 @@
                     <select id="prospectNicheFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:160px;">
                         <option value="">All niches</option>
                     </select>
+                    <select id="prospectAccountFilter" onchange="onProspectFilterChange()" title="Which pipeline: STILO's own or a client account's lead pool" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:170px;">
+                        <option value="">STILO pipeline</option>
+                    </select>
                 </div>
 
                 <!-- My Call History controls: date range pills + (when 'All SDRs' is selected) a hint that both reps' calls are merged. Visible only on the my-history sub-tab. -->
@@ -6321,7 +6324,7 @@
             tab: 'callable',
             // sdr: '' = all, 'remy' | 'david' | 'unassigned'. grantAdminAccess()
             // overwrites this with the signed-in user before any fetch fires.
-            filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '', historyRange: 'all' },
+            filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '', account: '', historyRange: 'all' },
             rows: [],
             // Pool-wide [{niche, count}] from /api/prospects/niches. Drives the
             // niche dropdown so it does not depend on which rows loaded.
@@ -6725,7 +6728,10 @@
         // don't pound the DB.
         async function loadProspectStats() {
             try {
-                var qs = prospectState.filters.sdr ? ('?assigned_to=' + encodeURIComponent(prospectState.filters.sdr)) : '';
+                var parts = [];
+                if (prospectState.filters.sdr) parts.push('assigned_to=' + encodeURIComponent(prospectState.filters.sdr));
+                if (prospectState.filters.account) parts.push('client_id=' + encodeURIComponent(prospectState.filters.account));
+                var qs = parts.length ? ('?' + parts.join('&')) : '';
                 var data = await prospectFetchJSON('/api/prospects/lifecycle-stats' + qs);
                 prospectState.statsCache = data;
 
@@ -6898,6 +6904,10 @@
             // Forward SDR to upstream as a hint. If David's backend doesn't
             // honor it yet, applyClientFilters() catches it client-side.
             if (f.sdr) qs.push('assigned_to=' + encodeURIComponent(f.sdr));
+            // Account filter: scope the list to a client account's lead pool.
+            // callable.js honors ?client_id= for admins (client mode: drops the
+            // per-lead script + pitch gates, exactly like a client-account rep).
+            if (f.account) qs.push('client_id=' + encodeURIComponent(f.account));
             return qs.length ? '?' + qs.join('&') : '';
         }
 
@@ -7062,11 +7072,32 @@
             }
         }
 
+        // Fill the Account filter with every client account, once. Fire-and-
+        // forget like loadProspectNiches(): the list must never wait on it.
+        var _accountFilterLoaded = false;
+        async function populateAccountFilter() {
+            if (_accountFilterLoaded) return;
+            _accountFilterLoaded = true;
+            try {
+                var sel = document.getElementById('prospectAccountFilter');
+                if (!sel) return;
+                var r = await sb.from('clients').select('id, business_name').order('business_name');
+                (r.data || []).forEach(function (c) {
+                    if (!c.id || !c.business_name) return;
+                    var o = document.createElement('option');
+                    o.value = c.id;
+                    o.textContent = c.business_name;
+                    sel.appendChild(o);
+                });
+            } catch (_) { _accountFilterLoaded = false; /* retry on next load */ }
+        }
+
         async function loadProspectCallable(opts) {
             opts = opts || {};
             // Fire-and-forget: the dropdown fills in when this lands, and the
             // lead list must not wait on it.
             loadProspectNiches();
+            populateAccountFilter();
             var host = document.getElementById('prospectTableCallable');
             var cached = !opts.force && prospectState.cache.callable;
             if (cached) {
@@ -9312,9 +9343,21 @@
             var search = document.getElementById('prospectSearch');
             var tier = document.getElementById('prospectTierFilter');
             var niche = document.getElementById('prospectNicheFilter');
+            var acct = document.getElementById('prospectAccountFilter');
+            var prevAccount = f.account;
             f.q = search ? search.value.trim() : '';
             f.tier = tier ? tier.value : '';
             f.niche = niche ? niche.value : '';
+            f.account = acct ? acct.value : '';
+            if (f.account !== prevAccount) {
+                // Switching pipelines: the workflow tiles and every cached list
+                // belong to the other account. Refresh counts, bust caches.
+                prospectState.cache.callable = null;
+                prospectState.cache.emailable = null;
+                prospectState.cache.callbacks = null;
+                prospectState.cache.booked = null;
+                loadProspectStats();
+            }
             // hasEmail filter removed from UI; keep flag false for back-compat.
             f.hasEmail = false;
             clearTimeout(prospectState.searchDebounce);
