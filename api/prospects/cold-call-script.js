@@ -176,6 +176,34 @@ async function findScriptByListing(token, slug) {
     return items[0];
 }
 
+// David's CLIENT-campaign convention (his choice, we align to it):
+//   <client>-<slug>-<YYYY-MM-DD>.md            e.g. blason-rejuvv-aesthetics-wellness-2026-08-26.md
+// No "-script-" segment, client prefix in front. One known client prefix today;
+// add to the list when the next client campaign starts.
+const CLIENT_PREFIXES = ['blason'];
+async function findClientScriptByListing(token, slug) {
+    for (const cp of CLIENT_PREFIXES) {
+        const url = 'https://storage.googleapis.com/storage/v1/b/' + BUCKET +
+            '/o?prefix=' + encodeURIComponent(PREFIX + cp + '-' + slug + '-') +
+            '&fields=items(name,timeCreated,updated,size)';
+        const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const re = new RegExp('^' + escapeRe(PREFIX + cp + '-' + slug) +
+            '-\\d{4}-\\d{2}-\\d{2}(?:-script-\\d{4}-\\d{2}-\\d{2})?\\.md$', 'i');
+        const items = (j.items || []).filter(function (it) { return re.test(it.name); });
+        if (!items.length) continue;
+        items.sort(function (a, b) {
+            const ta = a.updated || a.timeCreated || '';
+            const tb = b.updated || b.timeCreated || '';
+            if (ta && tb) return tb.localeCompare(ta);
+            return b.name.localeCompare(a.name);
+        });
+        return items[0];
+    }
+    return null;
+}
+
 async function readObject(token, name) {
     const url = 'https://storage.googleapis.com/storage/v1/b/' + BUCKET +
         '/o/' + encodeURIComponent(name) + '?alt=media';
@@ -289,6 +317,27 @@ module.exports = async function handler(req, res) {
         }
     } catch (e) {
         console.error('[cold-call-script] listing failed:', e.message);
+    }
+
+    // 2b) CLIENT CAMPAIGNS: David names client scripts <client>-<slug>-<date>.md
+    //     (his convention; we align to it). Checked after his standard names,
+    //     before the STILO-generated fallback, so his file always supersedes.
+    if (token) try {
+        const item = await findClientScriptByListing(token, slug);
+        if (item) {
+            const content = await readObject(token, item.name);
+            res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
+            return res.status(200).json({
+                slug: slug,
+                filename: item.name,
+                generated_at: item.updated || item.timeCreated || null,
+                size: item.size,
+                content_md: content,
+                source: 'gcs-client-listing'
+            });
+        }
+    } catch (e) {
+        console.error('[cold-call-script] client listing failed:', e.message);
     }
 
     // 3) FALLBACK: a STILO-generated script from David's Sage brief.
