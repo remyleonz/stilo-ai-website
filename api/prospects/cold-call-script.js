@@ -302,9 +302,18 @@ module.exports = async function handler(req, res) {
     //    To re-enable: regenerate the bucket against the current Booked Meetings
     //    offer, then restore the block below. Gate it on the content actually
     //    naming the current offer rather than trusting the bucket.
-    if (process.env.ALLOW_LEGACY_GENERATED_SCRIPTS === '1') try {
+    //
+    //    2026-08-27: re-enabled with exactly that content gate. The Blason
+    //    campaign scripts (982 files, generated from David's 2026-08-26
+    //    BLASON-COLDCALL-SKELETON) each carry a "Campaign: ... Blason Spa
+    //    Equipment" header line, so we serve a generated script ONLY when its
+    //    content names that campaign. The 609 pre-pivot receptionist scripts
+    //    in the same bucket never mention Blason and stay dead. David's
+    //    official GCS script still supersedes (paths 1 and 2 above win).
+    try {
         const gen = await readGeneratedScript(slug);
-        if (gen) {
+        const isCurrentCampaign = gen && /Campaign:.*Blason Spa Equipment/i.test(gen);
+        if (gen && (isCurrentCampaign || process.env.ALLOW_LEGACY_GENERATED_SCRIPTS === '1')) {
             res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
             return res.status(200).json({
                 slug: slug,
