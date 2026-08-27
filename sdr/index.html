@@ -2489,18 +2489,40 @@
         // Canonical renderer: /assets/cold-call-script.js (shared with /admin/).
         const renderScriptMarkdown = (md) => STILO_SCRIPT.render(md);
         // the drawer. The `rep` hint (A/B/C tag) speeds the storage lookup.
+        // EN/ES switch. Campaign scripts are generated in both languages, so the
+        // rep can flip mid-call when the prospect answers in the other one.
+        // Defaults to the lead's primary_language; the choice is per-lead and
+        // resets when the drawer opens a different lead.
+        var scriptLang = null, scriptLangLead = null;
+        function scriptLangToggleHtml(cur, hasBoth) {
+            if (!hasBoth) return '';
+            function btn(v, label) {
+                var on = cur === v;
+                return '<button type="button" onclick="setScriptLang(\'' + v + '\')" style="padding:5px 14px;border:none;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;'
+                    + (on ? 'background:var(--blue);color:#fff;' : 'background:transparent;color:var(--text-secondary);') + '">' + label + '</button>';
+            }
+            return '<div style="display:flex;gap:3px;padding:3px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;width:max-content;margin:0 0 12px;">'
+                + btn('en', 'English') + btn('es', 'Espanol') + '</div>';
+        }
+        function setScriptLang(v) {
+            scriptLang = v;
+            if (window.__lastProspectData) loadColdCallScript(window.__lastProspectData);
+        }
         async function loadColdCallScript(r) {
             const host = document.getElementById('sdrScriptBody');
             const metaEl = document.getElementById('sdrScriptMeta');
             if (!host) return;
             const name = r.business_name || r.name || '';
             if (!name) { host.textContent = 'No business name on this lead.'; return; }
-            let url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(name);
+            // New lead in the drawer: reset the toggle to the lead's language.
+            if (scriptLangLead !== r.id) { scriptLangLead = r.id; scriptLang = (r.primary_language === 'es') ? 'es' : 'en'; }
+            let url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(name) + '&lang=' + encodeURIComponent(scriptLang || 'en');
             if (r.tentative_rep_assignment) url += '&rep=' + encodeURIComponent(String(r.tentative_rep_assignment).toLowerCase());
             try {
                 const data = await fetchJSON(url);
                 if (data && data.content_md) {
-                    host.innerHTML = agentBadge(resolveAgentName(data.content_md, r))
+                    host.innerHTML = scriptLangToggleHtml(data.lang || scriptLang, !!(data.langs && data.langs.length > 1))
+                        + agentBadge(resolveAgentName(data.content_md, r))
                         + renderScriptMarkdown(stripScriptChrome(normalizeAgentSection(data.content_md, r)));
                     if (metaEl && data.generated_at) metaEl.textContent = '· generated ' + new Date(data.generated_at).toLocaleDateString();
                     return;

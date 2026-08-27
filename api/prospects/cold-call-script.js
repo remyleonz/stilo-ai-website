@@ -246,12 +246,24 @@ async function loadManifest(token) {
 // wins) and is keyed by the same slug, so David's official script supersedes it
 // the moment it lands. NOT the cold-call-briefs bucket — that's raw research.
 const GENERATED_BUCKET = 'cold-call-scripts-generated';
-async function readGeneratedScript(slug) {
+// lang: 'es' reads <slug>.es.md, anything else reads <slug>.md. Campaign
+// scripts are generated in BOTH languages so a rep can switch mid-call
+// (a Spanish-marked lead often answers in English and vice versa).
+async function readGeneratedScript(slug, lang) {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return null;
     try {
         const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
-        const { data, error } = await sb.storage.from(GENERATED_BUCKET).download(slug + '.md');
-        if (error || !data) return null;
+        const file = slug + (lang === 'es' ? '.es.md' : '.md');
+        const { data, error } = await sb.storage.from(GENERATED_BUCKET).download(file);
+        if (error || !data) {
+            // Spanish requested but not generated for this lead: fall back to
+            // English rather than showing the rep an empty drawer.
+            if (lang === 'es') {
+                const alt = await sb.storage.from(GENERATED_BUCKET).download(slug + '.md');
+                if (!alt.error && alt.data) return await alt.data.text();
+            }
+            return null;
+        }
         return await data.text();
     } catch (_) { return null; }
 }
@@ -263,6 +275,7 @@ module.exports = async function handler(req, res) {
 
     const q = req.query || {};
     const slug = (q.slug && String(q.slug).trim()) || slugify(q.business_name);
+    const lang = String(q.lang || '').toLowerCase() === 'es' ? 'es' : 'en';
     if (!slug) return res.status(400).json({ error: 'missing_slug', detail: 'Pass ?slug=<lead-slug> or ?business_name=<name>.' });
 
     // The dedicated cold-call SCRIPT lives in GCS
@@ -360,15 +373,19 @@ module.exports = async function handler(req, res) {
     //    in the same bucket never mention Blason and stay dead. David's
     //    official GCS script still supersedes (paths 1 and 2 above win).
     try {
-        const gen = await readGeneratedScript(slug);
+        const gen = await readGeneratedScript(slug, lang);
         const isCurrentCampaign = gen && /Campaign:.*Blason Spa Equipment/i.test(gen);
         if (gen && (isCurrentCampaign || process.env.ALLOW_LEGACY_GENERATED_SCRIPTS === '1')) {
             res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
             return res.status(200).json({
                 slug: slug,
-                filename: GENERATED_BUCKET + '/' + slug + '.md',
+                filename: GENERATED_BUCKET + '/' + slug + (lang === 'es' ? '.es.md' : '.md'),
                 generated_at: null,
                 content_md: gen,
+                lang: lang === 'es' ? 'es' : 'en',
+                // Campaign scripts exist in both languages, so the drawer can
+                // offer the EN/ES switch without a second round trip.
+                langs: ['en', 'es'],
                 source: 'stilo-generated'
             });
         }

@@ -9757,6 +9757,24 @@
         // Canonical renderer: /assets/cold-call-script.js (shared with /sdr/).
         var renderScriptMarkdown = function (md) { return STILO_SCRIPT.render(md); };
 
+        // EN/ES switch — campaign scripts exist in both languages so the rep can
+        // flip mid-call. Defaults to the lead's primary_language, resets per lead.
+        var psScriptLang = null, psScriptLangLead = null, psScriptLead = null;
+        function psScriptLangToggleHtml(cur, hasBoth) {
+            if (!hasBoth) return '';
+            function btn(v, label) {
+                var on = cur === v;
+                return '<button type="button" onclick="psSetScriptLang(\'' + v + '\')" style="padding:5px 14px;border:none;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;'
+                    + (on ? 'background:var(--blue);color:#fff;' : 'background:transparent;color:var(--text-secondary);') + '">' + label + '</button>';
+            }
+            return '<div style="display:flex;gap:3px;padding:3px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;width:max-content;margin:0 0 12px;">'
+                + btn('en', 'English') + btn('es', 'Espanol') + '</div>';
+        }
+        function psSetScriptLang(v) {
+            psScriptLang = v;
+            if (psScriptLead) loadColdCallScript(psScriptLead);
+        }
+
         async function loadColdCallScript(lead) {
             var body = document.getElementById('prospectScriptBody');
             var meta = document.getElementById('prospectScriptMeta');
@@ -9766,21 +9784,24 @@
                 body.innerHTML = '<div style="color:var(--text-muted);">No business name on this lead.</div>';
                 return;
             }
-            var url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(businessName);
+            psScriptLead = lead;
+            if (psScriptLangLead !== lead.id) { psScriptLangLead = lead.id; psScriptLang = (lead.primary_language === 'es') ? 'es' : 'en'; }
+            var url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(businessName) + '&lang=' + encodeURIComponent(psScriptLang || 'en');
             try {
                 var data = await prospectFetchJSON(url);
                 if (!data || !data.content_md) {
                     body.innerHTML = '<div style="color:var(--text-muted);">No script returned for this lead.</div>';
                     return;
                 }
-                body.innerHTML = psAgentBadge(psResolveAgentName(data.content_md, lead))
+                body.innerHTML = psScriptLangToggleHtml(data.lang || psScriptLang, !!(data.langs && data.langs.length > 1))
+                    + psAgentBadge(psResolveAgentName(data.content_md, lead))
                     + renderScriptMarkdown(psStripScriptChrome(psNormalizeAgentSection(data.content_md, lead)));
                 // Sync the Pitch pill + the drawer's "Recommended" line to the
                 // agent the script actually leads with (the lead's
                 // matched_product_name is often "Unknown").
                 var resolvedAgent = psResolveAgentName(data.content_md, lead);
                 var pillEl = document.getElementById('prospectScriptPitch'); if (pillEl) pillEl.textContent = '';
-                var recEl = document.getElementById('prospectRecAgent'); if (recEl) recEl.textContent = resolvedAgent;
+                // Recommended-agent field removed 2026-08-27 (pre-pivot concept).
                 if (meta) {
                     var when = data.generated_at ? new Date(data.generated_at).toLocaleDateString() : '';
                     meta.textContent = 'Script: ' + (data.filename || '').split('/').pop() + (when ? ' · generated ' + when : '');
@@ -10063,7 +10084,7 @@
                 + '<div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Niche</div><div style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(niche || '—') + '</div></div>'
                 + '<div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">City</div><div style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(d.city || '—') + '</div></div>'
                 + '<div style="grid-column:span 2;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Email</div><div style="font-size:14px;color:var(--text-primary);word-break:break-all;">' + (email ? '<a href="mailto:' + escapeAdminHtml(email) + '" style="color:var(--blue);text-decoration:none;">' + escapeAdminHtml(email) + '</a>' : '—') + '</div></div>'
-                + '<div style="grid-column:span 2;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:3px;">Recommended</div><div id="prospectRecAgent" style="font-size:14px;color:var(--text-primary);font-weight:600;">' + (recProduct ? escapeAdminHtml(recProduct) : '<span style="color:var(--text-muted);font-weight:400;">resolving from script…</span>') + '</div></div>'
+                + '<div id="prospectRecAgent" style="display:none;"></div>'
                 + '</div>';
 
             // Last-log pill — surfaces the most recent outcome at the top of the
