@@ -306,7 +306,15 @@ function templateBody(opts) {
 // Assignment is deterministic by lead id (even→A, odd→B) so re-opening or
 // re-drafting a lead never flips its arm: the body shown is the body sent.
 const VARIANT_KEYS = ['A', 'B'];
-const VARIANT_LABELS = { A: 'A · Direct', B: 'B · Value' };
+// Client-campaign arms are separate keys so they never pool with the STILO
+// A/B test in ab-results.js (same table, different offer, different audience).
+//   ctx = the full-context email that sells the next step outright
+//   ask = three lines ending in one question, engineered for a REPLY
+const CLIENT_VARIANT_KEYS = ['ctx', 'ask'];
+const VARIANT_LABELS = {
+    A: 'A · Direct', B: 'B · Value',
+    ctx: 'Context · sells the visit', ask: 'Question · baits a reply'
+};
 
 function pickVariant(leadId) {
     const n = parseInt(leadId, 10);
@@ -434,7 +442,7 @@ function buildClientEmailHtml(opts) {
 }
 
 module.exports = {
-    CALENDAR_LINK, MARKETING_SITE, PLAYBOOKS, VARIANT_KEYS, VARIANT_LABELS,
+    CALENDAR_LINK, MARKETING_SITE, PLAYBOOKS, VARIANT_KEYS, CLIENT_VARIANT_KEYS, VARIANT_LABELS,
     escapeHtml, sanitizeCopy, pickPlaybook, pickPlaybookForLead, playbookFromAgentName, playbookKey, firstName, formatPhone,
     getSenderIdentity, templateBody, pickVariant, variantLabel, buildSubject, buildVariantBody,
     ensureBookingLink, footerText, buildEmailHtml, clientFooterText, buildClientEmailHtml

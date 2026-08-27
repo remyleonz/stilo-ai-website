@@ -1810,9 +1810,9 @@
                         <button onclick="closeEmailComposer()" aria-label="Close" style="background:none;border:none;color:var(--text-muted);font-size:24px;line-height:1;cursor:pointer;">&times;</button>
                     </div>
                     <div id="emailComposerStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Drafting…</div>
-                    <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Their industry</label>
+                    <div style="margin-bottom:16px;"><label id="ecAgentLabel" style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Their industry</label>
                         <select id="ecAgent" onchange="redraftEmail()" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></select>
-                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Set from the lead. This picks which of the five videos they get.</div></div>
+                        <div id="ecAgentHelp" style="font-size:11px;color:var(--text-muted);margin-top:4px;">Set from the lead. This picks which of the five videos they get.</div></div>
                     <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">To</label>
                         <input id="ecTo" type="email" placeholder="client@email.com" style="width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:11px;color:inherit;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;"></div>
                     <div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);margin-bottom:7px;">Subject</label>
@@ -8309,6 +8309,7 @@
            server-side. Same endpoints the SDR dashboard uses. */
         var emailComposerLeadId = null;
         var emailComposerVariant = null;
+        var emailComposerIsClient = false;
         function ecValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim()); }
         function setEcSending(on) {
             var b = document.getElementById('ecSendBtn');
@@ -8345,14 +8346,25 @@
             emailComposerVariant = d.variant || null;
             var sel = document.getElementById('ecAgent');
             if (!sel || !d.agents) return;
-            // Client campaigns: no videos, no niches — hide the selector row.
-            // (And un-hide it when the next draft is a STILO lead: the modal is
-            // reused across leads, so display must be reset both ways.)
-            var row = sel.closest('label') || sel.parentElement;
-            if (d.source === 'client_campaign' || !d.agents.length) {
-                if (row) row.style.display = 'none';
+            // Client campaigns have no videos or niches. Repurpose this control
+            // as the A/B arm switcher so the rep can force the short question
+            // version or the full-context one; changing it re-drafts.
+            var row = sel.closest('div') || sel.parentElement;
+            var lbl = document.getElementById('ecAgentLabel');
+            var help = document.getElementById('ecAgentHelp');
+            emailComposerIsClient = (d.source === 'client_campaign');
+            if (emailComposerIsClient) {
+                if (row) row.style.display = '';
+                if (lbl) lbl.textContent = 'Email version (A/B)';
+                if (help) help.textContent = 'Assigned automatically per lead. Switch to force one; the result is tracked per arm.';
+                sel.innerHTML = (d.variants || []).map(function (v) {
+                    return '<option value="' + v.key + '"' + (v.key === d.variant ? ' selected' : '') + '>' + v.label + '</option>';
+                }).join('');
                 return;
             }
+            if (lbl) lbl.textContent = 'Their industry';
+            if (help) help.textContent = 'Set from the lead. This picks which of the five videos they get.';
+            if (!d.agents.length) { if (row) row.style.display = 'none'; return; }
             if (row) row.style.display = '';
             var none = '<option value=""' + (d.niche_slug ? '' : ' selected') + '>'
                 + (d.niche_slug ? 'No video, calendar link only' : 'Not sure yet, pick one') + '</option>';
@@ -8379,7 +8391,10 @@
             status.style.color = 'var(--text-muted)';
             status.textContent = 'Re-drafting for the ' + label + '…';
             try {
-                var d = await prospectFetchJSON('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify({ id: emailComposerLeadId, agent: agent }) });
+                var reqBody = emailComposerIsClient
+                    ? { id: emailComposerLeadId, variant: agent }   // client A/B arm
+                    : { id: emailComposerLeadId, agent: agent };
+                var d = await prospectFetchJSON('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify(reqBody) });
                 fillAgentSelect(d);
                 document.getElementById('ecSubject').value = d.subject || '';
                 document.getElementById('ecBody').value = d.body || '';

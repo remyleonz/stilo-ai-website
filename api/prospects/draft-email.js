@@ -142,7 +142,9 @@ module.exports = async function handler(req, res) {
     // templates, es/en per primary_language. Blason is the only client
     // campaign today; branch on the pool, write the copy for Blason.
     if (lead.client_id) {
-        const cfName = kit.firstName(lead.owner_name, lead.name, lead.address);
+        // trim(): firstName can carry trailing whitespace from scraped owner
+        // fields, which rendered as "Hola Irine ," on the first live send.
+        const cfName = String(kit.firstName(lead.owner_name, lead.name, lead.address) || '').trim();
         const es = lead.primary_language === 'es';
         // Showroom range = Miami-Dade + Broward (zip3 330-333), same rule the
         // scripts use. Match the 5-digit zip and test its prefix; an inline
@@ -150,18 +152,47 @@ module.exports = async function handler(req, res) {
         // every local lead was getting the weaker video-call ask).
         const zipM = String(lead.address || '').match(/\b(\d{5})(?:-\d{4})?\b/);
         const local = !!zipM && ['330', '331', '332', '333'].indexOf(zipM[1].slice(0, 3)) !== -1;
+
+        // A/B arm. Deterministic by lead id so a re-draft of the same lead
+        // keeps its arm (and the test stays honest); the composer can force one.
+        const cVariant = (body.variant === 'ctx' || body.variant === 'ask')
+            ? body.variant
+            : (parseInt(id, 10) % 2 === 0 ? 'ctx' : 'ask');
+        const hi = es ? ('Hola ' + (cfName || '') + ',') : ('Hi ' + (cfName || 'there') + ',');
+        const SHOWROOM = '3110 W 84th St Unit 4, Hialeah';
         let cSubject, cBody;
-        if (es && local) {
+
+        if (cVariant === 'ask') {
+            // THREE LINES. One question, and the question is the same one the
+            // cold-call script opens with, so a reply lands the rep straight in
+            // discovery. No address, no hours, no pitch: anything else here
+            // gives them something to read instead of something to answer.
+            if (es) {
+                cSubject = cfName ? (cfName + ', una pregunta') : 'Una pregunta';
+                cBody = hi + '\n\n'
+                    + 'Una pregunta después de la llamada: ¿qué tratamiento le están pidiendo que hoy no pueda hacer?\n\n'
+                    + 'Lo que me diga, le digo de frente si Manuel tiene la máquina o no.'
+                    + (local ? ' Y si la tiene, la puede ver funcionando en el showroom de Hialeah.' : '')
+                    + '\n';
+            } else {
+                cSubject = cfName ? (cfName + ', one question') : 'One question';
+                cBody = hi + '\n\n'
+                    + 'One question after our call: what treatment are your clients asking for that you can\'t do today?\n\n'
+                    + 'Whatever you name, I\'ll tell you straight whether Manuel has the machine for it or not.'
+                    + (local ? ' And if he does, you can see it running at the Hialeah showroom.' : '')
+                    + '\n';
+            }
+        } else if (es && local) {
             cSubject = (cfName ? cfName + ', ' : '') + 'venga a ver las máquinas funcionando';
-            cBody = 'Hola ' + (cfName || '') + ',\n\n'
+            cBody = hi + '\n\n'
                 + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, aquí en Miami.\n\n'
                 + 'Como le comenté, una máquina no se compra por una hoja de especificaciones. En el showroom de Hialeah están puestas y funcionando. Manuel, el dueño, le enseña las que le sirven para lo que usted quiere ofrecer, usted las prueba con sus propias manos, y él le explica cómo otros spas las financian.\n\n'
-                + '3110 W 84th St Unit 4, Hialeah. De lunes a sábado, de 9 a 4.\n\n'
+                + SHOWROOM + '. De lunes a sábado, de 9 a 4.\n\n'
                 + 'Respóndame con el día y la hora que le sirven y se lo aparto. Si esta semana le queda difícil llegar, Manuel la llama y lo hablan por teléfono.\n\n'
                 + 'Cualquier pregunta, me escribe aquí.\n';
         } else if (es) {
             cSubject = (cfName ? cfName + ', ' : '') + 'una llamada con Manuel, el dueño de Blason';
-            cBody = 'Hola ' + (cfName || '') + ',\n\n'
+            cBody = hi + '\n\n'
                 + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, en Miami.\n\n'
                 + 'El siguiente paso es hablar directo con Manuel, el dueño. Él importa el equipo, así que le dice de frente cuál máquina le sirve para lo que usted quiere ofrecer y cuál no le conviene. Sin presión y sin vueltas.\n\n'
                 + 'Blason es representante directo: las piezas y el servicio salen de Miami, en español, no de un call center en otro país.\n\n'
@@ -169,15 +200,15 @@ module.exports = async function handler(req, res) {
                 + 'Cualquier pregunta, me escribe aquí.\n';
         } else if (local) {
             cSubject = (cfName ? cfName + ', ' : '') + 'come see the machines running';
-            cBody = 'Hi ' + (cfName || 'there') + ',\n\n'
+            cBody = hi + '\n\n'
                 + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment here in Miami.\n\n'
                 + 'Like I said on the phone, you don\'t buy one of these off a spec sheet. The showroom in Hialeah has them set up and running. Manuel, the owner, walks you through the ones that fit what you want to offer, you get your hands on them, and he explains how other spas finance them.\n\n'
-                + '3110 W 84th St Unit 4, Hialeah. Monday through Saturday, 9 to 4.\n\n'
+                + SHOWROOM + '. Monday through Saturday, 9 to 4.\n\n'
                 + 'Reply with a day and time that work and I\'ll hold it for you. If getting over there is tough this week, Manuel can just call you instead.\n\n'
                 + 'Any questions, reply here.\n';
         } else {
             cSubject = (cfName ? cfName + ', ' : '') + 'a call with Manuel, the owner of Blason';
-            cBody = 'Hi ' + (cfName || 'there') + ',\n\n'
+            cBody = hi + '\n\n'
                 + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment in Miami.\n\n'
                 + 'The next step is a straight conversation with Manuel, the owner. He imports the equipment himself, so he\'ll tell you which machine actually fits what you want to offer and which one isn\'t worth it for you. No pitch, no pressure.\n\n'
                 + 'Blason is a direct distributor, so parts and service come out of Miami, in English or Spanish, not a call center overseas.\n\n'
@@ -191,6 +222,11 @@ module.exports = async function handler(req, res) {
             body: kit.sanitizeCopy(cBody),
             client_id: lead.client_id,
             client_campaign: 'Blason Spa Equipment',
+            variant: cVariant,
+            variant_label: kit.VARIANT_LABELS[cVariant] || cVariant,
+            variants: kit.CLIENT_VARIANT_KEYS.map(function (k) {
+                return { key: k, label: kit.VARIANT_LABELS[k] || k };
+            }),
             agents: [],
             sender: { name: cSender.name, phone: cSender.phone, footer: kit.clientFooterText(cSender, 'Blason Spa Equipment', es, 'blasononline.com') },
             source: 'client_campaign'

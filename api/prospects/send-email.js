@@ -105,7 +105,12 @@ module.exports = async function handler(req, res) {
     const subject = (body.subject || '').trim() || 'Following up from STILO AI Partners';
     const message = (body.body || '').trim();
     // A/B arm the rep actually sent (set by draft-email). Only A or B are valid.
-    const variant = (body.variant === 'A' || body.variant === 'B') ? body.variant : null;
+    // Whitelist both test families: STILO's A/B and the client-campaign arms.
+    // This list is what lands in lead_messages.variant, which is the ONLY thing
+    // ab-results.js aggregates — an unlisted key silently logs null and the send
+    // vanishes from the test (the first Blason send did exactly that).
+    const VARIANTS = ['A', 'B'].concat(kit.CLIENT_VARIANT_KEYS || []);
+    const variant = VARIANTS.indexOf(body.variant) !== -1 ? body.variant : null;
     if (id == null) return res.status(400).json({ error: 'missing_id' });
     if (!validEmail(to)) return res.status(400).json({ error: 'invalid_to_email' });
     if (message.length < 20) return res.status(400).json({ error: 'empty_body' });
