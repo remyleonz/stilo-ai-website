@@ -194,19 +194,45 @@ module.exports = async function handler(req, res) {
     } catch (_) { /* fail open */ }
 
     const sender = await kit.getSenderIdentity(gate.email);
-    const html = kit.buildEmailHtml({ bodyText: message, sender: sender });
+
+    // ── CLIENT CAMPAIGN (content firewall) ──────────────────────────────
+    // A client-pool lead gets client branding end to end: display name says
+    // the CLIENT, footer says the rep is writing for the client, no STILO
+    // calendar CTA, no STILO signature. Sent from the dedicated client
+    // subdomain when BLASON_SENDER_EMAIL is configured, so client-campaign
+    // volume never rides the same sending domain as STILO's own outreach.
+    let clientName = null, clientEs = false;
+    try {
+        const { data: lr } = await sb.from('leads').select('client_id, primary_language').eq('id', id).maybeSingle();
+        if (lr && lr.client_id) {
+            clientEs = lr.primary_language === 'es';
+            const pub2 = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+            const { data: c } = await pub2.from('clients').select('business_name').eq('id', lr.client_id).maybeSingle();
+            clientName = (c && c.business_name) || 'Blason Spa Equipment';
+        }
+    } catch (_) { /* on error treat as STILO — the draft copy still carries the client branding */ }
+
+    const html = clientName
+        ? kit.buildClientEmailHtml({ bodyText: message, sender: sender, clientName: clientName, es: clientEs })
+        : kit.buildEmailHtml({ bodyText: message, sender: sender });
     // Plain-text alternative (multipart). Mirrors the HTML body, so the message
     // reads clean in text-only clients and looks less "marketing" to Gmail.
-    const plainText = kit.ensureBookingLink(kit.sanitizeCopy(message)) + '\n\n' + kit.footerText(sender);
+    const plainText = clientName
+        ? kit.sanitizeCopy(message) + '\n\n' + kit.clientFooterText(sender, clientName, clientEs)
+        : kit.ensureBookingLink(kit.sanitizeCopy(message)) + '\n\n' + kit.footerText(sender);
 
     // Per-rep envelope address (alejandrobarrios@, jorgeayes@, ...). The rep who
     // dialed the prospect is the rep the prospect hears from. Falls back to the
     // master address for anyone not in sdr_users. See senderAddress() in
     // _email_kit.js for the Workspace-alias requirement.
-    const fromEmail = sender.fromEmail || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
+    // Client campaigns send from the dedicated client subdomain when configured
+    // (deliverability isolation from STILO's own outreach domain).
+    const fromEmail = clientName
+        ? (process.env.BLASON_SENDER_EMAIL || sender.fromEmail || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com')
+        : (sender.fromEmail || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com');
     // Quote the display name (RFC 5322) — it carries a middot, and the rep's
     // name could contain characters that would otherwise need escaping.
-    const fromName = '"' + sender.name.replace(/"/g, '') + ' · STILO AI Partners"';
+    const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + (clientName || 'STILO AI Partners') + '"';
 
     let sendResult;
     try {

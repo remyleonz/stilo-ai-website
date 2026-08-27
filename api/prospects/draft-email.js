@@ -129,10 +129,64 @@ module.exports = async function handler(req, res) {
     // a non-existent column makes PostgREST 400 and surfaced to the SDR/admin as
     // "Could not draft: lead_read_failed". Use category as the niche signal.
     const { data: lead, error } = await sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,niche,category,address,deep_research_json,prospect_reasoning,matched_product_name,pitch_agent')
+        .select('id,name,owner_name,owner_email,email,niche,category,address,deep_research_json,prospect_reasoning,matched_product_name,pitch_agent,client_id,primary_language')
         .eq('id', id).maybeSingle();
     if (error) return res.status(500).json({ error: 'lead_read_failed', detail: error.message });
     if (!lead) return res.status(404).json({ error: 'lead_not_found' });
+
+    // ── CLIENT CAMPAIGN (content firewall) ──────────────────────────────
+    // A lead in a client's pool must never receive STILO copy: no VSL, no
+    // STILO calendar link, no meetings pitch. The email's one job is to CLOSE
+    // the next step from the cold-call script: the showroom visit (local) or
+    // the 15-minute video call with the client's owner. Deterministic
+    // templates, es/en per primary_language. Blason is the only client
+    // campaign today; branch on the pool, write the copy for Blason.
+    if (lead.client_id) {
+        const cfName = kit.firstName(lead.owner_name, lead.name, lead.address);
+        const es = lead.primary_language === 'es';
+        const local = /FL 33[0-3]\d\b/.test(String(lead.address || ''));
+        let cSubject, cBody;
+        if (es && local) {
+            cSubject = (cfName ? cfName + ', ' : '') + 'su visita al showroom de Blason';
+            cBody = 'Hola ' + (cfName || '') + ',\n\n'
+                + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, aqui en Miami.\n\n'
+                + 'Como le comente, lo mejor es ver las maquinas funcionando antes de decidir nada. El showroom esta en Hialeah, 3110 W 84th St Unit 4, de lunes a sabado de 9 a 4. Manuel, el dueno, le muestra la maquina que le sirve para lo que usted quiere ofrecer y como la financia la gente.\n\n'
+                + 'Respondame con el dia y la hora que le quedan bien y le aparto el espacio. Si le queda mejor, Manuel tambien le hace una videollamada de 15 minutos con la maquina encendida.\n\n'
+                + 'Cualquier pregunta, me escribe directo a este correo.\n';
+        } else if (es) {
+            cSubject = (cfName ? cfName + ', ' : '') + 'sus 15 minutos con Manuel de Blason';
+            cBody = 'Hola ' + (cfName || '') + ',\n\n'
+                + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, en Miami.\n\n'
+                + 'Como le comente, el siguiente paso es una videollamada de 15 minutos con Manuel, el dueno de Blason. Le ensena la maquina encendida, le explica como la financia la gente, y usted decide con calma. Blason es representante directo, con showroom en Miami y servicio en espanol por toda la Florida.\n\n'
+                + 'Respondame con dos horarios que le sirvan esta semana y le confirmo uno.\n\n'
+                + 'Cualquier pregunta, me escribe directo a este correo.\n';
+        } else if (local) {
+            cSubject = (cfName ? cfName + ', ' : '') + 'your showroom visit at Blason';
+            cBody = 'Hi ' + (cfName || 'there') + ',\n\n'
+                + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment here in Miami.\n\n'
+                + 'Like I said on the phone, the best next step is seeing the machines running before you decide anything. The showroom is in Hialeah at 3110 W 84th St Unit 4, open Monday through Saturday, 9 to 4. Manuel, the owner, will show you the machine that fits what you want to offer and how people finance them.\n\n'
+                + 'Reply with the day and time that work for you and I\'ll hold the spot. If it\'s easier, Manuel can also do a 15-minute video call with the machine running.\n\n'
+                + 'Any questions, just reply to this email.\n';
+        } else {
+            cSubject = (cfName ? cfName + ', ' : '') + 'your 15 minutes with Manuel at Blason';
+            cBody = 'Hi ' + (cfName || 'there') + ',\n\n'
+                + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment in Miami.\n\n'
+                + 'Like I said on the phone, the next step is a 15-minute video call with Manuel, the owner of Blason. He shows you the machine running, walks through how people finance them, and you decide from there. Blason is a direct distributor with a showroom in Miami and service across Florida.\n\n'
+                + 'Reply with two times that work this week and I\'ll confirm one.\n\n'
+                + 'Any questions, just reply to this email.\n';
+        }
+        const cSender = await kit.getSenderIdentity(gate.email);
+        return res.status(200).json({
+            to_email: lead.owner_email || lead.email || researchEmail(lead) || '',
+            subject: cSubject,
+            body: kit.sanitizeCopy(cBody),
+            client_id: lead.client_id,
+            client_campaign: 'Blason Spa Equipment',
+            agents: [],
+            sender: { name: cSender.name, phone: cSender.phone, footer: kit.clientFooterText(cSender, 'Blason Spa Equipment', es) },
+            source: 'client_campaign'
+        });
+    }
 
     const business = lead.name || 'your business';
     const niche = lead.category || '';

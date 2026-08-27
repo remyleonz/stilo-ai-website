@@ -8332,7 +8332,9 @@
                 document.getElementById('ecSubject').value = d.subject || '';
                 document.getElementById('ecBody').value = d.body || '';
                 document.getElementById('ecFooter').textContent = (d.sender && d.sender.footer) || '';
-                status.textContent = (d.niche_slug
+                status.textContent = (d.source === 'client_campaign'
+                    ? 'Draft ready. Client campaign: closes the meeting for ' + (d.client_campaign || 'the client') + '. No STILO links.'
+                    : d.niche_slug
                     ? 'Draft ready. It links their ' + nicheLabel(d) + ' video.'
                     : 'Draft ready. We could not tell their industry, so this links the calendar instead of a video.')
                     + ' Edit anything, then send. Name, phone and signature are added automatically.' + abSuffix(d);
@@ -8343,6 +8345,15 @@
             emailComposerVariant = d.variant || null;
             var sel = document.getElementById('ecAgent');
             if (!sel || !d.agents) return;
+            // Client campaigns: no videos, no niches — hide the selector row.
+            // (And un-hide it when the next draft is a STILO lead: the modal is
+            // reused across leads, so display must be reset both ways.)
+            var row = sel.closest('label') || sel.parentElement;
+            if (d.source === 'client_campaign' || !d.agents.length) {
+                if (row) row.style.display = 'none';
+                return;
+            }
+            if (row) row.style.display = '';
             var none = '<option value=""' + (d.niche_slug ? '' : ' selected') + '>'
                 + (d.niche_slug ? 'No video, calendar link only' : 'Not sure yet, pick one') + '</option>';
             sel.innerHTML = none + d.agents.map(function (a) {

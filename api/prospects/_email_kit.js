@@ -400,9 +400,40 @@ function buildEmailHtml(opts) {
         + '</div>';
 }
 
+
+// ── Client-campaign email shell ────────────────────────────────────────────
+// A client-account lead (leads.client_id set) must NEVER receive STILO
+// branding, the STILO calendar CTA, or VSL copy — the email is from the rep
+// on behalf of the CLIENT (content firewall, see client-crm-architecture).
+// Same clean shell as buildEmailHtml, different signature, no booking link.
+function clientFooterText(sender, clientName, es) {
+    return [sender.name, (es ? 'de parte de ' : 'for ') + clientName, sender.phone]
+        .filter(Boolean).join('\n');
+}
+function buildClientEmailHtml(opts) {
+    const sender = opts.sender;
+    const paras = sanitizeCopy(opts.bodyText)
+        .split(/\n{2,}/)
+        .map(function (block) {
+            var lines = block.split('\n').map(function (line) {
+                return escapeHtml(line).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
+            });
+            return '<p style="margin:0 0 14px;">' + lines.join('<br>') + '</p>';
+        }).join('');
+    const sig = [
+        escapeHtml(sender.name),
+        escapeHtml((opts.es ? 'de parte de ' : 'for ') + opts.clientName),
+        (sender.phone ? escapeHtml(sender.phone) : '')
+    ].filter(Boolean).join('<br>');
+    return '<div style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#222222;font-size:15px;line-height:1.6;">'
+        + paras
+        + '<p style="margin:18px 0 0;color:#222222;">' + sig + '</p>'
+        + '</div>';
+}
+
 module.exports = {
     CALENDAR_LINK, MARKETING_SITE, PLAYBOOKS, VARIANT_KEYS, VARIANT_LABELS,
     escapeHtml, sanitizeCopy, pickPlaybook, pickPlaybookForLead, playbookFromAgentName, playbookKey, firstName, formatPhone,
     getSenderIdentity, templateBody, pickVariant, variantLabel, buildSubject, buildVariantBody,
-    ensureBookingLink, footerText, buildEmailHtml
+    ensureBookingLink, footerText, buildEmailHtml, clientFooterText, buildClientEmailHtml
 };
