@@ -210,6 +210,13 @@ module.exports = async function handler(req, res) {
         return niche[cat];
     }
 
+    // Seed every rep's HOME account so an assignment shows even at zero work.
+    // Without this a rep who has been put on an account but has not dialled it
+    // yet has no bucket at all and disappears from that account's group
+    // entirely — Alejandro was assigned to Blason and simply was not there.
+    // "Assigned, nothing yet" is a thing a manager needs to see; silence is not.
+    Object.keys(reps).forEach(function (k) { acctBucket(reps[k], reps[k].client_account); });
+
     // ── calls ──────────────────────────────────────────────────────────────
     const callLeadIds = new Set();
     const hourStats = {}; // ET hour -> { dials, contacts } — best-time-to-call curve

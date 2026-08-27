@@ -5078,9 +5078,15 @@
                       // roster account. Reading r.client_account subtitled Remy's
                       // STILO card "Blason Spa Equipment" while it showed his 601
                       // STILO dials — the exact confusion the split removes.
-                      '<div class="s-person__role">' + (r.active ? (acct && acct.account ? escapeAdminHtml(acct.account) : 'SDR') : 'Inactive') + ' &middot; ' + escapeAdminHtml(label) + '</div>'
+                      // Name the account THIS CARD is for. A rep who worked two accounts in
+                      // the period gets a card in each group, so "SDR" alone left it
+                      // unclear why the same person appeared twice — say "New client"
+                      // explicitly when that is the work being shown.
+                      '<div class="s-person__role">' + (r.active ? (acct && acct.account ? escapeAdminHtml(acct.account) : 'New client') : 'Inactive') + ' &middot; ' + escapeAdminHtml(label) + '</div>'
                     + '</div>'
-                    + (idle ? '<span class="s-badge s-badge--dim">idle</span>' : '<span class="s-person__go">View &rsaquo;</span>')
+                    + (idle
+                        ? '<span class="s-badge s-badge--dim">' + (acct && acct.account ? 'assigned' : 'idle') + '</span>'
+                        : '<span class="s-person__go">View &rsaquo;</span>')
                   + '</div>'
 
                   + '<div class="s-statrow">'
