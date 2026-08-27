@@ -4966,24 +4966,52 @@
                Group instead of sum, and only draw the headings once somebody is
                actually on a client account — while the whole roster is
                new-client, the tab looks exactly as it did before. */
-            var ours = shown.filter(function (r) { return (r.sdr_type || 'new_client') !== 'client_account'; });
-            var onAccounts = shown.filter(function (r) { return (r.sdr_type || 'new_client') === 'client_account'; });
+            /* Group on the ACCOUNT EACH CALL WAS FOR, not on the rep's current
+               sdr_type. sdr_type describes the person, so grouping by it
+               relabels a rep's whole history the moment they change accounts:
+               when Remy joined Blason, all 601 of his STILO dials and all 8 of
+               his STILO meetings moved into Blason's group overnight.
 
-            if (!onAccounts.length) {
-                grid.innerHTML = shown.map(function (r) { return sdrCardHtml(r, rk, label); }).join('');
-            } else {
-                var html = teamGroupHead('New client pipeline', 'Winning STILO clients', ours, rk);
-                html += ours.map(function (r) { return sdrCardHtml(r, rk, label); }).join('');
-
-                // One block per client, so two accounts never blend into each other.
-                var byAccount = {};
-                onAccounts.forEach(function (r) {
-                    var k = r.client_account || 'Unassigned account';
-                    (byAccount[k] = byAccount[k] || []).push(r);
+               team-analytics now returns r.accounts[] — one entry per account
+               that rep actually worked, stamped at call time. A rep who has
+               worked two accounts appears under both, with each group showing
+               only that account's numbers. */
+            var STILO = ' stilo';
+            var groups = {};                       // account name -> [{rep, acct}]
+            shown.forEach(function (r) {
+                var accts = (r.accounts && r.accounts.length)
+                    ? r.accounts
+                    // No account rows at all (a rep with no activity): fall back
+                    // to where the roster says they belong, so a brand-new hire
+                    // still shows up under their account instead of vanishing.
+                    : [{ account: r.client_account || null, dials: r.dials, meetings: r.meetings }];
+                accts.forEach(function (a) {
+                    // Only show a rep under an account where they did something
+                    // in THIS period; otherwise every rep appears everywhere.
+                    var active = (a.dials[rk] || 0) > 0 || (a.meetings[rk] || 0) > 0;
+                    var isHome = (a.account || null) === (r.client_account || null);
+                    if (!active && !isHome) return;
+                    var k = a.account || STILO;
+                    (groups[k] = groups[k] || []).push({ rep: r, acct: a });
                 });
-                Object.keys(byAccount).sort().forEach(function (name) {
-                    html += teamGroupHead(name, 'Client account · books onto their calendar', byAccount[name], rk);
-                    html += byAccount[name].map(function (r) { return sdrCardHtml(r, rk, label); }).join('');
+            });
+
+            var names = Object.keys(groups).filter(function (k) { return k !== STILO; }).sort();
+            var stiloRows = groups[STILO] || [];
+
+            // While every scrap of work is STILO's, draw no headings at all —
+            // the tab looks exactly as it did before client accounts existed.
+            if (!names.length) {
+                grid.innerHTML = stiloRows.map(function (g) { return sdrCardHtml(g.rep, rk, label); }).join('');
+            } else {
+                var html = '';
+                if (stiloRows.length) {
+                    html += teamGroupHead('New client pipeline', 'Winning STILO clients', stiloRows, rk);
+                    html += stiloRows.map(function (g) { return sdrCardHtml(g.rep, rk, label, g.acct); }).join('');
+                }
+                names.forEach(function (name) {
+                    html += teamGroupHead(name, 'Client account · books onto their calendar', groups[name], rk);
+                    html += groups[name].map(function (g) { return sdrCardHtml(g.rep, rk, label, g.acct); }).join('');
                 });
                 grid.innerHTML = html;
             }
@@ -4995,8 +5023,10 @@
         /* Full-width banner between card groups. Spans every column so the
            auto-fill grid does not try to seat it as a card. */
         function teamGroupHead(title, sub, rows, rk) {
-            var dials = rows.reduce(function (a, r) { return a + (r.dials[rk] || 0); }, 0);
-            var mtgs = rows.reduce(function (a, r) { return a + (r.meetings[rk] || 0); }, 0);
+            // rows are {rep, acct} pairs; the subtotal counts only the work done
+            // FOR this account, which is the whole point of the split.
+            var dials = rows.reduce(function (a, g) { return a + ((g.acct || g.rep).dials[rk] || 0); }, 0);
+            var mtgs = rows.reduce(function (a, g) { return a + ((g.acct || g.rep).meetings[rk] || 0); }, 0);
             return ''
                 + '<div style="grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;'
                 + 'gap:var(--s-4);padding-bottom:var(--s-2);margin-top:var(--s-4);'
@@ -5015,10 +5045,17 @@
                 + '</div>';
         }
 
-        function sdrCardHtml(r, rk, label) {
+        /* acct (optional) is one entry from r.accounts[] — the work this rep did
+           FOR the group being rendered. When present the headline figures come
+           from it, so a rep who works two accounts shows the right numbers
+           under each instead of their combined lifetime totals in both. Fields
+           the split does not carry (quota, pipeline, commission) stay on the
+           rep, where they belong. */
+        function sdrCardHtml(r, rk, label, acct) {
+            var v = acct || r;
             return (function (r) {
                 var e = earnFor(r.email);
-                var dials = r.dials[rk] || 0;
+                var dials = v.dials[rk] || 0;
                 var idle = dials === 0;
                 // Quota is a daily target, so the bar only means something for
                 // Today. For every other range it is replaced by pipeline runway.
@@ -5037,16 +5074,20 @@
                     + '<div class="s-avatar" style="background:' + escapeAdminHtml(r.color || '#2563eb') + ';">' + escapeAdminHtml(r.initials || initialsOf(r.name)) + '</div>'
                     + '<div class="s-person__id">'
                       + '<div class="s-person__name">' + escapeAdminHtml(r.name) + '</div>'
-                      + '<div class="s-person__role">' + (r.active ? (r.sdr_type === 'client_account' ? escapeAdminHtml(r.client_account || 'Client account') : 'SDR') : 'Inactive') + ' &middot; ' + escapeAdminHtml(label) + '</div>'
+                      + // Name the account THIS CARD is being rendered for, not the rep's
+                      // roster account. Reading r.client_account subtitled Remy's
+                      // STILO card "Blason Spa Equipment" while it showed his 601
+                      // STILO dials — the exact confusion the split removes.
+                      '<div class="s-person__role">' + (r.active ? (acct && acct.account ? escapeAdminHtml(acct.account) : 'SDR') : 'Inactive') + ' &middot; ' + escapeAdminHtml(label) + '</div>'
                     + '</div>'
                     + (idle ? '<span class="s-badge s-badge--dim">idle</span>' : '<span class="s-person__go">View &rsaquo;</span>')
                   + '</div>'
 
                   + '<div class="s-statrow">'
                     + stat(dials, 'Dials', idle ? 's-stat--muted' : '')
-                    + stat(r.dial_time_label[rk] || '0m', 'On phone', idle ? 's-stat--muted' : '')
-                    + stat(r.meetings[rk] || 0, 'Booked', r.meetings[rk] ? 's-stat--pos' : 's-stat--muted')
-                    + stat(pctStr(r.connect_rate_pct[rk]), 'Connect', idle ? 's-stat--muted' : '')
+                    + stat(v.dial_time_label[rk] || '0m', 'On phone', idle ? 's-stat--muted' : '')
+                    + stat(v.meetings[rk] || 0, 'Booked', v.meetings[rk] ? 's-stat--pos' : 's-stat--muted')
+                    + stat(pctStr(v.connect_rate_pct[rk]), 'Connect', idle ? 's-stat--muted' : '')
                   + '</div>'
 
                   // Quota is a daily target scaled to the period. Over "all
@@ -5058,11 +5099,11 @@
                       + '</div>')
 
                   + '<div class="s-tray">'
-                    + tray(fmtDur(r.avg_call_sec[rk]), 'Avg call')
-                    + tray(pctStr(r.conversation_rate_pct[rk]), 'Conv')
-                    + tray(r.dials_per_meeting[rk] != null ? r.dials_per_meeting[rk] : '—', 'Dials/mtg')
-                    + tray(r.active_days[rk] || 0, 'Days on')
-                    + tray(r.emails[rk] || 0, 'Emails')
+                    + tray(fmtDur(v.avg_call_sec[rk]), 'Avg call')
+                    + tray(pctStr(v.conversation_rate_pct[rk]), 'Conv')
+                    + tray(v.dials_per_meeting[rk] != null ? v.dials_per_meeting[rk] : '—', 'Dials/mtg')
+                    + tray(v.active_days[rk] || 0, 'Days on')
+                    + tray(v.emails[rk] || 0, 'Emails')
                   + '</div>'
 
                   + '<div class="s-kv"><span class="s-kv__k">Callable left</span>'

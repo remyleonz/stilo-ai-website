@@ -88,16 +88,16 @@ module.exports = async function handler(req, res) {
     // ── Everything that does not depend on another query runs at once. These
     // used to be five sequential awaits plus a 28-page full-table scan; the tab
     // spent ~13s waiting on round trips it never needed to serialise.
-    const [rosterRes, calls, bookedLeads, callableLeads, occRows, emailMsgs, dealsRes, sdrIdRes] = await Promise.all([
+    const [rosterRes, calls, bookedLeads, callableLeads, occRows, emailMsgs, dealsRes, sdrIdRes, clientsRes] = await Promise.all([
         pub.from('sdr_users').select(ROSTER_COLS).order('display_name'),
         pullAll(function () {
             return prospect.from('lead_calls')
-                .select('logged_by, direction, outcome, duration_seconds, called_at, lead_id, transcript, recording_url', { count: 'exact' })
+                .select('logged_by, direction, outcome, duration_seconds, called_at, lead_id, transcript, recording_url, client_account', { count: 'exact' })
                 .in('direction', ['outbound', 'outgoing']);
         }),
         pullAll(function () {
             return prospect.from('leads')
-                .select('id, name, owner_name, category, niche, assigned_to, meeting_event_id, meeting_scheduled_at, meeting_booked_at, meeting_booked_by_sdr, meeting_meet_link, pitch_agent', { count: 'exact' })
+                .select('id, name, owner_name, category, niche, assigned_to, meeting_event_id, meeting_scheduled_at, meeting_booked_at, meeting_booked_by_sdr, meeting_meet_link, pitch_agent, client_id', { count: 'exact' })
                 .not('meeting_scheduled_at', 'is', null);
         }),
         pullAll(function () {
@@ -112,11 +112,12 @@ module.exports = async function handler(req, res) {
         }),
         pullAll(function () {
             return prospect.from('lead_messages')
-                .select('sent_by, sent_at, direction, opened_at, clicked_at, replied_at, bounced_at', { count: 'exact' })
+                .select('sent_by, sent_at, direction, opened_at, clicked_at, replied_at, bounced_at, client_account', { count: 'exact' })
                 .eq('channel', 'email');
         }),
         pub.from('deals').select('sdr_id, stage, monthly_retainer_cents, closed_at, paid_at'),
-        pub.from('sdr_users').select('id, email')
+        pub.from('sdr_users').select('id, email'),
+        pub.from('clients').select('id, business_name, created_at')
     ]);
 
     const roster = rosterRes.data || [];
@@ -144,6 +145,14 @@ module.exports = async function handler(req, res) {
             // groups on this rather than summing the two into one number that
             // means nothing. See api/migrations/sdr_type_and_rep_e.sql.
             sdr_type: s.sdr_type || 'new_client', client_account: s.client_account || null,
+            // Work is split by the account each CALL was made for, not by the
+            // rep's current sdr_type. sdr_type describes the person, so moving
+            // someone between accounts used to relabel their entire history:
+            // Remy's 617 STILO dials jumped into Blason the moment he joined
+            // that account. accounts[] keeps each period of work where it
+            // happened. Key ' stilo' (leading space) can never collide with a
+            // real business name.
+            accounts: {},
             dials: emptyRange(), contacts: emptyRange(), conversations: emptyRange(),
             talk_sec: emptyRange(), dial_sec: emptyRange(),
             recorded: emptyRange(), transcribed: emptyRange(),
@@ -159,6 +168,19 @@ module.exports = async function handler(req, res) {
     function rep(rawEmail) {
         const c = idres.canonical(rawEmail);
         return c ? reps[c] : null;
+    }
+    /** Per-rep, per-account accumulator. null account = STILO new business. */
+    function acctBucket(r, name) {
+        const k = name || ' stilo';
+        if (!r.accounts[k]) {
+            r.accounts[k] = {
+                account: name || null,
+                dials: emptyRange(), contacts: emptyRange(), conversations: emptyRange(),
+                talk_sec: emptyRange(), dial_sec: emptyRange(), dial_days: R.emptySets(),
+                meetings: emptyRange(), emails: emptyRange()
+            };
+        }
+        return r.accounts[k];
     }
 
     const company = {
@@ -227,6 +249,12 @@ module.exports = async function handler(req, res) {
 
         const r = rep(c.logged_by);
         if (r) {
+            const acct = acctBucket(r, c.client_account);
+            addRange(acct.dials, b);
+            addRange(acct.dial_sec, b, dur);
+            if (contact) { addRange(acct.contacts, b); addRange(acct.talk_sec, b, dur); }
+            if (convo) addRange(acct.conversations, b);
+            if (day) R.addSet(acct.dial_days, b, day);
             addRange(r.dials, b);
             addRange(r.dial_sec, b, dur);
             if (c.recording_url) addRange(r.recorded, b);
@@ -242,6 +270,20 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // Which account each booked lead belongs to, by the same rule the database
+    // trigger uses: the client owns the work only from the moment the client
+    // existed. A lead that was ours in June and became a client's in August
+    // does not retroactively hand that June meeting to them.
+    const clientById = {};
+    (clientsRes.data || []).forEach(function (c) { clientById[c.id] = c; });
+    const leadAccount = {};
+    bookedLeads.forEach(function (l) {
+        const c = l.client_id ? clientById[l.client_id] : null;
+        if (!c) return;
+        const when = l.meeting_booked_at ? new Date(l.meeting_booked_at).getTime() : null;
+        if (when !== null && when >= new Date(c.created_at).getTime()) leadAccount[l.id] = c.business_name;
+    });
+
     // ── meetings booked ────────────────────────────────────────────────────
     const seenEvent = new Set();
     for (const l of bookedLeads) {
@@ -252,7 +294,11 @@ module.exports = async function handler(req, res) {
         const b = R.buckets(l.meeting_booked_at, B);
         addRange(company.meetings, b);
         const r = rep(l.meeting_booked_by_sdr);
-        if (r) addRange(r.meetings, b);
+        if (r) {
+            addRange(r.meetings, b);
+            // A meeting belongs to the account whose list the lead was on.
+            addRange(acctBucket(r, leadAccount[l.id] || null).meetings, b);
+        }
         else {
             unattributed.meetings += 1;
             const cl = idres.classify(l.meeting_booked_by_sdr);
@@ -348,6 +394,7 @@ module.exports = async function handler(req, res) {
         if (m.bounced_at) addRange(company.emails_bounced, b);
         const r = rep(m.sent_by);
         if (r) {
+            addRange(acctBucket(r, m.client_account).emails, b);
             addRange(r.emails, b);
             if (m.opened_at) addRange(r.emails_opened, b);
             if (m.replied_at) addRange(r.emails_replied, b);
@@ -463,6 +510,26 @@ module.exports = async function handler(req, res) {
         m.initials = r.initials; m.color = r.color; m.active = r.active;
         m.quota = r.quota; m.hired_at = r.hired_at; m.is_closer = r.is_closer;
         m.sdr_type = r.sdr_type; m.client_account = r.client_account;
+        // Every account this rep actually worked, with that account's numbers.
+        // The Team tab groups on THIS, not on sdr_type, so a rep who has worked
+        // two accounts appears under both with the right figures in each.
+        m.accounts = Object.keys(r.accounts).map(function (k) {
+            const a = r.accounts[k];
+            const days = R.sizesOf(a.dial_days);
+            return {
+                account: a.account,
+                dials: a.dials, contacts: a.contacts, conversations: a.conversations,
+                meetings: a.meetings, emails: a.emails,
+                dial_time_sec: a.dial_sec,
+                dial_time_label: mapR(a.dial_sec, hm),
+                talk_time_label: mapR(a.talk_sec, hm),
+                connect_rate_pct: rateR(a.contacts, a.dials),
+                conversation_rate_pct: rateR(a.conversations, a.dials),
+                avg_call_sec: perR(a.talk_sec, a.contacts),
+                dials_per_meeting: perR(a.dials, a.meetings),
+                active_days: days
+            };
+        }).sort(function (x, y) { return y.dials.all - x.dials.all; });
         m.quota_attainment_pct = rateR(r.dials, { today: r.quota, week: r.quota * 5, month: r.quota * 21, last_week: r.quota * 5, last_month: r.quota * 21, all: r.quota });
         m.pipeline_remaining = r.pipeline_remaining;
         // Days of callable leads left at this rep's current pace. The earliest
