@@ -144,7 +144,12 @@ module.exports = async function handler(req, res) {
     if (lead.client_id) {
         const cfName = kit.firstName(lead.owner_name, lead.name, lead.address);
         const es = lead.primary_language === 'es';
-        const local = /FL 33[0-3]\d\b/.test(String(lead.address || ''));
+        // Showroom range = Miami-Dade + Broward (zip3 330-333), same rule the
+        // scripts use. Match the 5-digit zip and test its prefix; an inline
+        // \b after four digits never matches a 5-digit zip (it did not, so
+        // every local lead was getting the weaker video-call ask).
+        const zipM = String(lead.address || '').match(/\b(\d{5})(?:-\d{4})?\b/);
+        const local = !!zipM && ['330', '331', '332', '333'].indexOf(zipM[1].slice(0, 3)) !== -1;
         let cSubject, cBody;
         if (es && local) {
             cSubject = (cfName ? cfName + ', ' : '') + 'su visita al showroom de Blason';
