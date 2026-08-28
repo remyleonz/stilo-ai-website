@@ -626,6 +626,14 @@ function preSendCheck(campaign, target, lead) {
     if (['CLOSED_LOST', 'CLOSED_WON'].includes(String(lead.stage || ''))) {
         return { ok: false, reason: 'lead_' + String(lead.stage).toLowerCase() };
     }
+    // The outcome half of the same rule. Stage alone misses the case where a rep
+    // logged the no on the call but left the lead open, which is the normal way
+    // a soft no gets recorded: across the STILO campaigns 15 targets sit on
+    // owner_uninterested leads and 8 of them were texted before this existed.
+    // NOTE: callers must select last_called_outcome for this to do anything.
+    if (['owner_uninterested', 'meeting_cancelled'].includes(String(lead.last_called_outcome || ''))) {
+        return { ok: false, reason: 'lead_declined' };
+    }
 
     // do_not_call is NEVER waivable. It carries actual opt-outs, DNC requests,
     // and confirmed scrub blocks, and no campaign setting may override it.
