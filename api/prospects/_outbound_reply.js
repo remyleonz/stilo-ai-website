@@ -79,8 +79,47 @@ const DECLINE_RE = new RegExp([
 // a phrase is ambiguous it stays an opt-out, because a false opt-out costs one
 // lead and a missed one costs the account.
 const FRIENDLY_STOP_RE = /\b(?:stop|quit)\s+(by|in|over|back|through|at|on)\b/i;
+/**
+ * A machine answered, not a person.
+ *
+ * These businesses run AI receptionists and auto-responders on the same number
+ * we text. Hello Sugar replied to the Blason opener in under a second with
+ * "Please give me a moment and I will connect you with an agent to assist you."
+ * That is not a reply, but the classifier had no way to say so, so the target
+ * went to stage='replied' (which unlocks the step-2 pitch), started a
+ * five-minute callback SLA, and emailed Alejandro to phone a bot. The same
+ * businesses do it on the voice side too: the Hello Sugar call transcript opens
+ * "This is Sky from Hello Sugar Orlando, how can I help you today?"
+ *
+ * Routed to 'auto': the body is recorded, the target stays at its current stage
+ * so no pitch is unlocked, no SLA starts and no rep is alerted. The lead is NOT
+ * dead. A human may well read the thread later, and the rep can still call.
+ *
+ * False positives here are cheap (we skip one alert) and false negatives are
+ * the status quo, so this leans inclusive.
+ */
+const AUTORESPONDER_RE = new RegExp([
+    "connect you (?:with|to) (?:an?|our) (?:agent|team|representative|specialist)",
+    "(?:just )?missed your call", "we'?ll get (?:right )?back to you",
+    "will get (?:right )?back to you", "get back to you (?:as soon as|shortly|asap)",
+    "this is an automated", "automated (?:reply|response|message)",
+    "do not reply to this", "please do not reply",
+    "out of (?:the )?office", "currently (?:closed|unavailable)",
+    "our (?:business |office )?hours are", "for (?:a )?faster (?:response|service)",
+    "thank you for (?:contacting|reaching out|your message)",
+    "please hold", "one moment please", "give me a moment",
+    "reply stop to unsubscribe",
+    "gracias por (?:contactarnos|su mensaje|comunicarse)",
+    "le responderemos", "en breve le", "fuera de (?:la )?oficina",
+].join('|'), 'i');
+
 function classifyReply(text) {
     const s = String(text || '');
+    // Checked FIRST. An autoresponder that happens to contain a stop keyword in
+    // its footer ("Reply STOP to unsubscribe") is not a person opting out, and
+    // treating it as one would DNC a lead nobody has actually spoken to. A real
+    // human opt-out does not arrive wrapped in an away-message.
+    if (AUTORESPONDER_RE.test(s)) return 'auto';
     const m = s.match(NEGATIVE_RE);
     // Checked before the friendly-stop forgiveness below but after NEGATIVE_RE,
     // so an explicit "stop" still outranks a polite no in the same message
@@ -255,6 +294,20 @@ async function handleInboundSms(fromPhone, toPhone, text) {
             updated_at: now.toISOString(),
         }).eq('id', t.id);
         return { action: 'dead', lead_id: t.lead_id };
+    }
+
+    // A machine answered. Record it, change nothing else: the stage stays where
+    // it is so the step-2 pitch is not unlocked, no callback SLA starts, and no
+    // rep is alerted. Alerting on an away-message trains people to ignore the
+    // alert that matters.
+    if (intent === 'auto') {
+        await sb.from('outbound_targets').update({
+            first_reply_at: t.first_reply_at || now.toISOString(),
+            first_reply_body: t.first_reply_body || String(text || '').slice(0, 1000),
+            updated_at: now.toISOString(),
+        }).eq('id', t.id);
+        console.log('[outbound] autoresponder lead=' + t.lead_id + ' target=' + t.id);
+        return { action: 'auto', lead_id: t.lead_id };
     }
 
     const { data: campaign } = await sb.from('outbound_campaigns')
