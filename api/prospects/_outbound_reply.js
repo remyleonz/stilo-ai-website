@@ -45,7 +45,35 @@ function isStop(text) {
  *                they didn't ask us to never contact them, just not to pitch
  *   'replied' -> everything else, the normal callback path
  */
-const NEGATIVE_RE = /\b(stop|unsubscribe|remove me|don'?t (?:text|message|contact)|wrong number|not interested|leave me alone|quit|cancel)\b/i;
+const NEGATIVE_RE = /\b(stop|unsubscribe|remove me|don'?t (?:text|message|contact)|wrong number|not interested|leave me alone|quit|cancel|no me escriba|deje de escribir|b[oó]rreme|elim[ií]neme)\b/i;
+
+/**
+ * The polite decline. Routes to 'dead', never to opt_out: these people did not
+ * ask us to stop contacting them, they said no to this offer.
+ *
+ * Added 2026-08-28 after the first reply the Blason campaign ever received.
+ * Tre Medspa answered "No thank you" two minutes after the text, which matched
+ * nothing in NEGATIVE_RE, so it landed at stage='replied'. That is the stage
+ * that unlocks the step-2 pitch AND it started a five-minute callback SLA, so
+ * the system's considered response to a polite no was to alert a rep to phone
+ * them about it. This file already learned this exact lesson once, for
+ * "please stop texting me, wrong number"; "no thanks" is simply the most common
+ * way a person declines and it was not on the list.
+ *
+ * Spanish is here from the start rather than after the first miss: 9 of the
+ * campaign's targets are Spanish-speaking and will decline in Spanish.
+ *
+ * Deliberately excluded as too ambiguous: "we're good", "all set", "pass".
+ * "all set for tuesday" is a confirmation, and reading it as a decline would
+ * bury a booked meeting.
+ */
+const DECLINE_RE = new RegExp([
+    "no,?\\s*thank\\s*you", "no,?\\s*thanks", "no\\s*thx",
+    "not\\s+(?:looking|interested)", "no\\s+need", "we'?re\\s+not\\s+looking",
+    "not\\s+(?:right\\s+now|at\\s+this\\s+time|at\\s+the\\s+moment)",
+    "no,?\\s*gracias", "no\\s+me\\s+interesa", "no\\s+estamos?\\s+interesad",
+    "no\\s+por\\s+ahora", "por\\s+ahora\\s+no", "ahora\\s+no",
+].join('|'), 'i');
 // "stop by tomorrow", "stop in when you can", "quit early Friday": friendly uses
 // where the next word makes it plainly not an opt-out. Narrow and deliberate; if
 // a phrase is ambiguous it stays an opt-out, because a false opt-out costs one
@@ -54,6 +82,10 @@ const FRIENDLY_STOP_RE = /\b(?:stop|quit)\s+(by|in|over|back|through|at|on)\b/i;
 function classifyReply(text) {
     const s = String(text || '');
     const m = s.match(NEGATIVE_RE);
+    // Checked before the friendly-stop forgiveness below but after NEGATIVE_RE,
+    // so an explicit "stop" still outranks a polite no in the same message
+    // ("no thanks, and please stop texting me" is an opt-out, not just a dead).
+    if (!m && DECLINE_RE.test(s)) return 'dead';
     if (!m) return 'replied';
     const hit = m[1].toLowerCase();
     if (hit === 'wrong number' || hit === 'not interested') return 'dead';
