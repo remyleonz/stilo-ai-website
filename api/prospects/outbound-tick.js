@@ -176,7 +176,11 @@ module.exports = async function handler(req, res) {
             if (!bodyText) { results.skipped.no_body_generated = (results.skipped.no_body_generated || 0) + 1; continue; }
 
             const { data: lead } = await sb.from('leads')
-                .select('id,name,niche,category,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
+                // client_id feeds preSendCheck's pool firewall. Omit it and the
+                // undefined coerces to null, which passes every client lead
+                // straight through a STILO campaign. Same failure shape as the
+                // missing niche/category on 2026-08-11.
+                .select('id,name,niche,category,client_id,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
 
             t.__is_team_number = teamSet.has(require('../openphone/_shared').normalizePhone(t.to_phone) || '');
             const check = ob.preSendCheck(campaign, t, lead);

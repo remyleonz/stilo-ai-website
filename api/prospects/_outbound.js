@@ -127,6 +127,40 @@ async function loadReps() {
     return byEmail;
 }
 
+/**
+ * The client a campaign is texting on behalf of, or null for STILO's own book.
+ *
+ * Attach the result to the campaign as `campaign.client` before generating or
+ * sending. Everything downstream branches on it: who the sender says they are,
+ * which name the copy MUST contain, and the deterministic fallback.
+ *
+ * A client campaign is not STILO copy with a different signature. The prospect
+ * had a phone call in which a rep said "Blason Spa Equipment", and a text that
+ * arrives without that name is an anonymous text from an unknown number. The
+ * inverse matters more: STILO must never appear in a client's pool, which is
+ * why 'stilo' is in BANNED for every campaign.
+ */
+async function loadCampaignClient(campaign) {
+    if (!campaign || !campaign.client_id) return null;
+    const pub = publicClient();
+    const { data, error } = await pub.from('clients')
+        .select('id, business_name, contact_name, website')
+        .eq('id', campaign.client_id).maybeSingle();
+    if (error) throw new Error('client read failed: ' + error.message);
+    return data || null;
+}
+
+/**
+ * The word the copy has to contain for a client campaign: the first token of
+ * the client's business name. "Blason Spa Equipment" -> "blason", so
+ * "blason spa equipment" and a bare "blason" both pass, and a message that
+ * names nobody fails.
+ */
+function clientToken(client) {
+    if (!client || !client.business_name) return '';
+    return String(client.business_name).trim().split(/\s+/)[0].toLowerCase();
+}
+
 // ---------------------------------------------------------------------------
 // Send window. Computed in the campaign's timezone, not the server's, because
 // Vercel runs UTC and a 09:00-19:00 window read in UTC texts people at 4am.
@@ -253,11 +287,23 @@ const BANNED = [
     { re: /\bstilo\b/i, why: 'names_company' },
     { re: /https?:\/\//i, why: 'contains_link' },
 ];
-function validateBody(text, senderFirstName) {
+function validateBody(text, senderFirstName, requiredToken) {
     const t = String(text || '').trim();
     if (t.length < 15) return { ok: false, why: 'too_short' };
     if (t.length > 320) return { ok: false, why: 'too_long' };
     for (const b of BANNED) if (b.re.test(t)) return { ok: false, why: b.why };
+
+    // Client campaigns invert the naming rule. On STILO's own book the company
+    // name is banned, because the opener works by sounding like a person rather
+    // than a vendor. On a client's book the client's name is the ONLY reason the
+    // text gets read: the prospect took a call last week from someone saying
+    // "Blason Spa Equipment", and in this market that name is recognised (an
+    // Aquabella assistant answered "yo soy cliente de Blason" the moment Ale
+    // said it). Drop the name and the same message becomes a stranger texting
+    // about equipment, which is indistinguishable from spam.
+    if (requiredToken && !t.toLowerCase().includes(String(requiredToken).toLowerCase())) {
+        return { ok: false, why: 'client_not_named' };
+    }
 
     // The sender MUST identify themselves. Without this the model drops its own
     // name whenever the lead has no owner_name, producing "hey, have we spoken
@@ -300,6 +346,15 @@ function leadFacts(lead, campaign) {
     return bits.join('\n');
 }
 
+// A lead flagged 'es' gets the whole message in Spanish, not an English message
+// with a Spanish greeting. The rep spoke Spanish to them on the phone (the
+// Aquabella call ran end to end in Spanish for a Miami business), so switching
+// to English in the follow-up reads as a different person from a different
+// company. 120 of Blason's 1,001 leads are flagged this way.
+function isSpanish(lead) {
+    return !!lead && String(lead.primary_language || '').toLowerCase() === 'es';
+}
+
 /**
  * Deterministic fallback used when Gemini is unavailable or returns junk.
  * Deliberately plain: a boring message that sends beats a clever one that
@@ -322,6 +377,40 @@ function fallbackBody(lead, step, sender, variant, campaign) {
     const hi = who ? 'hey ' + who : 'hey';
     const override = campaign && String(campaign.topic_override || '').trim();
     const topic = override || (lead.pitch_agent ? plainAgent(lead.pitch_agent) : 'your business');
+
+    // CLIENT CAMPAIGN FALLBACK. The STILO fallbacks below state the STILO offer
+    // in plain words ("we put the ready ones on your calendar as booked
+    // meetings"), which inside a client's pool is a content-firewall breach, not
+    // just off-message. A client campaign gets its own deterministic copy,
+    // named, in the lead's language, and it must pass validateBody like any
+    // generated body: it names the client and never names STILO.
+    const client = campaign && campaign.client;
+    if (client) {
+        const brand = String(client.business_name || '').trim();
+        const es = isSpanish(lead);
+        if (es) {
+            const hola = who ? 'hola ' + who : 'hola';
+            if (step === 1) {
+                return variant === 'B'
+                    ? hola + ', soy ' + sender.first_name + ' de ' + brand + '. tenemos las maquinas puestas y funcionando en hialeah. vale la pena que las vea?'
+                    : hola + ', soy ' + sender.first_name + ' de ' + brand + '. que tratamiento le estan pidiendo sus clientas que hoy no pueda hacer?';
+            }
+            if (step === 2) {
+                return 'el dueno importa las maquinas el mismo, asi que le dice de frente cual le sirve para eso y cual no le conviene. le coordino una llamada corta con el?';
+            }
+            return 'perfecto. le puedo llamar de este numero en un rato?';
+        }
+        if (step === 1) {
+            return variant === 'B'
+                ? hi + ', ' + sender.first_name + ' here from ' + brand + '. we have the machines set up and running in hialeah. worth a look?'
+                : hi + ', ' + sender.first_name + ' here from ' + brand + '. what treatment are your clients asking for that you cannot do right now?';
+        }
+        if (step === 2) {
+            return 'the owner imports the machines himself, so he will tell you straight which one fits that and which one is not worth it. want me to set up a short call with him?';
+        }
+        return 'perfect. ok if i call you from this number in a few minutes?';
+    }
+
     if (step === 1) {
         // Fallback must match the arm it is standing in for, or it silently
         // contaminates the experiment with the other arm's framing.
@@ -384,10 +473,41 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
     } else {
         guidance = (campaign['step' + step + '_guidance'] || '').trim() || DEFAULT_GUIDANCE[step];
     }
+    // A client campaign speaks as the client. The rep introduced themselves on
+    // the phone as "Alejandro from Blason Spa Equipment"; the text has to be
+    // recognisably the same person from the same company or it is a cold text
+    // from an unknown number, which is the one thing this channel must never be.
+    const client = campaign && campaign.client;
+    const token = clientToken(client);
+    const es = isSpanish(lead);
+
+    const identity = client
+        ? ('Who is sending: ' + sender.first_name + ', calling on behalf of '
+            + client.business_name + ', a Miami company. You do NOT work for any other company '
+            + 'as far as this person is concerned.')
+        : ('Who is sending: ' + sender.first_name + ' at STILO AI Partners, a small Miami team.');
+
+    const namingRules = client
+        ? [
+            '- You MUST write the company name "' + client.business_name + '" so they know who this is.',
+            '- NEVER write the name "STILO" or mention any agency. You are ' + client.business_name + ' to them.',
+        ]
+        : [
+            '- NEVER write the company name "STILO". Give your first name only.',
+        ];
+
+    const languageRules = es
+        ? [
+            '- WRITE THE ENTIRE MESSAGE IN SPANISH. Not a Spanish greeting on an English message.',
+            '- Use usted, not tu. Plain Miami Spanish, no Spain vocabulary.',
+            '- Accents are optional, plenty of people text without them.',
+        ]
+        : [];
+
     const prompt = [
         'Write ONE outbound SMS. Output only the message text, nothing else.',
         '',
-        'Who is sending: ' + sender.first_name + ' at STILO AI Partners, a small Miami team.',
+        identity,
         '',
         'About the recipient:',
         leadFacts(lead, campaign),
@@ -399,9 +519,10 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         '- Under 320 characters. Shorter is better.',
         '- No em dashes anywhere. Use commas or periods.',
         '- No exclamation points.',
+        '- Never mention price, cost, a range, a ballpark, financing terms or a number of dollars.',
         '- Never use: leverage, utilize, streamline, seamless, robust, cutting-edge, innovative, holistic, elevate, unlock.',
         '- Do not write a signature, a company footer, or a link.',
-        '- NEVER write the company name "STILO". Give your first name only.',
+    ].concat(namingRules, languageRules, [
         '- NEVER write internal product names: LCR, GMB, VSL, ECHO, IGNITE, REVIVE,',
         '  SCOUT, FORGE, SIGNAL, ORACLE, FLUX. Describe the topic in plain words.',
         '- If you do not know their first name, do NOT write the word "name".',
@@ -409,7 +530,7 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         '- Sound like a person typing on a phone, not a brochure.',
         '',
         'Write the message now.',
-    ].join('\n');
+    ]).join('\n');
 
     // Generate, validate, retry once, then fall back. The retry is cheap and
     // catches most one-off violations; the deterministic fallback guarantees we
@@ -419,7 +540,28 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         const out = await geminiSms(attempt === 0 ? prompt : prompt + '\n\nYour previous attempt broke a hard rule. Re-read the hard rules and try again.');
         if (!out) continue;
         let cleaned = out.replace(/—|–/g, ',').replace(/!/g, '.').trim();
-        const v = validateBody(cleaned, sender && sender.first_name);
+        // IDENTITY IS A STEP-1 RULE.
+        //
+        // Step 1 lands cold on a phone, so an unsigned message is a stranger
+        // and the checks are load-bearing. Steps 2 and 3 are turns inside a
+        // thread the person is already answering: re-introducing yourself every
+        // time ("ale here from blason spa equipment" three messages running)
+        // reads as an autoresponder, which is the opposite of what this channel
+        // is for.
+        //
+        // Applying them at every step also made the step-3 fallback
+        // ("perfect. ok if i give you a quick call from this number in a few
+        // minutes?") fail sender_not_named, so the deterministic copy meant to
+        // rescue a failed generation broke the very rule that rejected it. This
+        // file already learned that lesson once, in fallbackBody's comment: a
+        // fallback that violates the rules is worse than no fallback, because it
+        // looks like it worked.
+        const identityRequired = step === 1;
+        const v = validateBody(
+            cleaned,
+            identityRequired ? (sender && sender.first_name) : null,
+            identityRequired ? token : null
+        );
         if (v.ok) { body = cleaned; generated = true; }
         else rejected = v.why;
     }
@@ -457,6 +599,22 @@ function preSendCheck(campaign, target, lead) {
     // indistinguishable from a clean lead, and the scrub exemption could waive
     // a scrub for a lead nobody had actually looked at. Hard-fail instead.
     if (!lead) return { ok: false, reason: 'lead_read_failed' };
+
+    // POOL FIREWALL, checked at send time and not only at enqueue.
+    //
+    // outbound-enqueue.js now matches leads.client_id against the campaign's,
+    // but the same lesson as the ICP guard above applies: targets enqueued
+    // before a rule existed are still sitting in the table, and a stage flip can
+    // carry one past any cleanup. Texting a client's prospect with STILO copy,
+    // or a STILO prospect from a campaign written in a client's voice, is a
+    // content-firewall breach on the channel that reaches a phone.
+    //
+    // NOTE: every caller's lead SELECT must include client_id. A missing column
+    // reads as undefined, which coerces to null and would quietly pass every
+    // client lead through a STILO campaign.
+    if ((lead.client_id || null) !== (campaign.client_id || null)) {
+        return { ok: false, reason: 'wrong_pool' };
+    }
 
     // do_not_call is NEVER waivable. It carries actual opt-outs, DNC requests,
     // and confirmed scrub blocks, and no campaign setting may override it.
@@ -519,8 +677,8 @@ function preSendCheck(campaign, target, lead) {
 
 module.exports = {
     SEND_ENABLED, DEFAULT_GUIDANCE, DEFAULT_GUIDANCE_B,
-    serviceClient, publicClient, loadReps,
+    serviceClient, publicClient, loadReps, loadCampaignClient, clientToken,
     windowState, localParts, sentTodayByLine, lastSendByLine,
-    generateStepBody, fallbackBody, firstNameOf, leadFacts, validateBody, plainAgent,
+    generateStepBody, fallbackBody, firstNameOf, leadFacts, isSpanish, validateBody, plainAgent,
     preSendCheck,
 };

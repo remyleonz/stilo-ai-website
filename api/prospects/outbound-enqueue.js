@@ -174,6 +174,23 @@ module.exports = async function handler(req, res) {
         // well as from the dial boards, which is what everyone already assumed
         // archiving did.
         q = q.is('archived_batch', null);
+
+        // POOL FIREWALL. A campaign declares which book it serves and may only
+        // ever enqueue from that book:
+        //
+        //   campaign.client_id IS NULL  -> STILO's own leads, client_id IS NULL
+        //   campaign.client_id = <uuid> -> that client's leads, and only those
+        //
+        // Until 2026-08-28 there was no filter here at all. Nothing had gone
+        // wrong only because no client lead had ever been enqueued, but a
+        // 'scripted' enqueue on a STILO campaign would have pulled Blason leads
+        // in (1,000 of them carry has_cold_call_script) and texted them STILO
+        // copy from a rep the prospect knows as Blason. Every other
+        // client-content path already guards on client_id; this was the hole,
+        // and it is the one that reaches a phone.
+        if (campaign.client_id) q = q.eq('client_id', campaign.client_id);
+        else q = q.is('client_id', null);
+
         if (audience === 'scripted') q = q.eq('has_cold_call_script', true);
         if (audience === 'dialed') q = q.not('last_called_at', 'is', null);
         const { data, error } = await q.order('id', { ascending: true }).range(from, from + 999);

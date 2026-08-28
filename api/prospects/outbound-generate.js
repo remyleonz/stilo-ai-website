@@ -50,6 +50,13 @@ module.exports = async function handler(req, res) {
     try { reps = await ob.loadReps(); }
     catch (e) { return res.status(502).json({ error: 'reps_read_failed', detail: e.message }); }
 
+    // Resolve the client once per run and hang it off the campaign. Everything
+    // downstream reads campaign.client: who the sender says they are, the name
+    // the copy must contain, and the deterministic fallback. Without it a client
+    // campaign would generate STILO copy for a client's prospects.
+    try { campaign.client = await ob.loadCampaignClient(campaign); }
+    catch (e) { return res.status(502).json({ error: 'client_read_failed', detail: e.message }); }
+
     const bodyCol = 'step' + step + '_body';
     let q = sb.from('outbound_targets')
         .select('id, lead_id, assigned_to, from_line, to_phone, stage, variant, ' + bodyCol)
@@ -66,7 +73,10 @@ module.exports = async function handler(req, res) {
 
     const leadIds = targets.map(t => t.lead_id);
     const { data: leads, error: lErr } = await sb.from('leads')
-        .select('id,name,owner_name,niche,category,address,website,pitch_agent,last_called_outcome')
+        // primary_language drives the Spanish branch and client_id is asserted
+        // below; a missing column here silently produces English copy for a lead
+        // the rep spoke Spanish to.
+        .select('id,name,owner_name,niche,category,address,website,pitch_agent,last_called_outcome,primary_language,client_id')
         .in('id', leadIds);
     if (lErr) return res.status(500).json({ error: 'leads_read_failed', detail: lErr.message });
     const leadById = {};
@@ -75,9 +85,15 @@ module.exports = async function handler(req, res) {
     let generated = 0, modelWritten = 0, fellBack = 0, failed = 0;
     const samples = [];
 
+    let wrongPool = 0;
     for (const t of targets) {
         const lead = leadById[t.lead_id];
         if (!lead) { failed++; continue; }
+        // Belt and braces on the pool firewall. outbound-enqueue.js can no
+        // longer mix pools, but targets enqueued before that guard existed are
+        // still in the table, and generating client copy for a STILO lead (or
+        // the reverse) is exactly the mistake the guard was added to prevent.
+        if ((lead.client_id || null) !== (campaign.client_id || null)) { wrongPool++; continue; }
         const rep = reps[t.assigned_to] || { first_name: 'me', line: t.from_line, display_name: '' };
         try {
             const out = await ob.generateStepBody(lead, campaign, step, rep, t.variant);
@@ -111,6 +127,8 @@ module.exports = async function handler(req, res) {
         model_written: modelWritten,
         used_fallback: fellBack,
         failed: failed,
+        wrong_pool: wrongPool,
+        client: campaign.client ? campaign.client.business_name : null,
         remaining_without_body: remaining || 0,
         samples: samples,
         note: 'Nothing was sent. Review the samples, then run again with regenerate:true if the copy needs work.',
