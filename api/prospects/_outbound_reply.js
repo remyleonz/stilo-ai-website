@@ -128,6 +128,14 @@ const FRIENDLY_STOP_RE = /\b(?:stop|quit)\s+(by|in|over|back|through|at|on)\b/i;
  * the status quo, so this leans inclusive.
  */
 const AUTORESPONDER_RE = new RegExp([
+    // Self-identifying bots. Hello Sugar Orlando answered in 27 seconds with a
+    // literal "[AI]" prefix and then asked Alejandro which treatment he wanted
+    // to book, because their receptionist had decided he was a customer. The
+    // most obvious tell a machine can give, and the first version of this
+    // pattern set did not look for it.
+    "^\\s*\\[\\s*(?:ai|bot|auto|automated)\\s*\\]", "\\[\\s*ai\\s*\\]",
+    "i'?m an ai", "i am an ai", "ai assistant", "virtual assistant",
+    "automated assistant", "this is an? (?:ai|bot|virtual)",
     "connect you (?:with|to) (?:an?|our) (?:agent|team|representative|specialist)",
     "(?:just )?missed your call", "we'?ll get (?:right )?back to you",
     "will get (?:right )?back to you", "get back to you (?:as soon as|shortly|asap)",
