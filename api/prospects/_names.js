@@ -27,6 +27,10 @@ const NOT_A_NAME = new RegExp('^(' + [
     'ask', 'verify', 'confirm', 'tbd', 'na', 'none', 'unknown', 'whoever',
     'someone', 'anybody', 'receptionist', 'gatekeeper', 'supervisor',
     'coordinator', 'principal', 'staff', 'hr', 'practice',
+    // Bare honorifics. The prefix strip above only fires when a name FOLLOWS
+    // the title, so a lone "Dr" would otherwise be greeted as one.
+    'dr', 'dra', 'doctor', 'mr', 'mrs', 'ms', 'miss', 'prof', 'professor',
+    'sr', 'sra', 'srta', 'rev', 'capt',
 ].join('|') + ')$', 'i');
 
 /**
@@ -37,7 +41,12 @@ const NOT_A_NAME = new RegExp('^(' + [
 function firstName(ownerName, business, address) {
     const raw = String(ownerName || '').trim();
     if (!raw) return null;
-    const first = raw.split(/\s+/)[0];
+    // Strip honorifics before picking the first token, or "Dr Ryan Ballent"
+    // yields "Dr" and the rep opens with "Hi Dr". Medical practices are a core
+    // niche here, so titled names are common rather than an edge case.
+    const stripped = raw.replace(/^((dr|dra|doctor|mr|mrs|ms|miss|prof|professor|sr|sra|srta|rev|capt)\.?\s+)+/i, '').trim();
+    if (!stripped) return null;
+    const first = stripped.split(/\s+/)[0];
     if (!first || first.length < 2 || first.length > 20) return null;
     // Must be capitalised. A blocklist alone cannot keep up with free-text
     // placeholders, and every real name in this data is capitalised while
@@ -56,9 +65,15 @@ function firstName(ownerName, business, address) {
     // field ("Animal Cancer Care Clinic"), not a person, however many tokens it
     // has. Credentials (DMD, MD, CPA) are deliberately absent: those follow a
     // real person's name.
-    if (/\b(inc|llc|corp|corporation|co|company|services|service|clinic|center|centre|group|associates|holdings|enterprises|solutions|systems|realty|properties|studio|salon|spa|agency|team)\b/i.test(raw)) return null;
+    // Institutional words disqualify the WHOLE value, however many tokens it
+    // has. 'department' was in NOT_A_NAME, which only tests the FIRST token, so
+    // "Phillip Frost Department" (scraped from the Phillip Frost Department of
+    // Dermatology) sailed through as a full name and told a rep to ask for
+    // "Phillip". Anything shaped like an institution rather than a person
+    // belongs here, not in the first-token list.
+    if (/\b(inc|llc|corp|corporation|co|company|services|service|clinic|center|centre|group|associates|holdings|enterprises|solutions|systems|realty|properties|studio|salon|spa|agency|team|department|dept|division|institute|institution|university|college|academy|school|hospital|foundation|laboratory|laboratories|labs?|pharmacy|partners|partnership|management|consulting|consultants|pa|pllc|plc|ltd|lp|llp)\b/i.test(raw)) return null;
 
-    const isFullName = raw.split(/\s+/).length > 1;
+    const isFullName = stripped.split(/\s+/).length > 1;
     if (!isFullName) {
         if (String(business || '').toLowerCase().includes(f)) return null;
         if (String(address || '').toLowerCase().includes(f)) return null;
