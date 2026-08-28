@@ -248,10 +248,15 @@ async function lastSendByLine(sb, campaign, now) {
 // ---------------------------------------------------------------------------
 // Message generation
 // ---------------------------------------------------------------------------
-function firstNameOf(full) {
-    const f = String(full || '').trim().split(/\s+/)[0];
-    if (!f || /^(owner|the|practice|office|manager|front|personal|commercial)$/i.test(f)) return '';
-    return f;
+// _names.js is the ONE firstName rule in this codebase and every outbound path
+// is supposed to use it. This file had its own weaker copy: a seven-word
+// blocklist over the first token, which passes exactly the junk _names.js
+// exists to reject ("Program", "Executives", "ask for owner", values that are
+// really a company). A wrong name is worse than no name, so the strict rule
+// wins and its null is honoured by dropping the name entirely.
+const names = require('./_names');
+function firstNameOf(full, business, address) {
+    return names.firstName(full, business, address) || '';
 }
 
 /**
@@ -287,11 +292,40 @@ const BANNED = [
     { re: /\bstilo\b/i, why: 'names_company' },
     { re: /https?:\/\//i, why: 'contains_link' },
 ];
-function validateBody(text, senderFirstName, requiredToken) {
+// Words that legitimately follow a greeting and are not names.
+const NOT_A_GREETED_NAME = /^(there|soy|it|its|this|i|im|quick|just|hope|sorry|good|happy|we|so|the|team|guys|folks|habla|le|les)$/i;
+
+/**
+ * Any name in the greeting must be the name we actually supplied.
+ *
+ * The Salt Room Orlando was texted "hey jessica". Its owner_name is "Kendyl
+ * Wellness Operations", the brief said "Owner first name: Kendyl", and the
+ * string "jessica" appears in no field the model was given. It invented a
+ * person and we addressed a stranger by it. One in 41 sends, which is exactly
+ * the rate that never shows up in a sample of eight and does show up in a
+ * complaint.
+ *
+ * The same rule catches the inverse: a lead with no usable name where the model
+ * decides to greet someone anyway.
+ */
+function checkGreetedName(t, expectedFirstName) {
+    const m = t.match(/\b(?:hey|hi|hello|hola)\s+([A-Za-z\u00C0-\u024F'’-]{2,})/i);
+    if (!m) return null;
+    const greeted = m[1];
+    if (NOT_A_GREETED_NAME.test(greeted)) return null;
+    const expected = String(expectedFirstName || '').trim();
+    if (!expected) return 'invented_name';
+    if (greeted.toLowerCase() !== expected.toLowerCase()) return 'wrong_lead_name';
+    return null;
+}
+
+function validateBody(text, senderFirstName, requiredToken, expectedLeadName) {
     const t = String(text || '').trim();
     if (t.length < 15) return { ok: false, why: 'too_short' };
     if (t.length > 320) return { ok: false, why: 'too_long' };
     for (const b of BANNED) if (b.re.test(t)) return { ok: false, why: b.why };
+    const nameProblem = checkGreetedName(t, expectedLeadName);
+    if (nameProblem) return { ok: false, why: nameProblem };
 
     // Client campaigns invert the naming rule. On STILO's own book the company
     // name is banned, because the opener works by sounding like a person rather
@@ -324,8 +358,11 @@ function validateBody(text, senderFirstName, requiredToken) {
 function leadFacts(lead, campaign) {
     const bits = [];
     if (lead.name) bits.push('Business: ' + lead.name);
-    const who = firstNameOf(lead.owner_name);
+    const who = firstNameOf(lead.owner_name, lead.name, lead.address);
     if (who) bits.push('Owner first name: ' + who);
+    // Said explicitly, because the model otherwise fills the gap itself. See
+    // the name-integrity check in validateBody.
+    else bits.push('We do NOT know their first name. Do not use any name.');
     if (lead.niche || lead.category) bits.push('Industry: ' + (lead.niche || lead.category));
     if (lead.address) bits.push('Location: ' + lead.address);
     // The topic. A campaign-level topic_override wins over the lead's own
@@ -373,7 +410,7 @@ function isSpanish(lead) {
  * because it looks like it worked.
  */
 function fallbackBody(lead, step, sender, variant, campaign) {
-    const who = firstNameOf(lead.owner_name);
+    const who = firstNameOf(lead.owner_name, lead.name, lead.address);
     const hi = who ? 'hey ' + who : 'hey';
     const override = campaign && String(campaign.topic_override || '').trim();
     const topic = override || (lead.pitch_agent ? plainAgent(lead.pitch_agent) : 'your business');
@@ -560,7 +597,8 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
         const v = validateBody(
             cleaned,
             identityRequired ? (sender && sender.first_name) : null,
-            identityRequired ? token : null
+            identityRequired ? token : null,
+            firstNameOf(lead.owner_name, lead.name, lead.address)
         );
         if (v.ok) { body = cleaned; generated = true; }
         else rejected = v.why;
@@ -698,6 +736,6 @@ module.exports = {
     SEND_ENABLED, DEFAULT_GUIDANCE, DEFAULT_GUIDANCE_B,
     serviceClient, publicClient, loadReps, loadCampaignClient, clientToken,
     windowState, localParts, sentTodayByLine, lastSendByLine,
-    generateStepBody, fallbackBody, firstNameOf, leadFacts, isSpanish, validateBody, plainAgent,
+    generateStepBody, fallbackBody, firstNameOf, leadFacts, isSpanish, validateBody, checkGreetedName, plainAgent,
     preSendCheck,
 };
