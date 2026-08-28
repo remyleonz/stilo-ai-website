@@ -298,12 +298,18 @@ const NOT_A_GREETED_NAME = /^(there|soy|it|its|this|i|im|quick|just|hope|sorry|g
 /**
  * Any name in the greeting must be the name we actually supplied.
  *
- * The Salt Room Orlando was texted "hey jessica". Its owner_name is "Kendyl
- * Wellness Operations", the brief said "Owner first name: Kendyl", and the
- * string "jessica" appears in no field the model was given. It invented a
- * person and we addressed a stranger by it. One in 41 sends, which is exactly
- * the rate that never shows up in a sample of eight and does show up in a
- * complaint.
+ * CORRECTION, same day: this check was added because The Salt Room Orlando was
+ * texted "hey jessica" while its owner_name read "Kendyl Wellness Operations",
+ * which looked like the model inventing a person. It was not. The copy was
+ * written at 12:59 when owner_name was "Jessica Helmer"; the owner-email scrape
+ * overwrote the field at 14:46, after the message had been written and sent.
+ * The generator was right and the diagnosis was wrong.
+ *
+ * The check stays, because the failure it guards is real and cheap to prevent:
+ * a body that greets a name we did not supply should never leave. But do not
+ * read the history as evidence the model hallucinates names. It has not yet.
+ * What DID happen is that a scraper rewrote 89 owner names underneath a live
+ * campaign, which is a different bug in a different place.
  *
  * The same rule catches the inverse: a lead with no usable name where the model
  * decides to greet someone anyway.
