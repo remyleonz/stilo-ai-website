@@ -616,6 +616,17 @@ function preSendCheck(campaign, target, lead) {
         return { ok: false, reason: 'wrong_pool' };
     }
 
+    // A lead a rep has already closed out is never texted, whatever stage the
+    // TARGET sits in. Enqueue now filters these, but the first Blason enqueue
+    // proved the point: six leads whose owners said "not interested" on the
+    // phone on 08-27 were queued for a text on 08-28 and had copy written for
+    // them, because the enqueue's out-of-pipeline list did not include
+    // owner_uninterested. Every rule that only lives in the enqueue is a rule
+    // that already-queued rows escape.
+    if (['CLOSED_LOST', 'CLOSED_WON'].includes(String(lead.stage || ''))) {
+        return { ok: false, reason: 'lead_' + String(lead.stage).toLowerCase() };
+    }
+
     // do_not_call is NEVER waivable. It carries actual opt-outs, DNC requests,
     // and confirmed scrub blocks, and no campaign setting may override it.
     if (lead.do_not_call) return { ok: false, reason: 'do_not_call' };

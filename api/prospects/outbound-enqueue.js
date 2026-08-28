@@ -16,7 +16,9 @@
  * Every candidate must clear all of:
  *   - not do_not_call
  *   - never booked a meeting with us
- *   - last outcome isn't wrong_number / disconnected / dnc_request
+ *   - belongs to this campaign's pool (campaign.client_id vs leads.client_id)
+ *   - has not already told us no: stage isn't CLOSED_*, and the last outcome
+ *     isn't wrong_number / disconnected / dnc_request / owner_uninterested
  *   - has a phone
  *   - scrub_status = 'clear', and the number we will text is the number that
  *     was scrubbed
@@ -43,7 +45,27 @@ const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = requi
 const { normalizePhone } = require('../openphone/_shared');
 const ob = require('./_outbound');
 
-const OUT_OF_PIPELINE = ['booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call'];
+// Outcomes that take a lead out of the campaign. 'owner_uninterested' and
+// 'meeting_cancelled' were missing until 2026-08-28, and the first Blason
+// enqueue caught it: six people who had told a rep "not interested" the
+// previous afternoon were queued for a text the next morning. 4Ever Young,
+// NuLife, Rewind Anti-Aging, MD Aesthetics, Bellasa and Modern Dermatology all
+// said no on the phone on 08-27 and all six had copy written for them.
+//
+// A soft no is still a no. _outbound_reply.js already refuses to pitch someone
+// who says stop in a text; saying it out loud to a rep has to count for at
+// least as much, or the channel becomes the thing that generates complaints
+// rather than replies. They keep their long_followup date; that is the path
+// back, not a text tomorrow.
+const OUT_OF_PIPELINE = [
+    'booked_meeting', 'dnc_request', 'wrong_number', 'disconnected', 'do_not_call',
+    'owner_uninterested', 'meeting_cancelled',
+];
+
+// Stage is the second half of the same rule and it catches what the outcome
+// misses: a lead can be closed out by a rep in the dashboard without the call
+// log ever recording a declining outcome.
+const CLOSED_STAGES = ['CLOSED_LOST', 'CLOSED_WON'];
 
 async function connectedLeadIds(sb) {
     const ids = new Set();
@@ -147,7 +169,7 @@ module.exports = async function handler(req, res) {
     // Reasons are counted, not just filtered, so a small result set is
     // explainable instead of mysterious.
     const held = {
-        no_phone: 0, do_not_call: 0, already_booked: 0, bad_outcome: 0, not_connected: 0,
+        no_phone: 0, do_not_call: 0, already_booked: 0, bad_outcome: 0, closed_stage: 0, not_connected: 0,
         not_scrubbed: 0, scrub_blocked: 0, scrub_phone_mismatch: 0,
         no_rep_line: 0, not_in_audience: 0, already_in_campaign: 0,
         scrub_waived_prior_contact: 0, line_followed_last_dialer: 0,
@@ -163,7 +185,7 @@ module.exports = async function handler(req, res) {
         let q = sb.from('leads').select(
             'id,name,owner_name,niche,category,address,website,pitch_agent,assigned_to,' +
             'owner_phone_e164,owner_phone,phone,do_not_call,meeting_booked_at,last_called_at,' +
-            'last_called_outcome,has_cold_call_script,scrub_status,scrub_phone'
+            'last_called_outcome,stage,has_cold_call_script,scrub_status,scrub_phone'
         );
         // ARCHIVE IS AUTHORITATIVE. archived_batch is how a lead is retired, and
         // until 2026-08-19 this endpoint ignored it entirely, so every retired
@@ -207,6 +229,7 @@ module.exports = async function handler(req, res) {
             if (l.do_not_call) { held.do_not_call++; continue; }
             if (l.meeting_booked_at) { held.already_booked++; continue; }
             if (OUT_OF_PIPELINE.includes(l.last_called_outcome || '')) { held.bad_outcome++; continue; }
+            if (CLOSED_STAGES.includes(l.stage || '')) { held.closed_stage++; continue; }
 
             const to = normalizePhone(l.owner_phone_e164 || l.owner_phone || l.phone || '');
             if (!to) { held.no_phone++; continue; }

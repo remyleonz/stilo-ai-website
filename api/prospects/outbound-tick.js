@@ -180,7 +180,7 @@ module.exports = async function handler(req, res) {
                 // undefined coerces to null, which passes every client lead
                 // straight through a STILO campaign. Same failure shape as the
                 // missing niche/category on 2026-08-11.
-                .select('id,name,niche,category,client_id,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
+                .select('id,name,niche,category,client_id,stage,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
 
             t.__is_team_number = teamSet.has(require('../openphone/_shared').normalizePhone(t.to_phone) || '');
             const check = ob.preSendCheck(campaign, t, lead);
