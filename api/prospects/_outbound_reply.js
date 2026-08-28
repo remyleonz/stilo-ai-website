@@ -45,7 +45,36 @@ function isStop(text) {
  *                they didn't ask us to never contact them, just not to pitch
  *   'replied' -> everything else, the normal callback path
  */
-const NEGATIVE_RE = /\b(stop|unsubscribe|remove me|don'?t (?:text|message|contact)|wrong number|not interested|leave me alone|quit|cancel|no me escriba|deje de escribir|b[oó]rreme|elim[ií]neme)\b/i;
+/**
+ * An explicit request to be taken off the list. This outranks everything except
+ * an autoresponder, and it is evaluated across the WHOLE message rather than by
+ * whichever pattern happens to appear first.
+ *
+ * That ordering is the bug this replaced. Boss Bay Beauty answered the Blason
+ * opener with "Not interested. Take this number off your list". The old
+ * classifier matched NEGATIVE_RE, found "not interested" first because it comes
+ * first in the sentence, and returned 'dead' - which carries no DNC flag, so a
+ * person who had just asked in writing to be removed stayed live in the dial
+ * pool. This file's own header names that exact outcome as the complaint that
+ * ends an account: opting out of a text and then getting a cold call.
+ *
+ * "take this number off your list" was also not in the pattern set at all; only
+ * "remove me" was.
+ */
+const OPT_OUT_RE = new RegExp([
+    "\\bstop\\b", "\\bunsubscribe\\b", "\\bquit\\b", "\\bcancel\\b",
+    "remove (?:me|us|this|my)", "take (?:me|us|this number|my number|it) off",
+    "off (?:your|the|this) (?:list|mailing)", "delete (?:me|my number|this number)",
+    "don'?t (?:text|message|contact|call)", "do not (?:text|message|contact|call)",
+    "no (?:more|further) (?:texts?|messages?)", "leave me alone", "lose my number",
+    "no me escriba", "deje de escribir", "b[o\u00f3]rreme", "elim[i\u00ed]neme",
+    "s[a\u00e1]queme de (?:la|su) lista", "qu[i\u00ed]teme de (?:la|su) lista",
+    "no me (?:llame|contacte)",
+].join('|'), 'i');
+
+// Not an opt-out and not a polite decline: a flat statement that this is the
+// wrong person or the wrong fit. Same destination as DECLINE_RE.
+const DEAD_RE = /\b(?:wrong number|not interested|no estoy interesad|n[u\u00fa]mero equivocado)\b/i;
 
 /**
  * The polite decline. Routes to 'dead', never to opt_out: these people did not
@@ -113,27 +142,35 @@ const AUTORESPONDER_RE = new RegExp([
     "le responderemos", "en breve le", "fuera de (?:la )?oficina",
 ].join('|'), 'i');
 
+/**
+ * STRICTLY ORDERED BY SEVERITY, not by where a phrase sits in the sentence.
+ * Every message is tested against every band. First-match-wins on a single
+ * combined regex is what let "Not interested. Take this number off your list"
+ * resolve as a mere decline.
+ */
 function classifyReply(text) {
     const s = String(text || '');
-    // Checked FIRST. An autoresponder that happens to contain a stop keyword in
-    // its footer ("Reply STOP to unsubscribe") is not a person opting out, and
-    // treating it as one would DNC a lead nobody has actually spoken to. A real
-    // human opt-out does not arrive wrapped in an away-message.
+    // 1. A machine. Checked first because away-messages routinely carry a
+    //    "Reply STOP to unsubscribe" footer, and routing that to opt_out would
+    //    DNC a lead no human has ever answered for.
     if (AUTORESPONDER_RE.test(s)) return 'auto';
-    const m = s.match(NEGATIVE_RE);
-    // Checked before the friendly-stop forgiveness below but after NEGATIVE_RE,
-    // so an explicit "stop" still outranks a polite no in the same message
-    // ("no thanks, and please stop texting me" is an opt-out, not just a dead).
-    if (!m && DECLINE_RE.test(s)) return 'dead';
-    if (!m) return 'replied';
-    const hit = m[1].toLowerCase();
-    if (hit === 'wrong number' || hit === 'not interested') return 'dead';
-    // Only forgive the friendly reading when it is the ONLY negative hit.
-    if ((hit === 'stop' || hit === 'quit') && FRIENDLY_STOP_RE.test(s)
-        && !/\b(unsubscribe|remove me|don'?t (?:text|message|contact)|leave me alone)\b/i.test(s)) {
-        return 'replied';
+
+    // 2. An explicit removal request. Outranks any decline in the same message.
+    if (OPT_OUT_RE.test(s)) {
+        // The one forgiveness: a friendly "stop by tomorrow" / "quit early
+        // Friday", and only when no other opt-out signal is present. If a
+        // phrase is ambiguous it stays an opt-out, because a false opt-out
+        // costs one lead and a missed one costs the account.
+        const onlyStopish = !/(unsubscribe|remove (?:me|us|this|my)|take (?:me|us|this number|my number|it) off|off (?:your|the|this) (?:list|mailing)|delete (?:me|my number|this number)|don'?t (?:text|message|contact|call)|do not (?:text|message|contact|call)|leave me alone|lose my number|no me escriba|deje de escribir|b[o\u00f3]rreme|elim[i\u00ed]neme|s[a\u00e1]queme de|qu[i\u00ed]teme de|no me (?:llame|contacte))/i.test(s);
+        if (onlyStopish && FRIENDLY_STOP_RE.test(s)) return 'replied';
+        return 'opt_out';
     }
-    return 'opt_out';
+
+    // 3. A no, without a removal request. Lead stays callable elsewhere.
+    if (DEAD_RE.test(s) || DECLINE_RE.test(s)) return 'dead';
+
+    // 4. Everything else is a real person worth calling back.
+    return 'replied';
 }
 
 function esc(s) {
