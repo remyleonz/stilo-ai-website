@@ -156,11 +156,27 @@ async function forwardToProspecting(opts) {
         headers['Content-Type'] = 'application/json';
         init.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
     }
+    // Bound the wait. Without this a stalled upstream hangs the caller for as
+    // long as the platform allows, and callers that Promise.all() this with
+    // other work (lifecycle-stats does) never resolve at all — the browser sits
+    // on a spinner with no error to show. A slow backend must degrade to the
+    // fallback path, not freeze the page.
+    const ac = new AbortController();
+    const killer = setTimeout(function () { ac.abort(); }, Number(opts.timeoutMs || 8000));
     let res;
     try {
-        res = await fetch(url, init);
+        res = await fetch(url, Object.assign({}, init, { signal: ac.signal }));
     } catch (e) {
-        return { status: 502, json: { error: 'prospecting_unavailable', detail: String(e && e.message || e) } };
+        const aborted = e && (e.name === 'AbortError' || ac.signal.aborted);
+        return {
+            status: 502,
+            json: {
+                error: aborted ? 'prospecting_timeout' : 'prospecting_unavailable',
+                detail: String(e && e.message || e)
+            }
+        };
+    } finally {
+        clearTimeout(killer);
     }
     const text = await res.text();
     let json;

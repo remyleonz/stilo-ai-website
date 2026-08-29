@@ -86,124 +86,88 @@ async function localStats(sdrEmail, clientIdOverride) {
         // STILO book while the list below showed only the client pool
         // (the 1,590 / 1,663 counter incident, 2026-08-27).
         const clientId = clientIdOverride || await resolveClientScope(sdrEmail);
-        const scope = function (q) {
-            let out = sdrEmail ? q.eq('assigned_to', sdrEmail) : q;
-            if (clientId) out = out.eq('client_id', clientId);
-            return out;
-        };
-
-        const callable = function (q) {
-            // Callable = has a David-written cold-call script AND a dialable
-            // phone, not DNC, still in the cold-call lifecycle. (The scripted
-            // set is the callable queue; owner name not required.) Owners run
-            // through the same gate on their loaned-in scripted leads.
-            // Client mode: no per-lead script gate, same as callable.js.
-            let out = scope(q)
-                .or('owner_phone.not.is.null,phone.not.is.null')
-                .or('do_not_call.is.null,do_not_call.eq.false')
-                .or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
-            if (!clientId) out = out.eq('has_cold_call_script', true);
-            return out;
-        };
-        const C = function () { return leads().select('id', { count: 'exact', head: true }); };
-
-        const [hot, warm, cool, deadOut, cb, bk, ct, bw, cd, allLeads] = await Promise.all([
-            callable(C()).eq('prospect_tier', 'hot'),
-            callable(C()).eq('prospect_tier', 'warm'),
-            callable(C()).eq('prospect_tier', 'cool'),
-            scope(C()).or('last_called_outcome.in.(' + OUT_OF_PIPELINE.join(',') + '),and(call_attempts.gte.3,last_called_outcome.is.null)'),
-            // Same human-scheduled-only filter as callbacks.js / list-callbacks.js
-            scope(C()).or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))')
-                .or('do_not_call.is.null,do_not_call.eq.false'),
-            scope(C()).eq('last_called_outcome', 'booked_meeting'),
-            scope(C()).gte('last_called_at', startOfDay.toISOString()),
-            scope(C()).eq('last_called_outcome', 'booked_meeting').gte('last_called_at', startOfWeek.toISOString()),
-            scope(C()).eq('next_action_type', 'callback').lte('next_action_due_at', endOfDay.toISOString())
-                .or('last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)'),
-            callable(C())
-        ]);
-
-        // If ANY scope-query failed (most likely cause: assigned_to column
-        // doesn't exist yet), retry the lead-side queries without scoping
-        // so we at least return global counts. The SDR-action counts below
-        // (lead_calls.logged_by) still scope correctly.
-        const anyError = [hot, warm, cool, deadOut, cb, bk, ct, bw, cd, allLeads]
-            .some(r => r && r.error);
-        let scopedHot = hot, scopedWarm = warm, scopedCool = cool, scopedDeadOut = deadOut,
-            scopedCb = cb, scopedBk = bk, scopedCt = ct, scopedBw = bw, scopedCd = cd, scopedAll = allLeads;
-        let scoping_applied = !!sdrEmail;
-        if (anyError && sdrEmail) {
-            scoping_applied = false;
-            const callableNoScope = function (q) {
-                return q
-                    .eq('has_cold_call_script', true)
-                    .or('owner_phone.not.is.null,phone.not.is.null')
-                    .or('do_not_call.is.null,do_not_call.eq.false')
-                    .or('last_called_outcome.is.null,last_called_outcome.not.in.(' + OUT_OF_PIPELINE.join(',') + ')');
-            };
-            const Cu = () => leads().select('id', { count: 'exact', head: true });
-            [scopedHot, scopedWarm, scopedCool, scopedDeadOut, scopedCb, scopedBk, scopedCt, scopedBw, scopedCd, scopedAll] = await Promise.all([
-                callableNoScope(Cu()).eq('prospect_tier', 'hot'),
-                callableNoScope(Cu()).eq('prospect_tier', 'warm'),
-                callableNoScope(Cu()).eq('prospect_tier', 'cool'),
-                Cu().or('last_called_outcome.in.(' + OUT_OF_PIPELINE.join(',') + '),and(call_attempts.gte.3,last_called_outcome.is.null)'),
-                Cu().or('last_called_outcome.in.(callback_requested,interested_followup),and(next_action_type.eq.callback,or(last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)))').or('do_not_call.is.null,do_not_call.eq.false'),
-                Cu().eq('last_called_outcome', 'booked_meeting'),
-                Cu().gte('last_called_at', startOfDay.toISOString()),
-                Cu().eq('last_called_outcome', 'booked_meeting').gte('last_called_at', startOfWeek.toISOString()),
-                Cu().eq('next_action_type', 'callback').lte('next_action_due_at', endOfDay.toISOString())
-                    .or('last_called_outcome.is.null,last_called_outcome.not.in.(voicemail,no_answer,missed_inbound)'),
-                callableNoScope(Cu())
-            ]);
-            // If even the unscoped retries failed, bail to upstream fallback.
-            if ([scopedHot, scopedWarm, scopedCool, scopedDeadOut, scopedCb, scopedBk, scopedCt, scopedBw, scopedCd, scopedAll].some(r => r && r.error)) {
-                return null;
-            }
-        } else if (anyError) {
+        // ONE round trip for all ten counters.
+        //
+        // This used to be ten parallel PostgREST `count=exact, head=true`
+        // requests. None of them can use an index (every one carries an
+        // OR-chain), so each was a full scan of prospecting.leads, and the
+        // admin Leads tab calls this endpoint on mount — so one page load
+        // asked for ten whole-table scans at once.
+        //
+        // Each count takes 86 ms inside Postgres. Ten in parallel stalled the
+        // PostgREST layer roughly every other attempt, hanging past 30 s with
+        // the database completely idle: pg_stat_activity showed no active
+        // query and no lock wait. The request never returned and never failed,
+        // so the client sat on "Loading prospects..." and the four workflow
+        // cards sat on their em-dashes indefinitely. A 15-second edge cache was
+        // the only reason the tab ever rendered (2026-08-29).
+        //
+        // prospecting.lead_lifecycle_counts does the same work in one scan and
+        // one round trip. See api/migrations/lifecycle_counts_rpc.sql.
+        const { data: rpcCounts, error: rpcError } = await sb.rpc('lead_lifecycle_counts', {
+            p_sdr_email:  sdrEmail || null,
+            p_client_id:  clientId || null,
+            p_start_day:  startOfDay.toISOString(),
+            p_start_week: startOfWeek.toISOString(),
+            p_end_day:    endOfDay.toISOString()
+        });
+        if (rpcError || !rpcCounts) {
+            // Missing function or a bad scope value. Fall through to the
+            // upstream /stats fallback rather than serving zeroes as if they
+            // were real counts.
+            console.error('[lifecycle-stats] rpc failed:', rpcError && rpcError.message);
             return null;
         }
+        const n = function (k) { return Number(rpcCounts[k] || 0); };
+        const scoping_applied = !!sdrEmail;
 
         // Leads assigned to the rep but hidden from the call list because David
         // hasn't shipped their sales script yet (snapshotted by the script sync).
         // sb is the prospecting-scoped client created at the top of localStats.
-        let awaitingCount = 0;
-        try {
+        const awaitingQ = (function () {
             let aq = sb.from('awaiting_script').select('lead_id', { count: 'exact', head: true });
             if (sdrEmail) aq = aq.eq('assigned_to', sdrEmail);
-            const { count } = await aq;
-            awaitingCount = count || 0;
-        } catch (_) { awaitingCount = 0; }
+            return aq;
+        })();
 
         // True dials today: lead_calls rows logged by this rep (scoped when
         // sdrEmail is set). The Leads tab "Called today" card uses this so it
         // matches the Team tab's dial count, instead of the distinct-leads-by-
         // assignment count (called_today_count) which reads lower.
-        let dialsToday = 0;
-        try {
-            let dq = sb.from('lead_calls').select('id', { count: 'exact', head: true }).gte('called_at', startOfDay.toISOString());
+        const dialsQ = (function () {
+            let dq = sb.from('lead_calls').select('id', { count: 'exact', head: true })
+                .gte('called_at', startOfDay.toISOString());
             if (sdrEmail) dq = dq.eq('logged_by', sdrEmail);
-            const { count } = await dq;
-            dialsToday = count || 0;
-        } catch (_) { dialsToday = 0; }
+            return dq;
+        })();
+
+        // Two cheap indexed counts, together. Neither is allowed to fail the
+        // response: a missing snapshot table just means zero awaiting scripts.
+        let awaitingCount = 0, dialsToday = 0;
+        try {
+            const [aRes, dRes] = await Promise.all([awaitingQ, dialsQ]);
+            awaitingCount = (aRes && aRes.count) || 0;
+            dialsToday    = (dRes && dRes.count) || 0;
+        } catch (_) { /* leave both at zero */ }
 
         return {
             tier_counts: {
-                hot:  scopedHot.count  || 0,
-                warm: scopedWarm.count || 0,
-                cool: scopedCool.count || 0,
-                dead: scopedDeadOut.count || 0
+                hot:  n('hot'),
+                warm: n('warm'),
+                cool: n('cool'),
+                dead: n('dead_pool')
             },
-            tab_badges: { callbacks: scopedCb.count || 0, booked: scopedBk.count || 0 },
+            tab_badges: { callbacks: n('callbacks'), booked: n('booked') },
             activity: {
-                calls_today:         scopedCt.count || 0,
-                booked_this_week:    scopedBw.count || 0,
-                callbacks_due_today: scopedCd.count || 0
+                calls_today:         n('called_today'),
+                booked_this_week:    n('booked_week'),
+                callbacks_due_today: n('callbacks_due')
             },
-            all_leads_count:            scopedAll.count || 0,
-            called_today_count:         scopedCt.count || 0,
+            all_leads_count:            n('all_callable'),
+            called_today_count:         n('called_today'),
             dials_today_count:          dialsToday,
-            callbacks_due_today_count:  scopedCd.count || 0,
-            dead_pool_count:            scopedDeadOut.count || 0,
+            callbacks_due_today_count:  n('callbacks_due'),
+            dead_pool_count:            n('dead_pool'),
             awaiting_script_count:      awaitingCount,
             _scoping_applied: scoping_applied,
             _source: 'supabase_local'

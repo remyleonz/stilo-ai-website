@@ -6437,8 +6437,37 @@
             return h;
         }
 
+        // In-flight GETs are shared, not repeated.
+        //
+        // Mounting the Leads tab called loadProspectStats() six times and
+        // loadProspectCallable() three times in the same tick (13 and 4 call
+        // sites respectively, several firing off the same render). Every one
+        // opened its own request for a URL already in flight. Measured
+        // 2026-08-29: one page load issued six concurrent
+        // /api/prospects/lifecycle-stats requests and three
+        // /api/prospects/callable?limit=1000, most of which were then aborted
+        // by the next render. That multiplied an already expensive endpoint by
+        // six and was what turned a slow query into a hung tab.
+        //
+        // Identical concurrent GETs now await ONE promise. The entry is dropped
+        // the moment it settles, so this is request coalescing, not a cache —
+        // a later call still refetches, and a force-refresh still works.
+        var _prospectInFlight = {};
         async function prospectFetchJSON(path, opts) {
             opts = opts || {};
+            var method = opts.method || 'GET';
+            if (method === 'GET' && !opts.body) {
+                if (_prospectInFlight[path]) return _prospectInFlight[path];
+                var p = _prospectFetchRaw(path, opts);
+                _prospectInFlight[path] = p;
+                var clear = function () { delete _prospectInFlight[path]; };
+                p.then(clear, clear);
+                return p;
+            }
+            return _prospectFetchRaw(path, opts);
+        }
+
+        async function _prospectFetchRaw(path, opts) {
             var headers = await prospectAuthHeaders(opts.headers || {});
             if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
             var res = await fetch(path, { method: opts.method || 'GET', headers: headers, body: opts.body });
