@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
 
     const { data, error } = await supa
       .from('client_agents')
-      .select('id, agent_code, status, config, submitted_for_review_at, clients!inner(business_name)')
+      .select('id, agent_type, status, config, clients!inner(business_name)')
       .eq('status', 'pending_admin_review')
       .order('config->>submitted_for_review_at', { ascending: true });
     if (error) return res.status(500).json({ error: error.message });
@@ -55,7 +55,9 @@ module.exports = async function handler(req, res) {
       const cfg = row.config || {};
       return {
         client_agent_id: row.id,
-        agent_code: row.agent_code,
+        // public.client_agents stores the agent as agent_type; the admin card
+        // reads item.agent_code, so the wire name stays put.
+        agent_code: row.agent_type,
         business_name: row.clients?.business_name || cfg.business_name || '(unnamed)',
         submitted_at: cfg.submitted_for_review_at || null,
         submitted_by_email: cfg.submitted_by_email || null,
