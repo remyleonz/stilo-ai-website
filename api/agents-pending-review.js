@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
 
     const { data, error } = await supa
       .from('client_agents')
-      .select('id, agent_code, status, config, submitted_for_review_at, clients!inner(business_name, owner_user_id)')
+      .select('id, agent_code, status, config, submitted_for_review_at, clients!inner(business_name)')
       .eq('status', 'pending_admin_review')
       .order('config->>submitted_for_review_at', { ascending: true });
     if (error) return res.status(500).json({ error: error.message });
