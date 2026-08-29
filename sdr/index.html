@@ -2416,8 +2416,13 @@
 
             setEcSending(true); msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Sending…';
             try {
-                await fetchJSON('/api/prospects/send-email', { method: 'POST', body: JSON.stringify(payload) });
-                msg.style.color = 'var(--green)'; msg.textContent = 'Sent to ' + to + '.';
+                var _r = await fetchJSON('/api/prospects/send-email', { method: 'POST', body: JSON.stringify(payload) });
+                // The server suppresses an identical send inside 5 minutes, so
+                // say so plainly rather than reporting a send that did not happen.
+                msg.style.color = 'var(--green)';
+                msg.textContent = (_r && _r.duplicate_suppressed)
+                    ? 'Already sent moments ago — not sent again.'
+                    : 'Sent to ' + to + '.';
                 setTimeout(closeEmailComposer, 1300);
             } catch (e) {
                 setEcSending(false);

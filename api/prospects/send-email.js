@@ -242,6 +242,46 @@ module.exports = async function handler(req, res) {
     // name could contain characters that would otherwise need escaping.
     const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + (clientName || 'STILO AI Partners') + '"';
 
+    // ── Idempotency claim, BEFORE Resend ───────────────────────────────────
+    // This route had no duplicate guard at all and sends before it logs, so a
+    // second request for the same email sent a second email: a double-click, a
+    // client retry, a proxy replaying a slow POST. Five prospects got the same
+    // message twice between Aug 1 and Aug 28, three of them on one day.
+    //
+    // A read-then-check cannot close this. Two requests two seconds apart both
+    // read an empty history before either writes. So we CLAIM the send with a
+    // uniquely-indexed key first; the loser of the race fails the insert and
+    // returns instead of sending. The key carries a 5-minute bucket, so a
+    // genuine follow-up with the same subject later is unaffected.
+    const dedupeKey = require('crypto').createHash('sha1')
+        .update([id, 'email', to, subject, Math.floor(Date.now() / 300000)].join('|'))
+        .digest('hex');
+    const claim = await sb.from('lead_messages').insert({
+        lead_id: id,
+        direction: 'outbound',
+        channel: 'email',
+        subject: subject,
+        sent_at: new Date().toISOString(),
+        sent_by: gate.email || null,
+        to_address: to,
+        provider: 'resend',
+        status: 'sending',
+        variant: variant,
+        dedupe_key: dedupeKey
+    }).select('id').single();
+    if (claim.error) {
+        // 23505 = unique violation: an identical send is already in flight or
+        // just completed. Report it as success-shaped so a retrying client
+        // stops rather than escalating, but send nothing.
+        if (String(claim.error.code) === '23505') {
+            console.warn('[send-email] duplicate suppressed lead=' + id + ' subject=' + JSON.stringify(subject));
+            return res.status(200).json({ ok: true, duplicate_suppressed: true,
+                detail: 'An identical email to this lead was sent moments ago. Nothing was sent again.' });
+        }
+        return res.status(500).json({ error: 'claim_failed', detail: claim.error.message });
+    }
+    const claimId = claim.data.id;
+
     let sendResult;
     try {
         const r = await fetch('https://api.resend.com/emails', {
@@ -270,9 +310,15 @@ module.exports = async function handler(req, res) {
             })
         });
         const j = await r.json().catch(function () { return {}; });
-        if (!r.ok) return res.status(502).json({ error: 'send_failed', detail: j.message || ('http_' + r.status) });
+        if (!r.ok) {
+            // Nothing went out, so release the claim or the rep cannot retry
+            // for five minutes.
+            await sb.from('lead_messages').delete().eq('id', claimId);
+            return res.status(502).json({ error: 'send_failed', detail: j.message || ('http_' + r.status) });
+        }
         sendResult = { id: j.id };
     } catch (e) {
+        await sb.from('lead_messages').delete().eq('id', claimId);
         return res.status(502).json({ error: 'send_failed', detail: String(e.message || e) });
     }
 
@@ -283,22 +329,16 @@ module.exports = async function handler(req, res) {
         // supabase-js returns { error } rather than throwing, so CHECK it —
         // a swallowed error here is how email tracking silently broke before
         // (service_role lacked USAGE on lead_messages_id_seq). Now surfaced.
-        const { error: logErr } = await sb.from('lead_messages').insert({
-            lead_id: id,
-            direction: 'outbound',
-            channel: 'email',
-            subject: subject,
+        // UPDATE the claim row rather than inserting a second one — the claim
+        // above already created this message's row. Inserting here would leave
+        // two rows per send and defeat the point.
+        const { error: logErr } = await sb.from('lead_messages').update({
             body: plain,
             body_preview: plain.slice(0, 280),
-            sent_at: new Date().toISOString(),
-            sent_by: gate.email || null,
-            to_address: to,
             from_address: fromEmail,
-            provider: 'resend',
             provider_message_id: sendResult.id || null,
-            variant: variant,
             status: 'sent'
-        });
+        }).eq('id', claimId);
         if (logErr) console.error('[send-email] lead_messages log failed:', logErr.message);
     } catch (e) { console.error('[send-email] lead_messages log threw:', e && e.message); }
     try {
