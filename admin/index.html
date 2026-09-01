@@ -9707,7 +9707,7 @@
         async function openProspectDrawer(leadId, mode) {
             mode = mode || 'callable';
             prospectState.currentLeadId = leadId;
-            callbackState = { selectedIso: null, expandedDay: null };  // fresh picker per lead
+            callbackState = { selectedIso: null, expandedDay: null, manual: null };  // fresh picker per lead
             // Fresh stepper per lead too. It caches an expanded step, expanded
             // message bodies, and a fetched confirmation-email preview, all keyed
             // to one lead. The SDR dashboard already did this; admin never did,
@@ -11036,7 +11036,7 @@
            doesn't need to check the Google Calendar). 7 days out, every day,
            8:00 AM through 8:00 PM ET in 30-minute steps; past times on today are
            hidden. The selected ISO is read by readCallbackDateTime(). */
-        var callbackState = { selectedIso: null, expandedDay: null };
+        var callbackState = { selectedIso: null, expandedDay: null, manual: null };
 
         // ET wall-clock helpers. The whole dashboard hardcodes EDT (-04:00),
         // which is correct Mar–early-Nov; matches etCalendarBounds() elsewhere.
@@ -11107,7 +11107,34 @@
             }).join('');
             html += '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + escapeAdminHtml(callbackState.expandedDay) + ' · pick a time</div>'
                 + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;max-height:240px;overflow-y:auto;padding:2px;">' + timeButtons + '</div>';
+            // Escape hatch past the 7-day chips: "owner is on a trip until the
+            // end of September" needs a real calendar, not next week. The
+            // native date input opens a month picker, so any day works.
+            html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
+                + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or any date further out (back from a trip, next month, next season)</label>'
+                + '<input id="prospectCallbackManual" type="datetime-local" value="' + escapeAdminHtml(callbackState.manual || '') + '" min="' + etTodayYMD() + 'T08:00" onchange="setManualCallbackSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;color-scheme:dark;">'
+                + (callbackState.manual && callbackState.selectedIso
+                    ? '<div style="margin-top:6px;font-size:12px;color:var(--blue);font-weight:600;">Callback set: ' + new Date(callbackState.selectedIso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET</div>'
+                    : '')
+                + '</div>';
             host.innerHTML = html;
+        }
+
+        function setManualCallbackSlot(val) {
+            var msgEl = document.getElementById('prospectFormMsg');
+            if (!val) { callbackState.manual = null; renderCallbackPicker(); return; }
+            // datetime-local is zoneless; the rep thinks in ET wall time and the
+            // dashboard hardcodes EDT, same as etSlotIso() above.
+            var v = val.length === 16 ? val + ':00' : val;
+            var iso = new Date(v + '-04:00').toISOString();
+            if (!isFinite(new Date(iso).getTime()) || new Date(iso).getTime() <= Date.now() + 60000) {
+                if (msgEl) { msgEl.style.color = 'var(--red)'; msgEl.textContent = 'That callback time is in the past. Pick a future date.'; }
+                return;
+            }
+            if (msgEl) msgEl.textContent = '';
+            callbackState.manual = val;
+            callbackState.selectedIso = iso;
+            renderCallbackPicker();
         }
 
         function selectCallbackDay(day) {
@@ -11117,6 +11144,7 @@
         function selectCallbackSlot(iso) {
             callbackState.selectedIso = iso;
             callbackState.expandedDay = bookingDayKey(iso);
+            callbackState.manual = null;   // a chip click overrides the manual date
             renderCallbackPicker();
         }
 

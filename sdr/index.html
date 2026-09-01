@@ -3052,10 +3052,10 @@
            picker, but slots are generated locally: 7 days out, every day,
            8:00 AM–8:00 PM ET in 30-minute steps, past times on today hidden.
            A callback is just a reminder, so it doesn't touch Google Calendar. */
-        var callbackState = { selectedIso: null, expandedDay: null };
+        var callbackState = { selectedIso: null, expandedDay: null, manual: null };
         function openCallback(leadId) {
             hideOutcomeBoxes();
-            callbackState = { selectedIso: null, expandedDay: null };
+            callbackState = { selectedIso: null, expandedDay: null, manual: null };
             const box = document.getElementById('sdrCallbackBox');
             if (box) { box.style.display = 'block'; box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
             renderCallbackPicker();
@@ -3121,7 +3121,31 @@
             }).join('');
             html += '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + escapeHtml(callbackState.expandedDay) + ' · pick a time</div>'
                 + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;max-height:230px;overflow-y:auto;padding:2px;">' + timeButtons + '</div>';
+            // Escape hatch past the 7-day chips: a prospect back from a trip
+            // next month needs a real calendar. Native date input = month picker.
+            html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
+                + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or any date further out (back from a trip, next month, next season)</label>'
+                + '<input id="sdrCallbackManual" type="datetime-local" value="' + escapeHtml(callbackState.manual || '') + '" onchange="setManualCallbackSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:13px;color-scheme:dark;">'
+                + (callbackState.manual && callbackState.selectedIso
+                    ? '<div style="margin-top:6px;font-size:12px;color:var(--blue);font-weight:600;">Callback set: ' + new Date(callbackState.selectedIso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET</div>'
+                    : '')
+                + '</div>';
             host.innerHTML = html;
+        }
+
+        function setManualCallbackSlot(val) {
+            if (!val) { callbackState.manual = null; renderCallbackPicker(); return; }
+            // datetime-local is zoneless; the rep thinks in ET wall time and the
+            // dashboard hardcodes EDT everywhere else.
+            const v = val.length === 16 ? val + ':00' : val;
+            const iso = new Date(v + '-04:00').toISOString();
+            if (!isFinite(new Date(iso).getTime()) || new Date(iso).getTime() <= Date.now() + 60000) {
+                outcomeMsg('That callback time is in the past. Pick a future date.', 'var(--red)');
+                return;
+            }
+            callbackState.manual = val;
+            callbackState.selectedIso = iso;
+            renderCallbackPicker();
         }
         function selectCallbackDay(day) {
             callbackState.expandedDay = (callbackState.expandedDay === day) ? null : day;
@@ -3130,6 +3154,7 @@
         function selectCallbackSlot(iso) {
             callbackState.selectedIso = iso;
             callbackState.expandedDay = bookingDayKey(iso);
+            callbackState.manual = null;   // a chip click overrides the manual date
             renderCallbackPicker();
         }
         async function scheduleCallback(leadId) {
