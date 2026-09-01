@@ -10365,28 +10365,12 @@
                 + '<form id="' + formId + '" onsubmit="event.preventDefault();' + submitFn + ';return false;" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
                 + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px;">' + (mode === 'emailable' ? 'Log email' : 'Log call') + '</h3>'
 
-                // Sales script block — pulls David's per-lead cold-call script
-                // from the GCS bucket via /api/prospects/cold-call-script.
-                // Falls back to prospect_reasoning + matched_product_name when
-                // no script exists yet for this business. Loaded async so the
-                // drawer paints fast; loadColdCallScript fills it in.
-                // Sales script panel — shows only David's per-lead cold-call
-                // script from the GCS bucket. The old prospect_reasoning text
-                // (e.g. "reach=both(1.00) | product=LCR(28) | pain=23: ...")
-                // is internal scoring debug and not for the operator, so it's
-                // not surfaced anymore.
-                + ((mode !== 'emailable')
-                    ? '<div id="prospectScriptCard" style="margin-bottom:14px;padding:12px 14px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.22);border-radius:8px;">'
-                        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">'
-                          + '<span style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);">Sales script</span>'
-                          + '<span id="prospectScriptPitch"></span>'
-                        + '</div>'
-                        + '<div id="prospectScriptBody" style="font-size:13px;color:var(--text-primary);line-height:1.55;">'
-                          + '<div style="color:var(--text-muted);">Loading script…</div>'
-                        + '</div>'
-                        + '<div id="prospectScriptMeta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>'
-                      + '</div>'
-                    : '')
+                // Sales script moved BELOW the log form + call history +
+                // meeting notes (2026-09-01, Remy): the script is ~30KB and
+                // sat between the rep and everything they need pre-dial, so
+                // every lead required a scroll past it to reach notes, the
+                // outcome buttons and the history. The card itself is
+                // unchanged and still filled async by loadColdCallScript.
 
                 // One-tap outcome chips (parity with the SDR drawer). They drive
                 // the hidden #prospectOutcome the existing handlers read, so the
@@ -10460,6 +10444,22 @@
                 // Meeting transcripts — sales-meeting summaries (Tactiq) + pasted
                 // transcripts, so the future sales agent learns from real calls.
                 + renderMeetingsSection(d)
+
+                // Sales script — full text, below the pre-dial essentials (see
+                // note inside the form above). Long by design; nothing the rep
+                // needs before dialing sits under it anymore.
+                + ((mode !== 'emailable')
+                    ? '<div id="prospectScriptCard" style="margin-top:16px;padding:12px 14px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.22);border-radius:8px;">'
+                        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">'
+                          + '<span style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);">Sales script</span>'
+                          + '<span id="prospectScriptPitch"></span>'
+                        + '</div>'
+                        + '<div id="prospectScriptBody" style="font-size:13px;color:var(--text-primary);line-height:1.55;">'
+                          + '<div style="color:var(--text-muted);">Loading script…</div>'
+                        + '</div>'
+                        + '<div id="prospectScriptMeta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>'
+                      + '</div>'
+                    : '')
 
                 // Activity timeline — the canonical event feed for this lead:
                 // every call, every stage transition (NEW → CONTACTED →
