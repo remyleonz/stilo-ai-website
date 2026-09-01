@@ -2080,6 +2080,11 @@
                         <option value="">All reps</option>
                     </select>
                     <button onclick="obLoadBoard()" style="padding:9px 16px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;cursor:pointer;">Refresh</button>
+                    <!-- The only control that starts or stops sending. The API has
+                         supported action:'start'|'pause' since the campaign engine
+                         shipped, but nothing was ever bound to it, so a campaign
+                         could only be flipped by editing the row in SQL. -->
+                    <button id="obStatusBtn" onclick="obToggleStatus()" style="display:none;padding:9px 16px;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;"></button>
                     <span id="obPacing" style="margin-left:auto;font-size:0.8rem;color:var(--text-muted);"></span>
                 </div>
 
@@ -7812,7 +7817,75 @@
             }
         }
 
+        /**
+         * Start / pause control. Two locks decide whether anything sends:
+         * OUTBOUND_SEND_ENABLED (env, not editable here) and campaign.status.
+         * This button owns the second one and says plainly when the first is
+         * the thing standing in the way, so "I pressed start and nothing
+         * happened" cannot occur silently.
+         */
+        function obRenderStatusButton(envEnabled, campaign) {
+            var b = document.getElementById('obStatusBtn');
+            if (!b) return;
+            if (!campaign) { b.style.display = 'none'; return; }
+            b.style.display = '';
+            b.disabled = false;
+            var queued = (obBoardData && obBoardData.counts && obBoardData.counts.queued) || 0;
+            if (campaign.status === 'running') {
+                b.textContent = 'Pause sending';
+                b.style.background = 'rgba(245,158,11,0.12)';
+                b.style.border = '1px solid rgba(245,158,11,0.4)';
+                b.style.color = '#F59E0B';
+                b.title = 'Stop the drip. Queued messages stay queued.';
+            } else {
+                b.textContent = envEnabled ? ('Start sending' + (queued ? ' (' + queued + ' queued)' : '')) : 'Start sending (env lock closed)';
+                b.style.background = envEnabled ? 'rgba(16,185,129,0.12)' : 'rgba(120,120,120,0.12)';
+                b.style.border = '1px solid ' + (envEnabled ? 'rgba(16,185,129,0.4)' : 'rgba(120,120,120,0.35)');
+                b.style.color = envEnabled ? '#10B981' : 'var(--text-muted)';
+                b.title = envEnabled
+                    ? 'Move the campaign to running. Messages go out on the drip schedule inside the send window.'
+                    : 'The campaign will move to running, but OUTBOUND_SEND_ENABLED is still closed so nothing will actually send.';
+            }
+        }
+
+        async function obToggleStatus() {
+            var b = document.getElementById('obStatusBtn');
+            var sel = document.getElementById('obCampaignSelect');
+            var id = sel && sel.value;
+            var campaign = obBoardData && obBoardData.campaign;
+            if (!id || !campaign) return;
+            var starting = campaign.status !== 'running';
+            var queued = (obBoardData.counts && obBoardData.counts.queued) || 0;
+
+            if (starting) {
+                var cap = campaign.daily_cap || '?';
+                var win = (campaign.send_window_start || '?') + ' to ' + (campaign.send_window_end || '?');
+                if (!confirm(
+                    'Start sending "' + campaign.name + '"?\n\n'
+                    + queued + ' messages are queued.\n'
+                    + 'Up to ' + cap + ' will go out per day, inside ' + win + ' ' + (campaign.timezone || 'ET') + '.\n\n'
+                    + 'These are real texts to real businesses and cannot be recalled.'
+                )) return;
+            }
+
+            b.disabled = true;
+            var prev = b.textContent;
+            b.textContent = starting ? 'Starting...' : 'Pausing...';
+            try {
+                await prospectFetchJSON('/api/prospects/outbound-campaign', {
+                    method: 'POST',
+                    body: JSON.stringify({ id: Number(id), action: starting ? 'start' : 'pause' })
+                });
+                await obInitPage();   // repopulate the select so its status label updates too
+            } catch (e) {
+                b.disabled = false;
+                b.textContent = prev;
+                alert('Could not ' + (starting ? 'start' : 'pause') + ' the campaign: ' + (e.message || e));
+            }
+        }
+
         function obRenderLockBanner(envEnabled, campaign) {
+            obRenderStatusButton(envEnabled, campaign);
             var el = document.getElementById('obLockBanner');
             if (!el) return;
             var running = campaign && campaign.status === 'running';
