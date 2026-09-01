@@ -20,13 +20,12 @@
  *   - has not already told us no: stage isn't CLOSED_*, and the last outcome
  *     isn't wrong_number / disconnected / dnc_request / owner_uninterested
  *   - has a phone
- *   - scrub_status = 'clear', and the number we will text is the number that
- *     was scrubbed
+ *   - is not on public.lcr_suppressions (the working do-not-contact list)
  *   - the assigned rep has an active Quo line
  *
- * The scrub gate is the reason this can return far fewer rows than you expect.
- * That is working as designed: an unscrubbed lead is an unanswered question,
- * and ?dry=1 tells you exactly how many were held back and why.
+ * The IPQS litigator scrub was retired 2026-08-31 and is no longer required.
+ * A stored scrub_status of 'blocked' still blocks permanently. ?dry=1 still
+ * tells you exactly how many were held back and why.
  *
  * SCRUB EXEMPTION (campaign.scrub_exempt_prior_contact):
  * When set, a lead with a >=20s connected call on record may enqueue and send
@@ -243,12 +242,23 @@ module.exports = async function handler(req, res) {
             const priorContact = connected ? connected.has(l.id) : false;
             const exempt = campaign.scrub_exempt_prior_contact === true && priorContact;
 
-            if (!exempt) {
-                if (l.scrub_status !== 'clear') { held.not_scrubbed++; continue; }
-                if (l.scrub_phone && l.scrub_phone !== to) { held.scrub_phone_mismatch++; continue; }
-            } else {
-                held.scrub_waived_prior_contact = (held.scrub_waived_prior_contact || 0) + 1;
+            // IPQS RETIRED 2026-08-31. The paid litigator scrub is no longer a
+            // subscription we hold, so requiring scrub_status='clear' would hold
+            // back every lead forever: 945 of Blason's 1,001 were never scrubbed
+            // and never will be by that provider. Requiring a clean bill of health
+            // from a service we cannot run is not caution, it is a permanently
+            // closed valve.
+            //
+            // What still blocks, and always will:
+            //   - do_not_call on the lead (checked above)
+            //   - scrub_status 'blocked'  (checked above, a confirmed match we
+            //     already paid for; retiring the vendor does not un-know it)
+            //   - public.lcr_suppressions, which is now the working DNC list and
+            //     is fed by every decline in every channel
+            if (l.scrub_phone && l.scrub_status === 'clear' && l.scrub_phone !== to) {
+                held.scrub_phone_mismatch++; continue;
             }
+            if (exempt) held.scrub_waived_prior_contact = (held.scrub_waived_prior_contact || 0) + 1;
 
             // One voice per prospect: text from the number already on their
             // caller ID. Falls back to the assigned rep when nobody has dialled,
