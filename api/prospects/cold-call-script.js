@@ -19,6 +19,7 @@
  * isn't configured (e.g., before David grants IAM access).
  */
 const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
+const { appendPlaybook } = require('./_blason_playbook');
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 
@@ -304,7 +305,7 @@ module.exports = async function handler(req, res) {
                 slug: slug,
                 filename: PREFIX + entry.filename,
                 generated_at: entry.generated_at || null,
-                content_md: content,
+                content_md: appendPlaybook(content),
                 source: 'gcs-manifest'
             });
         }
@@ -324,7 +325,7 @@ module.exports = async function handler(req, res) {
                 filename: item.name,
                 generated_at: item.updated || item.timeCreated || null,
                 size: item.size,
-                content_md: content,
+                content_md: appendPlaybook(content),
                 source: 'gcs-listing'
             });
         }
@@ -345,7 +346,7 @@ module.exports = async function handler(req, res) {
                 filename: item.name,
                 generated_at: item.updated || item.timeCreated || null,
                 size: item.size,
-                content_md: content,
+                content_md: appendPlaybook(content),
                 source: 'gcs-client-listing'
             });
         }
@@ -381,7 +382,7 @@ module.exports = async function handler(req, res) {
                 slug: slug,
                 filename: GENERATED_BUCKET + '/' + slug + (lang === 'es' ? '.es.md' : '.md'),
                 generated_at: null,
-                content_md: gen,
+                content_md: appendPlaybook(gen),
                 lang: lang === 'es' ? 'es' : 'en',
                 // Campaign scripts exist in both languages, so the drawer can
                 // offer the EN/ES switch without a second round trip.
