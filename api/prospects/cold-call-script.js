@@ -182,6 +182,9 @@ async function findScriptByListing(token, slug) {
 // No "-script-" segment, client prefix in front. One known client prefix today;
 // add to the list when the next client campaign starts.
 const CLIENT_PREFIXES = ['blason'];
+// A client-prefixed manifest/lead key: <client>-<real-slug>-<numeric id>.
+// Group 1 is the real business slug. Shared with sync-scripts.js.
+const CLIENT_MANIFEST_KEY_RE = new RegExp('^(?:' + CLIENT_PREFIXES.join('|') + ')-(.+?)-\\d+$');
 async function findClientScriptByListing(token, slug) {
     for (const cp of CLIENT_PREFIXES) {
         const url = 'https://storage.googleapis.com/storage/v1/b/' + BUCKET +
@@ -190,8 +193,11 @@ async function findClientScriptByListing(token, slug) {
         const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
         if (!r.ok) continue;
         const j = await r.json();
+        // Two generations of David's client filenames:
+        //   blason-<slug>-<YYYY-MM-DD>.md                      (2026-08-26)
+        //   blason-<slug>-<his-numeric-id>-script-<date>.md    (2026-09-01 push)
         const re = new RegExp('^' + escapeRe(PREFIX + cp + '-' + slug) +
-            '-\\d{4}-\\d{2}-\\d{2}(?:-script-\\d{4}-\\d{2}-\\d{2})?\\.md$', 'i');
+            '-(?:\\d{4}-\\d{2}-\\d{2}|\\d+)(?:-script-\\d{4}-\\d{2}-\\d{2})?\\.md$', 'i');
         const items = (j.items || []).filter(function (it) { return re.test(it.name); });
         if (!items.length) continue;
         items.sort(function (a, b) {
@@ -226,7 +232,7 @@ async function loadManifest(token) {
     const raw = await readObject(token, PREFIX + 'manifest.json');
     const j = JSON.parse(raw);
     const scripts = Array.isArray(j) ? j : (j.scripts || []);
-    const byName = {}, bySlug = {};
+    const byName = {}, bySlug = {}, byClientSlug = {};
     for (const e of scripts) {
         if (!e || !e.filename) continue;
         if (e.business_name) byName[String(e.business_name).trim().toLowerCase()] = e;
@@ -235,7 +241,17 @@ async function loadManifest(token) {
         const base = String(e.lead_id || e.filename.replace(/-script-\d{4}-\d{2}-\d{2}\.md$/i, ''))
             .replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase();
         if (base) bySlug[base] = e;
+        // David's 2026-09-01 client push keys entries as
+        // blason-<slug>-<his-numeric-id> with business_name set to the same
+        // string ("Blason 180 Medspa 40880"), so neither byName nor bySlug
+        // matches the LEAD's actual name. Strip the client prefix and the
+        // trailing id and register under the real slug too. Collected
+        // separately and merged below so a direct entry always wins over a
+        // stripped one.
+        const cm = base.match(CLIENT_MANIFEST_KEY_RE);
+        if (cm) byClientSlug[cm[1]] = e;
     }
+    for (const k in byClientSlug) { if (!bySlug[k]) bySlug[k] = byClientSlug[k]; }
     _manifest = { byName: byName, bySlug: bySlug };
     _manifestAt = Date.now();
     return _manifest;
@@ -403,6 +419,7 @@ module.exports = async function handler(req, res) {
 // module.exports keeps the handler as the default while still letting
 // require('../prospects/cold-call-script').slugify work.
 module.exports.slugify = slugify;
+module.exports.CLIENT_MANIFEST_KEY_RE = CLIENT_MANIFEST_KEY_RE;
 module.exports.getAccessToken = getAccessToken;
 module.exports.findScriptByListing = findScriptByListing;
 module.exports.readObject = readObject;

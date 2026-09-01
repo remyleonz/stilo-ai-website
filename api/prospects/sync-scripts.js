@@ -153,18 +153,31 @@ async function loadManifestSlugs(token) {
     // plain assignment, so the LAST entry wins and that is the file the
     // dashboards serve. Mirror that exactly here: last-wins, never first-wins,
     // or the refresh pass parses a different file than the one on screen.
+    // Client-push entries (blason-<slug>-<his-id>) carry a synthetic
+    // business_name, so their real slug only exists after stripping the client
+    // prefix + trailing id. Collected separately and merged after the loop so
+    // a direct entry always beats a stripped one (mirrors cold-call-script.js).
+    const clientFileBySlug = {};
     for (const e of scripts) {
         if (!e) continue;
         if (e.business_name) {
             const s = cc.slugify(e.business_name);
             slugs.add(s);
             if (e.filename) fileBySlug[s] = e.filename;
+            const m = s.match(cc.CLIENT_MANIFEST_KEY_RE);
+            if (m && e.filename) clientFileBySlug[m[1]] = e.filename;
         }
         if (e.lead_id) {
             const s = String(e.lead_id).replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase();
             slugs.add(s);
             if (e.filename) fileBySlug[s] = e.filename;
+            const m = s.match(cc.CLIENT_MANIFEST_KEY_RE);
+            if (m && e.filename) clientFileBySlug[m[1]] = e.filename;
         }
+    }
+    for (const k in clientFileBySlug) {
+        slugs.add(k);
+        if (!fileBySlug[k]) fileBySlug[k] = clientFileBySlug[k];
     }
     return { slugs, fileBySlug };
 }
