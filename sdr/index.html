@@ -2891,16 +2891,12 @@
                 + '<div style="grid-column:span 2;"><div class="stat-label">Email</div><div style="word-break:break-all;">' + escapeHtml(r.owner_email || r.email || '—') + '</div></div>'
                 + '</div>'
                 + summaryHtml
-                // ── Cold-call script (filled by loadColdCallScript) ──
-                + '<div style="margin-bottom:22px;">'
-                + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
-                + '<div id="sdrScriptBody" style="font-size:14px;line-height:1.6;color:var(--text-primary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:16px 18px;">Loading script…</div>'
-                + '</div>'
-                // ── Log the call sits immediately under the script, because that is
-                // the order the rep works in: read the script, make the call, log it.
-                // It used to sit below the message history and the call log, which
-                // meant scrolling past everything that already happened to record
-                // the thing that just happened.
+                // ── Log the call comes FIRST, then history, then the script
+                // (2026-09-01, mirrors /admin/): the script is ~30KB, and with
+                // it on top every lead needed a scroll past it to reach the
+                // notes, the outcome buttons and what happened on prior calls.
+                // The pre-dial read is now one glance; the script is below for
+                // when the call connects.
                 // ── Log outcome ──
                 + '<div class="section-title" style="font-size:14px;margin-bottom:12px;">Log the call</div>'
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
@@ -2950,7 +2946,12 @@
                 + '<button id="sdrBookBtn" disabled onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'
                 + '</div>'
                 + nurtureBlock
-                + historyHtml;
+                + historyHtml
+                // ── Cold-call script (filled by loadColdCallScript) ──
+                + '<div style="margin-top:22px;">'
+                + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
+                + '<div id="sdrScriptBody" style="font-size:14px;line-height:1.6;color:var(--text-primary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:16px 18px;">Loading script…</div>'
+                + '</div>';
         }
 
         // Clean two-line outcome button (title + helper text), accent on the left edge.
