@@ -67,6 +67,7 @@ function arg(n, d) { const i = args.indexOf('--' + n); return i >= 0 && args[i +
 const CLIENT_ID = arg('client', '2efae6bf-69d8-4c4d-ac25-6a693db50f8b');
 const LIMIT = parseInt(arg('limit', '20'), 10);
 const SEND = args.includes('--send');
+const LANE = arg('lane', '1');   // 1 = medium+deliverable (proven 3.4%), 2 = role inboxes on live domains
 const GAP_MS = parseInt(arg('gap', '4000'), 10);   // pace so a fresh subdomain does not spike
 const LOCAL_ZIP3 = ['330', '331', '332', '333'];
 
@@ -189,15 +190,40 @@ async function main() {
     const clientName = (client && client.business_name) || 'Blason Spa Equipment';
     const clientSite = (client && client.website) || '';
 
-    const { data: leads, error } = await sb.from('leads')
+    // ---- BOUNCE BREAKER -------------------------------------------------
+    // The domain is young and lane 2's pool is unproven. Before any send run,
+    // look at the trailing 72h of this client's outbound email: 10+ sends with
+    // an 8%+ bounce rate means the list is hurting the domain faster than the
+    // volume is helping it, and the run refuses to start. Lane 1 measured 3.4%,
+    // so a healthy run never trips this.
+    const since = new Date(Date.now() - 72 * 3600 * 1000).toISOString();
+    const { data: recent } = await sb.from('lead_messages')
+        .select('bounced_at, leads!inner(client_id)')
+        .eq('direction', 'outbound').eq('channel', 'email')
+        .gte('sent_at', since).eq('leads.client_id', CLIENT_ID);
+    const rSent = (recent || []).length;
+    const rBounced = (recent || []).filter(function (m) { return m.bounced_at; }).length;
+    const rRate = rSent ? (rBounced / rSent) : 0;
+    console.log('breaker:  ' + rBounced + '/' + rSent + ' bounced in the last 72h (' + (rRate * 100).toFixed(1) + '%)');
+    if (SEND && rSent >= 10 && rRate >= 0.08) {
+        console.error('REFUSING to send: trailing bounce rate is at or above 8%. Fix the list before feeding the domain more of it.');
+        process.exit(2);
+    }
+
+    // Lane 1 is the proven pool: a real person's address, verified domain,
+    // medium confidence. Lane 2 is role inboxes (info@, contact@) whose domain
+    // is alive: the local part is not a guessed person, so the 13% guess-miss
+    // bounce rate of low-confidence PERSONAL addresses does not apply, but the
+    // pool is unproven, which is exactly what the breaker above is for.
+    let q = sb.from('leads')
         .select('id,name,owner_name,owner_email,address,primary_language,email_verify_status,email_confidence,bounced_at,unsubscribed_at,email_1_sent_at,last_called_outcome,stage,do_not_call')
         .eq('client_id', CLIENT_ID)
-        .eq('email_verify_status', 'deliverable')
-        .eq('email_confidence', 'medium')
+        .eq('email_verify_status', LANE === '2' ? 'role_inbox' : 'deliverable')
         .is('bounced_at', null)
         .is('unsubscribed_at', null)
-        .is('email_1_sent_at', null)
-        .limit(LIMIT * 3);   // over-fetch, the consent filter below removes some
+        .is('email_1_sent_at', null);
+    if (LANE !== '2') q = q.eq('email_confidence', 'medium');
+    const { data: leads, error } = await q.limit(LIMIT * 3);   // over-fetch, the consent filter below removes some
     if (error) { console.error(error); process.exit(1); }
 
     // ---- CONSENT FILTER -------------------------------------------------
@@ -226,7 +252,8 @@ async function main() {
     if (removed) console.log('consent filter removed ' + removed + ' lead(s) who already said no');
 
     console.log('client:   ' + clientName);
-    console.log('lane 1:   ' + eligible.length + ' eligible (medium confidence + MX clean, never emailed)');
+    console.log('lane ' + LANE + ':   ' + eligible.length + ' eligible ('
+        + (LANE === '2' ? 'role inbox on a live domain' : 'medium confidence + MX clean') + ', never emailed)');
     console.log('mode:     ' + (SEND ? 'SENDING' : 'DRY RUN (pass --send to actually send)'));
     console.log('');
 
@@ -262,6 +289,7 @@ async function main() {
             lead_id: lead.id, direction: 'outbound', channel: 'email', subject: subject,
             sent_at: new Date().toISOString(), sent_by: process.env.STILO_SENDER_EMAIL || null,
             to_address: to, provider: 'resend', status: 'sending', dedupe_key: dedupeKey,
+            variant: 'blason_lane' + LANE,
         }).select('id').single();
         if (claim.error) {
             if (String(claim.error.code) === '23505') { console.log('DUP   ' + tag); stats.dup++; continue; }
