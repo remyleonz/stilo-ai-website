@@ -118,7 +118,7 @@
 
     function plainOf(l) { return l.replace(/^[>#\s*]+/, '').replace(/\*\*/g, '').trim(); }
 
-    function render(md) {
+    function renderBody(md) {
         var src = String(md || '');
         var lines = src.split('\n');
 
@@ -257,6 +257,53 @@
         }
         closeList();
         return html;
+    }
+
+    /**
+     * The gatekeeper playbook ("If the front desk answers" + "MANUFACTURING
+     * STANDING") ships INSIDE David's Blason scripts, at the bottom, ~160
+     * lines. On a live dial the rep only needs it the moment a receptionist
+     * picks up, so render it as a collapsed drop-down pinned to the TOP of the
+     * script: one tap when the front desk answers, invisible otherwise
+     * (Remy, 2026-09-01). Pure render-time move; David's files are untouched.
+     *
+     * Block boundaries: starts at the H2 matching /front desk answers/i and
+     * runs while the following H2s still match /manufacturing standing/i.
+     * Scripts without the block (STILO scripts, older vintages) render as
+     * before.
+     */
+    function render(md) {
+        // David's generator ships CRLF line endings, and in JS regex `.` and
+        // `$` refuse to cross a bare \r, so every heading match fails on the
+        // raw text. Normalize first; renderBody strips trailing whitespace
+        // per-line anyway, so this changes nothing downstream.
+        var src = String(md || '').replace(/\r\n?/g, '\n');
+        var lines = src.split('\n');
+        var start = -1, end = lines.length;
+        for (var i = 0; i < lines.length; i++) {
+            var h = lines[i].match(/^##\s+(.*)$/);
+            if (!h) continue;
+            if (start === -1) {
+                if (/front desk answers/i.test(h[1])) start = i;
+            } else if (!/manufacturing standing/i.test(h[1])) { end = i; break; }
+        }
+        if (start === -1) return renderBody(src);
+
+        // Drop the block's own H2 (the summary row replaces it) but keep the
+        // day-1 stats paragraph right under it.
+        var gk = lines.slice(start + 1, end).join('\n');
+        var rest = lines.slice(0, start).concat(lines.slice(end)).join('\n');
+
+        var box = '<style>.stilo-gk>summary::-webkit-details-marker{display:none}.stilo-gk>summary::marker{content:""}.stilo-gk[open] .stilo-gk-hint{display:none}</style>'
+            + '<details class="stilo-gk" style="margin:0 0 16px;border:1px solid rgba(245,158,11,0.5);border-radius:10px;background:rgba(245,158,11,0.07);">'
+            + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;">'
+            + '<span style="flex:none;font-size:16px;">\uD83D\uDECE\uFE0F</span>'
+            + '<span style="font-family:var(--font-display);font-weight:800;color:#fff;font-size:15px;line-height:1.3;">Front desk answered? Tap here.<span style="display:block;font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:2px;">The call is won or lost at this turn. Openers, the four screens, the hinge line.</span></span>'
+            + '<span class="stilo-gk-hint" style="margin-left:auto;flex:none;font-size:11px;font-weight:700;color:rgba(245,158,11,0.9);">OPEN \u25BE</span>'
+            + '</summary>'
+            + '<div style="padding:2px 14px 14px;border-top:1px solid rgba(245,158,11,0.25);">' + renderBody(gk) + '</div>'
+            + '</details>';
+        return box + renderBody(rest);
     }
 
     global.STILO_SCRIPT = { render: render, escape: esc };
