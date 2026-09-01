@@ -3,11 +3,11 @@
  *
  * The three recurring team touches Remy was doing by hand (2026-08-24):
  *
- *   invite   Mon + Wed evening — email the whole active roster the invite for
- *            tomorrow's cold-call session (Tue/Thu 10am-2pm ET, hosted by
+ *   invite   Mon + Wed + Thu evening - email the whole active roster the invite for
+ *            tomorrow's cold-call session (Tue/Thu/Fri 9am-5pm ET, hosted by
  *            Remy & David) with the standing Meet link.
- *   morning  Tue + Thu 9am ET — SMS each SDR from their own Quo line to their
- *            personal phone: join the session, dial today.
+ *   morning  Tue + Thu + Fri 9am ET - SMS each SDR from their own Quo line to
+ *            their personal phone: join the session, dial today.
  *   evening  Mon-Fri 6pm ET — per SDR: if they dialled today, SMS asking them
  *            to drop their stats in the STILO groupchat; if they made zero
  *            dials, SMS a nudge to call tomorrow with their week so far.
@@ -116,9 +116,9 @@ async function jobInvite(dry) {
         const html = ''
             + '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1a1a1a;line-height:1.6;max-width:520px;">'
             + '<p>Hey ' + firstName(r) + ',</p>'
-            + '<p>Team cold-call session tomorrow (<strong>' + day + '</strong>), <strong>10am to 2pm ET</strong>. Hosted by Remy and David.</p>'
+            + '<p>Team cold-call session tomorrow (<strong>' + day + '</strong>), <strong>9am to 5pm ET</strong>. Hosted by Remy and David.</p>'
             + (meet ? '<p>Join here: <a href="' + meet + '">' + meet + '</a></p>' : '')
-            + '<p>Have your list and your script open before 10. See you on the call.</p>'
+            + '<p>Have your list and your script open before 9. See you on the call.</p>'
             + '<p>STILO</p></div>';
         if (dry) { results.push({ to: r.email, dry: true }); continue; }
         const resp = await fetch('https://api.resend.com/emails', {
@@ -127,7 +127,7 @@ async function jobInvite(dry) {
             body: JSON.stringify({
                 from: 'STILO AI Partners <' + (process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com') + '>',
                 to: [r.email],
-                subject: 'Call session tomorrow · 10am-2pm',
+                subject: 'Call session tomorrow · 9am-5pm',
                 html: html
             })
         });

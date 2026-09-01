@@ -30,8 +30,11 @@ const { normalizePhone } = require('../openphone/_shared');
 const PERSONAL = {
     'aleb1027@gmail.com': '+13057759522',
     'ayesjorge911@gmail.com': '+13053377495',   // was +1303… (typo) — carrier-rejected 8/25
-    'georgegutierrez446@gmail.com': '+17867975869',
-    'melanyealtuve12@gmail.com': '+17865806735'
+    'georgegutierrez446@gmail.com': '+17867975869'
+    // Melanye Altuve removed 2026-08-31 (let go). Her personal cell must leave
+    // this map as well as sdr_users: entries here are exempted from every
+    // prospect guard, so a departed rep's number staying whitelisted means we
+    // could still text a private individual with no rate limit behind it.
 };
 
 let cache = { at: 0, set: null };

@@ -155,11 +155,11 @@
     },
     {
       "path": "/api/prospects/team-rituals?job=invite",
-      "schedule": "0 0 * * 2,4"
+      "schedule": "0 0 * * 2,4,5"
     },
     {
       "path": "/api/prospects/team-rituals?job=morning",
-      "schedule": "0 13 * * 2,4"
+      "schedule": "0 13 * * 2,4,5"
     },
     {
       "path": "/api/prospects/team-rituals?job=evening",
