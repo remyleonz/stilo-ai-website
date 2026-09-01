@@ -23,6 +23,7 @@
 const { verifySignature, readRawBody, serviceClient, publicClient, normalizePhone, openphoneFetch } = require('./_shared');
 const outboundReplies = require('../prospects/_outbound_reply');
 const missedCall = require('../prospects/_missed_call_alert');
+const { smsDedupeKey } = require('../prospects/_sms');
 
 // Quo ships TWO direction vocabularies depending on the event:
 //   call.completed                      -> 'incoming' / 'outgoing'
@@ -433,7 +434,12 @@ module.exports = async function handler(req, res) {
             provider: 'openphone',
             provider_message_id: msg.id || msg.messageId || null,
             status: type === 'message.delivered' ? 'delivered' : 'received',
-            raw_payload: evt
+            raw_payload: evt,
+            // Written on BOTH sides. In the 2026-08-31 incident this handler won
+            // the race by one second, so a key only the send path wrote would
+            // have had nothing to collide with and the duplicate still lands.
+            dedupe_key: (direction === 'outbound' && mLeadId)
+                ? smsDedupeKey(mLeadId, toN, body) : null
         };
         try {
             // OUTBOUND MERGE.
@@ -468,9 +474,31 @@ module.exports = async function handler(req, res) {
                     }
                 }
 
+                // The deterministic key both sides compute. Preferred over the
+                // field-matching fallback below, which was silently failing:
+                // it does an exact .eq() on to_address, and the send path was
+                // writing "(305) 927-3195" while this handler writes
+                // "+13059273195". Same message, two formats, no match, two rows.
+                if (!merged && messageRow.lead_id) {
+                    const key = smsDedupeKey(messageRow.lead_id, messageRow.to_address, body);
+                    const { data: byKey } = await sb.from('lead_messages')
+                        .select('id, provider_message_id')
+                        .eq('dedupe_key', key).limit(1);
+                    if (byKey && byKey.length) {
+                        if (!byKey[0].provider_message_id) {
+                            const { error: upErr } = await sb.from('lead_messages')
+                                .update({ provider_message_id: providerId, status: messageRow.status, raw_payload: evt })
+                                .eq('id', byKey[0].id);
+                            if (upErr) throw upErr;
+                        }
+                        merged = true;
+                    }
+                }
+
                 if (!merged) {
                     // Our own un-enriched row for this exact text. Bounded to 6h so a
                     // genuinely new message with identical copy is never swallowed.
+                    // Kept as a fallback for rows written before dedupe_key existed.
                     const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
                     const { data: ours } = await sb.from('lead_messages')
                         .select('id')

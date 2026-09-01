@@ -27,7 +27,7 @@
  * 24h), so a stuck send button cannot turn into the 40-text loop of 2026-07-20.
  */
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
-const { sendSms, REMY_LINE } = require('./_sms');
+const { sendSms, smsDedupeKey, REMY_LINE } = require('./_sms');
 const { normalizePhone } = require('../openphone/_shared');
 const ob = require('./_outbound');
 
@@ -189,13 +189,21 @@ module.exports = async function handler(req, res) {
         subject: 'Manual reply',
         body: text,
         body_preview: text.slice(0, 300),
-        to_address: toPhone,
+        // E.164, ALWAYS. The lead table mostly holds "(305) 927-3195" while the
+        // OpenPhone webhook holds "+13059273195", and the webhook's merge does an
+        // exact .eq() on to_address. Writing the raw value here meant the merge
+        // never matched and every text got logged twice. See phone format drift.
+        to_address: normalizePhone(toPhone) || toPhone,
         from_address: (r && r.from) || line.from,
         provider: 'openphone',
-        // sendSms returns status/from/fellBack, not the provider payload, and
-        // _sms.js is off limits here. So the id stays null on our row and the
-        // Quo webhook fills it in when the delivery event lands, which is the
-        // same shape every other at-send-time log in this codebase has.
+        // Shared with the webhook so whichever lands second collides on the
+        // unique index instead of inserting a duplicate.
+        dedupe_key: smsDedupeKey(leadId, toPhone, text),
+        // sendSms now returns the provider id from the POST response, so this is
+        // populated at send time rather than waiting on a delivery webhook. That
+        // matters: the webhook's first and cleanest dedupe check asks "have I
+        // already seen this provider id?", and it could never fire while every
+        // at-send row carried null here.
         provider_message_id: (r && r.messageId) || null,
         status: 'sent',
         sent_by: gate.email,

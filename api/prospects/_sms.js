@@ -123,7 +123,37 @@ async function sendSms(from, to, content, opts) {
         err: ok ? null : JSON.stringify(r.json).slice(0, 160),
         from: usedFrom,
         fellBack: fellBack,
+        // OpenPhone returns the created message on the POST. Callers (send-sms.js)
+        // already read r.messageId and have been getting undefined since this
+        // helper was written, which left provider_message_id null on every
+        // at-send row. That in turn disabled the webhook's cleanest dedupe check
+        // ("have I already seen this provider id?") and was half the reason every
+        // outbound text was being logged twice. Shape is { data: { id } }; the
+        // fallbacks cover older/plainer response bodies.
+        messageId: (r.json && ((r.json.data && r.json.data.id) || r.json.id)) || null,
+        to: target,
     };
 }
 
-module.exports = { sendSms, guardOutbound, REMY_LINE, MAX_PER_LEAD_24H };
+/**
+ * The one key that identifies an outbound SMS from BOTH sides of the race.
+ *
+ * The at-send insert and the OpenPhone webhook both want to record the same
+ * text, and either can land first. A read-then-check loses that race, and it
+ * did: on lead 31737 the webhook wrote at 18:15:25 and the send path wrote a
+ * duplicate at 18:15:26. Both sides now compute this key and write it, and the
+ * unique index lead_messages_dedupe_key_uidx makes the loser collide instead of
+ * inserting a second row.
+ *
+ * Phone is normalized before hashing, because the send path historically held
+ * "(305) 927-3195" while the webhook held "+13059273195" and any key built on
+ * the raw value would differ on the two sides for the same message.
+ */
+function smsDedupeKey(leadId, toPhone, body) {
+    const crypto = require('crypto');
+    return crypto.createHash('sha1')
+        .update([leadId || 0, 'sms', normalizePhone(toPhone) || '', String(body || '').slice(0, 300)].join('|'))
+        .digest('hex');
+}
+
+module.exports = { sendSms, guardOutbound, smsDedupeKey, REMY_LINE, MAX_PER_LEAD_24H };
