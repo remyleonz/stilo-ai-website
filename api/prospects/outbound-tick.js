@@ -33,7 +33,8 @@
  * ?dry=1 reports exactly what it would send, and sends nothing.
  */
 const { assertAdminOrSdr } = require('./_shared');
-const { sendSms } = require('./_sms');
+const { sendSms, smsDedupeKey } = require('./_sms');
+const { normalizePhone } = require('../openphone/_shared');
 const ob = require('./_outbound');
 
 // Ceiling on sends per tick, across all campaigns. The cron runs every 5 min;
@@ -265,16 +266,27 @@ module.exports = async function handler(req, res) {
             // messages it exists to cap. Logging is loud on failure but never
             // triggers a resend.
             if (ok) {
+                // Same deterministic dedupe_key the manual path (send-sms.js)
+                // and the webhook echo write, so whichever of this insert and
+                // the message.created webhook lands second collides on
+                // lead_messages_dedupe_key_uidx instead of creating a second
+                // row. Until 2026-09-02 this insert had no key, so every
+                // campaign send was logged twice (tick row + webhook row).
                 const { error: logErr } = await sb.from('lead_messages').insert({
                     lead_id: t.lead_id, direction: 'outbound', channel: 'sms',
                     subject: 'Outbound campaign step ' + nextStep,
                     body: bodyText,
                     body_preview: bodyText.slice(0, 300),
-                    to_address: t.to_phone, from_address: (r && r.from) || line,
-                    provider: 'openphone', status: 'sent',
+                    to_address: normalizePhone(t.to_phone) || t.to_phone,
+                    from_address: (r && r.from) || line,
+                    provider: 'openphone', provider_message_id: (r && r.messageId) || null,
+                    status: 'sent',
                     variant: 'outbound_campaign', sent_at: new Date().toISOString(),
+                    dedupe_key: smsDedupeKey(t.lead_id, t.to_phone, bodyText),
                 });
-                if (logErr) {
+                if (logErr && String(logErr.code) === '23505') {
+                    // The webhook echo logged it first. One row exists; fine.
+                } else if (logErr) {
                     results.errors.push({ target: t.id, error: 'lead_messages_log_failed: ' + logErr.message, sent: true });
                     console.error('[outbound] lead_messages log failed target=' + t.id + ': ' + logErr.message);
                 }
