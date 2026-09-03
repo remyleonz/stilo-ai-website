@@ -2001,6 +2001,7 @@
                      meetings calendar, personal history). Calls Today and the
                      Dead Pool are reached via the workflow cards above. -->
                 <div id="prospectSubtabs" style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:16px;flex-wrap:wrap;">
+                    <button class="prospect-subtab" data-subtab="pipeline" onclick="switchProspectTab('pipeline')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Pipeline <span id="prospectPipelineBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(16,185,129,0.22);color:#10b981;font-size:10px;font-weight:700;">0</span></button>
                     <button class="prospect-subtab active" data-subtab="callable" onclick="switchProspectTab('callable')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;opacity:1;transition:opacity 150ms;">Cold Call</button>
                     <button class="prospect-subtab" data-subtab="emailable" onclick="switchProspectTab('emailable')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Cold Email</button>
                     <button class="prospect-subtab" data-subtab="callbacks" onclick="switchProspectTab('callbacks')" style="padding:11px 18px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;transition:opacity 150ms;">Call Back <span id="prospectCallbackBadge" style="display:none;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:700;">0</span></button>
@@ -2041,6 +2042,9 @@
                 </div>
 
                 <!-- Six table containers, only one visible at a time. overflow-x:auto so wide tables scroll within the card instead of clipping at the page edge. -->
+                <div id="prospectTablePipeline" class="prospect-table-host" style="display:none;">
+                    <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">The pipeline will load when you open this tab.</div>
+                </div>
                 <div id="prospectTableCallable" class="prospect-table-host" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
                     <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>
                 </div>
@@ -7579,6 +7583,8 @@
             if (sharedHost) sharedHost.style.display                          = name === 'shared'       ? '' : 'none';
             var emailedHost = document.getElementById('prospectTableEmailed');
             if (emailedHost) emailedHost.style.display                        = name === 'emailed'      ? '' : 'none';
+            var pipelineHost = document.getElementById('prospectTablePipeline');
+            if (pipelineHost) pipelineHost.style.display                      = name === 'pipeline'     ? '' : 'none';
             var myHistoryControls = document.getElementById('prospectMyHistoryControls');
             if (myHistoryControls) myHistoryControls.style.display            = name === 'my-history'   ? 'flex' : 'none';
             // Filter bar useful only for the broad inbound lists; hide on cold-call lifecycle stages.
@@ -7594,6 +7600,74 @@
             else if (name === 'quiz-leads')   loadQuizLeads();
             else if (name === 'shared')       loadProspectShared();
             else if (name === 'emailed')      loadProspectEmailed();
+            else if (name === 'pipeline')     loadClientPipeline();
+        }
+
+        /* ===== CLIENT PIPELINE (the Blason CRM view) =====
+           /api/prospects/client-pipeline groups the client pool into booked /
+           hot / working / closed so hot leads and promised callbacks are
+           VISIBLE instead of living in exports and memory. Rows open the
+           normal lead drawer. */
+        function cpFmt(iso) {
+            if (!iso) return null;
+            var norm = /[zZ]|[+-]\d\d:?\d\d$/.test(String(iso)) ? iso : (String(iso).replace(' ', 'T') + 'Z');
+            var d = new Date(norm);
+            if (isNaN(d.getTime())) return null;
+            return d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+        }
+        function cpChip(text, color) {
+            return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;background:' + color + '22;color:' + color + ';">' + escapeAdminHtml(text) + '</span>';
+        }
+        function cpRow(r, kind) {
+            var due = r.due_at ? cpFmt(r.due_at) : null;
+            var overdue = r.due_at && new Date(/[zZ]$/.test(r.due_at) ? r.due_at : r.due_at + 'Z').getTime() < Date.now();
+            var headline = kind === 'booked'
+                ? cpChip((cpFmt(r.meeting_at) || 'meeting set'), '#10b981')
+                : kind === 'hot'
+                    ? (due ? cpChip((overdue ? 'DUE ' : 'next: ') + due, overdue ? '#ef4444' : '#f59e0b') : cpChip(r.reply ? 'replied by text' : (r.outcome === 'callback_requested' ? 'wants a callback' : (r.stage || 'engaged')), '#f59e0b'))
+                    : cpChip('last touch ' + (cpFmt(r.last_called_at) || 'unknown'), 'var(--text-tertiary)'.indexOf('var') === 0 ? '#8b93a7' : '#8b93a7');
+            var second = r.next_step
+                ? escapeAdminHtml(r.next_step)
+                : (r.reply ? ('They texted: \u201c' + escapeAdminHtml(r.reply.body) + '\u201d') : escapeAdminHtml((r.notes || '').split('\n').filter(Boolean).slice(-1)[0] || ''));
+            return '<div onclick="openProspectDrawer(' + r.id + ')" style="display:flex;flex-direction:column;gap:5px;padding:13px 16px;border-top:1px solid var(--border-subtle);cursor:pointer;" onmouseover="this.style.background=\'rgba(37,99,235,0.05)\'" onmouseout="this.style.background=\'transparent\'">'
+                + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+                +   '<strong style="font-size:14px;color:var(--text-primary);">' + escapeAdminHtml(r.name) + '</strong>'
+                +   (r.owner_name ? '<span style="font-size:12px;color:var(--text-secondary);">' + escapeAdminHtml(r.owner_name) + '</span>' : '')
+                +   '<span style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono, monospace);">' + escapeAdminHtml(r.owner_phone || r.phone || '') + '</span>'
+                +   (r.city ? '<span style="font-size:11px;color:var(--text-muted);">' + escapeAdminHtml(r.city) + '</span>' : '')
+                +   '<span style="margin-left:auto;">' + headline + '</span>'
+                + '</div>'
+                + (second ? '<div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">' + second + '</div>' : '')
+                + '</div>';
+        }
+        function cpSection(title, sub, rows, kind, accent) {
+            if (!rows.length) return '';
+            return '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid ' + accent + ';border-radius:12px;margin-bottom:16px;overflow:hidden;">'
+                + '<div style="display:flex;align-items:baseline;gap:10px;padding:14px 16px 10px;">'
+                +   '<h3 style="font-size:13px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-primary);margin:0;">' + title + ' <span style="color:' + accent + ';">' + rows.length + '</span></h3>'
+                +   '<span style="font-size:11px;color:var(--text-muted);">' + sub + '</span>'
+                + '</div>'
+                + rows.map(function (r) { return cpRow(r, kind); }).join('')
+                + '</div>';
+        }
+        async function loadClientPipeline() {
+            var host = document.getElementById('prospectTablePipeline');
+            if (!host) return;
+            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading the pipeline...</div>';
+            try {
+                var d = await prospectFetchJSON('/api/prospects/client-pipeline');
+                var sec = d.sections || {};
+                var badge = document.getElementById('prospectPipelineBadge');
+                var live = (d.counts ? (d.counts.booked + d.counts.hot) : 0);
+                if (badge) { badge.textContent = String(live); badge.style.display = live ? 'inline-block' : 'none'; }
+                var html = cpSection('Booked', 'a visit or meeting is on the calendar. Confirm, prep Manuel, show up.', sec.booked || [], 'booked', '#10b981')
+                    + cpSection('Hot', 'live conversations with a next step. Work top to bottom, overdue first.', sec.hot || [], 'hot', '#f59e0b')
+                    + cpSection('Working', 'reached a human, no resolution logged yet. Callable pool.', sec.working || [], 'working', '#8b93a7')
+                    + cpSection('Closed', 'won and lost, for the record.', sec.closed || [], 'closed', '#5A7BE8');
+                host.innerHTML = html || '<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px;">Nothing in the pipeline yet. Book something.</div>';
+            } catch (e) {
+                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load the pipeline: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
         }
 
         /* ===== EMAILED (leads we've sent an email to) =====
