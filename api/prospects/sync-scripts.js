@@ -245,7 +245,7 @@ module.exports = async function handler(req, res) {
     let from = 0;
     for (;;) {
         const { data, error } = await pro.from('leads')
-            .select('id,name,owner_phone,phone,assigned_to,has_cold_call_script,pitch_agent,pitch_agent_file,owner_name,client_id,stage,last_called_at,call_attempts').range(from, from + 999);
+            .select('id,name,owner_phone,phone,assigned_to,has_cold_call_script,pitch_agent,pitch_agent_file,owner_name,client_id,stage,last_called_at,call_attempts,last_called_outcome,do_not_call,archived_batch').range(from, from + 999);
         if (error) return res.status(500).json({ error: 'leads_read_failed', detail: error.message });
         if (!data || !data.length) break;
         for (const l of data) {
@@ -294,12 +294,14 @@ module.exports = async function handler(req, res) {
     }
 
     // --- manifest caller -> assignment (the "David pushes, the board just
-    // works" rule, added 2026-09-03 after his 222-lead push sat on Ale's
-    // book). Same safety rule as the pg_cron reconciler: only UNTOUCHED leads
-    // move (stage NEW, never dialed, zero attempts), so nobody's worked
-    // pipeline can be yanked by a file push. Client-pool leads never move:
-    // their boards are client-scoped, not assignment-scoped. Callers resolve
-    // against ACTIVE sdr_users only; an unknown or inactive name leaves the
+    // works" rule; 2026-09-03, hardened same day per Remy: THE CALLER TAG
+    // WINS. If David assigns a lead to someone in his manifest, that person
+    // gets it, even if another rep touched it before, and an archived-batch
+    // lead comes back out of the archive. The only leads that never move:
+    // client-pool leads (their boards are client-scoped, not assignment-
+    // scoped), booked meetings and CLOSED stages (a live or finished deal
+    // never silently changes hands), and do_not_call. Callers resolve against
+    // ACTIVE sdr_users only; an unknown or inactive name leaves the
     // assignment alone.
     const toReassign = [];
     if (Object.keys(callerBySlug).length) {
@@ -312,12 +314,14 @@ module.exports = async function handler(req, res) {
         }
         for (const slug in callerBySlug) {
             const lead = bySlug[slug];
-            if (!lead || lead.client_id) continue;
+            if (!lead || lead.client_id || lead.do_not_call) continue;
+            if (['CLOSED_WON', 'CLOSED_LOST', 'MEETING_BOOKED'].includes(lead.stage || '')) continue;
+            if (lead.last_called_outcome === 'booked_meeting') continue;
             const email = emailByFirst[callerBySlug[slug].split(/\s+/)[0].toLowerCase()];
-            if (!email || String(lead.assigned_to || '').toLowerCase() === email) continue;
-            const untouched = (lead.stage === 'NEW' || !lead.stage) && !lead.last_called_at && !(lead.call_attempts > 0);
-            if (!untouched) continue;
-            toReassign.push({ id: lead.id, to: email });
+            if (!email) continue;
+            const needsMove = String(lead.assigned_to || '').toLowerCase() !== email;
+            const needsRevive = !!lead.archived_batch;
+            if (needsMove || needsRevive) toReassign.push({ id: lead.id, to: email });
         }
     }
 
@@ -341,7 +345,7 @@ module.exports = async function handler(req, res) {
         toReassign.forEach(r => (byEmail[r.to] = byEmail[r.to] || []).push(r.id));
         for (const email in byEmail) {
             for (const ids of chunk(byEmail[email], 200)) {
-                const { error } = await pro.from('leads').update({ assigned_to: email, updated_at: new Date().toISOString() }).in('id', ids);
+                const { error } = await pro.from('leads').update({ assigned_to: email, archived_batch: null, updated_at: new Date().toISOString() }).in('id', ids);
                 if (!error) reassigned += ids.length;
             }
         }
