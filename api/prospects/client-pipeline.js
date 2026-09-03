@@ -48,6 +48,14 @@ module.exports = async function handler(req, res) {
     const replyBy = {};
     (replied || []).forEach(t => { replyBy[t.lead_id] = t; });
 
+    // A decline often lives ONLY on the SMS target ("we are not interested"
+    // by text flips the target to dead/opted_out while the lead row still
+    // carries an innocent callback_requested from an earlier call). Without
+    // this, The Salt Room sat in Hot three days after texting a no.
+    const { data: killed } = await sb.from('outbound_targets')
+        .select('lead_id').in('stage', ['dead', 'opted_out', 'blocked']);
+    const killedSet = new Set((killed || []).map(t => t.lead_id));
+
     const now = Date.now();
     const out = { booked: [], hot: [], working: [], closed: [] };
     for (const l of leads) {
@@ -64,7 +72,7 @@ module.exports = async function handler(req, res) {
             reply: reply ? { body: String(reply.first_reply_body || '').slice(0, 160), at: reply.first_reply_at } : null,
         };
         if (['CLOSED_WON', 'CLOSED_LOST'].includes(l.stage)) { out.closed.push(row); continue; }
-        if (l.do_not_call || ['owner_uninterested', 'do_not_call', 'wrong_number'].includes(String(l.last_called_outcome || ''))) continue;
+        if (l.do_not_call || killedSet.has(l.id) || ['owner_uninterested', 'do_not_call', 'wrong_number'].includes(String(l.last_called_outcome || ''))) continue;
         if (l.stage === 'MEETING_BOOKED' || l.meeting_scheduled_at) { out.booked.push(row); continue; }
         const isHot = (l.next_action_due_at && l.next_action_type === 'callback' && l.next_step)
             || l.last_called_outcome === 'callback_requested'
