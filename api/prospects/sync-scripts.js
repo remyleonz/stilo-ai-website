@@ -158,12 +158,17 @@ async function loadManifestSlugs(token) {
     // prefix + trailing id. Collected separately and merged after the loop so
     // a direct entry always beats a stripped one (mirrors cold-call-script.js).
     const clientFileBySlug = {};
+    // manifest `caller` -> who should be dialing this lead. David tags his own
+    // book "caller": "David"; before 2026-09-03 nothing consumed the field, so
+    // his push looked assigned in the manifest and unassigned in the DB.
+    const callerBySlug = {};
     for (const e of scripts) {
         if (!e) continue;
         if (e.business_name) {
             const s = cc.slugify(e.business_name);
             slugs.add(s);
             if (e.filename) fileBySlug[s] = e.filename;
+            if (e.caller) callerBySlug[s] = String(e.caller).trim();
             const m = s.match(cc.CLIENT_MANIFEST_KEY_RE);
             if (m && e.filename) clientFileBySlug[m[1]] = e.filename;
         }
@@ -171,6 +176,7 @@ async function loadManifestSlugs(token) {
             const s = String(e.lead_id).replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase();
             slugs.add(s);
             if (e.filename) fileBySlug[s] = e.filename;
+            if (e.caller) callerBySlug[s] = String(e.caller).trim();
             const m = s.match(cc.CLIENT_MANIFEST_KEY_RE);
             if (m && e.filename) clientFileBySlug[m[1]] = e.filename;
         }
@@ -179,7 +185,7 @@ async function loadManifestSlugs(token) {
         slugs.add(k);
         if (!fileBySlug[k]) fileBySlug[k] = clientFileBySlug[k];
     }
-    return { slugs, fileBySlug };
+    return { slugs, fileBySlug, callerBySlug };
 }
 
 async function listAll(bucket, folder, sb) {
@@ -210,7 +216,8 @@ module.exports = async function handler(req, res) {
 
     // --- the scripted universe: manifest + our generated fallbacks -----------
     let scripted, fileBySlug;
-    try { const man = await loadManifestSlugs(token); scripted = man.slugs; fileBySlug = man.fileBySlug; }
+    let callerBySlug = {};
+    try { const man = await loadManifestSlugs(token); scripted = man.slugs; fileBySlug = man.fileBySlug; callerBySlug = man.callerBySlug || {}; }
     catch (e) { return res.status(502).json({ error: 'manifest_read_failed', detail: e.message }); }
     // The generated fallback no longer counts toward "scripted". Every file in
     // that bucket predates the 2026-08-02 pivot and pitches the retired AI
@@ -238,7 +245,7 @@ module.exports = async function handler(req, res) {
     let from = 0;
     for (;;) {
         const { data, error } = await pro.from('leads')
-            .select('id,name,owner_phone,phone,assigned_to,has_cold_call_script,pitch_agent,pitch_agent_file,owner_name').range(from, from + 999);
+            .select('id,name,owner_phone,phone,assigned_to,has_cold_call_script,pitch_agent,pitch_agent_file,owner_name,client_id,stage,last_called_at,call_attempts').range(from, from + 999);
         if (error) return res.status(500).json({ error: 'leads_read_failed', detail: error.message });
         if (!data || !data.length) break;
         for (const l of data) {
@@ -286,9 +293,38 @@ module.exports = async function handler(req, res) {
         needsRefresh.push({ lead: l, file: file });
     }
 
+    // --- manifest caller -> assignment (the "David pushes, the board just
+    // works" rule, added 2026-09-03 after his 222-lead push sat on Ale's
+    // book). Same safety rule as the pg_cron reconciler: only UNTOUCHED leads
+    // move (stage NEW, never dialed, zero attempts), so nobody's worked
+    // pipeline can be yanked by a file push. Client-pool leads never move:
+    // their boards are client-scoped, not assignment-scoped. Callers resolve
+    // against ACTIVE sdr_users only; an unknown or inactive name leaves the
+    // assignment alone.
+    const toReassign = [];
+    if (Object.keys(callerBySlug).length) {
+        const { data: reps } = await sb.from('sdr_users').select('email, display_name, active');
+        const emailByFirst = {};
+        for (const r of (reps || [])) {
+            if (!r.active) continue;
+            const first = String(r.display_name || '').trim().split(/\s+/)[0].toLowerCase();
+            if (first) emailByFirst[first] = String(r.email).toLowerCase();
+        }
+        for (const slug in callerBySlug) {
+            const lead = bySlug[slug];
+            if (!lead || lead.client_id) continue;
+            const email = emailByFirst[callerBySlug[slug].split(/\s+/)[0].toLowerCase()];
+            if (!email || String(lead.assigned_to || '').toLowerCase() === email) continue;
+            const untouched = (lead.stage === 'NEW' || !lead.stage) && !lead.last_called_at && !(lead.call_attempts > 0);
+            if (!untouched) continue;
+            toReassign.push({ id: lead.id, to: email });
+        }
+    }
+
     if (dry) {
         return res.status(200).json({
             ok: true, dry: true, prune: prune,
+            would_reassign: toReassign.length,
             briefed: briefed.size, scripted: scripted.size,
             target_callable: targetCallable.size, awaiting: awaiting.length,
             would_enable: toEnable.length,
@@ -299,7 +335,17 @@ module.exports = async function handler(req, res) {
     }
 
     const chunk = (arr, n) => { const o = []; for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; };
-    let enabled = 0, disabled = 0, agented = 0;
+    let enabled = 0, disabled = 0, agented = 0, reassigned = 0;
+    {
+        const byEmail = {};
+        toReassign.forEach(r => (byEmail[r.to] = byEmail[r.to] || []).push(r.id));
+        for (const email in byEmail) {
+            for (const ids of chunk(byEmail[email], 200)) {
+                const { error } = await pro.from('leads').update({ assigned_to: email, updated_at: new Date().toISOString() }).in('id', ids);
+                if (!error) reassigned += ids.length;
+            }
+        }
+    }
     for (const ids of chunk(toEnable, 200)) {
         const { error } = await pro.from('leads').update({ has_cold_call_script: true, updated_at: new Date().toISOString() }).in('id', ids);
         if (!error) enabled += ids.length;
@@ -396,6 +442,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({
         ok: true, prune: prune,
+        reassigned_to_manifest_caller: reassigned,
         briefed: briefed.size, scripted: scripted.size,
         target_callable: targetCallable.size,
         enabled: enabled, agented: agented, disabled: disabled,
