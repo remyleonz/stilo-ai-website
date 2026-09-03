@@ -328,7 +328,10 @@ module.exports = async function handler(req, res) {
             let best = null, bestLen = 0, tie = false;
             for (const c of man.clientList) {
                 const len = Math.min(compact.length, c.compact.length);
-                if (len < 10) continue;
+                // 7, not 10: "Viso Juvé" compacts to visojuve and David's key
+                // to visojuv (7). The ambiguity tie-break below already
+                // refuses any prefix that matches two different entries.
+                if (len < 7) continue;
                 if (compact.slice(0, len) === c.compact.slice(0, len)) {
                     if (len > bestLen) { best = c; bestLen = len; tie = false; }
                     else if (len === bestLen && best && c.e !== best.e) tie = true;
