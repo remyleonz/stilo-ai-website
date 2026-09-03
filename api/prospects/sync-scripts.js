@@ -185,7 +185,7 @@ async function loadManifestSlugs(token) {
         slugs.add(k);
         if (!fileBySlug[k]) fileBySlug[k] = clientFileBySlug[k];
     }
-    return { slugs, fileBySlug, callerBySlug };
+    return { slugs, fileBySlug, callerBySlug, clientSlugs: new Set(Object.keys(clientFileBySlug)) };
 }
 
 async function listAll(bucket, folder, sb) {
@@ -216,8 +216,8 @@ module.exports = async function handler(req, res) {
 
     // --- the scripted universe: manifest + our generated fallbacks -----------
     let scripted, fileBySlug;
-    let callerBySlug = {};
-    try { const man = await loadManifestSlugs(token); scripted = man.slugs; fileBySlug = man.fileBySlug; callerBySlug = man.callerBySlug || {}; }
+    let callerBySlug = {}, clientSlugs = new Set();
+    try { const man = await loadManifestSlugs(token); scripted = man.slugs; fileBySlug = man.fileBySlug; callerBySlug = man.callerBySlug || {}; clientSlugs = man.clientSlugs || new Set(); }
     catch (e) { return res.status(502).json({ error: 'manifest_read_failed', detail: e.message }); }
     // The generated fallback no longer counts toward "scripted". Every file in
     // that bucket predates the 2026-08-02 pivot and pitches the retired AI
@@ -238,6 +238,12 @@ module.exports = async function handler(req, res) {
             if (o.name.endsWith('.md')) briefed.add(o.name.replace(/-\d{4}-\d{2}-\d{2}\.md$/, '').replace(/\.md$/, '').toLowerCase());
         }
     }
+    // Client-campaign leads have no per-rep brief folder; David's manifest IS
+    // the assignment artifact for them. A client-prefixed manifest entry
+    // counts as briefed, so the enable pass lights a client lead up the hour
+    // its script lands (the Blason board now gates on has_cold_call_script).
+    for (const slug of clientSlugs) briefed.add(slug);
+    for (const slug in callerBySlug) briefed.add(slug);
 
     // --- leads: one per slug (prefer a lead with a phone, like the backfill) -
     const hasPhone = l => !!((l.owner_phone && l.owner_phone.trim()) || (l.phone && l.phone.trim()));

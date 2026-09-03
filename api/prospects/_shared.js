@@ -319,8 +319,12 @@ const CURRENT_OFFER = process.env.CALLABLE_OFFER || 'Booked Meetings';
 function gateToCurrentOffer(q, clientId) {
     // Client-account mode: the board IS the client's lead pool. Client leads
     // never carry a STILO pitch_agent (they're not being sold a STILO offer),
-    // so the pitch gate is replaced, not stacked, with the client_id filter.
-    if (clientId) return q.eq('client_id', clientId);
+    // so the pitch gate is replaced with the client_id filter. The SCRIPT
+    // gate stays (2026-09-03, Remy): only leads David has shipped a script
+    // for are dial-ready — "the real leads to call are the ones with the
+    // sales script." sync-scripts maintains the flag from his manifest, so a
+    // lead lights up the hour his script lands.
+    if (clientId) return q.eq('client_id', clientId).eq('has_cold_call_script', true);
     return CURRENT_OFFER === '*' ? q : q.eq('pitch_agent', CURRENT_OFFER);
 }
 
