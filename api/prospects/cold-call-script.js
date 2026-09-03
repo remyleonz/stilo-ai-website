@@ -252,7 +252,16 @@ async function loadManifest(token) {
         if (cm) byClientSlug[cm[1]] = e;
     }
     for (const k in byClientSlug) { if (!bySlug[k]) bySlug[k] = byClientSlug[k]; }
-    _manifest = { byName: byName, bySlug: bySlug };
+    // Fuzzy index for client entries. David's generator truncates slugs at
+    // ~55 chars and mangles apostrophes and accents ("Viso Juvé" ->
+    // "viso-juv", "Renew You Aesthetics | PRP, Hair ..." -> a 55-char
+    // prefix), so ~90 leads missed the exact-slug lookup and fell back to
+    // the stale 08-27 generated scripts. Compact both sides (dashes out)
+    // and match on prefix either way; longest overlap wins, ambiguity loses.
+    const clientList = Object.keys(byClientSlug).map(function (k) {
+        return { key: k, compact: k.replace(/-/g, ''), e: byClientSlug[k] };
+    });
+    _manifest = { byName: byName, bySlug: bySlug, clientList: clientList };
     _manifestAt = Date.now();
     return _manifest;
 }
@@ -312,8 +321,21 @@ module.exports = async function handler(req, res) {
     //    can never grab the wrong file.
     if (token) try {
         const man = await loadManifest(token);
-        const entry = (q.business_name && man.byName[String(q.business_name).trim().toLowerCase()])
+        let entry = (q.business_name && man.byName[String(q.business_name).trim().toLowerCase()])
             || man.bySlug[slug];
+        if (!entry && man.clientList && man.clientList.length) {
+            const compact = slug.replace(/-/g, '');
+            let best = null, bestLen = 0, tie = false;
+            for (const c of man.clientList) {
+                const len = Math.min(compact.length, c.compact.length);
+                if (len < 10) continue;
+                if (compact.slice(0, len) === c.compact.slice(0, len)) {
+                    if (len > bestLen) { best = c; bestLen = len; tie = false; }
+                    else if (len === bestLen && best && c.e !== best.e) tie = true;
+                }
+            }
+            if (best && !tie) entry = best.e;
+        }
         if (entry && entry.filename) {
             const content = await readObject(token, PREFIX + entry.filename);
             res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
