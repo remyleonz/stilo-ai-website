@@ -8900,7 +8900,7 @@
         // Admin port of the SDR callback calendar. Renders into
         // #prospectTableCallbacks; nav mutates ADMIN_CB and re-renders in place.
         // Buckets by America/New_York day; opens leads via openProspectDrawer.
-        var ADMIN_CB = { rows: [], view: 'month', focus: null, msg: null };
+        var ADMIN_CB = { rows: [], view: 'month', focus: null, msg: null, mutation: 0 };
         var CBCAL_STYLE_A = '<style>'
           + '.acb-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 16px;flex-wrap:wrap;padding:0 2px}'
           + '.acb-nav{display:flex;align-items:center;gap:8px}'
@@ -9152,6 +9152,10 @@
             var n = (ADMIN_CB.rows || []).length;
             if (badge) { badge.textContent = String(n); badge.style.display = n ? 'inline-block' : 'none'; }
             acbRerender();
+            // Quiet server reconcile. Starts AFTER the write committed, so it
+            // carries post-edit truth; the epoch guard protects it from racing
+            // any further clicks, and quiet keeps the success banner up.
+            loadProspectCallbacks({ force: true, quiet: true });
         }
         async function acbPost(payload) {
             return prospectFetchJSON('/api/prospects/set-callback', {
@@ -9167,6 +9171,7 @@
             if (idx === -1) return;
             var row = ADMIN_CB.rows[idx];
             var prev = { due: row.next_action_due_at, legacy: row.next_callback_at, type: row.next_action_type };
+            ADMIN_CB.mutation++;
             row.next_action_due_at = iso;
             row.next_callback_at = null;
             row.next_action_type = 'callback';
@@ -9188,6 +9193,7 @@
             if (idx === -1) return;
             var row = ADMIN_CB.rows[idx];
             var name = acbBiz(row);
+            ADMIN_CB.mutation++;
             ADMIN_CB.rows.splice(idx, 1);
             ADMIN_CB.msg = null;
             acbRerender();
@@ -9205,6 +9211,7 @@
             if (idx === -1) return;
             var row = ADMIN_CB.rows[idx];
             var name = acbBiz(row);
+            ADMIN_CB.mutation++;
             ADMIN_CB.rows.splice(idx, 1);
             ADMIN_CB.msg = null;
             acbRerender();
@@ -9217,9 +9224,9 @@
                 acbSetMsg('Could not remove that callback: ' + (e.message || 'unknown') + '. It is still on the list.');
             }
         }
-        function renderAdminCallbackCalendar(rows) {
+        function renderAdminCallbackCalendar(rows, keepMsg) {
             ADMIN_CB.rows = rows || [];
-            ADMIN_CB.msg = null;   // a fresh load clears the last edit's banner
+            if (!keepMsg) ADMIN_CB.msg = null;   // a fresh load clears the last edit's banner
             var host = document.getElementById('prospectTableCallbacks');
             if (host) host.innerHTML = '<div id="cbCalHostAdmin">' + adminCallbackCalendarHtml() + '</div>';
         }
@@ -9230,6 +9237,13 @@
             // dueTodayOnly is set when the Callbacks Due workflow card is active.
             // Bypass the cache when scope flips so the right slice renders.
             var dueOnly = !!prospectState.dueTodayOnly;
+            // Snapshot the local-edit epoch. Mark called / Remove / Reschedule
+            // update the calendar optimistically; a fetch already in flight
+            // when the user clicked would land a second later and repaint the
+            // PRE-click rows, which read as the buttons doing nothing until a
+            // manual refresh. If the epoch moves while fetching, local state
+            // is newer: cache the payload but leave the calendar alone.
+            var mutAtStart = ADMIN_CB.mutation;
             var cached = !opts.force && !dueOnly && prospectState.cache.callbacks;
             if (cached) {
                 prospectState.rows = sortByCallbackDue(applyClientFilters(cached));
@@ -9243,9 +9257,10 @@
                 var data = await prospectFetchJSON('/api/prospects/list-callbacks' + qs);
                 var raw = data.results || [];
                 if (!dueOnly) prospectState.cache.callbacks = raw;
+                if (ADMIN_CB.mutation !== mutAtStart) return;   // user edited mid-fetch; stale payload must not repaint
                 var rows = sortByCallbackDue(applyClientFilters(raw));
                 prospectState.rows = rows;
-                renderAdminCallbackCalendar(rows);
+                renderAdminCallbackCalendar(rows, !!opts.quiet);
                 var badge = document.getElementById('prospectCallbackBadge');
                 if (badge && !dueOnly) { badge.textContent = String(rows.length); badge.style.display = rows.length ? 'inline-block' : 'none'; }
             } catch (e) {
@@ -9338,6 +9353,17 @@
                     var saved = null;
                     try { saved = localStorage.getItem('openphoneLineId'); } catch (_) {}
                     var match = saved && prospectState.openphoneNumbers.find(function(n){ return String(n.id) === String(saved); });
+                    // No explicit choice on this browser: default to the
+                    // SIGNED-IN user's own line. The old fallback took
+                    // numbers[0], which the API returns alphabetically, so
+                    // David's fresh session dialed as George (2026-09-03).
+                    // [0] remains only for a user with no line of their own.
+                    if (!match && CURRENT_USER && CURRENT_USER.displayName) {
+                        var ownFirst = String(CURRENT_USER.displayName).split(/\s+/)[0].toLowerCase();
+                        match = prospectState.openphoneNumbers.find(function(n){
+                            return String(n.name || '').toLowerCase().indexOf(ownFirst) === 0;
+                        });
+                    }
                     prospectState.openphoneSelectedId = match ? match.id : prospectState.openphoneNumbers[0].id;
                 }
             } catch (e) {
