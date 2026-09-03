@@ -1381,6 +1381,14 @@
             </div>
         </div>
 
+        <!-- Sales pipeline (client accounts only; stays hidden for everyone
+             else). Read-only slice of the prospecting pipeline STILO runs for
+             this client: upcoming visits, hot conversations, honest totals. -->
+        <div id="salesPipelineSection" style="display:none;">
+            <div class="section-label">Your Sales Pipeline</div>
+            <div id="salesPipelineBody" style="margin-bottom:28px;"></div>
+        </div>
+
         <!-- Agent Cards -->
         <div class="section-label">Your Agents</div>
         <div class="agent-grid">
@@ -1699,6 +1707,65 @@
 
             loadAgentData(user.id);
             loadInvoices(user.id);
+            loadSalesPipeline(currentUserId, session.access_token);
+        }
+
+        // ── Sales pipeline card (client accounts) ──────────────────────────
+        // Fed by /api/client-pipeline-view: a sanitized slice (no rep notes,
+        // no internal next-steps) of the pipeline STILO works for this client.
+        // The section only appears when there is at least one live row, so
+        // agent-product clients never see an empty box.
+        function spEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+        function spWhen(iso) {
+            if (!iso) return 'time TBC';
+            var d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso.replace(' ', 'T') + 'Z');
+            if (isNaN(d.getTime())) return 'time TBC';
+            return d.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+        }
+        async function loadSalesPipeline(clientId, accessToken) {
+            try {
+                var resp = await fetch('/api/client-pipeline-view?client_id=' + encodeURIComponent(clientId), {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                if (!resp.ok) return;   // not a client account, or nothing to show
+                var d = await resp.json();
+                var c = d.counts || {};
+                var total = (c.booked || 0) + (c.hot || 0) + (c.working || 0) + (c.won || 0);
+                if (!total) return;
+                var card = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;';
+                var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;">'
+                    + [['Booked visits', c.booked || 0, '#10b981'], ['Hot conversations', c.hot || 0, '#f59e0b'], ['In progress', c.working || 0, '#8b93a7'], ['Closed won', c.won || 0, '#5A7BE8']]
+                        .map(function (t) {
+                            return '<div style="' + card + 'padding:16px 18px;">'
+                                + '<div style="font-size:26px;font-weight:800;color:' + t[2] + ';">' + t[1] + '</div>'
+                                + '<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px;">' + t[0] + '</div></div>';
+                        }).join('')
+                    + '</div>';
+                if ((d.booked || []).length) {
+                    html += '<div style="' + card + 'overflow:hidden;margin-bottom:12px;">'
+                        + '<div style="padding:13px 18px 9px;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#10b981;">Upcoming visits &amp; meetings</div>'
+                        + d.booked.map(function (b) {
+                            return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid rgba(255,255,255,0.06);">'
+                                + '<strong style="font-size:14px;">' + spEsc(b.name) + '</strong>'
+                                + (b.city ? '<span style="font-size:12px;color:rgba(255,255,255,0.5);">' + spEsc(b.city) + '</span>' : '')
+                                + (b.niche ? '<span style="font-size:11px;color:rgba(255,255,255,0.4);">' + spEsc(b.niche) + '</span>' : '')
+                                + '<span style="margin-left:auto;font-size:12px;font-weight:700;color:#10b981;">' + spEsc(spWhen(b.when)) + '</span>'
+                                + '</div>';
+                        }).join('')
+                        + '</div>';
+                }
+                if ((d.hot || []).length) {
+                    html += '<div style="' + card + 'overflow:hidden;">'
+                        + '<div style="padding:13px 18px 9px;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#f59e0b;">Hot conversations in play</div>'
+                        + '<div style="padding:6px 18px 14px;display:flex;flex-wrap:wrap;gap:8px;">'
+                        + d.hot.map(function (h) {
+                            return '<span style="padding:5px 12px;border-radius:999px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);font-size:12px;">' + spEsc(h.name) + (h.city ? ' <span style="color:rgba(255,255,255,0.45);">' + spEsc(h.city) + '</span>' : '') + '</span>';
+                        }).join('')
+                        + '</div></div>';
+                }
+                document.getElementById('salesPipelineBody').innerHTML = html;
+                document.getElementById('salesPipelineSection').style.display = '';
+            } catch (e) { console.warn('[sales pipeline]', e); }
         }
 
         // Render the sticky red banner that confirms an admin is acting as a
