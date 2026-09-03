@@ -310,6 +310,7 @@ module.exports = async function handler(req, res) {
     // ACTIVE sdr_users only; an unknown or inactive name leaves the
     // assignment alone.
     const toReassign = [];
+    const callerOverrides = [];
     if (Object.keys(callerBySlug).length) {
         const { data: reps } = await sb.from('sdr_users').select('email, display_name, active');
         const emailByFirst = {};
@@ -328,6 +329,12 @@ module.exports = async function handler(req, res) {
             const needsMove = String(lead.assigned_to || '').toLowerCase() !== email;
             const needsRevive = !!lead.archived_batch;
             if (needsMove || needsRevive) toReassign.push({ id: lead.id, to: email });
+            // Every caller-resolved lead is recorded as an override, moved or
+            // not, so the pg_cron folder reconciler permanently skips it.
+            // Without this the two reconcilers fought: the folder map snapped
+            // David's 09-03 book back to Ale every hour at :17 and his board
+            // collapsed to 5 (2026-09-03).
+            callerOverrides.push({ lead_id: lead.id, email: email });
         }
     }
 
@@ -346,6 +353,11 @@ module.exports = async function handler(req, res) {
 
     const chunk = (arr, n) => { const o = []; for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; };
     let enabled = 0, disabled = 0, agented = 0, reassigned = 0;
+    for (let i = 0; i < callerOverrides.length; i += 200) {
+        await pro.from('manifest_caller_overrides').upsert(
+            callerOverrides.slice(i, i + 200).map(function (o) { return { lead_id: o.lead_id, email: o.email, updated_at: new Date().toISOString() }; }),
+            { onConflict: 'lead_id' });
+    }
     {
         const byEmail = {};
         toReassign.forEach(r => (byEmail[r.to] = byEmail[r.to] || []).push(r.id));
