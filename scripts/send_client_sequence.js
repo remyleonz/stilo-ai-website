@@ -132,14 +132,14 @@ function compose(lead, clientName) {
 
     if (es) {
         const proximity = local
-            ? 'Tenemos el showroom aqui en Hialeah si en algun momento quiere venir a probar las maquinas usted antes de decidir nada.'
+            ? 'Tenemos el showroom aqui en Miami si en algun momento quiere venir a probar las maquinas usted antes de decidir nada.'
             : 'Le vendemos equipos a spas por toda la Florida, no solo aqui en Miami.';
         return {
             subject: 'una pregunta sobre sus equipos',
             body: [
                 (fn ? 'Hola ' + fn + ',' : 'Hola,'),
                 '',
-                'Soy ' + (process.env.STILO_SENDER_NAME || 'Remy') + ', de ' + clientName + ' en Hialeah. Trabajamos con spas y centros de estetica por toda la Florida.',
+                'Soy ' + (process.env.STILO_SENDER_NAME || 'Remy') + ', de ' + clientName + ' en Miami. Trabajamos con spas y centros de estetica por toda la Florida.',
                 '',
                 'En vez de mandarle un catalogo, una sola pregunta: que tratamiento le estan pidiendo sus clientes que ahora mismo no pueden hacer?',
                 '',
@@ -150,14 +150,14 @@ function compose(lead, clientName) {
         };
     }
     const proximity = local
-        ? 'Our showroom is here in Hialeah if you ever want to come run the machines yourself before deciding on anything.'
+        ? 'Our showroom is here in Miami if you ever want to come run the machines yourself before deciding on anything.'
         : 'We supply spas all over Florida, not just here in Miami.';
     return {
         subject: 'question about your equipment',
         body: [
             (fn ? 'Hi ' + fn + ',' : 'Hi,'),
             '',
-            'I\'m ' + (process.env.STILO_SENDER_NAME || 'Remy') + ' with ' + clientName + ' in Hialeah. We work with med spas and aesthetic clinics all over Florida.',
+            'I\'m ' + (process.env.STILO_SENDER_NAME || 'Remy') + ' with ' + clientName + ' in Miami. We work with med spas and aesthetic clinics all over Florida.',
             '',
             'Rather than send you a catalog, one question: what treatment are your clients asking for that your current equipment can\'t do?',
             '',
@@ -175,6 +175,7 @@ function preSendCheck(subject, body) {
     if (/stilo/i.test(t)) fails.push('mentions STILO in client copy');
     if (/\$|\bprice\b|\bprecio\b|\bcost\b|\bcosto\b|starting at|desde \$/i.test(t)) fails.push('mentions price');
     if (/[—–]/.test(t)) fails.push('contains an em or en dash');
+    if (/hialeah/i.test(t)) fails.push('mentions Hialeah (say Miami; standing rule 2026-09-03)');
     if (/https?:\/\/|www\./i.test(t)) fails.push('contains a link');
     if (/\bundefined\b|\bnull\b|Hi ,|Hola ,/.test(t)) fails.push('broken name merge');
     if (body.length > 1200) fails.push('body too long');

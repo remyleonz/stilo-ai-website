@@ -97,16 +97,16 @@ function message(lead, arm) {
     const local = isSouthFlorida(lead);
 
     if (arm === 'A') {
-        if (es) return `hola! una pregunta rápida, ¿hay algún tratamiento que sus clientas le piden y que ahorita no pueden hacer? soy ${REP}, de Blasón Spa Equipment aquí en Hialeah, nosotros vendemos los equipos`;
-        return `hey! quick question, is there a treatment your clients keep asking for that you can't do yet? i'm ${REP} with Blasón Spa Equipment over in Hialeah, we supply the machines`;
+        if (es) return `hola! una pregunta rápida, ¿hay algún tratamiento que sus clientas le piden y que ahorita no pueden hacer? soy ${REP}, de Blasón Spa Equipment aquí en Miami, nosotros vendemos los equipos`;
+        return `hey! quick question, is there a treatment your clients keep asking for that you can't do yet? i'm ${REP} with Blasón Spa Equipment in Miami, we supply the machines`;
     }
     // arm B: the offer. Showroom if they can actually drive to it, a call if not.
     if (local) {
-        if (es) return `hola! tenemos un showroom aquí en Hialeah con las máquinas montadas y funcionando, contorno corporal, láser, ese tipo de cosas. ¿vale la pena pasar a probarlas? soy ${REP}, de Blasón Spa Equipment`;
-        return `hey! we keep a showroom in Hialeah with the machines set up and running, body contouring, lasers, that kind of thing. worth swinging by to try a few? i'm ${REP} with Blasón Spa Equipment`;
+        if (es) return `hola! tenemos un showroom aquí en Miami con las máquinas montadas y funcionando, contorno corporal, láser, ese tipo de cosas. ¿vale la pena pasar a probarlas? soy ${REP}, de Blasón Spa Equipment`;
+        return `hey! we keep a showroom in Miami with the machines set up and running, body contouring, lasers, that kind of thing. worth swinging by to try a few? i'm ${REP} with Blasón Spa Equipment`;
     }
-    if (es) return `hola! soy ${REP}, de Blasón Spa Equipment en Hialeah. le vendemos equipos a spas por toda la Florida. ¿vale la pena una llamada corta para enseñarle lo que tenemos?`;
-    return `hey! i'm ${REP} with Blasón Spa Equipment down in Hialeah, we supply machines to spas all over Florida. worth a quick call to run through what we carry?`;
+    if (es) return `hola! soy ${REP}, de Blasón Spa Equipment en Miami. le vendemos equipos a spas por toda la Florida. ¿vale la pena una llamada corta para enseñarle lo que tenemos?`;
+    return `hey! i'm ${REP} with Blasón Spa Equipment in Miami, we supply machines to spas all over Florida. worth a quick call to run through what we carry?`;
 }
 
 function csvCell(v) {

@@ -128,12 +128,31 @@ There is no such thing as a medical director certificate. It is a licensed MD or
  * Idempotent: a script that already carries the block is returned untouched, so
  * a cached or re-proxied response cannot stack it twice.
  */
+/**
+ * Brand-copy rules applied to every Blason script AT RENDER TIME, so they
+ * hold across David's files, the generated fallbacks and re-pushes without
+ * editing anyone's source. Rule (Remy, 2026-09-03): the showroom and the
+ * company are in MIAMI, never Hialeah. Applied line-wise and only to lines
+ * that talk about the showroom / Blason / the street address, so a lead
+ * whose own city is Hialeah ("City: Hialeah") is never rewritten.
+ */
+function applyCopyRules(md) {
+    return String(md).split('\n').map(function (line) {
+        if (!/hialeah/i.test(line)) return line;
+        if (/showroom|blas[oó]n|84th St/i.test(line)) {
+            return line.replace(/Hialeah/gi, 'Miami');
+        }
+        return line;
+    }).join('\n');
+}
+
 function appendPlaybook(contentMd) {
     const md = String(contentMd || '');
     if (!md.trim()) return md;
     if (!/blas[oó]n/i.test(md)) return md;      // not a Blason script, leave it alone
-    if (md.includes('# Reference')) return md;  // already appended
-    return md.replace(/\s*$/, '') + '\n' + PLAYBOOK_MD;
+    const clean = applyCopyRules(md);
+    if (clean.includes('# Reference')) return clean;  // already appended
+    return clean.replace(/\s*$/, '') + '\n' + PLAYBOOK_MD;
 }
 
 module.exports = { appendPlaybook, PLAYBOOK_MD };

@@ -57,7 +57,7 @@ const UNANSWERED_INBOUND = new Set(['missed_inbound', 'voicemail', 'no_answer'])
 // inline \b after four digits never matches a 5-digit zip, which is how every
 // local lead spent a week getting the weaker video-call ask.
 const SHOWROOM_ZIP3 = ['330', '331', '332', '333'];
-const SHOWROOM_ADDR = '3110 W 84th St Unit 4, Hialeah';
+const SHOWROOM_ADDR = '3110 W 84th St Unit 4, Miami, FL 33018';
 
 function esc(s) {
     return String(s == null ? '' : s)
@@ -274,7 +274,7 @@ function buildScript(ctx) {
                 objections: [
                     { q: '"¿De qué se trata?"', say: 'Una llamada perdida mía. Blason Spa Equipment, en Miami. Nosotros surtimos los láser y las máquinas de contorno corporal. Tenía una sola pregunta sobre lo que ustedes tienen ahora.' },
                     { q: '"¿Cuánto cuesta?"', say: 'Depende de cuál máquina, y cuál máquina depende de lo que usted quiera ofrecer. Eso lo pone Manuel cuando sepa qué necesita. ¿Qué tratamiento le están pidiendo?' },
-                    { q: '"Mándeme información"', say: 'Se la mando hoy. Pero una máquina no se compra por una hoja de papel. En Hialeah están puestas y funcionando. ¿Qué día le sirve?' },
+                    { q: '"Mándeme información"', say: 'Se la mando hoy. Pero una máquina no se compra por una hoja de papel. En Miami están puestas y funcionando. ¿Qué día le sirve?' },
                     { q: '"No estamos buscando nada"', say: 'Está bien. Una última cosa: ¿cuál fue la última máquina que compraron, y a quién se la compraron?' },
                 ],
             };
@@ -298,7 +298,7 @@ function buildScript(ctx) {
             objections: [
                 { q: '"What is this about?"', say: 'A missed call from me. Blason Spa Equipment, in Miami. We supply the lasers and the body contouring machines. I had one question about what you are running now.' },
                 { q: '"How much is it?"', say: 'Depends which machine, and which machine depends on what you want to offer. Manuel prices it once he knows what you need. What treatment are clients asking you for?' },
-                { q: '"Just email me something"', say: 'I will send it today. But nobody buys one of these off a spec sheet. They are set up and running in Hialeah. What day works?' },
+                { q: '"Just email me something"', say: 'I will send it today. But nobody buys one of these off a spec sheet. They are set up and running in Miami. What day works?' },
                 { q: '"We are not looking"', say: 'Fair enough. Last thing before I go: what machine did you buy most recently, and who did you buy it from?' },
             ],
         };

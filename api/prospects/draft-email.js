@@ -164,7 +164,7 @@ module.exports = async function handler(req, res) {
         const hi = es
             ? ('Hola' + (cfName ? ' ' + cfName : '') + ',')
             : ('Hi ' + (cfName || 'there') + ',');
-        const SHOWROOM = '3110 W 84th St Unit 4, Hialeah';
+        const SHOWROOM = '3110 W 84th St Unit 4, Miami, FL 33018';
         let cSubject, cBody;
 
         if (cVariant === 'ask') {
@@ -177,21 +177,21 @@ module.exports = async function handler(req, res) {
                 cBody = hi + '\n\n'
                     + 'Una pregunta después de la llamada: ¿qué tratamiento le están pidiendo que hoy no pueda hacer?\n\n'
                     + 'Lo que me diga, le digo de frente si Manuel tiene la máquina o no.'
-                    + (local ? ' Y si la tiene, la puede ver funcionando en el showroom de Hialeah.' : '')
+                    + (local ? ' Y si la tiene, la puede ver funcionando en el showroom de Miami.' : '')
                     + '\n';
             } else {
                 cSubject = cfName ? (cfName + ', one question') : 'One question';
                 cBody = hi + '\n\n'
                     + 'One question after our call: what treatment are your clients asking for that you can\'t do today?\n\n'
                     + 'Whatever you name, I\'ll tell you straight whether Manuel has the machine for it or not.'
-                    + (local ? ' And if he does, you can see it running at the Hialeah showroom.' : '')
+                    + (local ? ' And if he does, you can see it running at the Miami showroom.' : '')
                     + '\n';
             }
         } else if (es && local) {
             cSubject = (cfName ? cfName + ', ' : '') + 'venga a ver las máquinas funcionando';
             cBody = hi + '\n\n'
                 + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, aquí en Miami.\n\n'
-                + 'Como le comenté, una máquina no se compra por una hoja de especificaciones. En el showroom de Hialeah están puestas y funcionando. Manuel, el dueño, le enseña las que le sirven para lo que usted quiere ofrecer, usted las prueba con sus propias manos, y él le explica cómo otros spas las financian.\n\n'
+                + 'Como le comenté, una máquina no se compra por una hoja de especificaciones. En el showroom de Miami están puestas y funcionando. Manuel, el dueño, le enseña las que le sirven para lo que usted quiere ofrecer, usted las prueba con sus propias manos, y él le explica cómo otros spas las financian.\n\n'
                 + SHOWROOM + '. De lunes a sábado, de 9 a 4.\n\n'
                 + 'Respóndame con el día y la hora que le sirven y se lo aparto. Si esta semana le queda difícil llegar, Manuel la llama y lo hablan por teléfono.\n\n'
                 + 'Cualquier pregunta, me escribe aquí.\n';
@@ -201,13 +201,13 @@ module.exports = async function handler(req, res) {
                 + 'Gracias por atender la llamada. Le escribo de parte de Blason Spa Equipment, en Miami.\n\n'
                 + 'El siguiente paso es hablar directo con Manuel, el dueño. Él importa el equipo, así que le dice de frente cuál máquina le sirve para lo que usted quiere ofrecer y cuál no le conviene. Sin presión y sin vueltas.\n\n'
                 + 'Blason es representante directo: las piezas y el servicio salen de Miami, en español, no de un call center en otro país.\n\n'
-                + 'Respóndame con dos horarios que le sirvan esta semana y se la coordino. Y si prefiere verlas en persona, el showroom está en Hialeah y vale el viaje.\n\n'
+                + 'Respóndame con dos horarios que le sirvan esta semana y se la coordino. Y si prefiere verlas en persona, el showroom está en Miami y vale el viaje.\n\n'
                 + 'Cualquier pregunta, me escribe aquí.\n';
         } else if (local) {
             cSubject = (cfName ? cfName + ', ' : '') + 'come see the machines running';
             cBody = hi + '\n\n'
                 + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment here in Miami.\n\n'
-                + 'Like I said on the phone, you don\'t buy one of these off a spec sheet. The showroom in Hialeah has them set up and running. Manuel, the owner, walks you through the ones that fit what you want to offer, you get your hands on them, and he explains how other spas finance them.\n\n'
+                + 'Like I said on the phone, you don\'t buy one of these off a spec sheet. The Miami showroom has them set up and running. Manuel, the owner, walks you through the ones that fit what you want to offer, you get your hands on them, and he explains how other spas finance them.\n\n'
                 + SHOWROOM + '. Monday through Saturday, 9 to 4.\n\n'
                 + 'Reply with a day and time that work and I\'ll hold it for you. If getting over there is tough this week, Manuel can just call you instead.\n\n'
                 + 'Any questions, reply here.\n';
@@ -217,7 +217,7 @@ module.exports = async function handler(req, res) {
                 + 'Thanks for taking the call. I\'m writing on behalf of Blason Spa Equipment in Miami.\n\n'
                 + 'The next step is a straight conversation with Manuel, the owner. He imports the equipment himself, so he\'ll tell you which machine actually fits what you want to offer and which one isn\'t worth it for you. No pitch, no pressure.\n\n'
                 + 'Blason is a direct distributor, so parts and service come out of Miami, in English or Spanish, not a call center overseas.\n\n'
-                + 'Reply with two times that work this week and I\'ll set it up. And if you\'d rather put your hands on the machines, the showroom is in Hialeah and it\'s worth the trip.\n\n'
+                + 'Reply with two times that work this week and I\'ll set it up. And if you\'d rather put your hands on the machines, the showroom is in Miami and it\'s worth the trip.\n\n'
                 + 'Any questions, reply here.\n';
         }
         const cSender = await kit.getSenderIdentity(gate.email);

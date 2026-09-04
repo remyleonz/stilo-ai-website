@@ -435,7 +435,7 @@ function fallbackBody(lead, step, sender, variant, campaign) {
             const hola = who ? 'hola ' + who : 'hola';
             if (step === 1) {
                 return variant === 'B'
-                    ? hola + ', soy ' + sender.first_name + ' de ' + brand + '. tenemos las maquinas puestas y funcionando en hialeah. vale la pena que las vea?'
+                    ? hola + ', soy ' + sender.first_name + ' de ' + brand + '. tenemos las maquinas puestas y funcionando en miami. vale la pena que las vea?'
                     : hola + ', soy ' + sender.first_name + ' de ' + brand + '. que tratamiento le estan pidiendo sus clientas que hoy no pueda hacer?';
             }
             if (step === 2) {
@@ -445,7 +445,7 @@ function fallbackBody(lead, step, sender, variant, campaign) {
         }
         if (step === 1) {
             return variant === 'B'
-                ? hi + ', ' + sender.first_name + ' here from ' + brand + '. we have the machines set up and running in hialeah. worth a look?'
+                ? hi + ', ' + sender.first_name + ' here from ' + brand + '. we have the machines set up and running in miami. worth a look?'
                 : hi + ', ' + sender.first_name + ' here from ' + brand + '. what treatment are your clients asking for that you cannot do right now?';
         }
         if (step === 2) {

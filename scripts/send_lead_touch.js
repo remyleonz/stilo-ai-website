@@ -72,6 +72,7 @@ function preSendCheck(text) {
     if (/stilo/i.test(text)) fails.push('mentions STILO in client copy');
     if (/\$|\bprice\b|\bprecio\b|\bcost\b|starting at/i.test(text)) fails.push('mentions price');
     if (/[—–]/.test(text)) fails.push('contains an em or en dash');
+    if (/hialeah/i.test(text)) fails.push('mentions Hialeah (say Miami; standing rule 2026-09-03)');
     if (/\bundefined\b|\bnull\b/.test(text)) fails.push('broken merge field');
     return fails;
 }
