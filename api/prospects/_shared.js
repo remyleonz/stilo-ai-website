@@ -392,7 +392,11 @@ const LEAD_LIST_COLUMNS = [
     // Lifecycle: stage badge, SDR scoping, dialed-today dimming, last-touch sort.
     'stage', 'assigned_to', 'last_called_at', 'last_called_outcome', 'call_attempts',
     // Callback + meeting stamps the calendars and the Booked column read.
-    'next_action_due_at', 'meeting_scheduled_at', 'meeting_confirmed_at',
+    // next_action_type gates the drawer's callback banner (only 'callback'
+    // stamps qualify, never the +90d long-followups); next_callback_at is
+    // the legacy column older rows still carry.
+    'next_action_due_at', 'next_action_type', 'next_callback_at',
+    'meeting_scheduled_at', 'meeting_confirmed_at',
     // Client-account scoping: which client's pool this lead belongs to
     // (null = STILO's own prospect). Read by the client CRM and board gates.
     'client_id'

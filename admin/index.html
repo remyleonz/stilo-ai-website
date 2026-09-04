@@ -10379,6 +10379,26 @@
                     + '</div>';
             }
 
+            // Scheduled-callback banner — pinned at the very top of the drawer.
+            // The last-log pill says a callback was requested; this says WHEN.
+            // Only real callbacks qualify (next_action_type='callback' or the
+            // legacy next_callback_at), never the +90d long-followup stamps.
+            var cbDueRaw = (d.next_action_type === 'callback' && d.next_action_due_at) ? d.next_action_due_at : (d.next_callback_at || null);
+            var cbIsBooked = d.last_called_outcome === 'booked_meeting' || d.meeting_scheduled_at;
+            var callbackCardHtml = '';
+            if (cbDueRaw && !cbIsBooked) {
+                var cbMs = tsToMsP(cbDueRaw);
+                var cbOverdue = cbMs != null && cbMs < Date.now();
+                var cbWhen = cbMs == null ? '—' : new Date(cbMs).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                var cbColor = cbOverdue ? 'var(--red,#ef4444)' : 'var(--blue)';
+                var cbBg = cbOverdue ? 'rgba(239,68,68,0.08)' : 'rgba(37,99,235,0.08)';
+                callbackCardHtml = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 16px;background:' + cbBg + ';border:1px solid ' + cbColor + ';border-radius:10px;flex-wrap:wrap;">'
+                    + '<span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;font-weight:800;color:' + cbColor + ';">' + (cbOverdue ? 'Callback overdue' : 'Callback scheduled') + '</span>'
+                    + '<span style="font-size:15px;font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(cbWhen) + ' ET</span>'
+                    + (cbOverdue ? '<span style="font-size:11px;color:' + cbColor + ';">was due, call now</span>' : '')
+                    + '</div>';
+            }
+
             var formId = mode === 'emailable' ? 'prospectEmailForm' : 'prospectCallForm';
             var submitFn = mode === 'emailable' ? 'submitEmailLog()' : 'submitCallLog()';
             var submitLabel = mode === 'emailable' ? 'Log email and next' : 'Log call and next';
@@ -10439,6 +10459,7 @@
             }
 
             return ''
+                + callbackCardHtml
                 // ── Header (SDR-drawer parity) ──
                 + '<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
                   + '<div style="flex:1;min-width:0;">'

@@ -2846,7 +2846,28 @@
                   + '</div>';
             }
 
+            // Scheduled-callback banner — pinned at the very top of the drawer
+            // so the rep sees WHEN the callback is due without scrolling to the
+            // call history. Only real callbacks (next_action_type='callback' or
+            // the legacy next_callback_at), never +90d long-followup stamps.
+            var sdrCbRaw = (r.next_action_type === 'callback' && r.next_action_due_at) ? r.next_action_due_at : (r.next_callback_at || null);
+            var sdrCbBooked = r.last_called_outcome === 'booked_meeting' || r.meeting_scheduled_at;
+            var sdrCallbackCard = '';
+            if (sdrCbRaw && !sdrCbBooked) {
+                var sdrCbMs = tsToMs(sdrCbRaw);
+                var sdrCbOverdue = sdrCbMs != null && sdrCbMs < Date.now();
+                var sdrCbWhen = sdrCbMs == null ? '—' : new Date(sdrCbMs).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                var sdrCbColor = sdrCbOverdue ? 'var(--red,#ef4444)' : 'var(--blue)';
+                var sdrCbBg = sdrCbOverdue ? 'rgba(239,68,68,0.08)' : 'rgba(37,99,235,0.08)';
+                sdrCallbackCard = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 16px;background:' + sdrCbBg + ';border:1px solid ' + sdrCbColor + ';border-radius:10px;flex-wrap:wrap;">'
+                    + '<span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;font-weight:800;color:' + sdrCbColor + ';">' + (sdrCbOverdue ? 'Callback overdue' : 'Callback scheduled') + '</span>'
+                    + '<span style="font-size:15px;font-weight:700;color:var(--text-primary);">' + escapeHtml(sdrCbWhen) + ' ET</span>'
+                    + (sdrCbOverdue ? '<span style="font-size:11px;color:' + sdrCbColor + ';">was due, call now</span>' : '')
+                    + '</div>';
+            }
+
             return ''
+                + sdrCallbackCard
                 // ── Header ──
                 + '<div style="margin-bottom:16px;">'
                 + '<div style="font-family:var(--font-display);font-size:23px;font-weight:800;letter-spacing:-0.02em;line-height:1.15;">' + escapeHtml(r.business_name || r.name || '—') + '</div>'
