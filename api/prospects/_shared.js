@@ -393,9 +393,10 @@ const LEAD_LIST_COLUMNS = [
     'stage', 'assigned_to', 'last_called_at', 'last_called_outcome', 'call_attempts',
     // Callback + meeting stamps the calendars and the Booked column read.
     // next_action_type gates the drawer's callback banner (only 'callback'
-    // stamps qualify, never the +90d long-followups); next_callback_at is
-    // the legacy column older rows still carry.
-    'next_action_due_at', 'next_action_type', 'next_callback_at',
+    // stamps qualify, never the +90d long-followups). next_callback_at is
+    // referenced in old frontend fallbacks but is NOT a real column — never
+    // add it here, it 400s every list query.
+    'next_action_due_at', 'next_action_type',
     'meeting_scheduled_at', 'meeting_confirmed_at',
     // Client-account scoping: which client's pool this lead belongs to
     // (null = STILO's own prospect). Read by the client CRM and board gates.
