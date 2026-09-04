@@ -75,8 +75,10 @@ module.exports = async function handler(req, res) {
     const { data: leads, error: lErr } = await sb.from('leads')
         // primary_language drives the Spanish branch and client_id is asserted
         // below; a missing column here silently produces English copy for a lead
-        // the rep spoke Spanish to.
-        .select('id,name,owner_name,niche,category,address,website,pitch_agent,last_called_outcome,primary_language,client_id')
+        // the rep spoke Spanish to. owner_name_verify_status gates whether the
+        // name may enter copy at all (verifiedFirstNameOf): omit it and every
+        // lead silently loses its greeting.
+        .select('id,name,owner_name,owner_name_verify_status,niche,category,address,website,pitch_agent,last_called_outcome,primary_language,client_id')
         .in('id', leadIds);
     if (lErr) return res.status(500).json({ error: 'leads_read_failed', detail: lErr.message });
     const leadById = {};

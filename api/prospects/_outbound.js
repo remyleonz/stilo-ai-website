@@ -259,6 +259,16 @@ function firstNameOf(full, business, address) {
     return names.firstName(full, business, address) || '';
 }
 
+// Scraped owner names are wrong roughly half the time, and a text that greets
+// the wrong person by name is worse than one with no name at all. Only a name
+// someone actually confirmed (owner_name_verify_status = 'verified', set by
+// verify_owner_names.js or from a rep's call) may enter prospect-facing copy.
+// Everyone else gets the no-name greeting, which is the fallback, not a bug.
+function verifiedFirstNameOf(lead) {
+    if (!lead || lead.owner_name_verify_status !== 'verified') return '';
+    return firstNameOf(lead.owner_name, lead.name, lead.address);
+}
+
 /**
  * Internal product codename -> what a prospect would actually recognise.
  * "LCR" means nothing to a dentist. "winning back past patients" does.
@@ -364,7 +374,7 @@ function validateBody(text, senderFirstName, requiredToken, expectedLeadName) {
 function leadFacts(lead, campaign) {
     const bits = [];
     if (lead.name) bits.push('Business: ' + lead.name);
-    const who = firstNameOf(lead.owner_name, lead.name, lead.address);
+    const who = verifiedFirstNameOf(lead);
     if (who) bits.push('Owner first name: ' + who);
     // Said explicitly, because the model otherwise fills the gap itself. See
     // the name-integrity check in validateBody.
@@ -416,7 +426,7 @@ function isSpanish(lead) {
  * because it looks like it worked.
  */
 function fallbackBody(lead, step, sender, variant, campaign) {
-    const who = firstNameOf(lead.owner_name, lead.name, lead.address);
+    const who = verifiedFirstNameOf(lead);
     const hi = who ? 'hey ' + who : 'hey';
     const override = campaign && String(campaign.topic_override || '').trim();
     const topic = override || (lead.pitch_agent ? plainAgent(lead.pitch_agent) : 'your business');
@@ -604,7 +614,11 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
             cleaned,
             identityRequired ? (sender && sender.first_name) : null,
             identityRequired ? token : null,
-            firstNameOf(lead.owner_name, lead.name, lead.address)
+            // Verified names only: for an unverified lead this is '', so a body
+            // greeting ANY name fails checkGreetedName and falls back to the
+            // no-name copy. The model never saw the name (leadFacts withholds
+            // it); this catches the case where it invents one anyway.
+            verifiedFirstNameOf(lead)
         );
         if (v.ok) { body = cleaned; generated = true; }
         else rejected = v.why;
