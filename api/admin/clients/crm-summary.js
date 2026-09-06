@@ -34,7 +34,14 @@ module.exports = async function handler(req, res) {
     if (cErr) return res.status(500).json({ error: 'client_read_failed', detail: cErr.message });
     if (!client) return res.status(404).json({ error: 'client_not_found' });
 
-    const base = () => pros.from('leads').select('id', { count: 'exact', head: true }).eq('client_id', clientId);
+    // The client's own source lead (the lead that BECAME this client) carries
+    // client_id but is STILO's sale to them, not their pipeline. Excluding it
+    // keeps "meetings booked" from counting our meeting with the client.
+    const srcLeadId = client.source_lead_id;
+    const base = () => {
+        let q = pros.from('leads').select('id', { count: 'exact', head: true }).eq('client_id', clientId);
+        return srcLeadId ? q.neq('id', srcLeadId) : q;
+    };
     const nowIso = new Date().toISOString();
 
     const [total, dialed, booked, upcoming] = await Promise.all([
@@ -50,8 +57,10 @@ module.exports = async function handler(req, res) {
     // Total dials = sum of call_attempts across the pool.
     let dials = 0;
     {
-        const { data, error } = await pros.from('leads')
+        let dq = pros.from('leads')
             .select('call_attempts').eq('client_id', clientId).gt('call_attempts', 0).limit(10000);
+        if (srcLeadId) dq = dq.neq('id', srcLeadId);
+        const { data, error } = await dq;
         if (error) return res.status(500).json({ error: 'dials_read_failed', detail: error.message });
         for (const r of (data || [])) dials += Number(r.call_attempts) || 0;
     }

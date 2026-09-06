@@ -2201,12 +2201,14 @@
                 <!-- Period selector — center-aligned, no date label per
                      Remy 2026-05-28. -->
                 <div id="revenuePeriodBar" style="display:flex;justify-content:center;align-items:center;gap:14px;margin-bottom:26px;flex-wrap:wrap;">
+                    <select id="revenueSourceSelect" onchange="setRevenueSource(this.value)" style="background:rgba(255,255,255,0.02);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:999px;padding:7px 14px;font-size:12px;cursor:pointer;"></select>
                     <div style="display:inline-flex;background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);border-radius:999px;padding:3px;">
                         <button type="button" class="rev-period" data-period="today" onclick="setRevenuePeriod('today')">Today</button>
                         <button type="button" class="rev-period" data-period="week" onclick="setRevenuePeriod('week')">7 days</button>
                         <button type="button" class="rev-period active" data-period="month" onclick="setRevenuePeriod('month')">Month</button>
                         <button type="button" class="rev-period" data-period="all" onclick="setRevenuePeriod('all')">All time</button>
                     </div>
+                    <span id="revenuePendingPill" style="display:none;font-size:12px;color:#eab308;border:1px solid rgba(234,179,8,0.4);border-radius:999px;padding:6px 12px;"></span>
                 </div>
 
                 <!-- 3 hero cards (period-aware) -->
@@ -2337,7 +2339,10 @@
                 <section class="stilo-section">
                     <div class="stilo-section-header">
                         <h3 class="stilo-section-title">SALES OVERVIEW</h3>
-                        <span class="stilo-section-count" id="salesOverviewMeta"></span>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <select id="salesAccountSelect" onchange="onSalesAccountChange(this.value)" style="background:var(--s-surface);color:var(--s-text);border:1px solid var(--s-line);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;"></select>
+                            <span class="stilo-section-count" id="salesOverviewMeta"></span>
+                        </div>
                     </div>
                     <div id="salesOverviewCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
                         <div class="stilo-empty" style="grid-column:1/-1;">Loading…</div>
@@ -4488,8 +4493,20 @@
            ============================================================ */
         var REVENUE_STATE = {
             period: 'month',          // 'today' | 'week' | 'month' | 'all'
-            cache: null               // { deals, agentsRows, firstDealAt }
+            // Revenue source: 'all' (deals + paid client commission),
+            // 'stilo' (client deals only), or a client uuid (that client's
+            // commission ledger only). Client commission counts as revenue
+            // ONLY once status='paid'; reported/invoiced shows as a pending
+            // pill, never in the totals. Money that has not landed is not
+            // revenue (Remy, 2026-09-04, the Ruvi sale).
+            source: (function () { try { return localStorage.getItem('revenueSourceScope') || 'all'; } catch (_) { return 'all'; } })(),
+            cache: null               // { deals, commissionDeals, pendingByClient, clientNames, agentsRows, firstDealAt }
         };
+        function setRevenueSource(v) {
+            REVENUE_STATE.source = v;
+            try { localStorage.setItem('revenueSourceScope', v); } catch (_) {}
+            loadRevenue();
+        }
         var REVENUE_PERIOD_LABELS = {
             today: 'Today',
             week:  'Last 7 days',
@@ -4718,15 +4735,20 @@
                 // Pull deals + active client_agents once; cache so period
                 // switches don't re-query.
                 if (!REVENUE_STATE.cache) {
-                    var [dealsRes, agentsRes] = await Promise.all([
+                    var [dealsRes, agentsRes, salesRes] = await Promise.all([
                         sb.from('deals')
                             .select('id, client_id, agent_codes, upfront_fee_cents, monthly_retainer_cents, stage, closed_at, paid_at, clients(business_name, email)')
                             .neq('stage', 'CLOSED_LOST'),
                         sb.from('client_agents')
-                            .select('id, client_id, agent_type, status, clients(business_name, email)')
+                            .select('id, client_id, agent_type, status, clients(business_name, email)'),
+                        sb.from('client_sales')
+                            .select('id, client_id, sale_date, buyer_name, sale_amount_cents, commission_cents, status, clients(business_name, email)')
                     ]);
                     if (dealsRes.error) throw dealsRes.error;
                     if (agentsRes.error) throw agentsRes.error;
+                    // client_sales is best-effort: an older session without the
+                    // RLS policy just sees an empty ledger, not a broken page.
+                    var salesRows = (salesRes && salesRes.data) || [];
                     var deals = (dealsRes.data || []).filter(function(d){
                         var em = (d.clients && d.clients.email) || '';
                         return !ADMIN_EMAILS.includes(em.toLowerCase()) && d.closed_at;
@@ -4735,15 +4757,59 @@
                         var em = (r.clients && r.clients.email) || '';
                         return r.status === 'active' && !ADMIN_EMAILS.includes(em.toLowerCase()) && r.agent_type !== 'business_profile';
                     });
-                    var firstDealAt = deals.reduce(function(min, d){
+                    // PAID commission becomes revenue, shaped like a one-off deal
+                    // (upfront = the commission, no retainer) so every accrual,
+                    // sparkline and top-clients calc downstream just works.
+                    var commissionDeals = salesRows.filter(function (s) { return s.status === 'paid'; }).map(function (s) {
+                        return {
+                            id: 'comm_' + s.id, client_id: s.client_id, agent_codes: [],
+                            upfront_fee_cents: Number(s.commission_cents) || 0, monthly_retainer_cents: 0,
+                            stage: 'LIVE', closed_at: s.sale_date, paid_at: s.sale_date,
+                            clients: s.clients || {}, is_commission: true
+                        };
+                    });
+                    var pendingByClient = {};
+                    salesRows.filter(function (s) { return s.status !== 'paid'; }).forEach(function (s) {
+                        pendingByClient[s.client_id] = (pendingByClient[s.client_id] || 0) + (Number(s.commission_cents) || 0);
+                    });
+                    var clientNames = {};
+                    salesRows.forEach(function (s) { if (s.clients && s.clients.business_name) clientNames[s.client_id] = s.clients.business_name; });
+                    var firstDealAt = deals.concat(commissionDeals).reduce(function(min, d){
                         var t = new Date(d.closed_at);
                         return (!min || t < min) ? t : min;
                     }, null);
-                    REVENUE_STATE.cache = { deals: deals, agentsRows: agentsRows, firstDealAt: firstDealAt };
+                    REVENUE_STATE.cache = { deals: deals, commissionDeals: commissionDeals, pendingByClient: pendingByClient, clientNames: clientNames, agentsRows: agentsRows, firstDealAt: firstDealAt };
                 }
-                var deals = REVENUE_STATE.cache.deals;
-                var agentsRows = REVENUE_STATE.cache.agentsRows;
-                var firstDealAt = REVENUE_STATE.cache.firstDealAt;
+                var source = REVENUE_STATE.source;
+                var cacheAll = REVENUE_STATE.cache;
+                var deals = source === 'stilo' ? cacheAll.deals
+                    : source === 'all' ? cacheAll.deals.concat(cacheAll.commissionDeals)
+                    : cacheAll.commissionDeals.filter(function (d) { return d.client_id === source; });
+                var agentsRows = (source === 'stilo' || source === 'all') ? cacheAll.agentsRows : [];
+                var firstDealAt = cacheAll.firstDealAt;
+
+                // Source dropdown options: All / STILO deals / one per client
+                // that has a commission ledger row.
+                var srcSel = document.getElementById('revenueSourceSelect');
+                if (srcSel) {
+                    var opts = [{ id: 'all', name: 'All revenue' }, { id: 'stilo', name: 'STILO · client deals' }];
+                    Object.keys(cacheAll.clientNames).forEach(function (cid) {
+                        opts.push({ id: cid, name: cacheAll.clientNames[cid] + ' · commission' });
+                    });
+                    srcSel.innerHTML = opts.map(function (o) {
+                        return '<option value="' + o.id + '"' + (o.id === source ? ' selected' : '') + '>' + o.name.replace(/</g, '&lt;') + '</option>';
+                    }).join('');
+                }
+                // Pending pill: commission reported or invoiced but NOT yet
+                // received. Never counted in the revenue totals.
+                var pendingPill = document.getElementById('revenuePendingPill');
+                if (pendingPill) {
+                    var pendCents = 0;
+                    if (source === 'all') Object.keys(cacheAll.pendingByClient).forEach(function (k) { pendCents += cacheAll.pendingByClient[k]; });
+                    else if (source !== 'stilo') pendCents = cacheAll.pendingByClient[source] || 0;
+                    pendingPill.style.display = pendCents > 0 ? '' : 'none';
+                    pendingPill.textContent = pendCents > 0 ? (fmtUsd(pendCents) + ' commission pending') : '';
+                }
 
                 var period = REVENUE_STATE.period;
                 var win = periodWindow(period, firstDealAt);
@@ -11902,19 +11968,38 @@
            churned). Click a card to expand its detail panel; onboarding/active/
            churned rows carry manual stage-move buttons. Leaderboard underneath. */
         var SALES = null, SALES_OPEN = null;
+        // Which book the Sales tab shows: 'stilo' (our own pipeline, default),
+        // a client uuid (that client's account), or 'all'. STILO and client
+        // numbers were mixed into one view until 2026-09-06.
+        var SALES_SCOPE = (function () { try { return localStorage.getItem('salesAccountScope') || 'stilo'; } catch (_) { return 'stilo'; } })();
+        function onSalesAccountChange(v) {
+            SALES_SCOPE = v;
+            try { localStorage.setItem('salesAccountScope', v); } catch (_) {}
+            SALES_OPEN = null; renderSalesPanel(null);
+            loadSalesOverview();
+        }
         function fmtMoneyCents(c) { return '$' + Math.round((c || 0) / 100).toLocaleString('en-US'); }
 
         async function loadSalesOverview() {
             var cards = document.getElementById('salesOverviewCards');
             if (!cards) return;
             try {
-                var d = await prospectFetchJSON('/api/prospects/sales-overview');
+                var d = await prospectFetchJSON('/api/prospects/sales-overview?client=' + encodeURIComponent(SALES_SCOPE));
                 SALES = d;
+                var sel = document.getElementById('salesAccountSelect');
+                if (sel && d.accounts) {
+                    sel.innerHTML = d.accounts.map(function (a) {
+                        return '<option value="' + escapeAdminHtml(a.id) + '"' + (a.id === d.scope ? ' selected' : '') + '>' + escapeAdminHtml(a.name) + '</option>';
+                    }).join('');
+                }
                 renderSalesCards();
                 renderSalesLeaderboard(d.leaderboard || []);
                 if (SALES_OPEN) renderSalesPanel(SALES_OPEN);
                 var meta = document.getElementById('salesOverviewMeta');
-                if (meta) meta.textContent = 'sitewide · all reps';
+                if (meta) {
+                    var acc = (d.accounts || []).find(function (a) { return a.id === d.scope; });
+                    meta.textContent = (acc ? acc.name.toLowerCase() : 'sitewide') + ' · all reps';
+                }
             } catch (e) {
                 cards.innerHTML = '<div class="stilo-empty" style="grid-column:1/-1;color:var(--red);">Could not load: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
             }
@@ -11926,11 +12011,23 @@
             var defs = [
                 { k: 'cold_calls', label: 'Total cold calls', val: c.cold_calls, color: '#2563eb' },
                 { k: 'emails_sent', label: 'Total emails sent', val: c.emails_sent, color: '#5A7BE8' },
-                { k: 'booked', label: 'Booked meetings', val: c.booked, color: '#10b981' },
-                { k: 'onboarding', label: 'Onboarding', val: c.onboarding, color: '#f97316' },
-                { k: 'active', label: 'Paid clients', val: c.active, color: '#16a34a', sub: fmtMoneyCents(SALES.mrr_cents) + '/mo MRR' },
-                { k: 'churned', label: 'Churned', val: c.churned, color: '#ef4444' }
+                { k: 'booked', label: 'Booked meetings', val: c.booked, color: '#10b981' }
             ];
+            if (SALES.commission) {
+                // Client-account scope: commission economics, not deals/MRR.
+                var cm = SALES.commission;
+                defs = defs.concat([
+                    { k: 'comm_sales', label: 'Sales closed', val: cm.sales_count, color: '#f97316', sub: fmtMoneyCents(cm.sales_amount_cents) + ' sold' },
+                    { k: 'comm_paid', label: 'Commission paid', val: fmtMoneyCents(cm.paid_cents), color: '#16a34a' },
+                    { k: 'comm_pending', label: 'Commission pending', val: fmtMoneyCents(cm.pending_cents), color: '#eab308' }
+                ]);
+            } else {
+                defs = defs.concat([
+                    { k: 'onboarding', label: 'Onboarding', val: c.onboarding, color: '#f97316' },
+                    { k: 'active', label: 'Paid clients', val: c.active, color: '#16a34a', sub: fmtMoneyCents(SALES.mrr_cents) + '/mo MRR' },
+                    { k: 'churned', label: 'Churned', val: c.churned, color: '#ef4444' }
+                ]);
+            }
             cards.innerHTML = defs.map(function (x) {
                 var open = SALES_OPEN === x.k;
                 // Each metric wears its own colour — Remy's call (2026-08-24),
@@ -12167,7 +12264,23 @@
             var p = document.getElementById('salesPanel');
             if (!p) return;
             if (!k || !SALES) { p.innerHTML = ''; return; }
-            if (k === 'onboarding' || k === 'active' || k === 'churned') {
+            if (k === 'comm_sales' || k === 'comm_paid' || k === 'comm_pending') {
+                var cm = SALES.commission || { rows: [] };
+                var rows = (cm.rows || []).filter(function (r) {
+                    if (k === 'comm_paid') return r.status === 'paid';
+                    if (k === 'comm_pending') return r.status !== 'paid';
+                    return true;
+                });
+                var commLabels = { comm_sales: 'Sales ledger', comm_paid: 'Commission paid out', comm_pending: 'Commission pending (not yet received)' };
+                p.innerHTML = salesPanelWrap(commLabels[k], rows.length ? rows.map(function (r) {
+                    return '<div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--s-line);font-size:13px;">'
+                        + '<div><div style="font-weight:600;color:var(--s-text);">' + escapeAdminHtml(r.buyer_name || r.description || 'Sale') + '</div>'
+                        + '<div style="color:var(--s-text-3);font-size:12px;">' + escapeAdminHtml(r.sale_date || '') + ' · ' + escapeAdminHtml(r.status || '') + (r.notes ? ' · ' + escapeAdminHtml(String(r.notes).slice(0, 90)) : '') + '</div></div>'
+                        + '<div style="text-align:right;white-space:nowrap;"><div style="font-weight:700;color:var(--s-text);">' + fmtMoneyCents(r.commission_cents) + '</div>'
+                        + '<div style="color:var(--s-text-3);font-size:12px;">of ' + fmtMoneyCents(r.sale_amount_cents) + ' at ' + escapeAdminHtml(String(r.commission_pct || '')) + '%</div></div>'
+                        + '</div>';
+                }).join('') : '<div style="color:var(--text-muted);font-size:13px;">None yet.</div>');
+            } else if (k === 'onboarding' || k === 'active' || k === 'churned') {
                 var list = (SALES.deals && SALES.deals[k]) || [];
                 var labels = { onboarding: 'Onboarding (paid half, implementing)', active: 'Paid clients (live)', churned: 'Churned' };
                 p.innerHTML = salesPanelWrap(labels[k], list.length ? list.map(function (d) { return salesDealRow(d, k); }).join('') : '<div style="color:var(--text-muted);font-size:13px;">None yet.</div>');

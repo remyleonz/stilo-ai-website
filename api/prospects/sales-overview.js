@@ -32,12 +32,43 @@ module.exports = async function handler(req, res) {
     const prospect = lc();
     const pub = pc();
 
+    // ACCOUNT SCOPE. STILO's own pipeline and a client account's pipeline are
+    // different books and were mixed here until 2026-09-06 (Blason's 404 dials
+    // and its booked showroom visits inflated STILO's numbers). ?client= is:
+    //   'stilo' (default) -> STILO's own book, leads.client_id IS NULL
+    //   'all'             -> everything, the old behaviour
+    //   a client uuid     -> that client's pool only
+    const rawScope = String((req.query && req.query.client) || 'stilo').toLowerCase();
+    const scope = /^[0-9a-f-]{36}$/.test(rawScope) ? rawScope : (rawScope === 'all' ? 'all' : 'stilo');
+    // Fetched up front: the dropdown needs the roster, and a client's OWN
+    // source lead (the lead that became the client, e.g. Blason lead 19613)
+    // carries the client's client_id but is STILO's sale, not the client's
+    // pipeline. It is excluded from that client's scoped numbers.
+    const { data: clientRows } = await pub.from('clients').select('id, business_name, source_lead_id').eq('status', 'active');
+    const scopedClient = (clientRows || []).find(function (c) { return c.id === scope; }) || null;
+    const srcLeadId = scopedClient && scopedClient.source_lead_id;
+    // For prospecting tables that hang off leads (lead_messages, lead_calls),
+    // the filter rides an inner join; select must include leads!inner(client_id).
+    function scopeJoin(q) {
+        if (scope === 'all') return q;
+        if (scope === 'stilo') return q.is('leads.client_id', null);
+        q = q.eq('leads.client_id', scope);
+        return srcLeadId ? q.neq('leads.id', srcLeadId) : q;
+    }
+    function scopeLeads(q) {
+        if (scope === 'all') return q;
+        if (scope === 'stilo') return q.is('client_id', null);
+        q = q.eq('client_id', scope);
+        return srcLeadId ? q.neq('id', srcLeadId) : q;
+    }
+    const joinSel = scope === 'all' ? 'id' : 'id, leads!inner(client_id)';
+
     // Headline counts (head:true → count only, no rows).
-    const emails_sent = await count(prospect.from('lead_messages').select('id', { count: 'exact', head: true }).eq('channel', 'email'));
+    const emails_sent = await count(scopeJoin(prospect.from('lead_messages').select(joinSel, { count: 'exact', head: true }).eq('channel', 'email')));
     // Cold calls = outbound DIALS only (outbound|outgoing), attributed to a rep.
     // Must match the per-rep tally below exactly, or the headline and the
     // "cold calls by rep" breakdown disagree. Inbound calls are NOT cold calls.
-    const cold_calls = await count(prospect.from('lead_calls').select('id', { count: 'exact', head: true }).in('direction', ['outbound', 'outgoing']).not('logged_by', 'is', null));
+    const cold_calls = await count(scopeJoin(prospect.from('lead_calls').select(joinSel, { count: 'exact', head: true }).in('direction', ['outbound', 'outgoing']).not('logged_by', 'is', null)));
     // Rep roster for display names + sdr_id->email (deals attribute by sdr_id).
     const { data: roster } = await pub.from('sdr_users').select('id, email, display_name');
     const nameByEmail = {}, emailById = {};
@@ -51,10 +82,13 @@ module.exports = async function handler(req, res) {
     // sync's title-vs-business-name fallback), which double-counted a single
     // meeting. Keyed on meeting_scheduled_at (not last_called_outcome, which a
     // later reminder/callback overwrites). Drives the card, panel, leaderboard.
-    const { data: bookedRaw } = await prospect.from('leads')
-        .select('id, name, owner_name, owner_email, email, owner_phone, phone, meeting_event_id, meeting_scheduled_at, meeting_meet_link, meeting_booked_by_sdr, meeting_confirmed_at, pitch_agent, matched_product_name, next_step, next_step_due')
-        .not('meeting_scheduled_at', 'is', null)
-        .order('meeting_scheduled_at', { ascending: true, nullsFirst: false })
+    // A client-account meeting often has no calendar event (a showroom visit
+    // agreed in a DM has a stage, not a Google event), so the scoped query
+    // takes EITHER a scheduled timestamp OR a MEETING_BOOKED stage.
+    const { data: bookedRaw } = await scopeLeads(prospect.from('leads')
+        .select('id, name, owner_name, owner_email, email, owner_phone, phone, stage, meeting_event_id, meeting_scheduled_at, meeting_meet_link, meeting_booked_by_sdr, meeting_confirmed_at, pitch_agent, matched_product_name, next_step, next_step_due')
+        .or('meeting_scheduled_at.not.is.null,stage.eq.MEETING_BOOKED')
+        .order('meeting_scheduled_at', { ascending: true, nullsFirst: false }))
         .limit(500);
     const bookedByEvent = new Map();
     (bookedRaw || []).forEach(function (l) {
@@ -195,10 +229,10 @@ module.exports = async function handler(req, res) {
     try {
         let from = 0;
         for (;;) {
-            const { data: calls } = await prospect.from('lead_calls')
-                .select('logged_by')
+            const { data: calls } = await scopeJoin(prospect.from('lead_calls')
+                .select(scope === 'all' ? 'logged_by' : 'logged_by, leads!inner(client_id)')
                 .in('direction', ['outbound', 'outgoing'])
-                .not('logged_by', 'is', null)
+                .not('logged_by', 'is', null))
                 .range(from, from + 999);
             if (!calls || !calls.length) break;
             calls.forEach(function (c) { bump(c.logged_by, 'dials'); });
@@ -207,7 +241,7 @@ module.exports = async function handler(req, res) {
         }
     } catch (_) {}
     try {
-        const { data: msgs } = await prospect.from('lead_messages').select('sent_by').eq('channel', 'email').not('sent_by', 'is', null).limit(5000);
+        const { data: msgs } = await scopeJoin(prospect.from('lead_messages').select(scope === 'all' ? 'sent_by' : 'sent_by, leads!inner(client_id)').eq('channel', 'email').not('sent_by', 'is', null)).limit(5000);
         (msgs || []).forEach(function (m) { bump(m.sent_by, 'emails'); });
     } catch (_) {}
     // Booked per rep = distinct events (bookedLeads is already event-deduped).
@@ -225,7 +259,31 @@ module.exports = async function handler(req, res) {
     });
     const leaderboard = Object.values(board).sort(function (a, b) { return (b.dials + b.emails * 5 + b.booked * 20) - (a.dials + a.emails * 5 + a.booked * 20); });
 
+    // Accounts for the UI's scope dropdown: STILO's own book plus every client.
+    const accounts = [{ id: 'stilo', name: 'STILO · new clients' }]
+        .concat((clientRows || []).map(function (c) { return { id: c.id, name: c.business_name + ' · client account' }; }))
+        .concat([{ id: 'all', name: 'All accounts' }]);
+
+    // Client accounts earn commission (public.client_sales), not deals/MRR.
+    // Returned only for a uuid scope so the UI can swap the deal cards out.
+    let commission = null;
+    if (scope !== 'stilo' && scope !== 'all') {
+        const { data: sales } = await pub.from('client_sales')
+            .select('id, sale_date, buyer_name, description, sale_amount_cents, commission_pct, commission_cents, status, notes')
+            .eq('client_id', scope).order('sale_date', { ascending: false });
+        const rows = sales || [];
+        commission = {
+            sales_count: rows.length,
+            sales_amount_cents: rows.reduce(function (s, r) { return s + (Number(r.sale_amount_cents) || 0); }, 0),
+            paid_cents: rows.filter(function (r) { return r.status === 'paid'; }).reduce(function (s, r) { return s + (Number(r.commission_cents) || 0); }, 0),
+            pending_cents: rows.filter(function (r) { return r.status !== 'paid'; }).reduce(function (s, r) { return s + (Number(r.commission_cents) || 0); }, 0),
+            rows: rows
+        };
+    }
+
     return res.status(200).json({
+        scope: scope,
+        accounts: accounts,
         cards: {
             emails_sent: emails_sent,
             cold_calls: cold_calls,
@@ -236,6 +294,7 @@ module.exports = async function handler(req, res) {
         },
         mrr_cents: mrr_cents,
         deals: { onboarding: onboarding, active: active, churned: churned },
+        commission: commission,
         booked_leads: bookedLeads || [],
         booked_summary: bs,
         leaderboard: leaderboard
