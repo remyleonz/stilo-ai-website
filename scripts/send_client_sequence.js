@@ -318,10 +318,14 @@ async function main() {
             .is('email_2_sent_at', null).is('reply_received_at', null);
     } else if (MODE === 'warm') {
         // Reached on the phone (connected filter below), address passed DNS
-        // verification, never emailed. Role inboxes are allowed here: we have
-        // actually rung this business, so this is follow-up, not list mail.
+        // verification, never emailed. DELIVERABLE ONLY. The 2026-09-04 warm
+        // batch allowed role inboxes on the theory that a prior call made it
+        // follow-up, not list mail; deliverability does not care about the
+        // relationship: 21 of 36 role-inbox sends bounced (58%) vs 0 of 3
+        // personal addresses. An info@ that does not exist bounces no matter
+        // how warm the lead is.
         q = q.is('email_1_sent_at', null)
-            .in('email_verify_status', ['deliverable', 'role_inbox'])
+            .eq('email_verify_status', 'deliverable')
             .not('last_called_at', 'is', null);
     } else {
         q = q.is('email_1_sent_at', null)
