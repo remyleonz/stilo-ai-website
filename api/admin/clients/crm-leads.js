@@ -27,7 +27,11 @@ module.exports = async function handler(req, res) {
     let sel = sb.from('leads')
         .select(LEAD_LIST_COLUMNS)
         .eq('client_id', q.client_id);
-    if (q.q) sel = sel.ilike('name', '%' + q.q + '%');
+    if (q.q) {
+        // Match business OR owner name; the UI's search box promises both.
+        const needle = String(q.q).replace(/[%,()]/g, ' ').trim();
+        if (needle) sel = sel.or('name.ilike.%' + needle + '%,owner_name.ilike.%' + needle + '%');
+    }
     if (q.only === 'booked') sel = sel.not('meeting_scheduled_at', 'is', null);
     if (q.only === 'called') sel = sel.not('last_called_at', 'is', null);
 

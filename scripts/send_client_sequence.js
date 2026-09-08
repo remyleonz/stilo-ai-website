@@ -344,7 +344,12 @@ async function main() {
     // from the start; the email lane did not. A decline in ANY channel is a
     // decline in every channel.
     const declined = new Set(['owner_uninterested', 'do_not_call']);
-    const CLOSED = ['CLOSED_LOST', 'CLOSED_WON'];
+    // MEETING_BOOKED counts as closed for outbound purposes: a lead mid-visit
+    // or mid-reschedule is in a live human conversation, and a templated
+    // "i called you recently" email into that thread reads like a bot (Oya
+    // Wellness got one on 2026-09-08 while actively texting about that day's
+    // showroom visit).
+    const CLOSED = ['CLOSED_LOST', 'CLOSED_WON', 'MEETING_BOOKED'];
     const { data: killed } = await sb.from('outbound_targets')
         .select('lead_id, stage').in('stage', ['dead', 'opted_out', 'queued']);
     const killedIds = new Set((killed || []).filter(function (t) { return t.stage !== 'queued'; }).map(function (t) { return t.lead_id; }));

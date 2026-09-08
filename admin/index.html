@@ -1667,7 +1667,7 @@
                             <h3 class="stilo-section-title">LEAD POOL</h3>
                             <span class="stilo-section-count" id="crmLeadsCount"></span>
                             <div class="stilo-section-actions" style="margin-left:auto;">
-                                <input id="crmLeadSearch" type="search" placeholder="Search…" oninput="crmRenderLeads()" style="padding:7px 12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.83rem;width:200px;">
+                                <input id="crmLeadSearch" type="search" placeholder="Search…" oninput="crmSearchLeads()" style="padding:7px 12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.83rem;width:200px;">
                             </div>
                         </div>
                         <div style="overflow-x:auto;">
@@ -3170,11 +3170,25 @@
             });
         }
 
+        // Search goes to the SERVER. The endpoint returns at most 1000 of a
+        // pool that can be larger (Blason holds 1,454), so filtering the
+        // loaded rows client-side made any lead outside the first page
+        // unfindable: "AgeRejuvenation" matched 5 leads in the pool and 0 on
+        // screen (2026-09-08). Debounced so typing doesn't fire per keystroke.
+        var crmSearchTimer = null;
+        function crmSearchLeads() {
+            clearTimeout(crmSearchTimer);
+            crmSearchTimer = setTimeout(crmLoadLeads, 300);
+        }
+
         async function crmLoadLeads() {
             var body = document.getElementById('crmLeadsBody');
             body.innerHTML = '<tr><td colspan="7" class="stilo-empty">Loading…</td></tr>';
             try {
-                var j = await crmFetch('/api/admin/clients/crm-leads?client_id=' + encodeURIComponent(crmClientId));
+                var searchBox = document.getElementById('crmLeadSearch');
+                var q = searchBox ? String(searchBox.value || '').trim() : '';
+                var j = await crmFetch('/api/admin/clients/crm-leads?client_id=' + encodeURIComponent(crmClientId)
+                    + (q ? '&q=' + encodeURIComponent(q) : ''));
                 crmLeadsCache = j.results || [];
                 crmRenderLeads();
                 crmRenderMeetings();
