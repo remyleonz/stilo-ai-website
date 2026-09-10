@@ -341,9 +341,25 @@ module.exports = async function handler(req, res) {
         }).eq('id', claimId);
         if (logErr) console.error('[send-email] lead_messages log failed:', logErr.message);
     } catch (e) { console.error('[send-email] lead_messages log threw:', e && e.message); }
+    // The composer's To is ground truth. Every send through this endpoint is a
+    // human choosing an address (often one they just heard on a call), so after
+    // a successful send that address REPLACES the stored owner_email — the
+    // column emailable.js and every campaign/nurture sender reads first.
+    // Previously we only backfilled when the lead had NO email at all, so a
+    // wrong guessed address stayed on file forever and follow-ups kept mailing
+    // it. The old address is not lost: every prior send in lead_messages keeps
+    // its to_address, and the per-address bounce history there still guards it.
+    //
+    // A changed address also clears the lead-level bounced_at: that stamp
+    // belongs to the OLD address, and while it is set _email_guard blocks every
+    // automated send and emailable.js drops the lead from the queue entirely —
+    // exactly the follow-up campaigns the corrected address is for.
     try {
-        if (!lead.owner_email && !lead.email) {
-            await sb.from('leads').update({ owner_email: to }).eq('id', id);
+        const norm = function (s) { return String(s || '').trim().toLowerCase(); };
+        if (norm(to) !== norm(lead.owner_email)) {
+            const upd = { owner_email: to, updated_at: new Date().toISOString() };
+            if (lead.bounced_at) upd.bounced_at = null;
+            await sb.from('leads').update(upd).eq('id', id);
         }
     } catch (_) { /* non-fatal */ }
 
