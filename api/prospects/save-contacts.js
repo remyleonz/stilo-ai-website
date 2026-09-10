@@ -49,6 +49,12 @@ module.exports = async function handler(req, res) {
         update.owner_name_verify_status = value ? 'verified' : null;
         update.owner_name_verify_source = value ? 'rep_confirmed' : null;
         update.owner_name_last_verified = value ? new Date().toISOString() : null;
+        // The rep's answer REPLACES every other owner name on file. Clearing
+        // the scrape's candidate (owner_name_found) pulls the lead out of the
+        // contradicted-review queue and stops any later job from suggesting
+        // the old name again. owner_name itself is the single column all
+        // outbound copy and both dashboards read.
+        if (value) update.owner_name_found = null;
     }
 
     const { error } = await sb.from('leads').update(update).eq('id', id);

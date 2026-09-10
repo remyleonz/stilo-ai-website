@@ -78,6 +78,7 @@
             + '<input id="cnInput_' + f.key + '" type="text" autocomplete="off" spellcheck="false" maxlength="120"'
               + ' value="' + A.escape(val) + '" data-saved="' + A.escape(val) + '" placeholder="' + A.escape(f.placeholder) + '"'
               + ' onkeydown="CONTACT_NAMES._key(event, this)"'
+              + ' oninput="CONTACT_NAMES._input(this, \'' + f.key + '\')"'
               + ' onblur="CONTACT_NAMES._blur(this, \'' + f.key + '\')"'
               + ' style="width:100%;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;"'
               + ' onfocus="this.style.borderColor=\'var(--blue)\'"'
@@ -95,7 +96,7 @@
         return '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:13px 16px 14px;margin-bottom:16px;">'
             + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;">'
               + '<span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);">Contacts</span>'
-              + '<span style="font-size:10.5px;color:var(--text-muted);">Type what you hear · saves on its own</span>'
+              + '<span style="font-size:10.5px;color:var(--text-muted);">Type what you hear · saves as you type</span>'
             + '</div>'
             + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;">'
               + FIELDS.map(function (f) { return fieldHtml(d, f); }).join('')
@@ -103,21 +104,45 @@
           + '</div>';
     }
 
+    // Debounced autosave: fires ~0.9s after typing stops (same rhythm as the
+    // Notes box), and blur / Enter flush immediately. Escape reverts.
+    var _timers = {};
+
     function _key(ev, input) {
         if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
         else if (ev.key === 'Escape') {
             ev.preventDefault();
+            if (_timers[input.id]) { clearTimeout(_timers[input.id]); _timers[input.id] = null; }
             input.value = input.getAttribute('data-saved') || '';
             input.blur();
         }
+    }
+
+    function _input(input, field) {
+        if (_timers[input.id]) clearTimeout(_timers[input.id]);
+        var status = document.getElementById('cnStatus_' + field);
+        if (status && input.value.trim() !== (input.getAttribute('data-saved') || '')) {
+            status.style.color = 'var(--text-muted)'; status.textContent = 'Saving…';
+        }
+        _timers[input.id] = setTimeout(function () { _save(input, field); }, 900);
     }
 
     function _blur(input, field) {
         input.style.borderColor = 'var(--border-medium)';
         var val = input.value.trim();
         input.value = val;
+        _save(input, field);
+    }
+
+    function _save(input, field) {
+        if (_timers[input.id]) { clearTimeout(_timers[input.id]); _timers[input.id] = null; }
+        var val = input.value.trim();
         var saved = input.getAttribute('data-saved') || '';
-        if (val === saved) return;
+        if (val === saved) {
+            var st = document.getElementById('cnStatus_' + field);
+            if (st && st.textContent === 'Saving…') st.textContent = '';
+            return;
+        }
         var lead = A.getLead() || {};
         var id = lead.id;
         var status = document.getElementById('cnStatus_' + field);
@@ -149,5 +174,5 @@
         });
     }
 
-    global.CONTACT_NAMES = { configure: configure, render: render, _key: _key, _blur: _blur };
+    global.CONTACT_NAMES = { configure: configure, render: render, _key: _key, _input: _input, _blur: _blur };
 })(window);
