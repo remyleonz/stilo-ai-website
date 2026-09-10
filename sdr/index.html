@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/assets/cold-call-script.js"></script>
     <script src="/assets/nurture-stepper.js"></script>
+    <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
@@ -2180,6 +2181,21 @@
                         getLead: function () { return window.__lastProspectData || {}; }
                     });
                 }
+                // Editable Owner / Front-desk names (assets/contact-names.js,
+                // shared with /admin/). onSaved patches the cached tab rows so
+                // the table shows the corrected name without a refetch.
+                if (window.CONTACT_NAMES) {
+                    CONTACT_NAMES.configure({
+                        escape: escapeHtml,
+                        fetchJson: fetchJSON,
+                        getLead: function () { return window.__lastProspectData || {}; },
+                        onSaved: function (id, field, value) {
+                            ((window.STATE && STATE.currentRows) || []).forEach(function (row) {
+                                if (row && String(row.id) === String(id)) row[field] = value;
+                            });
+                        }
+                    });
+                }
                 body.innerHTML = buildLeadDrawerHtml(r);
                 loadColdCallScript(r);
                 // Messages live in prospecting.lead_messages, not on the lead row,
@@ -2871,7 +2887,7 @@
                 // ── Header ──
                 + '<div style="margin-bottom:16px;">'
                 + '<div style="font-family:var(--font-display);font-size:23px;font-weight:800;letter-spacing:-0.02em;line-height:1.15;">' + escapeHtml(r.business_name || r.name || '—') + '</div>'
-                + '<div style="color:var(--text-primary);margin-top:6px;font-size:14px;">' + escapeHtml(r.owner_name || 'Owner (verify on call)') + (r.address ? ' · ' + escapeHtml(r.address) : '') + '</div>'
+                + '<div style="color:var(--text-primary);margin-top:6px;font-size:14px;"><span id="cnHeaderOwner">' + escapeHtml(r.owner_name || 'Owner (verify on call)') + '</span>' + (r.address ? ' · ' + escapeHtml(r.address) : '') + '</div>'
                 + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
                 + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '')
                 + (r.prospect_score != null ? '<span style="font-size:11px;color:var(--text-tertiary);">Score ' + r.prospect_score + '</span>' : '')
@@ -2905,6 +2921,8 @@
                 + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>'
                 + 'Share</button>'
                 + '</div>'
+                // ── Editable contact names (shared with /admin/) ──
+                + (window.CONTACT_NAMES ? CONTACT_NAMES.render(r) : '')
                 // ── Info grid ──
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-bottom:20px;">'
                 + '<div><div class="stat-label">Niche</div><div>' + escapeHtml(r.niche || r.category || '—') + '</div></div>'

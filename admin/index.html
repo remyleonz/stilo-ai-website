@@ -2503,6 +2503,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/assets/cold-call-script.js"></script>
     <script src="/assets/nurture-stepper.js"></script>
+    <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
@@ -10290,6 +10291,23 @@
         });
         function renderNurtureStepper(d) { return NURTURE_STEPPER.render(d); }
 
+        // Editable Owner / Front-desk names (assets/contact-names.js, shared
+        // with /sdr/). onSaved patches every cached tab list so the tables
+        // show the corrected name without a refetch.
+        CONTACT_NAMES.configure({
+            escape: escapeAdminHtml,
+            fetchJson: prospectFetchJSON,
+            getLead: function () { return window.__lastProspectData || {}; },
+            onSaved: function (leadId, field, value) {
+                var cache = prospectState.cache || {};
+                Object.keys(cache).forEach(function (k) {
+                    (cache[k] || []).forEach(function (r) {
+                        if (r && String(r.id) === String(leadId)) r[field] = value;
+                    });
+                });
+            }
+        });
+
         // A lead retired in a named bulk batch (a rep left, a list was killed)
         // looks identical to a live lead in this drawer otherwise, which is how
         // you end up dialing a lead you deliberately shelved. Say it at the top,
@@ -10544,7 +10562,7 @@
                 + '<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
                   + '<div style="flex:1;min-width:0;">'
                     + '<div style="font-family:var(--font-display);font-size:23px;font-weight:800;letter-spacing:-0.02em;line-height:1.15;">' + escapeAdminHtml(business) + '</div>'
-                    + '<div style="color:var(--text-primary);margin-top:6px;font-size:14px;">' + escapeAdminHtml(owner) + (d.address ? ' · ' + escapeAdminHtml(d.address) : '') + '</div>'
+                    + '<div style="color:var(--text-primary);margin-top:6px;font-size:14px;"><span id="cnHeaderOwner">' + escapeAdminHtml(owner) + '</span>' + (d.address ? ' · ' + escapeAdminHtml(d.address) : '') + '</div>'
                     + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
                       + tierBadge(d.prospect_tier) + stageBadge(d.stage)
                       + '<span style="font-size:11px;color:var(--text-muted);">Score ' + escapeAdminHtml(score) + '</span>'
@@ -10561,6 +10579,7 @@
                 + '<div id="nurtureStepperHost">' + (mode !== 'emailable' ? renderNurtureStepper(d) : '') + '</div>'
                 + phoneCardHtml
                 + actionPillsHtml
+                + CONTACT_NAMES.render(d)
                 + infoGridHtml
 
                 + '<form id="' + formId + '" onsubmit="event.preventDefault();' + submitFn + ';return false;" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
@@ -10745,7 +10764,38 @@
                         iconColor = '#0ea5e9';
                         var marrow = e.direction === 'inbound' ? '↓ in' : '↑ out';
                         header = marrow + ' · ' + (e.channel || 'message').toUpperCase() + (e.status ? ' · ' + escapeAdminHtml(e.status.replace(/_/g,' ')) : '');
-                        if (e.body_preview) detail = escapeAdminHtml(String(e.body_preview).slice(0, 240));
+                        // Show the actual message, not just the fact one went
+                        // out: who it went to, the subject, and the full body
+                        // (expandable for email, inline for SMS — texts are
+                        // short enough to read in place).
+                        var isEmail = (e.channel || '') === 'email';
+                        var toLine = e.to_address
+                            ? '<div style="margin-top:3px;font-size:11px;color:var(--text-muted);word-break:break-all;">to ' + escapeAdminHtml(e.to_address)
+                              + (e.sent_by ? ' · sent by ' + escapeAdminHtml(sdrFromEmail(e.sent_by).displayName || e.sent_by) : '') + '</div>'
+                            : '';
+                        var subjLine = (isEmail && e.subject)
+                            ? '<div style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text-primary);">' + escapeAdminHtml(e.subject) + '</div>'
+                            : '';
+                        var fullBody = e.body || e.body_preview || '';
+                        // Emails sent as HTML read as tag soup in a text block;
+                        // reduce them to readable text (line breaks kept).
+                        if (isEmail && /<[a-z][^>]*>/i.test(fullBody)) {
+                            fullBody = fullBody
+                                .replace(/<br\s*\/?>/gi, '\n')
+                                .replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n')
+                                .replace(/<[^>]+>/g, '')
+                                .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+                                .replace(/\n{3,}/g, '\n\n').trim();
+                        }
+                        var bodyBlock = '';
+                        if (fullBody && isEmail) {
+                            bodyBlock = '<details style="margin-top:5px;"><summary style="cursor:pointer;font-size:11px;color:var(--blue);user-select:none;">View full email</summary>'
+                                + '<div style="margin-top:6px;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-secondary);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;">' + escapeAdminHtml(fullBody) + '</div>'
+                                + '</details>';
+                        } else if (fullBody) {
+                            bodyBlock = '<div style="margin-top:5px;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-secondary);font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;">' + escapeAdminHtml(fullBody) + '</div>';
+                        }
+                        detail = toLine + subjLine + bodyBlock;
                     } else {
                         return '';
                     }
