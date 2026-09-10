@@ -85,13 +85,11 @@ module.exports = async function handler(req, res) {
     if (leadId == null) return res.status(400).json({ error: 'missing_lead_id' });
     if (!whenIso) return res.status(400).json({ error: 'missing_when_iso' });
 
+    // Calendar is required only for the STILO discovery-call path. A
+    // client-account booking (showroom visit) creates no calendar event, so a
+    // disconnected calendar must never block it; the 503 moved below, into
+    // the STILO branch.
     const refreshToken = await getCalendarRefreshToken();
-    if (!refreshToken) {
-        return res.status(503).json({
-            error: 'google_calendar_not_configured',
-            detail: 'The STILO booking calendar is not connected. Open /api/oauth?provider=google-calendar&action=start signed in as remyleon@stiloaipartners.com to link it.'
-        });
-    }
 
     // Look up lead
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -153,6 +151,112 @@ module.exports = async function handler(req, res) {
     const ownerFirstName = (lead.owner_name || '').trim().split(/\s+/)[0] || null;
     const startIso = new Date(whenIso).toISOString();
     const endIso = new Date(new Date(whenIso).getTime() + durationMin * 60000).toISOString();
+
+    // ── CLIENT-ACCOUNT BOOKING: showroom visit, not a STILO discovery call ──
+    // No Google Calendar event, no Meet link, no STILO confirmation, no VSL.
+    // Instead: stamp the lead, and send the client-branded package (prospect
+    // email + SMS with the address, brief to the client contact). This is the
+    // Chanel Studio manual flow of 2026-09-10, made permanent. Without this
+    // branch, a Blason lead got a Meet invite from STILO's calendar and the
+    // STILO confirmation flow: the wrong experience end to end.
+    if (clientCo) {
+        // Best-effort: a lead mis-booked through the OLD flow may carry a live
+        // STILO calendar event. Cancel it so the prospect's calendar clears.
+        if (lead.meeting_event_id && refreshToken) {
+            try {
+                const tok = await accessTokenFromRefresh(refreshToken);
+                await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'
+                    + encodeURIComponent(lead.meeting_event_id) + '?sendUpdates=all', {
+                    method: 'DELETE', headers: { Authorization: 'Bearer ' + tok }
+                });
+            } catch (_) { /* cleanup only, never blocks the booking */ }
+        }
+
+        let persistError = null;
+        try {
+            const updateRow = {
+                meeting_event_id: null, meeting_event_link: null, meeting_meet_link: null,
+                meeting_scheduled_at: startIso,
+                meeting_duration_min: durationMin,
+                meeting_booked_by_sdr: gate.email || null,
+                meeting_booked_at: new Date().toISOString(),
+                last_called_outcome: 'booked_meeting',
+                last_called_at: new Date().toISOString(),
+                call_attempts: (Number(lead.call_attempts) || 0) + 1,
+                call_notes: 'Showroom visit booked ' + new Date(startIso).toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET (' + clientCo.business_name + ')',
+                // The package below IS the confirmation. Stamping it keeps the
+                // safety-net cron away (it already excludes client leads, this
+                // makes the row state honest either way).
+                meeting_confirmation_sent_at: new Date().toISOString(),
+                nurture_stage: 'booked'
+            };
+            const movedTo = new Date(startIso).getTime();
+            const movedFrom = lead.meeting_scheduled_at ? new Date(lead.meeting_scheduled_at).getTime() : null;
+            if (movedFrom === null || movedFrom !== movedTo) {
+                updateRow.meeting_confirmed_at = null;
+                updateRow.meeting_reminder_sent_at = null;
+                updateRow.closer_reminder_sent_at = null;
+                updateRow.day_before_sms_sent_at = null;
+            }
+            if (typedEmail && typedEmail !== lead.owner_email) updateRow.owner_email = typedEmail;
+            const upd = await sb.from('leads').update(updateRow).eq('id', leadId);
+            if (upd.error) persistError = upd.error.message;
+        } catch (e) { persistError = String(e.message || e); }
+
+        // The top-of-handler select is narrow; the package needs rep_notes and
+        // primary_language too. Re-read the few fields it uses.
+        let leadFull = lead;
+        try {
+            const { data: lf } = await sb.from('leads')
+                .select('id,name,owner_name,owner_email,email,owner_phone,phone,rep_notes,primary_language')
+                .eq('id', leadId).maybeSingle();
+            if (lf) leadFull = lf;
+        } catch (_) { /* fall back to the narrow row */ }
+
+        let pkg = null;
+        try {
+            const { sendClientBookingPackage } = require('./_client_booking');
+            pkg = await sendClientBookingPackage(sb, leadFull, clientCo, {
+                whenIso: startIso,
+                prospectEmail: ownerEmail,
+                repEmail: gate.email || null
+            });
+        } catch (e) {
+            pkg = { error: String((e && e.message) || e) };
+            console.error('[book-meeting] client booking package failed for lead=' + leadId + ':', (e && e.message) || e);
+        }
+
+        try {
+            await sb.from('lead_calls').insert({
+                lead_id: leadId, direction: 'outbound', outcome: 'booked_meeting',
+                called_at: new Date().toISOString(), logged_by: gate.email || null,
+                transcript_summary: 'Showroom visit booked for ' + new Date(startIso).toLocaleString('en-US', { timeZone: 'America/New_York' }) + ' ET (' + clientCo.business_name + ')'
+            });
+        } catch (_) { /* nice-to-have */ }
+
+        try {
+            await sendInternalNotification({
+                businessName: businessName + ' (' + clientCo.business_name + ' showroom visit)',
+                whenIso: startIso, meetLink: '',
+                bookedBy: gate.email || 'STILO', sdrEmail: gate.email || null,
+                contact: ownerName, email: ownerEmail, phone: ownerPhone
+            });
+        } catch (_) { /* best-effort */ }
+
+        return res.status(200).json({
+            ok: true, lead_id: leadId, mode: 'client_showroom',
+            client: clientCo.business_name,
+            package: pkg,
+            persisted: !persistError, persist_error: persistError
+        });
+    }
+
+    if (!refreshToken) {
+        return res.status(503).json({
+            error: 'google_calendar_not_configured',
+            detail: 'The STILO booking calendar is not connected. Open /api/oauth?provider=google-calendar&action=start signed in as remyleon@stiloaipartners.com to link it.'
+        });
+    }
 
     let accessToken;
     try {

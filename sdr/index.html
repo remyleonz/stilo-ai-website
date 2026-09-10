@@ -2852,13 +2852,15 @@
                 var mw = r.meeting_scheduled_at ? new Date(r.meeting_scheduled_at) : null;
                 var mwStr = mw ? mw.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'Time not set yet';
                 sdrMeetingCard = '<div style="margin-bottom:18px;padding:14px 16px;background:rgba(22,163,74,0.10);border:1px solid rgba(22,163,74,0.40);border-radius:12px;">'
-                    + '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#16a34a;margin-bottom:6px;">Meeting booked</div>'
+                    + '<div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#16a34a;margin-bottom:6px;">' + (r.client_id ? 'Showroom visit booked' + (r.client_company ? ' · ' + escapeHtml(r.client_company) : '') : 'Meeting booked') + '</div>'
                     + '<div style="font-size:17px;font-weight:700;color:var(--text-primary);">' + escapeHtml(mwStr) + '</div>'
+                    + (r.client_id && r.client_address ? '<div style="font-size:12.5px;color:var(--text-secondary);margin-top:4px;">' + escapeHtml(r.client_address) + '</div>' : '')
                     + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
                       + (r.meeting_meet_link ? '<a href="' + escapeHtml(r.meeting_meet_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;">Join Google Meet</a>' : '')
                       + (r.meeting_event_link ? '<a href="' + escapeHtml(r.meeting_event_link) + '" target="_blank" rel="noopener" style="display:inline-block;background:var(--bg-input);color:var(--text-primary);text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;border:1px solid var(--border-medium);">Open in Calendar</a>' : '')
                     + '</div>'
-                    + ((!r.meeting_meet_link && !r.meeting_event_link) ? '<div style="font-size:11px;color:var(--text-tertiary);margin-top:8px;">The Meet link appears once the calendar sync runs.</div>' : '')
+                    // Showroom visits have no Meet link by design; never promise one.
+                    + ((!r.client_id && !r.meeting_meet_link && !r.meeting_event_link) ? '<div style="font-size:11px;color:var(--text-tertiary);margin-top:8px;">The Meet link appears once the calendar sync runs.</div>' : '')
                   + '</div>';
             }
 
@@ -2965,25 +2967,42 @@
                 // confirmBooking() calls /api/prospects/book-meeting, which creates
                 // the Google Meet event, emails the prospect the invite, notifies
                 // Remy, and logs the booking. No iframe, no manual time entry.
-                + '<div id="sdrBookingPicker" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'
-                + '<div class="section-title" style="font-size:13px;margin-bottom:4px;">Book the meeting</div>'
-                + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;line-height:1.5;">Pick a real open time on the STILO calendar, enter the prospect\'s email, and tap Book. We create the Google Meet event, send the prospect the invite, notify Remy, and it lands on your Booked tab automatically.</div>'
-                + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (gets the invite)</label>'
-                + '<input id="sdrBookingEmail" type="email" oninput="updateBookBtn()" value="' + escapeHtml(r.owner_email || r.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;margin-bottom:12px;">'
-                // Which agent the rep actually sold on the call. Same picker the
-                // admin drawer uses (assets/vsl-agents.js) so the two dashboards
-                // cannot drift — the booking markup is otherwise duplicated.
-                + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('sdrBookingAgent', r, { helperColor: 'var(--text-tertiary)', onChange: 'refreshConfirmationPreview()' }) : '')
-                + '<div id="sdrBookingSlots"></div>'
-                + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
-                  + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
-                  + '<input id="sdrBookManual" type="datetime-local" onchange="setManualBookSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">'
-                + '</div>'
-                // The exact confirmation email, editable, below the date/time.
-                + (window.CONFIRMATION_PREVIEW ? CONFIRMATION_PREVIEW.html('sdrConfirmPreview') : '')
-                + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
-                + '<button id="sdrBookBtn" disabled onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'
-                + '</div>'
+                + (r.client_id
+                    // Client-account lead: showroom visit (e.g. Blason), not a
+                    // STILO discovery call. Plain date/time picker, no STILO
+                    // calendar slots, no Meet, no agent picker, no STILO
+                    // confirmation preview. book-meeting branches server-side
+                    // and sends the client-branded package (confirmation text
+                    // + email with the address, brief to the client contact).
+                    ? '<div id="sdrBookingPicker" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'
+                      + '<div class="section-title" style="font-size:13px;margin-bottom:4px;">Book the showroom visit' + (r.client_company ? ' · ' + escapeHtml(r.client_company) : '') + '</div>'
+                      + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;line-height:1.5;">Pick the date and time you agreed on the call (ET). We send the prospect a confirmation text and email with the address' + (r.client_address ? ' (' + escapeHtml(r.client_address) + ')' : '') + ', and brief ' + escapeHtml(r.client_company || 'the client') + ' automatically.</div>'
+                      + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Visit date &amp; time (ET)</label>'
+                      + '<input id="sdrShowroomWhen" type="datetime-local" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;margin-bottom:12px;">'
+                      + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (optional, gets the confirmation)</label>'
+                      + '<input id="sdrBookingEmail" type="email" value="' + escapeHtml(r.owner_email || r.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;margin-bottom:12px;">'
+                      + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:2px;min-height:16px;"></div>'
+                      + '<button id="sdrBookBtn" onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Book + send confirmation</button>'
+                      + '</div>'
+                    : '<div id="sdrBookingPicker" style="display:none;margin-top:8px;border-top:1px solid var(--border-medium);padding-top:16px;">'
+                      + '<div class="section-title" style="font-size:13px;margin-bottom:4px;">Book the meeting</div>'
+                      + '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;line-height:1.5;">Pick a real open time on the STILO calendar, enter the prospect\'s email, and tap Book. We create the Google Meet event, send the prospect the invite, notify Remy, and it lands on your Booked tab automatically.</div>'
+                      + '<label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Prospect email (gets the invite)</label>'
+                      + '<input id="sdrBookingEmail" type="email" oninput="updateBookBtn()" value="' + escapeHtml(r.owner_email || r.email || '') + '" placeholder="name@business.com" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;margin-bottom:12px;">'
+                      // Which agent the rep actually sold on the call. Same picker the
+                      // admin drawer uses (assets/vsl-agents.js) so the two dashboards
+                      // cannot drift — the booking markup is otherwise duplicated.
+                      + (window.VSL_AGENT_PICKER ? VSL_AGENT_PICKER.selectHtml('sdrBookingAgent', r, { helperColor: 'var(--text-tertiary)', onChange: 'refreshConfirmationPreview()' }) : '')
+                      + '<div id="sdrBookingSlots"></div>'
+                      + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-medium);">'
+                        + '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Or a specific date &amp; time (for meetings further out than 7 days)</label>'
+                        + '<input id="sdrBookManual" type="datetime-local" onchange="setManualBookSlot(this.value)" style="width:100%;padding:9px 11px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-family:inherit;font-size:14px;">'
+                      + '</div>'
+                      // The exact confirmation email, editable, below the date/time.
+                      + (window.CONFIRMATION_PREVIEW ? CONFIRMATION_PREVIEW.html('sdrConfirmPreview') : '')
+                      + '<div id="sdrBookingMsg" style="font-size:12px;margin-top:10px;min-height:16px;"></div>'
+                      + '<button id="sdrBookBtn" disabled onclick="confirmBooking(' + r.id + ')" style="margin-top:8px;width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;opacity:0.5;">Book + send invite</button>'
+                      + '</div>')
                 + nurtureBlock
                 + historyHtml
                 // ── Cold-call script (filled by loadColdCallScript) ──
@@ -3235,10 +3254,15 @@
             if (typeof bookingState === 'undefined' || !bookingState) bookingState = { slots: [], selectedIso: null, expandedDay: null };
             bookingState.leadId = leadId;
             if (window.CONFIRMATION_PREVIEW) CONFIRMATION_PREVIEW.clear();
-            loadBookingSlots();
-            // Draft it immediately so the rep can read it while picking a slot;
-            // it re-renders with the real time once one is chosen.
-            refreshConfirmationPreview(true);
+            // Client-account leads use the showroom picker (plain date/time,
+            // no STILO calendar slots, no confirmation preview).
+            var _obLead = window.__lastProspectData || {};
+            if (!_obLead.client_id) {
+                loadBookingSlots();
+                // Draft it immediately so the rep can read it while picking a slot;
+                // it re-renders with the real time once one is chosen.
+                refreshConfirmationPreview(true);
+            }
         }
 
         // Page the slot picker forward/back a week at a time (from= offset on the
@@ -3399,34 +3423,59 @@
         async function confirmBooking(leadId) {
             var msg = document.getElementById('sdrBookingMsg');
             var btn = document.getElementById('sdrBookBtn');
+            // Client-account lead: showroom mode. Time comes from the plain
+            // date/time input (rep machines are ET), the email is optional
+            // (the SMS carries the address too), and the server sends the
+            // client-branded package instead of the STILO flow.
+            var cbLead = window.__lastProspectData || {};
+            var isShowroom = !!cbLead.client_id;
+            if (isShowroom) {
+                var whenEl = document.getElementById('sdrShowroomWhen');
+                var whenVal = whenEl && whenEl.value;
+                if (!whenVal) {
+                    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Pick the visit date and time first.'; }
+                    return;
+                }
+                if (!bookingState) bookingState = { slots: [], selectedIso: null, expandedDay: null };
+                bookingState.selectedIso = new Date(whenVal).toISOString();
+            }
             if (!bookingState || !bookingState.selectedIso) {
                 if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Pick a time slot first.'; }
                 return;
             }
             var email = bookingEmail();
-            if (!validEmail(email)) {
-                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter the prospect\'s email so they get the invite.'; }
+            if (!validEmail(email) && !(isShowroom && !email)) {
+                if (msg) { msg.style.color = 'var(--red)'; msg.textContent = isShowroom ? 'That email does not look right. Fix it or clear the field.' : 'Enter the prospect\'s email so they get the invite.'; }
                 return;
             }
             if (btn) { btn.disabled = true; btn.textContent = 'Booking…'; }
-            if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = 'Booking and sending the invite…'; }
+            if (msg) { msg.style.color = 'var(--text-tertiary)'; msg.textContent = isShowroom ? 'Booking and sending the confirmation…' : 'Booking and sending the invite…'; }
             try {
                 // One call does it all: creates the Google Meet event on Remy's
                 // calendar, emails the prospect the invite, notifies Remy, sets the
                 // meeting fields, and lands it on the Booked tab attributed to this SDR.
-                var sdrBookBody = { lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15, email: email };
-                // Omit when absent so the server keeps its own default.
-                var sdrAgent = window.VSL_AGENT_PICKER && VSL_AGENT_PICKER.readSelect('sdrBookingAgent');
-                if (sdrAgent) sdrBookBody.agent = sdrAgent;
-                // If the rep edited the confirmation email, send THEIR version.
-                // Returns {} when untouched so the lead keeps following the template.
-                if (window.CONFIRMATION_PREVIEW) Object.assign(sdrBookBody, CONFIRMATION_PREVIEW.readEdits());
-                await fetchJSON('/api/prospects/book-meeting', {
+                // (Client-account leads branch server-side into the showroom flow.)
+                var sdrBookBody = { lead_id: leadId, when_iso: bookingState.selectedIso, duration_min: 15 };
+                if (email) sdrBookBody.email = email;
+                if (!isShowroom) {
+                    // Omit when absent so the server keeps its own default.
+                    var sdrAgent = window.VSL_AGENT_PICKER && VSL_AGENT_PICKER.readSelect('sdrBookingAgent');
+                    if (sdrAgent) sdrBookBody.agent = sdrAgent;
+                    // If the rep edited the confirmation email, send THEIR version.
+                    // Returns {} when untouched so the lead keeps following the template.
+                    if (window.CONFIRMATION_PREVIEW) Object.assign(sdrBookBody, CONFIRMATION_PREVIEW.readEdits());
+                }
+                var bookResp = await fetchJSON('/api/prospects/book-meeting', {
                     method: 'POST',
                     body: JSON.stringify(sdrBookBody)
                 });
-                if (msg) { msg.style.color = 'var(--green)'; msg.textContent = 'Booked. Invite and Meet link sent. It is on your Booked tab.'; }
-                setTimeout(function () { closeLeadDrawer(); loadLeads(); loadOverview(); }, 1500);
+                if (msg) {
+                    msg.style.color = 'var(--green)';
+                    msg.textContent = (bookResp && bookResp.mode === 'client_showroom')
+                        ? 'Showroom visit booked. Confirmation text + email sent with the address, and ' + (bookResp.client || 'the client') + ' briefed.'
+                        : 'Booked. Invite and Meet link sent. It is on your Booked tab.';
+                }
+                setTimeout(function () { closeLeadDrawer(); loadLeads(); loadOverview(); }, 1800);
             } catch (e) {
                 if (btn) { btn.disabled = false; btn.textContent = 'Book + send invite'; }
                 var berr = (e.body && e.body.error) || '';

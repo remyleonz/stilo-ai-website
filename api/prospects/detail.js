@@ -173,6 +173,22 @@ module.exports = async function handler(req, res) {
     lead.nurture_last_email_at = emailStats.last_sent_at;
     lead.nurture_messages = nurture.messages;
     lead.nurture_vsl = nurture.vsl;
+    // Client-account leads: attach the client's name + showroom address so
+    // the drawer can render the booking picker and the booked-meeting card in
+    // showroom mode (no Meet link, address instead). displayAddress applies
+    // the Blason copy rule (Miami, never Hialeah).
+    if (lead.client_id) {
+        try {
+            const { displayAddress } = require('./_client_booking');
+            const pubSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+            const { data: c } = await pubSb.from('clients')
+                .select('business_name,address').eq('id', lead.client_id).maybeSingle();
+            if (c) {
+                lead.client_company = c.business_name || null;
+                lead.client_address = displayAddress(c.address || '') || null;
+            }
+        } catch (_) { /* drawer falls back to generic labels */ }
+    }
     const status = 200;
     const json = lead;
 
