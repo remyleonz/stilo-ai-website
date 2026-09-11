@@ -101,7 +101,7 @@ const REPLY_TO = process.env.VSL_REPLY_TO || process.env.STILO_REPLY_TO || 'remy
 // exclusions, borrowed verbatim from vsl-campaign.js.
 // Broader than vsl-campaign's: dot/word suffixes (info.miami@), customer-service
 // spellings, and legal/HR inboxes all surfaced in the first dry run.
-const ROLE_RE = /^(info|sales|contact|admin|office|hello|support|team|mail|billing|help|service|services|reception|frontdesk|no-?reply|cs|customerservice|customer\.?care|privacy|legal|careers|jobs|hr|accounts?|ops|dispatch|estimating|estimates|quotes?)([.@_-]|@)/i;
+const ROLE_RE = /^(info|sales|contact|admin|office|hello|support|team|mail|billing|help|service|services|reception|frontdesk|no-?reply|cs|customerservice|customer\.?care|privacy|legal|careers|jobs|hr|accounts?|ops|dispatch|estimating|estimates|quotes?|resumes?|inquir(?:y|ies)|connect|scheduling|bookings?|appointments?|marketing|press|parts)([.@_-]|@)/i;
 
 // Deliberately loose: local@domain.tld with no whitespace and a real TLD. This
 // is a garbage filter for the scraper's output ("owner@", "n/a", a phone number
@@ -109,7 +109,9 @@ const ROLE_RE = /^(info|sales|contact|admin|office|hello|support|team|mail|billi
 // Resend 422, and 422s are logged against our sending reputation.
 // The local part keeps the apostrophe (o'brien@ is a real address); the domain
 // does not.
-const EMAIL_SHAPE_RE = /^[^\s@,;<>"]+@[^\s@,;<>"']+\.[A-Za-z]{2,}$/;
+// Percent signs are URL-encoding shrapnel from bad scrapes ("%20bradenton@..."
+// was in a real would-send list on 2026-09-11); a real address never has one.
+const EMAIL_SHAPE_RE = /^[^\s@,;<>"%]+@[^\s@,;<>"'%]+\.[A-Za-z]{2,}$/;
 
 // The MX probe's verdict for "this domain has no mail server". Excluded outright.
 // NULL means never probed, which is most of the list, and must stay eligible.
