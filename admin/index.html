@@ -10137,6 +10137,8 @@
             psScriptLead = lead;
             if (psScriptLangLead !== lead.id) { psScriptLangLead = lead.id; psScriptLang = (lead.primary_language === 'es') ? 'es' : 'en'; }
             var url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(businessName) + '&lang=' + encodeURIComponent(psScriptLang || 'en');
+            // Client-pool lead: the resolver must never serve a STILO script.
+            if (lead.client_id) url += '&client_pool=1';
             try {
                 var data = await prospectFetchJSON(url);
                 if (!data || !data.content_md) {

@@ -302,6 +302,13 @@ module.exports = async function handler(req, res) {
     const q = req.query || {};
     const slug = (q.slug && String(q.slug).trim()) || slugify(q.business_name);
     const lang = String(q.lang || '').toLowerCase() === 'es' ? 'es' : 'en';
+    // client_pool=1: the drawer says this LEAD belongs to a client account.
+    // A client-pool lead must NEVER render a STILO script (pool firewall:
+    // client copy names the CLIENT, never STILO). Old STILO-era manifest
+    // entries shadowed the client/generated scripts for revived leads
+    // (found live on Real Aesthetic Medical Spa, 2026-09-11), so in this
+    // mode paths 1-2 only accept client-prefixed entries.
+    const clientPool = String(q.client_pool || '') === '1';
     if (!slug) return res.status(400).json({ error: 'missing_slug', detail: 'Pass ?slug=<lead-slug> or ?business_name=<name>.' });
 
     // The dedicated cold-call SCRIPT lives in GCS
@@ -339,6 +346,11 @@ module.exports = async function handler(req, res) {
             }
             if (best && !tie) entry = best.e;
         }
+        if (entry && entry.filename && clientPool) {
+            const entryBase = String(entry.lead_id || entry.filename.replace(/-script-\d{4}-\d{2}-\d{2}\.md$/i, ''))
+                .replace(/-\d{4}-\d{2}-\d{2}$/, '').toLowerCase();
+            if (!CLIENT_MANIFEST_KEY_RE.test(entryBase)) entry = null;
+        }
         if (entry && entry.filename) {
             const content = await readObject(token, PREFIX + entry.filename);
             res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
@@ -356,7 +368,8 @@ module.exports = async function handler(req, res) {
 
     // 2) SECONDARY: prefix-list for <slug>...-script-<date>.md (a lead not yet in
     //    the manifest). Still GCS scripts only — no brief fallback, ever.
-    if (token) try {
+    //    Skipped for client-pool leads: this listing only finds STILO-named files.
+    if (token && !clientPool) try {
         const item = await findScriptByListing(token, slug);
         if (item) {
             const content = await readObject(token, item.name);

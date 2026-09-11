@@ -2553,6 +2553,8 @@
             // New lead in the drawer: reset the toggle to the lead's language.
             if (scriptLangLead !== r.id) { scriptLangLead = r.id; scriptLang = (r.primary_language === 'es') ? 'es' : 'en'; }
             let url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(name) + '&lang=' + encodeURIComponent(scriptLang || 'en');
+            // Client-pool lead: the resolver must never serve a STILO script.
+            if (r.client_id) url += '&client_pool=1';
             if (r.tentative_rep_assignment) url += '&rep=' + encodeURIComponent(String(r.tentative_rep_assignment).toLowerCase());
             try {
                 const data = await fetchJSON(url);
