@@ -401,7 +401,9 @@ async function main() {
     console.log('client:   ' + clientName);
     const modeDesc = MODE === 'followup' ? 'emailed 3+ days ago, no reply, no bounce, no unsubscribe'
         : MODE === 'warm' ? '20s+ connected call, DNS-verified address, never emailed'
-        : (LANE === '2' ? 'role inbox on a live domain' : 'medium confidence + MX clean') + ', never emailed';
+        : (LANE === '2' ? 'role inbox on a live domain'
+            : LANE === '3' ? 'address published on their own site'
+            : 'medium confidence + MX clean') + ', never emailed';
     console.log('mode ' + MODE + (MODE === 'cold' ? ' lane ' + LANE : '') + ':   '
         + eligible.length + ' eligible (' + modeDesc + ')');
     console.log('mode:     ' + (SEND ? 'SENDING' : 'DRY RUN (pass --send to actually send)'));
