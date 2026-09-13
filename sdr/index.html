@@ -15,6 +15,7 @@
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
+    <script src="/assets/dialer-mode.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -836,6 +837,7 @@
                 <select id="leadsCityFilter" onchange="setCityFilter(this.value)" title="Filter by city. South Florida groups the whole Miami metro, the showroom's home turf." style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-secondary);font-family:inherit;font-size:12px;font-weight:600;min-width:140px;cursor:pointer;">
                     <option value="">All cities</option>
                 </select>
+                <button id="dialerStartBtn" onclick="startDialerMode()" title="Full-screen dialing session: Space to call, number keys to log, auto-advance" style="display:inline-flex;align-items:center;gap:7px;padding:7px 18px;background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;">▶ Start Dialer</button>
             </div>
 
             <div class="table-wrap" id="leadsTableWrap">
@@ -1494,6 +1496,9 @@
             // Tier filter only makes sense on the Cold Call queue.
             const tf = document.getElementById('leadsTierFilter');
             if (tf) tf.style.display = (sub === 'callable') ? 'flex' : 'none';
+            // Same for the dialer: it consumes the Cold Call queue.
+            const db = document.getElementById('dialerStartBtn');
+            if (db) db.style.display = (sub === 'callable') ? 'inline-flex' : 'none';
             loadLeadsTable();
             // Opening the Booked tab pulls any new self-booked meetings off the
             // calendar (throttled server-side) so they appear without a cron.
@@ -2315,6 +2320,8 @@
             try { if (_notesDirty && _notesLeadId) saveNotesNow(_notesLeadId); } catch (e) {}
             document.getElementById('leadDrawer').classList.remove('open');
             document.getElementById('leadDrawerOverlay').classList.remove('open');
+            // If Dialer Mode sent the rep here to book, bring them back.
+            if (window.DIALER_MODE && DIALER_MODE.isPaused()) DIALER_MODE.resume();
         }
 
         /* ===== LEAD NOTES (autosave) =====
@@ -3160,6 +3167,55 @@
                 document.removeEventListener('visibilitychange', onHide);
                 if (!appOpened && !document.hidden) window.open(web, '_blank');
             }, 1400);
+        }
+
+        /* ── Dialer Mode (shared renderer: /assets/dialer-mode.js) ──
+           Full-screen session over the Cold Call queue. This wiring hands the
+           module the page's own helpers so auth, impersonation scoping and the
+           client-pool script firewall all keep working unchanged. */
+        async function dialerScriptHtml(r) {
+            const name = r.business_name || r.name || '';
+            if (!name) return '<div style="color:var(--text-muted);">No business name on this lead.</div>';
+            let url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(name)
+                + '&lang=' + encodeURIComponent(r.primary_language === 'es' ? 'es' : 'en');
+            if (r.client_id) url += '&client_pool=1';
+            if (r.tentative_rep_assignment) url += '&rep=' + encodeURIComponent(String(r.tentative_rep_assignment).toLowerCase());
+            try {
+                const data = await fetchJSON(url);
+                if (data && data.content_md) {
+                    return agentBadge(resolveAgentName(data.content_md, r))
+                        + renderScriptMarkdown(stripScriptChrome(normalizeAgentSection(data.content_md, r)));
+                }
+                throw { status: 404 };
+            } catch (e) {
+                if (e.status === 404) {
+                    const synth = buildScriptFromResearch(r);
+                    if (synth) {
+                        return agentBadge(resolveAgentName(synth, r))
+                            + renderScriptMarkdown(stripScriptChrome(normalizeAgentSection(synth, r)));
+                    }
+                    return '<div style="color:var(--text-muted);">No cold-call script for this lead yet. Work off the notes on the left.</div>';
+                }
+                return '<div style="color:var(--red);">Could not load script: ' + escapeHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+        function startDialerMode() {
+            if (!window.DIALER_MODE) return;
+            DIALER_MODE.configure({
+                escape: escapeHtml,
+                fmtTime: fmtET,
+                fetchJson: fetchJSON,
+                getRepName: function () {
+                    var n = CURRENT.sdr && CURRENT.sdr.display_name;
+                    return n ? n.split(' ')[0] : 'me';
+                },
+                loadScriptHtml: dialerScriptHtml,
+                openBooking: function (lead) {
+                    openLeadDrawer(lead.id).then(function () { openBookingPicker(lead.id); });
+                },
+                onClose: function () { loadLeads(); loadOverview(); }
+            });
+            DIALER_MODE.open({ rows: Array.isArray(STATE.currentRows) ? STATE.currentRows.slice() : [] });
         }
 
         // ── Interested → callback scheduler ──

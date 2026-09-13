@@ -2031,6 +2031,7 @@
                     <select id="prospectAccountFilter" onchange="onProspectFilterChange()" title="Which pipeline: STILO's own or a client account's lead pool" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:170px;">
                         <option value="">STILO pipeline</option>
                     </select>
+                    <button id="dialerStartBtn" onclick="startDialerMode()" title="Full-screen dialing session: Space to call, number keys to log, auto-advance" style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;">▶ Start Dialer</button>
                 </div>
 
                 <!-- My Call History controls: date range pills + (when 'All SDRs' is selected) a hint that both reps' calls are merged. Visible only on the my-history sub-tab. -->
@@ -2510,6 +2511,7 @@
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
+    <script src="/assets/dialer-mode.js"></script>
     <script>
         /* ===========================================================
            Supabase Auth
@@ -7726,6 +7728,9 @@
             // Filter bar useful only for the broad inbound lists; hide on cold-call lifecycle stages.
             var hideFilter = (name === 'dead' || name === 'callbacks' || name === 'booked' || name === 'calls-today' || name === 'my-history' || name === 'quiz-leads' || name === 'shared' || name === 'emailed');
             document.getElementById('prospectFilterBar').style.display = hideFilter ? 'none' : 'flex';
+            // Dialer consumes the Cold Call queue only.
+            var dialerBtn = document.getElementById('dialerStartBtn');
+            if (dialerBtn) dialerBtn.style.display = (name === 'callable') ? 'inline-flex' : 'none';
             if (name === 'callable')          loadProspectCallable();
             else if (name === 'emailable')    loadProspectEmailable();
             else if (name === 'callbacks')    loadProspectCallbacks();
@@ -10239,6 +10244,61 @@
             }
         }
 
+        /* ── Dialer Mode (shared renderer: /assets/dialer-mode.js) ──
+           Full-screen session over the Cold Call queue. Wiring hands the
+           module the admin page's own helpers (prospectFetchJSON auth, the
+           ps* script pipeline with its client-pool firewall). */
+        async function adminDialerScriptHtml(lead) {
+            var businessName = lead.business_name || lead.business || lead.name || '';
+            if (!businessName) return '<div style="color:var(--text-muted);">No business name on this lead.</div>';
+            var url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(businessName)
+                + '&lang=' + encodeURIComponent(lead.primary_language === 'es' ? 'es' : 'en');
+            if (lead.client_id) url += '&client_pool=1';
+            try {
+                var data = await prospectFetchJSON(url);
+                if (data && data.content_md) {
+                    return psAgentBadge(psResolveAgentName(data.content_md, lead))
+                        + renderScriptMarkdown(psStripScriptChrome(psNormalizeAgentSection(data.content_md, lead)));
+                }
+                throw { status: 404 };
+            } catch (e) {
+                if (e.status === 404) {
+                    var synth = psBuildScriptFromResearch(lead);
+                    if (synth) {
+                        return psAgentBadge(psResolveAgentName(synth, lead))
+                            + renderScriptMarkdown(psStripScriptChrome(psNormalizeAgentSection(synth, lead)));
+                    }
+                    return '<div style="color:var(--text-muted);">No cold-call script for this lead yet. Work off the notes on the left.</div>';
+                }
+                return '<div style="color:var(--red);font-size:12px;">Could not load script: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
+            }
+        }
+        function startDialerMode() {
+            if (!window.DIALER_MODE) return;
+            DIALER_MODE.configure({
+                escape: escapeAdminHtml,
+                fmtTime: fmtETp,
+                fetchJson: prospectFetchJSON,
+                getRepName: function () {
+                    try {
+                        var em = (document.getElementById('aboutAdminEmail') || {}).textContent || '';
+                        if (/^david/i.test(em)) return 'David';
+                    } catch (e) {}
+                    return 'Remy';
+                },
+                loadScriptHtml: adminDialerScriptHtml,
+                openBooking: function (lead) {
+                    Promise.resolve(openProspectDrawer(lead.id)).then(function () { openBookingPicker(lead.id); });
+                },
+                // Admin's DNC flow also notifies the upstream lifecycle service.
+                dncExtra: function (leadId) {
+                    prospectFetchJSON('/api/prospects/dnc', { method: 'POST', body: JSON.stringify({ id: leadId }) }).catch(function () {});
+                },
+                onClose: function () { try { loadProspectCallable(); } catch (e) {} }
+            });
+            DIALER_MODE.open({ rows: Array.isArray(prospectState.rows) ? prospectState.rows.slice() : [] });
+        }
+
         /* ===== MEETING TRANSCRIPTS (Tactiq + manual) ===== */
         // Phone-sync (openphone) can write several PARTIAL rows for one call, so a
         // real 25k-char transcript sits next to 300-char stubs and it looks cut off.
@@ -11363,6 +11423,8 @@
             // a strip of the drawer peeking in at the right edge after close.
             if (drawer)  drawer.style.right  = '-920px';
             if (overlay) overlay.style.display = 'none';
+            // If Dialer Mode sent the operator here to book, bring them back.
+            if (window.DIALER_MODE && DIALER_MODE.isPaused()) DIALER_MODE.resume();
             prospectState.currentLeadId = null;
             history.replaceState(null, '', window.location.pathname + window.location.search);
         }
