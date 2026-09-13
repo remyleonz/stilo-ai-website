@@ -2025,6 +2025,9 @@
                     <select id="prospectNicheFilter" onchange="onProspectFilterChange()" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:160px;">
                         <option value="">All niches</option>
                     </select>
+                    <select id="prospectCityFilter" onchange="onProspectFilterChange()" title="Filter leads by city. South Florida groups the whole Miami metro (zips 330-334), the showroom's home turf." style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:150px;">
+                        <option value="">All cities</option>
+                    </select>
                     <select id="prospectAccountFilter" onchange="onProspectFilterChange()" title="Which pipeline: STILO's own or a client account's lead pool" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:170px;">
                         <option value="">STILO pipeline</option>
                     </select>
@@ -6461,7 +6464,7 @@
             tab: 'callable',
             // sdr: '' = all, 'remy' | 'david' | 'unassigned'. grantAdminAccess()
             // overwrites this with the signed-in user before any fetch fires.
-            filters: { tier: '', q: '', niche: '', hasEmail: false, sdr: '', account: '', historyRange: 'all' },
+            filters: { tier: '', q: '', niche: '', city: '', hasEmail: false, sdr: '', account: '', historyRange: 'all' },
             rows: [],
             // Pool-wide [{niche, count}] from /api/prospects/niches. Drives the
             // niche dropdown so it does not depend on which rows loaded.
@@ -7028,6 +7031,52 @@
             sel.innerHTML = html;
         }
 
+        // ── City filter ────────────────────────────────────────────────
+        // City comes from normalizeLead (server-side parse of leads.address);
+        // the zip in the raw address drives the South Florida group: zip3
+        // 330-334 is the Miami metro (Miami-Dade / Broward / Palm Beach), the
+        // showroom's home turf, which is why it gets its own option.
+        function leadCityOf(r) {
+            if (r && r.city) return String(r.city).trim();
+            var parts = String((r && r.address) || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            if (parts.length && /^(usa|united states)$/i.test(parts[parts.length - 1])) parts.pop();
+            if (parts.length < 2) return '';
+            var c = parts[parts.length - 2];
+            return /^[A-Z]{2}\s*\d{5}/.test(c) ? '' : c;
+        }
+        function leadIsSouthFlorida(r) {
+            var m = String((r && r.address) || '').match(/\b(3[0-4]\d)\d\d(?:-\d{4})?\b/);
+            return !!m && ['330', '331', '332', '333', '334'].indexOf(m[1]) !== -1;
+        }
+        function matchesCityFilter(r) {
+            var want = prospectState.filters.city;
+            if (!want) return true;
+            if (want === '__sfl') return leadIsSouthFlorida(r);
+            return leadCityOf(r).toLowerCase() === want.toLowerCase();
+        }
+        // Options come from the rows the current queue loaded, counted before
+        // the city filter itself is applied (so picking a city never empties
+        // the dropdown down to that one city).
+        function populateCityFilter(rows) {
+            var sel = document.getElementById('prospectCityFilter');
+            if (!sel) return;
+            var counts = {}, sfl = 0;
+            (rows || []).forEach(function (r) {
+                var c = leadCityOf(r);
+                if (c) counts[c] = (counts[c] || 0) + 1;
+                if (leadIsSouthFlorida(r)) sfl++;
+            });
+            var cities = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); }).slice(0, 40);
+            var current = prospectState.filters.city || sel.value;
+            var html = '<option value="">All cities</option>'
+                + '<option value="__sfl"' + (current === '__sfl' ? ' selected' : '') + '>South Florida (' + sfl + ')</option>';
+            cities.forEach(function (c) {
+                html += '<option value="' + escapeAdminHtml(c) + '"' + (c === current ? ' selected' : '') + '>'
+                    + escapeAdminHtml(c) + ' (' + counts[c] + ')</option>';
+            });
+            sel.innerHTML = html;
+        }
+
         // Does a lead belong to the niche group currently selected in the filter?
         // Mirrors applyNicheFilter() in api/prospects/callable.js. Only used for
         // rows that arrive from an endpoint the filter was not applied to; the
@@ -7145,6 +7194,12 @@
                 });
             }
             if (f.hasEmail) rows = rows.filter(function (r) { return r.owner_email || r.email; });
+
+            // City dropdown: refresh options from the pre-city-filter rows,
+            // then narrow. Sits at this choke point so every list loader that
+            // goes through applyClientFilters keeps the dropdown honest.
+            populateCityFilter(rows);
+            if (f.city) rows = rows.filter(matchesCityFilter);
 
             // Tier filter (client-side fallback in case David's API doesn't
             // honor the ?tier= query param). Compares lowercase.
@@ -9705,10 +9760,12 @@
             var tier = document.getElementById('prospectTierFilter');
             var niche = document.getElementById('prospectNicheFilter');
             var acct = document.getElementById('prospectAccountFilter');
+            var citySel = document.getElementById('prospectCityFilter');
             var prevAccount = f.account;
             f.q = search ? search.value.trim() : '';
             f.tier = tier ? tier.value : '';
             f.niche = niche ? niche.value : '';
+            f.city = citySel ? citySel.value : '';
             f.account = acct ? acct.value : '';
             if (f.account !== prevAccount) {
                 // Switching pipelines: the workflow tiles and every cached list

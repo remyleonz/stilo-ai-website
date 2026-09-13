@@ -172,18 +172,23 @@ module.exports = async function handler(req, res) {
             // cold-call script opens with, so a reply lands the rep straight in
             // discovery. No address, no hours, no pitch: anything else here
             // gives them something to read instead of something to answer.
+            //
+            // 2026-09-13: the question is now the WISHLIST question, not "what
+            // treatment can't you do". 40 asks of the old diagnostic across the
+            // call corpus produced ~90% "we're covered" and zero sales; these
+            // buyers buy on expansion and upgrades, not confessed weakness.
             if (es) {
                 cSubject = cfName ? (cfName + ', una pregunta') : 'Una pregunta';
                 cBody = hi + '\n\n'
-                    + 'Una pregunta después de la llamada: ¿qué tratamiento le están pidiendo que hoy no pueda hacer?\n\n'
-                    + 'Lo que me diga, le digo de frente si Manuel tiene la máquina o no.'
+                    + 'Una pregunta después de la llamada: ¿cuál es la próxima máquina que quiere meter en su spa?\n\n'
+                    + 'La que me diga, le digo de frente si Manuel la tiene o no.'
                     + (local ? ' Y si la tiene, la puede ver funcionando en el showroom de Miami.' : '')
                     + '\n';
             } else {
                 cSubject = cfName ? (cfName + ', one question') : 'One question';
                 cBody = hi + '\n\n'
-                    + 'One question after our call: what treatment are your clients asking for that you can\'t do today?\n\n'
-                    + 'Whatever you name, I\'ll tell you straight whether Manuel has the machine for it or not.'
+                    + 'One question after our call: what\'s the next machine on your wishlist?\n\n'
+                    + 'Whatever you name, I\'ll tell you straight whether Manuel has it or not.'
                     + (local ? ' And if he does, you can see it running at the Miami showroom.' : '')
                     + '\n';
             }

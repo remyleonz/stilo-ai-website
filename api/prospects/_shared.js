@@ -218,7 +218,13 @@ function startOfDayET() {
 function cityFromAddress(addr) {
     if (!addr || typeof addr !== 'string') return null;
     const parts = addr.split(',').map(s => s.trim()).filter(Boolean);
-    return parts.length >= 2 ? parts[parts.length - 2] : null;
+    // Some scraped addresses end ", USA" / ", United States"; drop that so the
+    // second-to-last part is the city, not the "FL 33142" state segment.
+    if (parts.length && /^(usa|united states)$/i.test(parts[parts.length - 1])) parts.pop();
+    if (parts.length < 2) return null;
+    const c = parts[parts.length - 2];
+    // If the picked segment is actually the state+zip, the address had no city.
+    return /^[A-Z]{2}\s*\d{5}/.test(c) ? null : c;
 }
 
 /**
@@ -400,7 +406,10 @@ const LEAD_LIST_COLUMNS = [
     'meeting_scheduled_at', 'meeting_confirmed_at',
     // Client-account scoping: which client's pool this lead belongs to
     // (null = STILO's own prospect). Read by the client CRM and board gates.
-    'client_id'
+    'client_id',
+    // City filter: normalizeLead derives `city` from this, and the dashboards'
+    // South Florida group reads the zip. One short text column per row.
+    'address'
 ].join(', ');
 
 module.exports.LEAD_LIST_COLUMNS = LEAD_LIST_COLUMNS;

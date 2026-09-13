@@ -833,6 +833,9 @@
                     <button class="tier-chip" data-tier="warm" onclick="setTierFilter('warm')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Warm</button>
                     <button class="tier-chip" data-tier="cool" onclick="setTierFilter('cool')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Cool</button>
                 </div>
+                <select id="leadsCityFilter" onchange="setCityFilter(this.value)" title="Filter by city. South Florida groups the whole Miami metro, the showroom's home turf." style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-secondary);font-family:inherit;font-size:12px;font-weight:600;min-width:140px;cursor:pointer;">
+                    <option value="">All cities</option>
+                </select>
             </div>
 
             <div class="table-wrap" id="leadsTableWrap">
@@ -1115,7 +1118,7 @@
         // survives logging a call + advancing to the next lead. currentRows holds
         // the rows behind the standard lead table so advance can step through
         // them in the exact order the rep is looking at.
-        var STATE = { leadsSubtab: 'callable', historyRange: 'week', tierFilter: '', lastTouchDir: null, currentRows: [] };
+        var STATE = { leadsSubtab: 'callable', historyRange: 'week', tierFilter: '', cityFilter: '', lastTouchDir: null, currentRows: [] };
 
         /* ===== AUTH ===== */
         (async function init() {
@@ -1525,6 +1528,56 @@
             loadLeadsTable();
         }
 
+        // ── City filter ──────────────────────────────────────────────
+        // City comes off the row (normalizeLead parses leads.address server-
+        // side); the zip drives the South Florida group: zip3 330-334 is the
+        // Miami metro, the showroom's home turf, so it gets its own option.
+        function setCityFilter(v) {
+            STATE.cityFilter = v;
+            loadLeadsTable();
+        }
+        function leadCityOf(r) {
+            if (r && r.city) return String(r.city).trim();
+            var parts = String((r && r.address) || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            if (parts.length && /^(usa|united states)$/i.test(parts[parts.length - 1])) parts.pop();
+            if (parts.length < 2) return '';
+            var c = parts[parts.length - 2];
+            return /^[A-Z]{2}\s*\d{5}/.test(c) ? '' : c;
+        }
+        function leadIsSouthFlorida(r) {
+            var m = String((r && r.address) || '').match(/\b(3[0-4]\d)\d\d(?:-\d{4})?\b/);
+            return !!m && ['330', '331', '332', '333', '334'].indexOf(m[1]) !== -1;
+        }
+        // Options rebuild from the rows the subtab loaded, counted BEFORE the
+        // city filter narrows them, so picking a city never empties the menu.
+        function populateCityFilter(rows) {
+            var sel = document.getElementById('leadsCityFilter');
+            if (!sel) return;
+            var counts = {}, sfl = 0;
+            (rows || []).forEach(function (r) {
+                var c = leadCityOf(r);
+                if (c) counts[c] = (counts[c] || 0) + 1;
+                if (leadIsSouthFlorida(r)) sfl++;
+            });
+            var cities = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); }).slice(0, 40);
+            var current = STATE.cityFilter || '';
+            var html = '<option value="">All cities</option>'
+                + '<option value="__sfl"' + (current === '__sfl' ? ' selected' : '') + '>South Florida (' + sfl + ')</option>';
+            cities.forEach(function (c) {
+                html += '<option value="' + escapeHtml(c) + '"' + (c === current ? ' selected' : '') + '>'
+                    + escapeHtml(c) + ' (' + counts[c] + ')</option>';
+            });
+            sel.innerHTML = html;
+        }
+        function applyCityFilter(rows) {
+            var want = STATE.cityFilter;
+            if (!want) return rows;
+            return (rows || []).filter(function (r) {
+                if (want === '__sfl') return leadIsSouthFlorida(r);
+                return leadCityOf(r).toLowerCase() === want.toLowerCase();
+            });
+        }
+
         var _leadsScopeWaits = 0;
         // Booked list order: upcoming meetings first (soonest at top), past
         // meetings pushed to the bottom (most-recent past first). Mirrors the
@@ -1577,8 +1630,10 @@
                 // meeting you have in an hour underneath every old one. Same
                 // ordering the admin dashboard uses.
                 if (sub === 'booked') rows = sortBookedUpcomingFirst(rows);
+                populateCityFilter(rows);
+                rows = applyCityFilter(rows);
                 if (!rows.length) {
-                    wrap.innerHTML = '<div class="empty-state">No leads in this view yet.</div>';
+                    wrap.innerHTML = '<div class="empty-state">' + (STATE.cityFilter ? 'No leads in this view for that city.' : 'No leads in this view yet.') + '</div>';
                     return;
                 }
                 let html;
