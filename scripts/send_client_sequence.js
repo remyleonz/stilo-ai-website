@@ -350,6 +350,27 @@ async function main() {
     // dead on the SMS campaign. The Instagram worklist had these exclusions
     // from the start; the email lane did not. A decline in ANY channel is a
     // decline in every channel.
+    // ---- BOUNCE SHIELDS (2026-09-14, before opening lane 2 at volume) ----
+    // (a) Domain blacklist: any domain that has EVER bounced one of our sends
+    //     is dead to us; the sending domain pays for every retry.
+    // (b) Address dedupe: several leads share one inbox (franchises). Lowest
+    //     lead id in the batch owns the address; the rest wait.
+    const bounceDomains = new Set();
+    {
+        let from = 0;
+        while (true) {
+            const { data: rows } = await sb.from('lead_messages')
+                .select('to_address').eq('channel', 'email').not('bounced_at', 'is', null)
+                .range(from, from + 999);
+            if (!rows || !rows.length) break;
+            for (const r of rows) {
+                const d = String(r.to_address || '').split('@')[1];
+                if (d) bounceDomains.add(d.toLowerCase());
+            }
+            if (rows.length < 1000) break; from += 1000;
+        }
+        console.log('bounce-domain blacklist: ' + bounceDomains.size + ' domains');
+    }
     const declined = new Set(['owner_uninterested', 'do_not_call']);
     // MEETING_BOOKED counts as closed for outbound purposes: a lead mid-visit
     // or mid-reschedule is in a live human conversation, and a templated
@@ -395,7 +416,20 @@ async function main() {
         return true;
     });
     const removed = leads.length - consented.length;
-    const eligible = consented.slice(0, LIMIT);
+    const _seenAddr = new Set();
+    const shielded = consented.filter(function (l) {
+        const addr = String(l.email_verify_address || l.owner_email || l.email || '').trim().toLowerCase();
+        if (!addr) return false;
+        const dom = addr.split('@')[1];
+        if (dom && bounceDomains.has(dom)) return false;
+        if (_seenAddr.has(addr)) return false;
+        _seenAddr.add(addr);
+        return true;
+    });
+    if (shielded.length !== consented.length) {
+        console.log('bounce shields removed ' + (consented.length - shielded.length) + ' (blacklisted domain or duplicate inbox)');
+    }
+    const eligible = shielded.slice(0, LIMIT);
     if (removed) console.log('consent filter removed ' + removed + ' lead(s) who already said no');
 
     console.log('client:   ' + clientName);

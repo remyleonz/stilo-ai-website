@@ -36,7 +36,14 @@ if [ "$LEG" = "sms" ]; then
     console.log("validation gate: "+rows.length+" unsent bodies checked, "+wiped+" wiped");
   })().catch(e=>console.log("gate ERR "+e.message));'
 else
-  node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/send_client_sequence.js" --limit 50 --send 2>&1 | tail -3
+  # Daily email program, 50 total: step-2 follow-ups first, then lane 1
+  # (medium+deliverable), then lane 2 (MX-confirmed role inboxes) fills the
+  # remainder. Every run passes the 8% trailing-bounce breaker and the
+  # bounce-domain blacklist + shared-inbox dedupe inside the script.
+  SEQ="/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/send_client_sequence.js"
+  node "$SEQ" --mode followup --limit 20 --send 2>&1 | tail -2
+  node "$SEQ" --lane 1 --limit 10 --send 2>&1 | tail -2
+  node "$SEQ" --lane 2 --limit 20 --send 2>&1 | tail -2
 fi
 echo "[$STAMP] === leg $LEG done ==="
 } >> "$LOG" 2>&1
