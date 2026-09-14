@@ -58,6 +58,21 @@ const B_ES = [
 const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pueden hacer|asking for that/i;
 
 (async () => {
+    // STEP 2: a lead who replied gets the pitch turn. Generic by design; a reply
+    // that needs a real conversational answer is what the reply alert is for,
+    // and the rep can overwrite step2_body before the tick sends it.
+    const r2 = await fetch(`${URL_}/rest/v1/outbound_targets?campaign_id=eq.4&stage=eq.replied&step2_sent_at=is.null&step2_body=is.null&select=id,lead_id&order=id`, { headers: H });
+    const replied = await r2.json();
+    for (const t of (Array.isArray(replied) ? replied : [])) {
+        const lr = await fetch(`${URL_}/rest/v1/leads?id=eq.${t.lead_id}&select=primary_language`, { headers: H });
+        const es = ((await lr.json())[0] || {}).primary_language === 'es';
+        const body = es
+            ? 'gracias por responder. version corta: equipos de estetica y contorno corporal, laser, faciales, body sculpting. manuel, el dueno de blason aqui en miami, los importa el mismo y le dice directo cual le sirve. cual es la proxima maquina en su lista de deseos?'
+            : "thanks for getting back. short version: aesthetic and body contouring equipment, lasers, facials, body sculpting. manuel, the owner of blason here in miami, imports them himself, so he tells you straight which one fits. what's the next machine on your wishlist?";
+        const w = await fetch(`${URL_}/rest/v1/outbound_targets?id=eq.${t.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ step2_body: body, body_generated_at: new Date().toISOString() }) });
+        console.log('step2 filled for target', t.id, w.ok ? 'ok' : w.status);
+    }
+
     const r = await fetch(`${URL_}/rest/v1/outbound_targets?campaign_id=eq.4&step1_sent_at=is.null&step1_body=is.null&stage=eq.queued&select=id,lead_id,variant,assigned_to&order=id`, { headers: H });
     const targets = await r.json();
     if (!Array.isArray(targets) || !targets.length) { console.log('nothing to fill'); return; }
