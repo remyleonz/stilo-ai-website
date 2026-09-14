@@ -3210,6 +3210,13 @@
                     return n ? n.split(' ')[0] : 'me';
                 },
                 loadScriptHtml: dialerScriptHtml,
+                // Fallback queue fetch honors the rep's tier filter; server
+                // scoping (JWT + impersonation param) already keeps the pool.
+                fetchQueue: function () {
+                    var t = STATE.tierFilter ? '&tier=' + encodeURIComponent(STATE.tierFilter) : '';
+                    return fetchJSON('/api/prospects/callable?limit=200' + t)
+                        .then(function (d) { return (d && (d.results || d.leads)) || []; });
+                },
                 openBooking: function (lead) {
                     openLeadDrawer(lead.id).then(function () { openBookingPicker(lead.id); });
                 },

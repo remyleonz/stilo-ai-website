@@ -10287,6 +10287,22 @@
                     return 'Remy';
                 },
                 loadScriptHtml: adminDialerScriptHtml,
+                // Scope the session to the board's CURRENT filters: the account
+                // (client pool vs STILO) gates which callbacks may ride in
+                // front, the SDR filter rides to the callbacks endpoint, and
+                // the fallback queue fetch reuses the page's own query.
+                queueScope: function () {
+                    var f = prospectState.filters || {};
+                    return { clientId: f.account || null };
+                },
+                callbacksPath: function () {
+                    var f = prospectState.filters || {};
+                    return '/api/prospects/callbacks' + (f.sdr ? '?assigned_to=' + encodeURIComponent(f.sdr) : '');
+                },
+                fetchQueue: function () {
+                    return prospectFetchJSON('/api/prospects/callable' + buildProspectQuery())
+                        .then(function (d) { return applyClientFilters((d && (d.results || d.leads)) || []); });
+                },
                 openBooking: function (lead) {
                     Promise.resolve(openProspectDrawer(lead.id)).then(function () { openBookingPicker(lead.id); });
                 },

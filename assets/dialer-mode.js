@@ -11,25 +11,30 @@
      SPACE  -> quo:// deep link opens the app pre-dialed + POST log-dial
      poll   -> GET /api/prospects/timeline every 3.5s until a NEW call
                row appears for this lead (id not in the pre-dial snapshot)
-     keys   -> disposition overlay: 1 no answer/VM, 2 callback, 3 booked,
-               4 not interested, 5 wrong number, 6 DNC (reason required)
+     keys   -> 1 no answer/VM, 2 callback, 3 booked, 4 not interested,
+               5 wrong number, 6 DNC (reason required); E email, T text
      auto   -> 5s countdown, next lead. Esc pauses.
 
    Ordering matters: we poll FIRST and log SECOND, so log-call's merge
    rule updates the Quo row in place instead of inserting a duplicate.
-   Key 1 writes nothing unless the rep typed a note — log-dial already
-   counted the attempt and the webhook row carries the auto outcome
-   (logging no_answer before the webhook lands would strand a manual
-   row the webhook can't merge onto).
+   Key 1 writes nothing at all — log-dial already counted the attempt
+   and the webhook row carries the auto outcome (a manual no_answer row
+   written before the webhook lands can never be merged).
+
+   Queue scoping: the host page passes its CURRENT board rows, a
+   fetchQueue() fallback built from its own filters, a callbacksPath
+   already carrying its rep scope, and a queueScope whose clientId
+   keeps client-pool and STILO callbacks from crossing into each
+   other's sessions (the pool firewall).
+
+   Notes: the lead panel carries the rep's living note (leads.rep_notes
+   via save-notes, debounced autosave). Activity: calls (Quo AI summary
+   + expandable transcript) merged with sent emails/SMS, collapsible.
 
    Booking (key 3) reuses the page's real booking picker (client
    showroom branching included) via cfg.openBooking — the session
-   pauses and a floating pill brings the rep back.
-
-   Follow-ups (disposition screen): E drafts + sends the follow-up
-   email through draft-email/send-email; T sends an SMS through
-   send-sms, shown ONLY when this call connected (duration >= 20s,
-   the connected-call gate).
+   pauses and a floating pill brings the rep back. T (SMS) only renders
+   after a 20s+ connect on THIS call (the connected-call gate).
    ============================================================ */
 (function (global) {
     'use strict';
@@ -114,92 +119,154 @@
             answered: 'Answered', voicemail: 'Voicemail', no_answer: 'No answer',
             missed_inbound: 'Missed inbound', callback_requested: 'Callback set',
             booked_meeting: 'Booked meeting', not_interested: 'Not interested',
-            wrong_number: 'Wrong number', do_not_call: 'Do Not Call'
+            wrong_number: 'Wrong number', do_not_call: 'Do Not Call',
+            interested_followup: 'Interested', owner_uninterested: 'Not interested',
+            dnc_request: 'Do Not Call'
         })[o] || (o || '');
     }
-    function tierChip(r) {
-        var t = (r.prospect_tier || r.tier || '').toLowerCase();
-        if (!t) return '';
-        var c = t === 'hot' ? 'var(--red,#f87171)' : (t === 'warm' ? 'var(--yellow,#fbbf24)' : 'var(--text-tertiary,#6e7083)');
-        return '<span class="dm-chip" style="color:' + c + ';border-color:currentColor;">' + esc(t.toUpperCase()) + '</span>';
-    }
 
-    /* ---------- css (injected once; both pages, fallbacked vars) ---------- */
-    var CSS = ''
-        + '#dmRoot{position:fixed;inset:0;z-index:12000;background:var(--bg-primary,#08080c);color:var(--text-primary,#ecedf2);display:flex;flex-direction:column;font-family:var(--font-body,-apple-system,system-ui,sans-serif);}'
-        + '#dmRoot *{box-sizing:border-box;}'
-        + '#dmRoot.dm-hidden{display:none;}'
-        + '.dm-hud{display:flex;align-items:center;gap:18px;padding:10px 20px;border-bottom:1px solid var(--border-subtle,rgba(255,255,255,.07));flex-shrink:0;flex-wrap:wrap;}'
-        + '.dm-wordmark{font-family:var(--font-mono,ui-monospace,monospace);font-size:12px;font-weight:700;letter-spacing:.18em;color:var(--blue,#2563eb);white-space:nowrap;}'
-        + '.dm-hud-stats{display:flex;gap:22px;flex:1;justify-content:center;flex-wrap:wrap;}'
-        + '.dm-stat{text-align:center;min-width:52px;}'
-        + '.dm-stat b{display:block;font-family:var(--font-mono,ui-monospace,monospace);font-size:17px;font-weight:700;line-height:1.1;}'
-        + '.dm-stat span{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted,#6e7083);}'
-        + '.dm-hud-right{display:flex;align-items:center;gap:10px;white-space:nowrap;}'
-        + '.dm-pos{font-family:var(--font-mono,ui-monospace,monospace);font-size:12px;color:var(--text-secondary,#a2a3b4);}'
-        + '.dm-iconbtn{padding:6px 13px;background:var(--bg-card,#14141c);border:1px solid var(--border-subtle,rgba(255,255,255,.09));border-radius:999px;color:var(--text-secondary,#a2a3b4);font-size:12px;font-weight:600;cursor:pointer;}'
-        + '.dm-iconbtn:hover{color:var(--text-primary,#ecedf2);border-color:var(--border-medium,rgba(255,255,255,.16));}'
-        + '.dm-main{flex:1;display:flex;gap:0;min-height:0;}'
-        + '.dm-lead{width:400px;flex-shrink:0;overflow-y:auto;padding:26px 24px;border-right:1px solid var(--border-subtle,rgba(255,255,255,.07));}'
-        + '.dm-script{flex:1;overflow-y:auto;padding:26px 30px;min-width:0;}'
-        + '.dm-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}'
-        + '.dm-chip{font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 9px;border-radius:999px;border:1px solid var(--border-medium,rgba(255,255,255,.14));color:var(--text-secondary,#a2a3b4);}'
-        + '.dm-chip.dm-chip-cb{color:var(--blue,#60a5fa);border-color:var(--blue,#2563eb);}'
-        + '.dm-chip.dm-chip-client{color:var(--yellow,#fbbf24);border-color:currentColor;}'
-        + '.dm-bizname{font-family:var(--font-display,inherit);font-size:30px;font-weight:700;line-height:1.12;margin:0 0 4px;}'
-        + '.dm-niche{font-size:13px;color:var(--text-tertiary,#6e7083);margin-bottom:16px;}'
-        + '.dm-kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border-subtle,rgba(255,255,255,.05));font-size:13px;}'
-        + '.dm-kv b{font-weight:600;text-align:right;}'
-        + '.dm-kv span{color:var(--text-muted,#6e7083);flex-shrink:0;}'
-        + '.dm-phone{font-family:var(--font-mono,ui-monospace,monospace);font-size:15px;letter-spacing:.02em;}'
-        + '.dm-sec{margin-top:18px;}'
-        + '.dm-sec h4{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted,#6e7083);margin:0 0 8px;font-weight:700;}'
-        + '.dm-notes{font-size:13px;line-height:1.55;color:var(--text-secondary,#a2a3b4);white-space:pre-wrap;max-height:150px;overflow-y:auto;background:var(--bg-card,#0e0e14);border:1px solid var(--border-subtle,rgba(255,255,255,.06));border-radius:10px;padding:10px 12px;}'
-        + '.dm-callrow{display:flex;gap:10px;align-items:baseline;font-size:12px;padding:5px 0;color:var(--text-secondary,#a2a3b4);}'
-        + '.dm-callrow .dm-co{font-weight:600;color:var(--text-primary,#ecedf2);flex-shrink:0;}'
-        + '.dm-callrow .dm-cd{font-family:var(--font-mono,ui-monospace,monospace);color:var(--text-muted,#6e7083);margin-left:auto;flex-shrink:0;}'
-        + '.dm-vm{margin-top:22px;background:var(--bg-card,#0e0e14);border:1px solid var(--border-subtle,rgba(255,255,255,.07));border-left:3px solid var(--blue,#2563eb);border-radius:10px;padding:14px 16px;}'
-        + '.dm-vm h4{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue,#60a5fa);margin:0 0 8px;font-weight:700;}'
-        + '.dm-vm p{margin:0;font-size:14px;line-height:1.6;color:var(--text-secondary,#a2a3b4);}'
-        + '.dm-foot{flex-shrink:0;border-top:1px solid var(--border-subtle,rgba(255,255,255,.07));padding:14px 20px;background:var(--bg-secondary,#0b0b10);}'
-        + '.dm-callbtn{display:inline-flex;align-items:center;gap:12px;padding:14px 34px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.01em;}'
-        + '.dm-callbtn:hover{filter:brightness(1.1);}'
-        + '.dm-key{display:inline-block;min-width:22px;text-align:center;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.10);font-family:var(--font-mono,ui-monospace,monospace);font-size:11px;font-weight:700;}'
-        + '.dm-foot-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}'
-        + '.dm-hint{font-size:12px;color:var(--text-muted,#6e7083);}'
-        + '.dm-pulse{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green,#10b981);animation:dmPulse 1.1s ease-in-out infinite;}'
-        + '@keyframes dmPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.75);}}'
-        + '.dm-live{font-family:var(--font-mono,ui-monospace,monospace);font-size:15px;font-weight:700;}'
-        + '.dm-disp{display:flex;gap:8px;flex-wrap:wrap;}'
-        + '.dm-dbtn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 14px;background:var(--bg-card,#14141c);border:1px solid var(--border-subtle,rgba(255,255,255,.09));border-radius:10px;color:var(--text-primary,#ecedf2);font-size:13px;font-weight:600;cursor:pointer;min-width:118px;text-align:left;}'
-        + '.dm-dbtn:hover{border-color:var(--border-medium,rgba(255,255,255,.2));background:var(--bg-input,#1b1b25);}'
-        + '.dm-dbtn small{font-size:10px;font-weight:500;color:var(--text-muted,#6e7083);}'
-        + '.dm-note{width:100%;margin-top:10px;padding:9px 12px;background:var(--bg-input,#101018);border:1px solid var(--border-subtle,rgba(255,255,255,.08));border-radius:9px;color:inherit;font-family:inherit;font-size:13px;resize:none;}'
-        + '.dm-result{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;}'
-        + '.dm-panel{margin-top:12px;padding:14px;background:var(--bg-card,#0e0e14);border:1px solid var(--border-subtle,rgba(255,255,255,.08));border-radius:12px;}'
-        + '.dm-panel h4{margin:0 0 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted,#6e7083);}'
-        + '.dm-qbtn{padding:8px 14px;background:var(--bg-input,#14141c);border:1px solid var(--border-medium,rgba(255,255,255,.14));border-radius:999px;color:var(--text-primary,#ecedf2);font-size:12.5px;font-weight:600;cursor:pointer;margin:0 6px 6px 0;}'
-        + '.dm-qbtn:hover{border-color:var(--blue,#2563eb);color:var(--blue,#60a5fa);}'
-        + '.dm-input{padding:8px 12px;background:var(--bg-input,#101018);border:1px solid var(--border-subtle,rgba(255,255,255,.1));border-radius:8px;color:inherit;font-family:inherit;font-size:13px;}'
-        + '.dm-send{padding:9px 20px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;}'
-        + '.dm-cancel{padding:9px 14px;background:none;border:none;color:var(--text-muted,#6e7083);font-size:12px;cursor:pointer;}'
-        + '.dm-countwrap{flex:1;max-width:340px;}'
-        + '.dm-countbar{height:4px;border-radius:2px;background:var(--border-subtle,rgba(255,255,255,.08));overflow:hidden;margin-top:8px;}'
-        + '.dm-countbar i{display:block;height:100%;background:var(--blue,#2563eb);transition:width .1s linear;}'
-        + '.dm-summary{max-width:560px;margin:60px auto;text-align:center;padding:0 20px;}'
-        + '.dm-summary h2{font-family:var(--font-display,inherit);font-size:34px;margin:0 0 8px;}'
-        + '.dm-sumgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:30px 0;}'
-        + '.dm-sumcell{background:var(--bg-card,#0e0e14);border:1px solid var(--border-subtle,rgba(255,255,255,.07));border-radius:14px;padding:18px 10px;}'
-        + '.dm-sumcell b{display:block;font-family:var(--font-mono,ui-monospace,monospace);font-size:26px;}'
-        + '.dm-sumcell span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted,#6e7083);}'
-        + '#dmResumePill{position:fixed;left:18px;bottom:18px;z-index:12001;display:flex;align-items:center;gap:10px;padding:11px 18px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 8px 30px rgba(37,99,235,.45);}'
-        + '.dm-overlay-menu{position:absolute;inset:0;background:rgba(8,8,12,.82);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:5;}'
-        + '.dm-menu{background:var(--bg-card,#0e0e14);border:1px solid var(--border-medium,rgba(255,255,255,.12));border-radius:16px;padding:26px 30px;text-align:center;min-width:280px;}'
-        + '.dm-menu h3{margin:0 0 16px;font-size:17px;}'
-        + '@media(max-width:900px){.dm-main{flex-direction:column;overflow-y:auto;}.dm-lead{width:100%;border-right:none;border-bottom:1px solid var(--border-subtle,rgba(255,255,255,.07));padding:18px;overflow-y:visible;flex-shrink:0;}.dm-script{padding:18px;overflow:visible;flex-shrink:0;}.dm-hud-stats{gap:12px;}.dm-bizname{font-size:23px;}}';
+    /* ---------- css (injected once; both pages, fallbacked vars) ----------
+       Design language: one surface, hierarchy from type and spacing, almost
+       no rules or boxes. Elevation (#0d0d13) instead of borders. Blue only
+       on the call-to-action, the wordmark and the VM accent. */
+    var CSS = [
+        '#dmRoot{position:fixed;inset:0;z-index:12000;background:var(--bg-primary,#08080c);color:var(--text-primary,#ecedf2);display:flex;flex-direction:column;font-family:var(--font-body,-apple-system,system-ui,sans-serif);font-size:15px;-webkit-font-smoothing:antialiased;}',
+        '#dmRoot *{box-sizing:border-box;}',
+        '#dmRoot.dm-hidden{display:none;}',
+        '#dmRoot ::-webkit-scrollbar{width:8px;height:8px;}',
+        '#dmRoot ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:4px;}',
+        '#dmRoot ::-webkit-scrollbar-track{background:transparent;}',
+
+        /* HUD */
+        '.dm-hud{display:flex;align-items:center;gap:22px;padding:14px 28px;flex-shrink:0;flex-wrap:wrap;}',
+        '.dm-wordmark{font-family:var(--font-mono,ui-monospace,monospace);font-size:11px;font-weight:700;letter-spacing:.22em;color:var(--blue,#2563eb);white-space:nowrap;}',
+        '.dm-clock{font-family:var(--font-mono,ui-monospace,monospace);font-size:12px;color:var(--text-tertiary,#6e7083);}',
+        '.dm-hud-stats{display:flex;gap:30px;flex:1;justify-content:center;flex-wrap:wrap;}',
+        '.dm-stat{text-align:center;min-width:46px;}',
+        '.dm-stat b{display:block;font-family:var(--font-mono,ui-monospace,monospace);font-size:17px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;}',
+        '.dm-stat span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted,#565866);}',
+        '.dm-hud-right{display:flex;align-items:center;gap:14px;white-space:nowrap;}',
+        '.dm-pos{font-family:var(--font-mono,ui-monospace,monospace);font-size:12px;color:var(--text-tertiary,#6e7083);}',
+        '.dm-iconbtn{padding:7px 14px;background:transparent;border:none;border-radius:8px;color:var(--text-tertiary,#6e7083);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;}',
+        '.dm-iconbtn:hover{color:var(--text-primary,#ecedf2);background:rgba(255,255,255,.05);}',
+
+        /* Main split — lead panel gets the room, script is reference */
+        '.dm-main{flex:1;display:flex;min-height:0;}',
+        '.dm-lead{width:48%;min-width:440px;overflow-y:auto;padding:30px 36px 40px;}',
+        '.dm-script{flex:1;overflow-y:auto;padding:30px 40px 40px;min-width:0;background:rgba(255,255,255,.014);}',
+        '.dm-script-inner{max-width:700px;}',
+
+        /* Status tokens: dot + small caps, no boxes */
+        '.dm-chips{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}',
+        '.dm-chip{font-size:10.5px;font-weight:700;letter-spacing:.13em;color:var(--text-tertiary,#8a8c9c);display:inline-flex;align-items:center;gap:7px;border:none;padding:0;}',
+        '.dm-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}',
+        '.dm-chip-cb{color:var(--blue,#60a5fa);}',
+        '.dm-chip-hot{color:#f87171;}',
+        '.dm-chip-warm{color:#fbbf24;}',
+        '.dm-chip-client{color:#fbbf24;}',
+
+        '.dm-bizname{font-family:var(--font-display,inherit);font-size:33px;font-weight:700;line-height:1.1;margin:0 0 6px;letter-spacing:-.01em;}',
+        '.dm-niche{font-size:14px;color:var(--text-tertiary,#6e7083);margin-bottom:24px;}',
+
+        /* Identity + status: quiet grid, no rules */
+        '.dm-grid{display:grid;grid-template-columns:118px 1fr;row-gap:11px;column-gap:16px;margin-bottom:26px;}',
+        '.dm-grid span{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-muted,#565866);font-weight:600;padding-top:3px;}',
+        '.dm-grid b{font-weight:600;font-size:15px;line-height:1.35;}',
+        '.dm-phone{font-family:var(--font-mono,ui-monospace,monospace);font-size:18px;font-weight:500;letter-spacing:.02em;}',
+        '.dm-dim{color:var(--text-tertiary,#6e7083);font-weight:400;font-style:normal;}',
+
+        /* Section headers */
+        '.dm-sec{margin-top:28px;}',
+        '.dm-sec>h4{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-muted,#565866);margin:0 0 12px;font-weight:700;display:flex;align-items:baseline;gap:10px;}',
+        '.dm-savedmsg{font-size:11px;letter-spacing:.02em;text-transform:none;color:var(--text-muted,#565866);font-weight:400;}',
+
+        /* Live notes — the rep types here mid-call, autosaves to rep_notes */
+        '.dm-notes-edit{width:100%;min-height:112px;padding:14px 16px;background:rgba(255,255,255,.035);border:none;border-radius:14px;color:var(--text-primary,#ecedf2);font-family:inherit;font-size:15px;line-height:1.6;resize:vertical;outline:none;}',
+        '.dm-notes-edit:focus{background:rgba(255,255,255,.055);}',
+        '.dm-notes-edit::placeholder{color:var(--text-muted,#565866);}',
+
+        /* Activity timeline: calls + emails + sms, expandable */
+        '.dm-act{display:flex;align-items:baseline;gap:12px;padding:9px 0;cursor:pointer;border-radius:8px;}',
+        '.dm-act:hover{background:rgba(255,255,255,.03);margin:0 -10px;padding:9px 10px;}',
+        '.dm-act-k{font-size:10px;font-weight:700;letter-spacing:.12em;width:44px;flex-shrink:0;color:var(--text-muted,#565866);}',
+        '.dm-act-k.dm-k-call{color:var(--blue,#60a5fa);}',
+        '.dm-act-o{font-size:14px;font-weight:600;flex-shrink:0;}',
+        '.dm-act-s{font-size:13.5px;color:var(--text-tertiary,#6e7083);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}',
+        '.dm-act-d{font-family:var(--font-mono,ui-monospace,monospace);font-size:11.5px;color:var(--text-muted,#565866);flex-shrink:0;}',
+        '.dm-act-caret{color:var(--text-muted,#565866);font-size:10px;flex-shrink:0;transition:transform .15s;}',
+        '.dm-act.dm-open .dm-act-caret{transform:rotate(90deg);}',
+        '.dm-act-body{margin:2px 0 14px 56px;font-size:14px;line-height:1.65;color:var(--text-secondary,#a2a3b4);}',
+        '.dm-act-body p{margin:0 0 10px;white-space:pre-wrap;}',
+        '.dm-act-sub{font-weight:600;color:var(--text-primary,#ecedf2);margin-bottom:6px;font-size:14.5px;}',
+        '.dm-act-meta{font-size:12px;color:var(--text-muted,#565866);margin-top:6px;}',
+        '.dm-txlink{display:inline-block;margin-top:4px;background:none;border:none;color:var(--blue,#60a5fa);font-size:12.5px;font-weight:600;cursor:pointer;padding:0;font-family:inherit;}',
+        '.dm-tx{margin-top:10px;max-height:320px;overflow-y:auto;padding:14px 16px;background:rgba(255,255,255,.03);border-radius:12px;font-size:13.5px;line-height:1.7;white-space:pre-wrap;color:var(--text-secondary,#a2a3b4);}',
+        '.dm-more{background:none;border:none;color:var(--text-muted,#565866);font-size:12.5px;font-weight:600;cursor:pointer;padding:8px 0;font-family:inherit;}',
+        '.dm-more:hover{color:var(--text-secondary,#a2a3b4);}',
+
+        /* Voicemail card — the one accented block */
+        '.dm-vm{margin-top:30px;background:rgba(37,99,235,.06);border-radius:14px;padding:18px 20px 18px 22px;position:relative;overflow:hidden;}',
+        '.dm-vm::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue,#2563eb);}',
+        '.dm-vm h4{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue,#60a5fa);margin:0 0 10px;font-weight:700;}',
+        '.dm-vm p{margin:0;font-size:15px;line-height:1.65;color:var(--text-secondary,#c6c7d2);}',
+
+        /* Footer */
+        '.dm-foot{flex-shrink:0;padding:18px 28px 14px;background:rgba(255,255,255,.02);}',
+        '.dm-foot-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}',
+        '.dm-callbtn{display:inline-flex;align-items:center;gap:12px;padding:15px 36px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.01em;font-family:inherit;box-shadow:0 10px 34px rgba(37,99,235,.28);}',
+        '.dm-callbtn:hover{filter:brightness(1.08);}',
+        '.dm-key{display:inline-block;min-width:20px;text-align:center;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.08);font-family:var(--font-mono,ui-monospace,monospace);font-size:10.5px;font-weight:700;color:var(--text-secondary,#a2a3b4);}',
+        '.dm-callbtn .dm-key{background:rgba(255,255,255,.22);color:#fff;}',
+        '.dm-hint{font-size:12.5px;color:var(--text-muted,#565866);}',
+        '.dm-pulse{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green,#10b981);animation:dmPulse 1.1s ease-in-out infinite;}',
+        '@keyframes dmPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.75);}}',
+        '.dm-live{font-family:var(--font-mono,ui-monospace,monospace);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;}',
+        '.dm-result{display:inline-flex;align-items:center;gap:10px;font-size:15px;font-weight:600;}',
+
+        /* Disposition keys: quiet pills, single line */
+        '.dm-disp{display:flex;gap:6px;flex-wrap:wrap;}',
+        '.dm-dbtn{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;background:rgba(255,255,255,.045);border:none;border-radius:11px;color:var(--text-primary,#ecedf2);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}',
+        '.dm-dbtn:hover{background:rgba(255,255,255,.09);}',
+
+        /* Always-visible key legend */
+        '.dm-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.04);}',
+        '.dm-legend span{font-size:11.5px;color:var(--text-muted,#565866);display:inline-flex;align-items:center;gap:6px;}',
+        '.dm-legend .dm-key{font-size:9.5px;min-width:16px;padding:1px 5px;background:rgba(255,255,255,.06);color:var(--text-tertiary,#8a8c9c);}',
+
+        /* Sub-panels */
+        '.dm-panel{margin-top:14px;padding:18px 20px;background:rgba(255,255,255,.035);border-radius:14px;}',
+        '.dm-panel h4{margin:0 0 12px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted,#565866);font-weight:700;}',
+        '.dm-qbtn{padding:9px 16px;background:rgba(255,255,255,.05);border:none;border-radius:999px;color:var(--text-primary,#ecedf2);font-size:13px;font-weight:600;cursor:pointer;margin:0 6px 6px 0;font-family:inherit;}',
+        '.dm-qbtn:hover{background:rgba(37,99,235,.22);color:#fff;}',
+        '.dm-input{padding:10px 14px;background:rgba(255,255,255,.05);border:none;border-radius:10px;color:var(--text-primary,#ecedf2);font-family:inherit;font-size:14px;outline:none;}',
+        '.dm-input:focus{background:rgba(255,255,255,.08);}',
+        '.dm-send{padding:10px 22px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;}',
+        '.dm-cancel{padding:10px 14px;background:none;border:none;color:var(--text-muted,#565866);font-size:12.5px;cursor:pointer;font-family:inherit;}',
+
+        /* Advance countdown */
+        '.dm-countwrap{flex:1;max-width:340px;}',
+        '.dm-countbar{height:3px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:8px;}',
+        '.dm-countbar i{display:block;height:100%;background:var(--blue,#2563eb);transition:width .1s linear;}',
+
+        /* Summary */
+        '.dm-summary{max-width:600px;margin:70px auto;text-align:center;padding:0 20px;}',
+        '.dm-summary h2{font-family:var(--font-display,inherit);font-size:38px;margin:0 0 8px;letter-spacing:-.01em;}',
+        '.dm-sumgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:36px 0;}',
+        '.dm-sumcell{background:rgba(255,255,255,.035);border-radius:16px;padding:22px 10px;}',
+        '.dm-sumcell b{display:block;font-family:var(--font-mono,ui-monospace,monospace);font-size:27px;font-weight:600;}',
+        '.dm-sumcell span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted,#565866);}',
+
+        '#dmResumePill{position:fixed;left:18px;bottom:18px;z-index:12001;display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 8px 30px rgba(37,99,235,.45);font-family:inherit;}',
+        '.dm-overlay-menu{position:absolute;inset:0;background:rgba(8,8,12,.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:5;}',
+        '.dm-menu{background:#101017;border-radius:20px;padding:30px 34px;text-align:center;min-width:300px;}',
+        '.dm-menu h3{margin:0 0 18px;font-size:18px;}',
+
+        '@media(max-width:980px){.dm-main{flex-direction:column;overflow-y:auto;}.dm-lead{width:100%;min-width:0;padding:20px;overflow-y:visible;flex-shrink:0;}.dm-script{padding:20px;overflow:visible;flex-shrink:0;background:none;}.dm-hud{padding:10px 16px;gap:12px;}.dm-hud-stats{gap:14px;}.dm-bizname{font-size:25px;}.dm-grid{grid-template-columns:100px 1fr;}.dm-foot{padding:12px 16px 10px;}}'
+    ].join('');
 
     function injectCss() {
-        if (el('dmStyles')) return;
+        var old = el('dmStyles');
+        if (old) old.remove();
         var st = document.createElement('style');
         st.id = 'dmStyles';
         st.textContent = CSS;
@@ -208,13 +275,19 @@
 
     /* ---------- queue ---------- */
     // The rep's existing board, callbacks first: due (or coming due within
-    // 30 min) callbacks are prepended to the callable rows. No new queue
-    // logic beyond that.
-    function buildQueue(rows, callbacks) {
+    // 30 min) callbacks are prepended to the callable rows. queueScope keeps
+    // the pools honest: a Blason session only pulls Blason callbacks, a
+    // STILO session never pulls a client-account one.
+    function inScope(r, scope) {
+        if (!scope) return true;
+        if (scope.clientId) return String(r.client_id || '') === String(scope.clientId);
+        return !r.client_id;
+    }
+    function buildQueue(rows, callbacks, scope) {
         var now = Date.now();
         var due = (callbacks || []).filter(function (r) {
             var t = tsToMs(r.next_action_due_at);
-            return t && t <= now + 30 * 60 * 1000 && leadPhone(r);
+            return t && t <= now + 30 * 60 * 1000 && leadPhone(r) && inScope(r, scope);
         });
         due.forEach(function (r) { r.__dmCallback = true; });
         var seen = {};
@@ -240,12 +313,15 @@
             pollTimer: null, clockTimer: null, advTimer: null,
             advanceLeft: 0,
             pausedFor: null,        // 'booking' | 'menu' | null
-            bookingPrior: null,     // meeting_scheduled_at before booking opened
+            bookingPrior: null,
             startedAt: Date.now(),
             stats: { dials: 0, connects: 0, talk: 0, booked: 0, callbacks: 0, logged: 0 },
             lastLoggedLabel: '',
             emailVariant: null,
-            panel: null             // 'callback' | 'dnc' | 'email' | 'sms' | null
+            panel: null,            // 'callback' | 'dnc' | 'email' | 'sms' | null
+            activity: [],           // merged calls + messages for the open lead
+            actShowAll: false,
+            notes: { leadId: null, dirty: false, timer: null }
         };
     }
 
@@ -257,7 +333,7 @@
         root.innerHTML =
             '<div class="dm-hud">'
             + '<span class="dm-wordmark">STILO DIALER</span>'
-            + '<span class="dm-pos" id="dmClock">0:00</span>'
+            + '<span class="dm-clock" id="dmClock">0:00</span>'
             + '<div class="dm-hud-stats">'
             + '<div class="dm-stat"><b id="dmStDials">0</b><span>Dials</span></div>'
             + '<div class="dm-stat"><b id="dmStConn">0</b><span>Connects</span></div>'
@@ -283,20 +359,127 @@
         if (!S) return;
         var elapsed = Date.now() - S.startedAt;
         var clock = el('dmClock'); if (clock) clock.textContent = fmtClock(elapsed);
-        var hrs = Math.max(elapsed / 3600000, 1 / 60);  // floor at 1 min so pace isn't absurd
-        var pace = S.stats.dials ? Math.round(S.stats.dials / hrs) : 0;
+        var hrs = Math.max(elapsed / 3600000, 1 / 60);
         setText('dmStDials', S.stats.dials);
         setText('dmStConn', S.stats.connects);
         setText('dmStTalk', fmtDur(S.stats.talk));
         setText('dmStCb', S.stats.callbacks);
         setText('dmStBooked', S.stats.booked);
-        setText('dmStPace', pace);
+        setText('dmStPace', S.stats.dials ? Math.round(S.stats.dials / hrs) : 0);
         if (S.phase === 'dialing') {
             var t = el('dmLiveTimer');
             if (t) t.textContent = fmtClock(Date.now() - S.dialStartedAt);
         }
     }
     function setText(id, v) { var e = el(id); if (e) e.textContent = v; }
+
+    /* ---------- activity (calls + sent emails/sms), collapsible ---------- */
+    function buildActivity(d) {
+        var items = [];
+        (d.call_history || []).forEach(function (c) {
+            items.push({
+                kind: 'call', ts: tsToMs(c.called_at), when: c.called_at,
+                outcome: c.outcome, dur: c.duration_seconds || 0,
+                summary: c.transcript_summary || '', transcript: c.transcript || '',
+                notes: c.notes || ''
+            });
+        });
+        (d.nurture_messages || []).forEach(function (m) {
+            if (m.direction && m.direction !== 'outbound' && m.direction !== 'outgoing') {
+                items.push({
+                    kind: (m.channel === 'sms') ? 'sms-in' : 'email-in', ts: tsToMs(m.sent_at), when: m.sent_at,
+                    subject: m.subject || '', body: m.body || m.body_preview || ''
+                });
+                return;
+            }
+            items.push({
+                kind: (m.channel === 'sms') ? 'sms' : 'email', ts: tsToMs(m.sent_at), when: m.sent_at,
+                subject: m.subject || '', body: m.body || m.body_preview || '',
+                opened: m.opened_at, replied: m.replied_at, bounced: m.bounced_at, status: m.status
+            });
+        });
+        items.sort(function (a, b) { return b.ts - a.ts; });
+        return items;
+    }
+    function actKindLabel(k) {
+        return { call: 'CALL', email: 'EMAIL', sms: 'SMS', 'email-in': 'REPLY', 'sms-in': 'SMS IN' }[k] || 'ACT';
+    }
+    function activityHtml() {
+        if (!S.activity.length) return '<div class="dm-hint">No calls or messages yet. First touch.</div>';
+        var max = S.actShowAll ? 40 : 6;
+        var html = S.activity.slice(0, max).map(function (a, i) {
+            var head, snippet;
+            if (a.kind === 'call') {
+                head = '<span class="dm-act-o">' + esc(outcomeLabel(a.outcome) || 'Call') + (a.dur ? ' · ' + fmtDur(a.dur) : '') + '</span>';
+                snippet = a.summary ? '<span class="dm-act-s">' + esc(a.summary) + '</span>' : '<span class="dm-act-s"></span>';
+            } else {
+                head = '<span class="dm-act-o">' + esc(a.subject || (a.kind.indexOf('sms') === 0 ? 'Text' : 'Email')) + '</span>';
+                snippet = '<span class="dm-act-s">' + esc((a.body || '').slice(0, 80)) + '</span>';
+            }
+            var body;
+            if (a.kind === 'call') {
+                body = (a.summary ? '<p>' + esc(a.summary) + '</p>' : '<p class="dm-hint">No AI summary for this call.</p>')
+                    + (a.notes ? '<p><span class="dm-dim">Rep note:</span> ' + esc(a.notes) + '</p>' : '')
+                    + (a.transcript
+                        ? '<button class="dm-txlink" onclick="event.stopPropagation();DIALER_MODE.toggleTx(' + i + ')">Show full transcript</button><div class="dm-tx" id="dmTx' + i + '" hidden>' + esc(a.transcript) + '</div>'
+                        : '');
+            } else {
+                var meta = [];
+                if (a.opened) meta.push('opened ' + cfg.fmtTime(a.opened));
+                if (a.replied) meta.push('replied ' + cfg.fmtTime(a.replied));
+                if (a.bounced) meta.push('bounced');
+                body = (a.subject ? '<div class="dm-act-sub">' + esc(a.subject) + '</div>' : '')
+                    + '<p>' + esc(a.body || '') + '</p>'
+                    + (meta.length ? '<div class="dm-act-meta">' + esc(meta.join(' · ')) + '</div>' : '');
+            }
+            return '<div class="dm-act" id="dmAct' + i + '" onclick="DIALER_MODE.toggleAct(' + i + ')">'
+                + '<span class="dm-act-caret">▶</span>'
+                + '<span class="dm-act-k' + (a.kind === 'call' ? ' dm-k-call' : '') + '">' + actKindLabel(a.kind) + '</span>'
+                + head + snippet
+                + '<span class="dm-act-d">' + esc(cfg.fmtTime(a.when)) + '</span>'
+                + '</div>'
+                + '<div class="dm-act-body" id="dmActBody' + i + '" hidden>' + body + '</div>';
+        }).join('');
+        if (S.activity.length > max) {
+            html += '<button class="dm-more" onclick="DIALER_MODE.actAll()">Show all ' + S.activity.length + ' touches</button>';
+        }
+        return html;
+    }
+    function toggleAct(i) {
+        var b = el('dmActBody' + i), r = el('dmAct' + i);
+        if (!b) return;
+        b.hidden = !b.hidden;
+        if (r) r.classList.toggle('dm-open', !b.hidden);
+    }
+    function toggleTx(i) { var t = el('dmTx' + i); if (t) t.hidden = !t.hidden; }
+    function actAll() {
+        S.actShowAll = true;
+        var host = el('dmActivityHost');
+        if (host) host.innerHTML = activityHtml();
+    }
+
+    /* ---------- live notes (leads.rep_notes via save-notes) ---------- */
+    function notesChanged() {
+        var ta = el('dmLiveNotes');
+        if (!ta || !S) return;
+        S.notes.dirty = true;
+        S.notes.leadId = (S.lead || S.queue[S.idx]).id;
+        setText('dmNotesSaved', 'typing…');
+        if (S.notes.timer) clearTimeout(S.notes.timer);
+        S.notes.timer = setTimeout(flushNotes, 900);
+    }
+    function flushNotes() {
+        if (!S || !S.notes.dirty) return;
+        var ta = el('dmLiveNotes');
+        var id = S.notes.leadId;
+        if (!ta || id == null) return;
+        var val = ta.value;
+        S.notes.dirty = false;
+        cfg.fetchJson('/api/prospects/save-notes', { method: 'POST', body: JSON.stringify({ id: id, notes: val }) })
+            .then(function () { if (S) setText('dmNotesSaved', 'saved'); })
+            .catch(function () { if (S) { S.notes.dirty = true; setText('dmNotesSaved', 'not saved — retrying'); if (S.notes.timer) clearTimeout(S.notes.timer); S.notes.timer = setTimeout(flushNotes, 4000); } });
+        if (S.lead && S.lead.id === id) S.lead.rep_notes = val;
+    }
 
     /* ---------- lead rendering ---------- */
     function renderLead() {
@@ -306,53 +489,39 @@
         setText('dmQueuePos', (S.idx + 1) + ' / ' + S.queue.length);
 
         var chips = '';
-        if (r.__dmCallback) chips += '<span class="dm-chip dm-chip-cb">CALLBACK DUE</span>';
-        chips += tierChip(r);
-        if (r.client_id) chips += '<span class="dm-chip dm-chip-client">' + esc(r.client_company || 'CLIENT ACCOUNT') + '</span>';
-        if (r.primary_language === 'es') chips += '<span class="dm-chip">ESPANOL</span>';
+        if (r.__dmCallback) chips += '<span class="dm-chip dm-chip-cb">Callback due</span>';
+        var tier = (r.prospect_tier || r.tier || '').toLowerCase();
+        if (tier) chips += '<span class="dm-chip dm-chip-' + tier + '">' + esc(tier) + '</span>';
+        if (r.client_id) chips += '<span class="dm-chip dm-chip-client">' + esc(r.client_company || 'Client account') + '</span>';
+        if (r.primary_language === 'es') chips += '<span class="dm-chip">Español</span>';
 
-        var kv = '';
-        kv += '<div class="dm-kv"><span>Owner</span><b>' + (r.owner_name ? esc(r.owner_name) : '<i style="color:var(--text-muted,#6e7083);">unknown</i>') + '</b></div>';
-        if (r.front_desk_name) kv += '<div class="dm-kv"><span>Front desk</span><b>' + esc(r.front_desk_name) + '</b></div>';
-        kv += '<div class="dm-kv"><span>Phone</span><b class="dm-phone">' + esc(leadPhone(r)) + '</b></div>';
+        var g = '';
+        g += '<span>Owner</span><b>' + (r.owner_name ? esc(r.owner_name) : '<i class="dm-dim">unknown</i>') + '</b>';
+        if (r.front_desk_name) g += '<span>Front desk</span><b>' + esc(r.front_desk_name) + '</b>';
+        g += '<span>Phone</span><b class="dm-phone">' + esc(leadPhone(r)) + '</b>';
         var lastBits = [];
         if (r.last_called_outcome) lastBits.push(outcomeLabel(r.last_called_outcome));
         if (r.last_called_at) lastBits.push(cfg.fmtTime(r.last_called_at));
-        kv += '<div class="dm-kv"><span>Last call</span><b>' + (lastBits.length ? esc(lastBits.join(' · ')) : 'Never called') + '</b></div>';
-        kv += '<div class="dm-kv"><span>Attempts</span><b>' + esc(r.call_attempts || 0) + '</b></div>';
+        g += '<span>Last call</span><b>' + (lastBits.length ? esc(lastBits.join(' · ')) : '<i class="dm-dim">never called</i>')
+            + (r.call_attempts ? ' <span class="dm-dim">· ' + esc(r.call_attempts) + ' attempts</span>' : '') + '</b>';
         if (r.next_action_type === 'callback' && r.next_action_due_at) {
-            kv += '<div class="dm-kv"><span>Callback due</span><b style="color:var(--blue,#60a5fa);">' + esc(cfg.fmtTime(r.next_action_due_at)) + '</b></div>';
-        }
-        if (r.nurture_email_count) {
-            kv += '<div class="dm-kv"><span>Emails sent</span><b>' + esc(r.nurture_email_count) + (r.nurture_last_email_at ? ' · last ' + esc(cfg.fmtTime(r.nurture_last_email_at)) : '') + '</b></div>';
+            g += '<span>Callback due</span><b style="color:var(--blue,#60a5fa);">' + esc(cfg.fmtTime(r.next_action_due_at)) + '</b>';
         }
 
-        var notes = (r.rep_notes != null && r.rep_notes !== '') ? r.rep_notes : (r.call_notes || '');
-        var notesHtml = notes
-            ? '<div class="dm-sec"><h4>Notes</h4><div class="dm-notes">' + esc(notes) + '</div></div>'
-            : '';
-
-        var callsHtml = '';
-        var hist = (r.call_history || []).slice(0, 3);
-        if (hist.length) {
-            callsHtml = '<div class="dm-sec"><h4>Recent calls</h4>' + hist.map(function (c) {
-                return '<div class="dm-callrow">'
-                    + '<span class="dm-co">' + esc(outcomeLabel(c.outcome) || '?') + '</span>'
-                    + (c.transcript_summary ? '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(String(c.transcript_summary).slice(0, 90)) + '</span>' : '')
-                    + '<span class="dm-cd">' + (c.duration_seconds ? fmtDur(c.duration_seconds) + ' · ' : '') + esc(cfg.fmtTime(c.called_at)) + '</span>'
-                    + '</div>';
-            }).join('') + '</div>';
-        }
+        var notesVal = (r.rep_notes != null && r.rep_notes !== '') ? r.rep_notes : (r.call_notes || '');
 
         main.innerHTML =
             '<div class="dm-lead">'
             + '<div class="dm-chips">' + chips + '</div>'
             + '<h2 class="dm-bizname">' + esc(r.business_name || r.name || 'Lead #' + r.id) + '</h2>'
             + '<div class="dm-niche">' + esc(r.category || r.niche || '') + (r.city ? ' · ' + esc(r.city) : '') + '</div>'
-            + kv + notesHtml + callsHtml
-            + '<div class="dm-vm"><h4>Voicemail · read it word for word</h4><p id="dmVmText">' + esc(vmScript(r)) + '</p></div>'
+            + '<div class="dm-grid">' + g + '</div>'
+            + '<div class="dm-sec"><h4>Notes <span class="dm-savedmsg" id="dmNotesSaved"></span></h4>'
+            + '<textarea id="dmLiveNotes" class="dm-notes-edit" placeholder="Type while you talk. Saves on its own." oninput="DIALER_MODE.notesChanged()">' + esc(notesVal) + '</textarea></div>'
+            + '<div class="dm-sec"><h4>Activity</h4><div id="dmActivityHost">' + activityHtml() + '</div></div>'
+            + '<div class="dm-vm"><h4>Voicemail · read it word for word</h4><p>' + esc(vmScript(r)) + '</p></div>'
             + '</div>'
-            + '<div class="dm-script" id="dmScriptPane"><div style="color:var(--text-muted,#6e7083);font-size:13px;">Loading script…</div></div>';
+            + '<div class="dm-script"><div class="dm-script-inner" id="dmScriptPane"><div class="dm-hint">Loading script…</div></div></div>';
 
         // Script loads async through the page's own pipeline (client-pool
         // firewall, language, agent resolution all live there).
@@ -364,14 +533,21 @@
         }).catch(function () {
             if (!S || S.idx !== myIdx) return;
             var pane = el('dmScriptPane');
-            if (pane) pane.innerHTML = '<div style="color:var(--text-muted,#6e7083);">Could not load script.</div>';
+            if (pane) pane.innerHTML = '<div class="dm-hint">Could not load script.</div>';
         });
 
         renderFoot();
     }
 
     /* ---------- footer per phase ---------- */
-    function keyHint(k, label) { return '<span class="dm-hint"><span class="dm-key">' + k + '</span> ' + label + '</span>'; }
+    function legendHtml() {
+        function k(key, label) { return '<span><span class="dm-key">' + key + '</span>' + label + '</span>'; }
+        return '<div class="dm-legend">'
+            + k('1', 'No answer / VM') + k('2', 'Callback') + k('3', 'Booked')
+            + k('4', 'Not interested') + k('5', 'Wrong number') + k('6', 'DNC')
+            + k('E', 'Email') + k('T', 'Text') + k('SPACE', 'Call / Next') + k('N', 'Skip') + k('ESC', 'Pause')
+            + '</div>';
+    }
 
     function renderFoot() {
         var foot = el('dmFoot');
@@ -380,11 +556,10 @@
 
         if (S.phase === 'ready') {
             foot.innerHTML = '<div class="dm-foot-row">'
-                + '<button class="dm-callbtn" onclick="DIALER_MODE.dial()"><span class="dm-key" style="background:rgba(255,255,255,.22);">SPACE</span> Call in Quo</button>'
-                + keyHint('N', 'Skip lead') + keyHint('ESC', 'Pause')
+                + '<button class="dm-callbtn" onclick="DIALER_MODE.dial()"><span class="dm-key">SPACE</span> Call in Quo</button>'
                 + '<span style="flex:1;"></span>'
-                + '<span class="dm-hint">Space opens Quo pre-dialed. Tap call there, talk, hang up. This screen detects the hangup on its own.</span>'
-                + '</div>';
+                + '<span class="dm-hint">Quo opens pre-dialed. Talk, hang up. This screen detects the hangup on its own.</span>'
+                + '</div>' + legendHtml();
             return;
         }
         if (S.phase === 'dialing') {
@@ -393,26 +568,19 @@
                 + '<span class="dm-hint">In Quo. Waiting for the hangup…</span>'
                 + '<span style="flex:1;"></span>'
                 + dispositionKeysHtml()
-                + '</div>'
-                + noteBoxHtml();
+                + '</div>' + legendHtml();
             return;
         }
         if (S.phase === 'disposition') {
             var c = S.currentCall;
-            var connected = c && (c.duration_seconds || 0) >= CONNECT_SECONDS;
             var result = c
                 ? '<span class="dm-result"><span style="color:var(--green,#10b981);">●</span> ' + esc(outcomeLabel(c.outcome)) + (c.duration_seconds ? ' · ' + fmtDur(c.duration_seconds) : '') + '</span>'
-                : '<span class="dm-result" style="color:var(--text-muted,#6e7083);">No call detected yet. Log it anyway:</span>';
+                : '<span class="dm-result dm-hint" style="font-weight:500;">No call detected yet — log it anyway</span>';
             foot.innerHTML = '<div class="dm-foot-row">' + result
                 + '<span style="flex:1;"></span>' + dispositionKeysHtml()
                 + '</div>'
-                + '<div class="dm-foot-row" style="margin-top:8px;">'
-                + keyHint('E', 'Email follow-up')
-                + (connected ? keyHint('T', 'Text follow-up') : '<span class="dm-hint" style="opacity:.45;"><span class="dm-key">T</span> Text (needs a ' + CONNECT_SECONDS + 's+ connect)</span>')
-                + keyHint('N', 'Skip, no log')
-                + '</div>'
-                + noteBoxHtml()
-                + '<div id="dmPanelHost"></div>';
+                + '<div id="dmPanelHost"></div>'
+                + legendHtml();
             return;
         }
         if (S.phase === 'advance') {
@@ -420,39 +588,33 @@
                 + '<span class="dm-result" style="color:var(--green,#10b981);">✓ ' + esc(S.lastLoggedLabel || 'Logged') + '</span>'
                 + '<div class="dm-countwrap"><span class="dm-hint">Next lead in <b id="dmCountNum">' + S.advanceLeft + '</b>s</span>'
                 + '<div class="dm-countbar"><i id="dmCountBar" style="width:100%;"></i></div></div>'
-                + '<button class="dm-callbtn" style="padding:10px 22px;font-size:14px;" onclick="DIALER_MODE.nextNow()"><span class="dm-key" style="background:rgba(255,255,255,.22);">SPACE</span> Next now</button>'
-                + keyHint('ESC', 'Pause')
-                + '</div>';
+                + '<button class="dm-callbtn" style="padding:11px 24px;font-size:14px;" onclick="DIALER_MODE.nextNow()"><span class="dm-key">SPACE</span> Next now</button>'
+                + '</div>' + legendHtml();
             return;
         }
         foot.innerHTML = '';
     }
 
     function dispositionKeysHtml() {
+        function b(k, label) {
+            return '<button class="dm-dbtn" onclick="DIALER_MODE.disposition(' + k + ')"><span class="dm-key">' + k + '</span>' + label + '</button>';
+        }
         return '<div class="dm-disp">'
-            + dBtn(1, 'No answer / VM', 'just move on')
-            + dBtn(2, 'Callback', 'interested, set a time')
-            + dBtn(3, 'Booked', 'open the slot picker')
-            + dBtn(4, 'Not interested', 'a real no')
-            + dBtn(5, 'Wrong number', '')
-            + dBtn(6, 'DNC', 'reason required')
+            + b(1, 'No answer / VM') + b(2, 'Callback') + b(3, 'Booked')
+            + b(4, 'Not interested') + b(5, 'Wrong number') + b(6, 'DNC')
             + '</div>';
     }
-    function dBtn(k, label, sub) {
-        return '<button class="dm-dbtn" onclick="DIALER_MODE.disposition(' + k + ')"><span><span class="dm-key">' + k + '</span> ' + label + '</span>' + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
-    }
-    function noteBoxHtml() {
-        return '<textarea id="dmNote" class="dm-note" rows="1" placeholder="Call note (saved with the outcome)…"></textarea>';
-    }
-    function noteVal() { var n = el('dmNote'); return n ? n.value.trim() : ''; }
 
     /* ---------- lead lifecycle ---------- */
     function nextLead() {
+        flushNotes();
         clearTimers(false);
         S.idx++;
         S.currentCall = null;
         S.knownCallIds = {};
         S.panel = null;
+        S.activity = [];
+        S.actShowAll = false;
         if (S.idx >= S.queue.length) { S.phase = 'done'; renderSummary(); return; }
         S.phase = 'ready';
         S.lead = S.queue[S.idx];
@@ -466,7 +628,16 @@
             merged.__dmCallback = S.queue[S.idx].__dmCallback;
             S.lead = merged;
             ((d && d.call_history) || []).forEach(function (c) { if (c.id != null) S.knownCallIds[c.id] = 1; });
-            if (S.phase === 'ready') renderLead();
+            S.activity = buildActivity(d || {});
+            // Don't wipe anything the rep already typed into the notes box.
+            var ta = el('dmLiveNotes');
+            var typed = ta && (S.notes.dirty && S.notes.leadId === merged.id) ? ta.value : null;
+            if (S.phase === 'ready' || S.phase === 'dialing') {
+                var ph = S.phase;
+                renderLead();
+                if (ph !== 'ready') { S.phase = ph; renderFoot(); }
+                if (typed != null) { var ta2 = el('dmLiveNotes'); if (ta2) ta2.value = typed; }
+            }
         }).catch(function () { /* queue row is enough to dial */ });
     }
 
@@ -527,40 +698,22 @@
 
     /* ---------- dispositions ---------- */
     // Poll-first-log-second discipline: when the webhook row exists,
-    // log-call MERGES the human outcome onto it. When it doesn't (rep
-    // dispositioned before Quo's event landed), log-call inserts a manual
-    // row and the webhook merges onto that — EXCEPT for auto-valued
-    // outcomes (no_answer/voicemail), which the webhook can't claim. So
-    // key 1 only writes when the webhook row is already here AND the rep
-    // typed a note; otherwise it's a pure advance.
+    // log-call MERGES the human outcome onto it. Key 1 never writes —
+    // log-dial counted the attempt and the webhook row carries the auto
+    // outcome. The rep's running context lives in the Notes box
+    // (rep_notes), which autosaves independently of outcomes.
     function disposition(k) {
         if (!S) return;
         if (S.phase !== 'disposition' && S.phase !== 'dialing') return;
         if (S.panel) return;   // a sub-panel is open; its own buttons handle input
         stopPoll();
         var r = S.lead || S.queue[S.idx];
-        var note = noteVal();
 
-        if (k === 1) {
-            if (S.currentCall && note) {
-                var oc = S.currentCall.outcome === 'voicemail' ? 'voicemail' : 'no_answer';
-                logCall(r.id, oc, { notes: note });
-            }
-            advance('No answer / voicemail', false);
-            return;
-        }
+        if (k === 1) { advance('No answer / voicemail', false); return; }
         if (k === 2) { openCallbackPanel(); return; }
         if (k === 3) { pauseForBooking(); return; }
-        if (k === 4) {
-            logCall(r.id, 'not_interested', { notes: note });
-            advance('Not interested', false);
-            return;
-        }
-        if (k === 5) {
-            logCall(r.id, 'wrong_number', { notes: note });
-            advance('Wrong number', false);
-            return;
-        }
+        if (k === 4) { logCall(r.id, 'not_interested', {}); advance('Not interested', false); return; }
+        if (k === 5) { logCall(r.id, 'wrong_number', {}); advance('Wrong number', false); return; }
         if (k === 6) { openDncPanel(); return; }
     }
 
@@ -575,8 +728,6 @@
     function panelHost() {
         var h = el('dmPanelHost');
         if (!h && S.phase === 'dialing') {
-            // Disposition during a live dial: promote to the disposition
-            // footer first so the panel host exists.
             S.phase = 'disposition';
             renderFoot();
             h = el('dmPanelHost');
@@ -599,7 +750,7 @@
             + slot('Tomorrow 10 AM', tomorrow10.getTime())
             + slot('Tomorrow 2 PM', tomorrow2.getTime())
             + slot('Monday 10 AM', monday.getTime())
-            + '<div style="margin-top:8px;display:flex;gap:8px;align-items:center;">'
+            + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;">'
             + '<input type="datetime-local" id="dmCbCustom" class="dm-input">'
             + '<button class="dm-send" onclick="DIALER_MODE.setCallbackCustom()">Set</button>'
             + '<button class="dm-cancel" onclick="DIALER_MODE.closePanel()">Cancel (Esc)</button>'
@@ -613,7 +764,7 @@
     }
     function commitCallback(iso) {
         var r = S.lead || S.queue[S.idx];
-        logCall(r.id, 'callback_requested', { next_callback_at: iso, notes: noteVal() });
+        logCall(r.id, 'callback_requested', { next_callback_at: iso });
         S.stats.callbacks++;
         S.panel = null;
         advance('Callback set · ' + cfg.fmtTime(iso), false);
@@ -632,7 +783,7 @@
     }
     function commitDnc() {
         var reason = (el('dmDncReason') && el('dmDncReason').value.trim()) || '';
-        if (!reason) { var inp = el('dmDncReason'); if (inp) { inp.style.borderColor = 'var(--red,#f87171)'; inp.focus(); } return; }
+        if (!reason) { var inp = el('dmDncReason'); if (inp) { inp.style.outline = '1px solid var(--red,#f87171)'; inp.focus(); } return; }
         var r = S.lead || S.queue[S.idx];
         logCall(r.id, 'do_not_call', { notes: reason });
         if (cfg.dncExtra) { try { cfg.dncExtra(r.id); } catch (e) {} }
@@ -645,22 +796,22 @@
         S.panel = 'email';
         var r = S.lead || S.queue[S.idx];
         h.innerHTML = '<div class="dm-panel" id="dmEmailPanel"><h4>Follow-up email</h4>'
-            + '<div style="color:var(--text-muted,#6e7083);font-size:12px;">Drafting…</div></div>';
+            + '<div class="dm-hint">Drafting…</div></div>';
         cfg.fetchJson('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify({ id: r.id }) }).then(function (d) {
             var p = el('dmEmailPanel'); if (!p || !S || S.panel !== 'email') return;
             S.emailVariant = d.variant || null;
             p.innerHTML = '<h4>Follow-up email' + (d.agent ? ' · ' + esc(d.agent) : '') + '</h4>'
                 + '<input id="dmEmTo" class="dm-input" style="width:100%;margin-bottom:6px;" value="' + esc(d.to_email || r.owner_email || r.email || '') + '">'
                 + '<input id="dmEmSubj" class="dm-input" style="width:100%;margin-bottom:6px;" value="' + esc(d.subject || '') + '">'
-                + '<textarea id="dmEmBody" class="dm-input" style="width:100%;min-height:120px;resize:vertical;">' + esc(d.body || '') + '</textarea>'
-                + '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;">'
+                + '<textarea id="dmEmBody" class="dm-input" style="width:100%;min-height:130px;resize:vertical;">' + esc(d.body || '') + '</textarea>'
+                + '<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">'
                 + '<button class="dm-send" onclick="DIALER_MODE.sendEmail()">Send</button>'
                 + '<button class="dm-cancel" onclick="DIALER_MODE.closePanel()">Cancel (Esc)</button>'
                 + '<span class="dm-hint" id="dmEmMsg"></span>'
                 + '</div>';
         }).catch(function (e) {
             var p = el('dmEmailPanel'); if (!p) return;
-            p.innerHTML = '<h4>Follow-up email</h4><div style="color:var(--red,#f87171);font-size:12px;">Draft failed: ' + esc((e && e.message) || 'error') + '</div>'
+            p.innerHTML = '<h4>Follow-up email</h4><div style="color:var(--red,#f87171);font-size:13px;">Draft failed: ' + esc((e && e.message) || 'error') + '</div>'
                 + '<button class="dm-cancel" onclick="DIALER_MODE.closePanel()">Close</button>';
         });
     }
@@ -690,8 +841,8 @@
         S.panel = 'sms';
         var r = S.lead || S.queue[S.idx];
         h.innerHTML = '<div class="dm-panel"><h4>Follow-up text · from your Quo line</h4>'
-            + '<textarea id="dmSmsBody" class="dm-input" style="width:100%;min-height:64px;resize:vertical;" maxlength="320">' + esc(smsTemplate(r)) + '</textarea>'
-            + '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;">'
+            + '<textarea id="dmSmsBody" class="dm-input" style="width:100%;min-height:68px;resize:vertical;" maxlength="320">' + esc(smsTemplate(r)) + '</textarea>'
+            + '<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">'
             + '<button class="dm-send" onclick="DIALER_MODE.sendSms()">Send text</button>'
             + '<button class="dm-cancel" onclick="DIALER_MODE.closePanel()">Cancel (Esc)</button>'
             + '<span class="dm-hint" id="dmSmsMsg"></span>'
@@ -721,6 +872,7 @@
 
     /* ---------- booking (key 3): reuse the page's real picker ---------- */
     function pauseForBooking() {
+        flushNotes();
         var r = S.lead || S.queue[S.idx];
         S.pausedFor = 'booking';
         S.bookingPrior = r.meeting_scheduled_at || null;
@@ -769,6 +921,7 @@
 
     /* ---------- advance ---------- */
     function advance(label, silent) {
+        flushNotes();
         closePanel();
         S.lastLoggedLabel = label;
         S.phase = 'advance';
@@ -807,7 +960,7 @@
         wrap.className = 'dm-overlay-menu';
         wrap.innerHTML = '<div class="dm-menu"><h3>Session paused</h3>'
             + '<button class="dm-callbtn" style="width:100%;justify-content:center;" onclick="DIALER_MODE.resume()">Resume (Esc)</button>'
-            + '<button class="dm-iconbtn" style="width:100%;margin-top:8px;" onclick="DIALER_MODE.close()">End session</button>'
+            + '<button class="dm-iconbtn" style="width:100%;margin-top:10px;" onclick="DIALER_MODE.close()">End session</button>'
             + '</div>';
         root.appendChild(wrap);
     }
@@ -820,7 +973,7 @@
         function cell(v, l) { return '<div class="dm-sumcell"><b>' + v + '</b><span>' + l + '</span></div>'; }
         if (main) main.innerHTML = '<div class="dm-summary" style="width:100%;">'
             + '<h2>Queue cleared.</h2>'
-            + '<div style="color:var(--text-secondary,#a2a3b4);">' + fmtClock(elapsed) + ' of dialing.</div>'
+            + '<div style="color:var(--text-tertiary,#6e7083);">' + fmtClock(elapsed) + ' of dialing.</div>'
             + '<div class="dm-sumgrid">'
             + cell(S.stats.dials, 'Dials')
             + cell(S.stats.dials ? Math.round(S.stats.dials / hrs) : 0, 'Dials / hr')
@@ -880,6 +1033,7 @@
     function clearTimers(all) {
         stopPoll();
         if (S && S.advTimer) { clearInterval(S.advTimer); S.advTimer = null; }
+        if (S && S.notes.timer) { clearTimeout(S.notes.timer); S.notes.timer = null; }
         if (all && S && S.clockTimer) { clearInterval(S.clockTimer); S.clockTimer = null; }
     }
 
@@ -889,14 +1043,18 @@
         if (!cfg) { console.warn('[dialer] configure() first'); return; }
         if (S) return;   // already open
         var rows = (opts && opts.rows) || [];
+        var scope = (typeof cfg.queueScope === 'function') ? cfg.queueScope() : (cfg.queueScope || null);
+        var cbPath = (typeof cfg.callbacksPath === 'function') ? cfg.callbacksPath() : (cfg.callbacksPath || '/api/prospects/callbacks');
         var boot = function (queueRows) {
-            // Callbacks ride in front of the board.
-            cfg.fetchJson('/api/prospects/callbacks').then(function (cb) {
-                start(buildQueue(queueRows, (cb && cb.results) || []));
-            }).catch(function () { start(buildQueue(queueRows, [])); });
+            // Callbacks ride in front of the board, same scope as the board.
+            cfg.fetchJson(cbPath).then(function (cb) {
+                start(buildQueue(queueRows, (cb && cb.results) || [], scope));
+            }).catch(function () { start(buildQueue(queueRows, [], scope)); });
         };
         if (rows.length) boot(rows);
-        else {
+        else if (cfg.fetchQueue) {
+            Promise.resolve(cfg.fetchQueue()).then(function (r2) { boot(r2 || []); }).catch(function () { boot([]); });
+        } else {
             cfg.fetchJson('/api/prospects/callable?limit=200').then(function (d) {
                 boot((d && (d.results || d.leads)) || []);
             }).catch(function () { boot([]); });
@@ -904,7 +1062,7 @@
     }
 
     function start(queue) {
-        if (!queue.length) { alert('No callable leads in the queue.'); return; }
+        if (!queue.length) { alert('No callable leads in this queue. Check the filters on the board.'); return; }
         S = newSession(queue);
         openShell();
         tickHud();
@@ -913,6 +1071,7 @@
 
     function close() {
         if (!S) return;
+        flushNotes();
         clearTimers(true);
         document.removeEventListener('keydown', onKeyDown, true);
         hideResumePill();
@@ -932,6 +1091,8 @@
         dial: dial, disposition: disposition, nextNow: nextNow, menu: menu,
         setCallback: setCallback, setCallbackCustom: setCallbackCustom,
         commitDnc: commitDnc, closePanel: closePanel,
-        sendEmail: sendEmail, sendSms: sendSms
+        sendEmail: sendEmail, sendSms: sendSms,
+        toggleAct: toggleAct, toggleTx: toggleTx, actAll: actAll,
+        notesChanged: notesChanged
     };
 })(typeof window !== 'undefined' ? window : this);
