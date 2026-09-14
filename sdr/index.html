@@ -1668,7 +1668,7 @@
                         + '<b>Type:</b> VSL = interested-lead video · Confirm = meeting confirmation · Manual = you hit Email. '
                         + '<b>Dots:</b> <span style="color:#10b981;">●</span> done · <span style="color:#eab308;">●</span> partial · <span style="color:var(--text-tertiary);">●</span> nothing yet.'
                         + '</div>';
-                    html += '<table><thead><tr><th>Business</th><th>Owner</th><th>Type</th><th>Sent</th><th>Opened</th><th>Viewed</th><th>Confirmed / Booked</th><th>Next step</th></tr></thead><tbody>';
+                    html += '<table><thead><tr><th>Business</th><th>Owner</th><th>Type</th><th>Sent</th><th>Opened</th><th>Watched</th><th>Confirmed / Booked</th><th>Next step</th></tr></thead><tbody>';
                     const dot = (state) => {
                         const c = state === 'yes' ? '#10b981' : (state === 'part' ? '#eab308' : 'var(--text-tertiary)');
                         return '<span style="color:' + c + ';font-size:15px;">●</span>';
@@ -1687,12 +1687,14 @@
                         if (isConfirm) {
                             last = g.confirmed ? dot('yes') + ' Confirmed' : (g.booked ? dot('part') + ' Booked' : dot('no') + ' —');
                             if (g.confirmed) { step = 'Confirmed ✓'; stepColor = '#10b981'; }
-                            else if (g.viewed) { step = 'Viewed, not confirmed. Nudge them'; stepColor = '#eab308'; }
+                            else if (g.played) { step = 'WATCHED the video, not confirmed. Nudge them'; stepColor = '#eab308'; }
+                            else if (g.viewed) { step = 'Page opened only (often a bot). Treat as not watched, CALL'; stepColor = '#94a3b8'; }
                             else { step = 'Not viewed. CALL to confirm'; stepColor = '#ef4444'; }
                         } else {
                             last = g.booked ? dot('yes') + ' Booked' : (g.confirmed ? dot('yes') + ' Confirmed' : dot('no') + ' —');
                             if (g.booked) { step = 'Booked ✓'; stepColor = '#10b981'; }
-                            else if (g.viewed) { step = 'Viewed, not booked. Follow up'; stepColor = '#eab308'; }
+                            else if (g.played) { step = 'WATCHED the video, not booked. Follow up NOW'; stepColor = '#eab308'; }
+                            else if (g.viewed) { step = 'Page opened only (often a bot). Treat as not watched'; stepColor = '#94a3b8'; }
                             else { step = 'Not viewed. Call or re-send'; stepColor = '#ef4444'; }
                         }
                         html += '<tr onclick="openLeadDrawer(' + (r.id || 'null') + ')">'
@@ -1701,7 +1703,7 @@
                             + '<td style="white-space:nowrap;">' + typeBadge(em.type) + '</td>'
                             + '<td style="white-space:nowrap;">' + escapeHtml(sent) + '</td>'
                             + '<td style="white-space:nowrap;">' + dot(g.opened ? 'yes' : 'no') + '</td>'
-                            + '<td style="white-space:nowrap;">' + dot(g.viewed ? 'yes' : 'no') + '</td>'
+                            + '<td style="white-space:nowrap;">' + dot(g.played ? 'yes' : (g.viewed ? 'part' : 'no')) + '</td>'
                             + '<td style="white-space:nowrap;">' + last + '</td>'
                             + '<td style="white-space:nowrap;color:' + stepColor + ';font-weight:600;font-size:12px;">' + step + '</td>'
                             + '</tr>';
