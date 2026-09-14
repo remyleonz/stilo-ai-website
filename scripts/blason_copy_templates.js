@@ -1,0 +1,82 @@
+/**
+ * scripts/blason_copy_templates.js
+ *
+ * Claude-authored template bank for Blason campaign 4 step-1 SMS. Replaces the
+ * Gemini call in the daily autopilot (Gemini prepay ran dry 2026-09-14 and its
+ * deterministic fallback still asked the RETIRED question).
+ *
+ * The copy itself was written by Claude once, reviewed here in the repo, and is
+ * personalized per lead deterministically: verified first name when we have one,
+ * the lead's language, and the rep's own first name from the assigned line. No
+ * per-send model call, so the copy is STABLE and the A/B stays interpretable.
+ *
+ * TEST PLAN (Remy, 2026-09-14): hold this copy for at least 200 sends, then read
+ * reply rate by variant:
+ *   select variant, count(*) sends, count(first_reply_at) replies
+ *   from prospecting.outbound_targets
+ *   where campaign_id=4 and step1_sent_at >= '2026-09-14' group by variant;
+ *
+ * Arm A rotates the three buyer-motive questions (wishlist / oldest machine /
+ * expansion). Arm B is the showroom. Never price, never Hialeah, never the
+ * retired "what can't your equipment do" question.
+ *
+ * Usage: node scripts/blason_copy_templates.js          (fill bodyless targets)
+ *        node scripts/blason_copy_templates.js --dry    (print, write nothing)
+ */
+const fs = require('fs');
+const path = require('path');
+try {
+    fs.readFileSync(path.join(__dirname, '..', '.env.local'), 'utf8').split('\n').forEach(function (line) {
+        const m = line.match(/^([A-Z_]+)=(.*)$/);
+        if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, '');
+    });
+} catch (e) { /* env may already be set */ }
+
+const URL_ = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_KEY;
+const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Accept-Profile': 'prospecting', 'Content-Profile': 'prospecting', 'Content-Type': 'application/json' };
+const DRY = process.argv.includes('--dry');
+const repFirst = rep => rep && rep.startsWith('remyleon') ? 'remy' : rep && rep.startsWith('aleb') ? 'alejandro' : 'jorge';
+
+// hi(name) — verified first name only, else plain "hey"/"hola".
+const A_EN = [
+    (hi, n) => `${hi}, ${n} here with blason spa equipment in miami, i called you the other day. quick one: what's the next machine on your wishlist?`,
+    (hi, n) => `${hi}, ${n} with blason spa equipment in miami, tried you by phone the other day. curious, what's the oldest machine in your room right now?`,
+    (hi, n) => `${hi}, ${n} here from blason spa equipment in miami, i called the other day. anything new coming for you guys, a new service or a second room?`,
+];
+const A_ES = [
+    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, los llamé hace unos días. una pregunta: ¿cuál es la próxima máquina en su lista de deseos?`,
+    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, intenté llamarlos hace poco. ¿cuál es la máquina más vieja que tienen en cabina ahora?`,
+    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, los llamé el otro día. ¿viene algo nuevo para ustedes, un servicio nuevo o una segunda cabina?`,
+];
+const B_EN = [
+    (hi, n) => `${hi}, ${n} here with blason spa equipment in miami, i called you the other day. our machines are set up and running at the showroom in miami so you can put your hands on them before deciding anything. worth a look?`,
+    (hi, n) => `${hi}, ${n} from blason spa equipment in miami, tried to reach you by phone the other day. the machines are running live at our miami showroom, you can try them before deciding anything. worth a look?`,
+];
+const B_ES = [
+    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, los llamé hace unos días. las máquinas están montadas y funcionando en nuestro showroom de miami, las puede probar antes de decidir nada. ¿vale la pena una visita?`,
+];
+const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pueden hacer|asking for that/i;
+
+(async () => {
+    const r = await fetch(`${URL_}/rest/v1/outbound_targets?campaign_id=eq.4&step1_sent_at=is.null&step1_body=is.null&stage=eq.queued&select=id,lead_id,variant,assigned_to&order=id`, { headers: H });
+    const targets = await r.json();
+    if (!Array.isArray(targets) || !targets.length) { console.log('nothing to fill'); return; }
+    let ai = 0, bi = 0, written = 0;
+    for (const t of targets) {
+        const lr = await fetch(`${URL_}/rest/v1/leads?id=eq.${t.lead_id}&select=owner_name,owner_name_verify_status,primary_language`, { headers: H });
+        const l = (await lr.json())[0] || {};
+        const es = l.primary_language === 'es';
+        const verified = ['verified', 'rep_confirmed'].includes(l.owner_name_verify_status);
+        const first = verified && l.owner_name ? String(l.owner_name).trim().split(/\s+/)[0].toLowerCase() : null;
+        const hi = es ? (first ? `hola ${first}` : 'hola') : (first ? `hey ${first}` : 'hey');
+        const n = repFirst(t.assigned_to);
+        let body;
+        if (t.variant === 'A') { const p = es ? A_ES : A_EN; body = p[ai % p.length](hi, n); ai++; }
+        else { const p = es ? B_ES : B_EN; body = p[bi % p.length](hi, n); bi++; }
+        if (BANNED.test(body) || body.length > 320) { console.log('SKIP invalid', t.id); continue; }
+        if (DRY) { console.log(t.id, body); continue; }
+        const w = await fetch(`${URL_}/rest/v1/outbound_targets?id=eq.${t.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ step1_body: body, body_generated_at: new Date().toISOString() }) });
+        if (w.ok) written++; else console.log('write fail', t.id, w.status);
+    }
+    console.log((DRY ? 'dry, would write ' : 'wrote ') + (DRY ? targets.length : written) + ' bodies');
+})().catch(e => { console.error('ERR', e.message); process.exit(1); });

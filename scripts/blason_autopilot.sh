@@ -1,7 +1,8 @@
 #!/bin/zsh
-# Blason daily autopilot. Runs from launchd (com.stilo.blason-sms-refill / -email-daily).
-# SMS leg: enqueue yesterday's connected dials into campaign 4, generate copy, then
-# STRIP any body that fails the banned-pattern check so fallback junk can never send.
+# Blason daily autopilot. Runs from launchd (com.stilo.blason-sms-daily / -email-daily).
+# SMS leg: enqueue yesterday's connected dials into campaign 4, fill copy from the
+# Claude-authored template bank (scripts/blason_copy_templates.js — no Gemini), then
+# STRIP any body that fails the banned-pattern check so bad copy can never send.
 # Email leg: run the client sequence with --send, cap 50.
 # Logs: ~/Library/Logs/blason-autopilot.log
 set -u
@@ -17,9 +18,7 @@ if [ "$LEG" = "sms" ]; then
   curl -s -X POST "https://stiloaipartners.com/api/prospects/outbound-enqueue" \
     -H "Authorization: Bearer $CRON" -H "Content-Type: application/json" \
     -d '{"campaign_id":4,"audience":"warm"}' | head -c 300; echo ""
-  curl -s -X POST "https://stiloaipartners.com/api/prospects/outbound-generate" \
-    -H "Authorization: Bearer $CRON" -H "Content-Type: application/json" \
-    -d '{"campaign_id":4,"step":1,"limit":60}' | head -c 200; echo ""
+  node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/blason_copy_templates.js"
   # Validation gate: wipe unsent bodies carrying banned patterns (retired question,
   # Hialeah, any price talk). A bodyless target just waits; a bad body would SEND.
   node -e '
