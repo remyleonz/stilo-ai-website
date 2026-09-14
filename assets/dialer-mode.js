@@ -619,6 +619,7 @@
     function setScriptLang(l) {
         if (!S || (l !== 'en' && l !== 'es') || S.scriptLang === l) return;
         S.scriptLang = l;
+        S.scriptLangManual = true;
         var pane = el('dmScriptPane');
         if (pane) pane.innerHTML = '<div class="dm-hint">Loading script…</div>';
         loadScript();
@@ -801,6 +802,7 @@
         S.activity = [];
         S.actShowAll = false;
         S.scriptLang = null;   // re-derived from the next lead's primary_language
+        S.scriptLangManual = false;
         if (S.idx >= S.queue.length) { S.phase = 'done'; renderSummary(); return; }
         S.phase = 'ready';
         S.lead = S.queue[S.idx];
@@ -815,6 +817,10 @@
             S.lead = merged;
             ((d && d.call_history) || []).forEach(function (c) { if (c.id != null) S.knownCallIds[c.id] = 1; });
             S.activity = buildActivity(d || {});
+            // Board rows don't carry primary_language; the detail row does.
+            // Re-derive the script language from it unless the rep already
+            // picked one by hand.
+            if (!S.scriptLangManual) S.scriptLang = (merged.primary_language === 'es') ? 'es' : 'en';
             // Don't wipe anything the rep already typed into the notes box.
             var ta = el('dmLiveNotes');
             var typed = ta && (S.notes.dirty && S.notes.leadId === merged.id) ? ta.value : null;

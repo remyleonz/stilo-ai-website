@@ -356,7 +356,8 @@
                 for (var j = out.length - 1; j >= 0; j--) {
                     var p = out[j], pt = p.trim();
                     if (!pt) continue;
-                    if (/^\(.*\)$/.test(pt) || /^>\s*\(.*\)$/.test(pt)) continue;
+                    // Stage directions may be emphasis-wrapped: *(let them respond)*
+                    if (/^>?\s*[*_]*\(.*\)[*_]*$/.test(pt)) continue;
                     if (/^#{1,6}\s/.test(pt) || /^\|/.test(pt) || /^([-*_])\1{2,}$/.test(pt)) break;
                     out[j] = cleaned;   // the EN line takes its original's exact slot
                     placed = true;
