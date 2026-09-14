@@ -430,7 +430,7 @@ module.exports = async function handler(req, res) {
     try {
         const gen = await readGeneratedScript(slug, lang);
         const isCurrentCampaign = gen && /Campaign:.*Blason Spa Equipment/i.test(gen);
-        if (gen && (isCurrentCampaign || process.env.ALLOW_LEGACY_GENERATED_SCRIPTS === '1')) {
+        if (gen && isCurrentCampaign) {
             res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
             return res.status(200).json({
                 slug: slug,

@@ -50,7 +50,7 @@ const { langForLead, t } = require('./_lang');
 
 const AGENT_FACTS = {
     meetings: {
-        label: 'booked sales meetings',
+        label: 'booked-meetings system',
         how: 'We find the companies in your market that need what you do, reach out to them one by one as your team, and put the ready ones on your calendar as booked meetings. You just show up and close.',
         benchmark: 'Most owner-operated businesses win work through referrals and repeat customers, which is real but not steerable. A steady outbound motion is the only version of growth you can turn up on purpose.',
         proof: 'Measured on booked meetings with the right kind of company that actually show up, not on messages sent.',
@@ -446,13 +446,18 @@ async function generateTouch(stepKey, lead, sender) {
         'Write it now.',
     ].filter(Boolean).join('\n');
 
-    const generated = await geminiWrite(prompt, touch.channel === 'sms' ? 200 : 1400);
+    // Model-written nurture retired 2026-09-14 (no Gemini in copy paths).
+    // fallbackContent IS the copy: hand-written, interpolating the vetted
+    // AGENT_FACTS. The prompt above stays as the written spec only.
+    void prompt;
+    const generated = null;
     const fb = fallbackContent(stepKey, lead, facts, senderName);
 
     // Send-boundary guard: generated copy that mentions AI or money is
     // discarded in favor of the vetted fallback (2026-09-14 incident).
     const _gate = require('./_shared').copyGate;
     let body = (generated && !_gate(generated)) ? generated : fb.body;
+    if (body && _gate(body)) return null; // vetted copy tripping the gate means a legacy fact leaked: skip, never send
     // A Spanish lead has no hand-written fallback for the four long-form emails
     // (see fallbackContent). If generation also failed we send nothing rather
     // than an English email to someone who does not read English. The caller

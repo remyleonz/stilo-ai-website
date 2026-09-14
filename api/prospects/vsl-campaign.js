@@ -65,15 +65,6 @@ const SENDER_EMAIL = process.env.VSL_SENDER_EMAIL || process.env.STILO_SENDER_EM
 const SENDER_NAME = process.env.VSL_SENDER_NAME || 'Remy Leon';
 const REPLY_TO = process.env.VSL_REPLY_TO || process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com';
 
-// One line per agent, in the prospect's language, not ours.
-const PITCH = {
-    'receptionist': 'answers your phone at 8pm and books the job instead of taking a message',
-    'lead-reply': 'replies to a new lead within 5 minutes, before they call the next guy',
-    'reactivation': 'goes through your old customers and gets the ones who are overdue back in',
-    'b2bleadgen': 'builds you a list of local businesses that actually need what you sell',
-    'website': 'rebuilds your site so it books work instead of just sitting there',
-    'sales-agent': 'coaches your reps off their own call recordings',
-};
 
 // ai-seo and ontology were retired 2026-07-15 (never filmed, now redirected in
 // vercel.json). Anything that used to route there falls through to receptionist
@@ -162,7 +153,7 @@ function callRef(repName) {
 
 function warmEmailA(lead, slug, link, repName) {
     const first = firstName(lead.owner_name, lead.name, lead.address);
-    const pitch = PITCH[slug] || 'finds the businesses in your area that need what you do and puts them on your calendar as booked meetings';
+    const pitch = 'finds the businesses in your area that need what you do and puts them on your calendar as booked meetings';
     const body = [
         first ? 'Hi ' + first + ',' : 'Hi,',
         '',
@@ -184,15 +175,7 @@ function warmEmailA(lead, slug, link, repName) {
 }
 function warmEmailB(lead, slug, link, repName) {
     const first = firstName(lead.owner_name, lead.name, lead.address);
-    const ASK = {
-        'receptionist': 'Roughly how many calls a week ring out when the team is busy?',
-        'lead-reply': 'When a new lead comes in, how long before someone actually calls them back?',
-        'reactivation': 'Roughly how many past customers are overdue to come back in?',
-        'b2bleadgen': 'How are you finding new accounts right now, referrals or outbound?',
-        'website': 'Is your site actually booking work, or just sitting there?',
-        'sales-agent': 'Are you recording your reps\' calls right now?',
-    };
-    const ask = ASK[slug] || 'Roughly how many new customers a month could you take on if they just showed up booked?';
+        const ask = 'Roughly how many new customers a month could you take on if they just showed up booked?';
     const body = [
         first ? 'Hi ' + first + ',' : 'Hi,',
         '',

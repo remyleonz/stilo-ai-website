@@ -225,11 +225,6 @@ module.exports = async function handler(req, res) {
     // Counting them here would keep putting leads on a dial board whose drawer
     // now correctly renders nothing. Re-enable together with that endpoint, and
     // only once the bucket is regenerated against the current offer.
-    if (process.env.ALLOW_LEGACY_GENERATED_SCRIPTS === '1') {
-        for (const o of await listAll(GENERATED_BUCKET, '', sb)) {
-            if (o.name.endsWith('.md')) scripted.add(o.name.replace(/\.md$/, '').toLowerCase());
-        }
-    }
 
     // --- the briefed universe: every slug David placed in a rep folder -------
     const briefed = new Set();

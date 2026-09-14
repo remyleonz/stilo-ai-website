@@ -473,7 +473,7 @@ function fallbackBody(lead, step, sender, variant, campaign) {
         // contaminates the experiment with the other arm's framing.
         return variant === 'B'
             ? hi + ', ' + sender.first_name + ' here. have we spoken before or am i misremembering? was about ' + topic + '.'
-            : hi + ', ' + sender.first_name + ' here. we spoke a little while back about ' + topic + '. still worth a quick chat?';
+            : hi + ', ' + sender.first_name + ' here. have we spoken before or am i misremembering? was about ' + topic + '.';
     }
     // Step 2 states the CURRENT offer in plain words. The old version said "we
     // build and run the AI that brings local businesses more booked work", which
@@ -482,45 +482,72 @@ function fallbackBody(lead, step, sender, variant, campaign) {
     return 'perfect. ok if i give you a quick call from this number in a few minutes?';
 }
 
-async function geminiSms(prompt) {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) return null;
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
-    const controller = new AbortController();
-    const timer = setTimeout(function () { controller.abort(); }, 9000);
-    try {
-        const r = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.8, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } },
-            }),
-        });
-        clearTimeout(timer);
-        if (!r.ok) return null;
-        const j = await r.json();
-        const t = j && j.candidates && j.candidates[0] && j.candidates[0].content
-            && j.candidates[0].content.parts && j.candidates[0].content.parts[0]
-            && j.candidates[0].content.parts[0].text;
-        if (!t || t.trim().length < 8) return null;
-        return t.trim().replace(/^["']|["']$/g, '');
-    } catch (_) {
-        clearTimeout(timer);
-        return null;
+// geminiSms removed 2026-09-14: no model calls in any copy path.
+/**
+ * CURATED COPY (2026-09-14). All step bodies are authored by Claude in-session,
+ * reviewed in this repo, and personalized deterministically: verified first
+ * name only, lead language, sender line, campaign topic. No model call at send
+ * time, so the copy is stable (interpretable A/B) and can never drift back to
+ * the retired offer. Rotation is keyed on lead id so a lead always sees the
+ * same variant.
+ */
+function curatedSms(lead, step, sender, variant, campaign, es) {
+    const n = ((sender && sender.first_name) || 'remy').toLowerCase();
+    const vf = verifiedFirstNameOf(lead);
+    const first = vf ? String(vf).toLowerCase() : null;
+    const hi = es ? (first ? 'hola ' + first : 'hola') : (first ? 'hey ' + first : 'hey');
+    const rot = Math.abs(Number(lead.id) || 0);
+    if (campaign && campaign.client_id) {
+        // Blason Spa Equipment. Same banks as scripts/blason_copy_templates.js.
+        if (step === 1) {
+            const A_EN = [
+                hi + ', ' + n + ' here with blason spa equipment in miami, i called you the other day. quick one: what\'s the next machine on your wishlist?',
+                hi + ', ' + n + ' with blason spa equipment in miami, tried you by phone the other day. curious, what\'s the oldest machine in your room right now?',
+                hi + ', ' + n + ' here from blason spa equipment in miami, i called the other day. anything new coming for you guys, a new service or a second room?',
+            ];
+            const A_ES = [
+                hi + ', soy ' + n + ' de blason spa equipment en miami, los llame hace unos dias. una pregunta: cual es la proxima maquina en su lista de deseos?',
+                hi + ', soy ' + n + ' de blason spa equipment en miami, intente llamarlos hace poco. cual es la maquina mas vieja que tienen en cabina ahora?',
+            ];
+            const B_EN = [
+                hi + ', ' + n + ' here with blason spa equipment in miami, i called you the other day. our machines are set up and running at the showroom in miami so you can put your hands on them before deciding anything. worth a look?',
+                hi + ', ' + n + ' from blason spa equipment in miami, tried to reach you by phone the other day. the machines are running live at our miami showroom, you can try them before deciding anything. worth a look?',
+            ];
+            const B_ES = [
+                hi + ', soy ' + n + ' de blason spa equipment en miami, los llame hace unos dias. las maquinas estan montadas y funcionando en nuestro showroom de miami, las puede probar antes de decidir nada. vale la pena una visita?',
+            ];
+            const pool = variant === 'A' ? (es ? A_ES : A_EN) : (es ? B_ES : B_EN);
+            return pool[rot % pool.length];
+        }
+        if (step === 2) {
+            return es
+                ? hi + ', gracias por responder. version corta: equipos de estetica y contorno corporal, laser, faciales, body sculpting. manuel, el dueno de blason aqui en miami, los importa el mismo y le dice directo cual le sirve. cual es la proxima maquina en su lista de deseos?'
+                : hi + ', thanks for getting back. short version: aesthetic and body contouring equipment, lasers, facials, body sculpting. manuel, the owner of blason here in miami, imports them himself, so he tells you straight which one fits. what\'s the next machine on your wishlist?';
+        }
+        return es
+            ? 'perfecto. le puedo llamar de este numero en unos minutos?'
+            : 'perfect. ok if i call you from this number in a few minutes?';
     }
+    // STILO. Arm A was retired 2026-08-20 (it asserted a call that often never
+    // reached the owner), so both arms get the honest opener.
+    const topic = (campaign && campaign.topic_override)
+        || (es ? 'conseguirle mas reuniones de venta agendadas' : 'getting more booked sales meetings on your calendar');
+    if (step === 1) {
+        return es
+            ? hi + ', soy ' + n + '. hemos hablado antes o me estoy confundiendo? era sobre ' + topic + '.'
+            : hi + ', ' + n + ' here. have we spoken before or am i misremembering? was about ' + topic + '.';
+    }
+    if (step === 2) {
+        return es
+            ? 'gracias por responder. version corta: encontramos las empresas de su mercado que necesitan lo que usted hace y le ponemos las que estan listas en el calendario como reuniones agendadas. usted solo llega y cierra. podria manejar mas trabajo ahora mismo si llegara?'
+            : 'appreciate you getting back. short version: we find the companies in your market that need what you do and put the ready ones on your calendar as booked meetings. you just show up and close. could you handle more work right now if it came in?';
+    }
+    return es
+        ? 'perfecto. le puedo llamar de este numero en unos minutos?'
+        : 'perfect. ok if i give you a quick call from this number in a few minutes?';
 }
 
-/**
- * Generate one personalized message for one lead at one step.
- *
- * The campaign's step guidance is passed through as the authoring brief. The
- * lead's own record supplies the personalization. Length is hard-capped at 320
- * chars: past that a carrier splits it into multiple segments, which costs more
- * and reads as bulk.
- */
-async function generateStepBody(lead, campaign, step, sender, variant) {
+function generateStepBody(lead, campaign, step, sender, variant) {
     // Arm B only exists for step 1: the opener is what the test is about, and
     // splitting later steps too would confound the result (you could no longer
     // tell whether the opener or the pitch moved the number).
@@ -592,36 +619,17 @@ async function generateStepBody(lead, campaign, step, sender, variant) {
     // Generate, validate, retry once, then fall back. The retry is cheap and
     // catches most one-off violations; the deterministic fallback guarantees we
     // never emit a message that failed the check.
+    // Copy comes from the curated banks below; the prompt assembled above is
+    // retained as the written spec of the rules but is no longer sent anywhere.
+    void prompt;
     let body = null, generated = false, rejected = null;
-    for (let attempt = 0; attempt < 2 && !body; attempt++) {
-        const out = await geminiSms(attempt === 0 ? prompt : prompt + '\n\nYour previous attempt broke a hard rule. Re-read the hard rules and try again.');
-        if (!out) continue;
-        let cleaned = out.replace(/—|–/g, ',').replace(/!/g, '.').trim();
-        // IDENTITY IS A STEP-1 RULE.
-        //
-        // Step 1 lands cold on a phone, so an unsigned message is a stranger
-        // and the checks are load-bearing. Steps 2 and 3 are turns inside a
-        // thread the person is already answering: re-introducing yourself every
-        // time ("ale here from blason spa equipment" three messages running)
-        // reads as an autoresponder, which is the opposite of what this channel
-        // is for.
-        //
-        // Applying them at every step also made the step-3 fallback
-        // ("perfect. ok if i give you a quick call from this number in a few
-        // minutes?") fail sender_not_named, so the deterministic copy meant to
-        // rescue a failed generation broke the very rule that rejected it. This
-        // file already learned that lesson once, in fallbackBody's comment: a
-        // fallback that violates the rules is worse than no fallback, because it
-        // looks like it worked.
+    {
+        const cleaned = curatedSms(lead, step, sender, variant, campaign, es).replace(/—|–/g, ',').replace(/!/g, '.').trim();
         const identityRequired = step === 1;
         const v = validateBody(
             cleaned,
             identityRequired ? (sender && sender.first_name) : null,
             identityRequired ? token : null,
-            // Verified names only: for an unverified lead this is '', so a body
-            // greeting ANY name fails checkGreetedName and falls back to the
-            // no-name copy. The model never saw the name (leadFacts withholds
-            // it); this catches the case where it invents one anyway.
             verifiedFirstNameOf(lead)
         );
         if (v.ok) { body = cleaned; generated = true; }

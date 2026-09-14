@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
     // places. That is why the admin "Confirmed" stat has always read 0.
     try {
         const url = process.env.SUPABASE_URL;
-        const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const key = process.env.SUPABASE_SERVICE_KEY;
         if (url && key && leadId != null) {
             const supabase = createClient(url, key, { auth: { persistSession: false } });
             const nowIso = new Date().toISOString();

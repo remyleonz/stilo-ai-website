@@ -153,7 +153,7 @@ function playbookFromAgentName(name) {
     if (/growth intel|ontology|strategy intel|business intelligence|\boracle\b/.test(n)) return PLAYBOOKS.growth;
     if (/custom automation|bespoke|\bflux\b|\bcustom\b/.test(n)) return PLAYBOOKS.custom;
     if (/reactivat|lapsed|lost customer|\blcr\b|revive/.test(n)) return PLAYBOOKS.reactivation;
-    if (/receptionist|front desk|\becho\b/.test(n)) return PLAYBOOKS.receptionist;
+    if (/receptionist|front desk|\becho\b/.test(n)) return PLAYBOOKS.meetings; // retired product names resolve to the current offer
     if (/outbound|lead response|lead reply|ignite|speed to lead/.test(n)) return PLAYBOOKS.lead_response;
     if (/lead gen|lead generat|prospect|\bscout\b/.test(n)) return PLAYBOOKS.lead_gen;
     return null;
@@ -189,7 +189,7 @@ function pickPlaybookForLead(opts) {
     // use the "product=" format, or product codes not in the map above.
     const lc = reasoning.toLowerCase();
     if (/\blcr\b|reactivat|lapsed/.test(lc)) return PLAYBOOKS.reactivation;
-    if (/receptionist/.test(lc)) return PLAYBOOKS.receptionist;
+    if (/receptionist/.test(lc)) return PLAYBOOKS.meetings;
     if (/outbound|lead response/.test(lc)) return PLAYBOOKS.lead_response;
     if (/lead gen/.test(lc)) return PLAYBOOKS.lead_gen;
     return pickPlaybook(opts.niche);

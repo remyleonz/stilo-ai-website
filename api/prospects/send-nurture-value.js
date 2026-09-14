@@ -42,6 +42,13 @@ module.exports = async function handler(req, res) {
     const cronOk = !!process.env.CRON_SECRET && authHeader === 'Bearer ' + process.env.CRON_SECRET;
     if (!cronOk) { const gate = await assertAdminOrSdr(req, res); if (!gate.ok) return; }
 
+    // Default-closed kill switch, same shape as OUTBOUND_SEND_ENABLED. Set to
+    // 'true' in Vercel production (done 2026-09-14); any other environment,
+    // preview deploy, or local run is inert by default.
+    if (process.env.NURTURE_SEND_ENABLED !== 'true') {
+        return res.status(200).json({ ok: true, skipped: 'NURTURE_SEND_ENABLED_not_true' });
+    }
+
     const dry = String((req.query || {}).dry || '') === '1';
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false }, db: { schema: 'prospecting' },

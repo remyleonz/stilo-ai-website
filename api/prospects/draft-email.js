@@ -58,64 +58,7 @@ function researchEmail(r) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : '';
 }
 
-async function geminiDraft(ctx) {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) return null;
-    const prompt = [
-        "You are an SDR at STILO AI Partners, a Miami sales agency. We book qualified meetings with buyers onto our clients' calendars. We do NOT sell software or AI agents.",
-        "Write a SHORT cold-call follow-up email to a prospect we just called. They were busy or asked us to email them.",
-        "",
-        "PROSPECT:",
-        "- Business: " + ctx.business,
-        "- Contact first name: " + (ctx.firstName || '(unknown, use \"Hi there,\")'),
-        "- Industry: " + (ctx.niche || 'local business'),
-        ctx.hook ? "- What we noticed: " + ctx.hook : "",
-        "",
-        "WHAT WE SELL: qualified meetings with their ideal customer, booked onto their calendar. Setup fee and a flat fee per qualified meeting. No retainer.",
-        "THE PAIN TO NAME: " + ctx.pain,
-        "",
-        "RULES:",
-        "- 120 to 190 words. Plain text only, no markdown, no subject line in the body.",
-        "- Open by referencing that we called " + ctx.business + " today.",
-        "- Name the pain in plain language, then say what we do in one line. Do NOT mention AI, agents, software, or prices.",
-        "- One short line on who we are: a small Miami sales team that finds their buyers and books the meetings, paid on meetings that actually show up, no retainer.",
-        "- End the message with this exact line on its own, then the URL on its own line:",
-        "  If it's worth a closer look, grab a 15-minute call with us here:",
-        "  " + kit.CALENDAR_LINK,
-        "- Sign off warm but brief. Do NOT add a signature, name, title, phone, or company footer (we append that).",
-        "- Hard bans: no em dashes (use commas or periods), no exclamation points, and never use the words leverage, utilize, streamline, seamless, robust, cutting-edge, innovative, holistic.",
-        "- Use contractions. Vary sentence length. Sound like a sharp human, not a brochure.",
-        "",
-        "Write only the email body now."
-    ].filter(Boolean).join('\n');
-
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
-    const controller = new AbortController();
-    const timer = setTimeout(function () { controller.abort(); }, 9000);
-    try {
-        const r = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.7, maxOutputTokens: 600, thinkingConfig: { thinkingBudget: 0 } }
-            })
-        });
-        clearTimeout(timer);
-        if (!r.ok) return null;
-        const j = await r.json();
-        const text = j && j.candidates && j.candidates[0] && j.candidates[0].content
-            && j.candidates[0].content.parts && j.candidates[0].content.parts[0]
-            && j.candidates[0].content.parts[0].text;
-        if (!text || text.trim().length < 60) return null;
-        return text.trim();
-    } catch (_) {
-        clearTimeout(timer);
-        return null;
-    }
-}
-
+// geminiDraft removed 2026-09-14: drafts are the hand-written template below; no model calls in copy paths.
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
     const gate = await assertAdminOrSdr(req, res);
