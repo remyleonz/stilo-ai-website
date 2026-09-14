@@ -411,7 +411,7 @@ async function generateTouch(stepKey, lead, sender) {
             ? 'Write ONE text message. Output only the message text.'
             : 'Write ONE short email body. Output only the body, no subject line, no signature block.',
         '',
-        'Sender: ' + senderName + ' at STILO AI Partners, a small Miami team that builds and runs AI agents for local businesses.',
+        'Sender: ' + senderName + ' at STILO Partners, a small Miami sales team that books meetings with new customers for local businesses. Never mention AI, software, bots, or automation. Never mention price, cost, fees, or any number of dollars.',
         'Recipient: ' + (who ? who + ', the owner of ' : 'the owner of ') + (lead.name || 'a business') + '.',
         'Their industry: ' + niche + '.',
         lead.address ? 'Location: ' + lead.address : '',
@@ -449,7 +449,10 @@ async function generateTouch(stepKey, lead, sender) {
     const generated = await geminiWrite(prompt, touch.channel === 'sms' ? 200 : 1400);
     const fb = fallbackContent(stepKey, lead, facts, senderName);
 
-    let body = generated || fb.body;
+    // Send-boundary guard: generated copy that mentions AI or money is
+    // discarded in favor of the vetted fallback (2026-09-14 incident).
+    const _gate = require('./_shared').copyGate;
+    let body = (generated && !_gate(generated)) ? generated : fb.body;
     // A Spanish lead has no hand-written fallback for the four long-form emails
     // (see fallbackContent). If generation also failed we send nothing rather
     // than an English email to someone who does not read English. The caller

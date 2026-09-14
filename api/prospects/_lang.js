@@ -371,14 +371,14 @@ const COPY = {
 
     nurtureWhatToExpect: {
         en: function (v) {
-            return 'Morning' + (v.who ? ' ' + v.who : '') + '. Quick note on today: about 20 minutes, I\'ll show you the '
-                + v.label + ' running live, and we\'ll work out what it\'s worth for ' + v.biz
-                + ' using your numbers. You\'ll leave with a straight answer either way.';
+            return 'Morning' + (v.who ? ' ' + v.who : '') + '. Quick note on today: about 20 minutes, I\'ll walk you through '
+                + 'exactly how we\'d keep ' + v.biz + '\'s calendar full of booked sales meetings, using your numbers. '
+                + 'Bring your questions.';
         },
         es: function (v) {
             return 'Buenos días' + (v.who ? ' ' + v.who : '') + '. Una nota rápida sobre hoy: son unos 20 minutos, le muestro '
-                + v.label + ' funcionando en vivo, y sacamos juntos cuánto vale para ' + v.biz
-                + ' con los números suyos. Sale de ahí con una respuesta clara de todas maneras.';
+                + 'exactamente cómo mantendríamos el calendario de ' + v.biz + ' lleno de reuniones de venta agendadas, '
+                + 'con los números suyos. Traiga sus preguntas.';
         },
     },
 

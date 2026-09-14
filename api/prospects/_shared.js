@@ -453,3 +453,18 @@ function isRoleInbox(addr) {
 module.exports.ROLE_INBOX_PREFIXES = ROLE_INBOX_PREFIXES;
 module.exports.ROLE_INBOX_RE = ROLE_INBOX_RE;
 module.exports.isRoleInbox = isRoleInbox;
+
+// ---------------------------------------------------------------------------
+// COPY GATE (2026-09-14). The two pivot rules, enforced at the send boundary:
+// no AI/agent/bot language, no price talk, in anything a prospect reads. A
+// prompt asks nicely; this makes it physically unable to leave the building.
+// Lifted from _vsl_nurture_copy.js where the pattern was proven.
+const COPY_GATE_AI = /\bA\.?I\.?\b|\bagents?\b|\breceptionist\b|automat|\bbots?\b|\balgorithm/i;
+const COPY_GATE_PRICE = /\$|\bprice\b|\bpricing\b|\bprecio\b|\bcosts?\b|\bfees?\b|per meeting|per month|monthly|retainer|starting at|cost estimate|\bquotes?\b|\bcotizaci/i;
+function copyGate(text) {
+    const t = String(text || '');
+    if (COPY_GATE_AI.test(t)) return 'ai_language';
+    if (COPY_GATE_PRICE.test(t)) return 'price_talk';
+    return null;
+}
+module.exports.copyGate = copyGate;

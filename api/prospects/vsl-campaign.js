@@ -166,7 +166,7 @@ function warmEmailA(lead, slug, link, repName) {
     const body = [
         first ? 'Hi ' + first + ',' : 'Hi,',
         '',
-        callRef(repName) + ' about the agent that ' + pitch + '.',
+        callRef(repName) + ' about the setup that ' + pitch + '.',
         '',
         'Never sent you the 2-minute version. Here it is:',
         link,

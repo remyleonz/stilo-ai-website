@@ -202,6 +202,16 @@ module.exports = async function handler(req, res) {
                 continue;
             }
 
+            // Send-boundary copy gate (2026-09-14): a body that mentions AI or
+            // money never reaches the provider. Wipe it so generation redoes it.
+            const copyBlock = require('./_shared').copyGate(bodyText);
+            if (copyBlock) {
+                results.skipped.copy_gate = (results.skipped.copy_gate || 0) + 1;
+                const wipe = {}; wipe['step' + nextStep + '_body'] = null;
+                await sb.from('outbound_targets').update(wipe).eq('id', t.id);
+                continue;
+            }
+
             // Mark the line consumed BEFORE evaluating the result. This used to
             // live in the success branch only, so a failed send left the line
             // unmarked, the loop advanced to the next target on the SAME line,

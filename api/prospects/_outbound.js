@@ -282,7 +282,7 @@ function plainAgent(pitchAgent) {
     if (/website|forge/.test(v)) return 'your website turning visitors into booked jobs';
     if (/seo|geo|signal/.test(v)) return 'getting found when people search';
     if (/ontology|oracle/.test(v)) return 'reporting on your numbers';
-    return 'the AI side of your business';
+    return 'getting more booked sales meetings on your calendar';
 }
 
 /**
@@ -301,6 +301,10 @@ const BANNED = [
     { re: /\b(lcr|gmb|vsl|echo|ignite|revive|scout|forge|signal|oracle|flux)\b/i, why: 'internal_jargon' },
     { re: /\bstilo\b/i, why: 'names_company' },
     { re: /https?:\/\//i, why: 'contains_link' },
+    // The two pivot rules (2026-09-14): a model that mentions AI or money has
+    // broken the offer, not just the style guide.
+    { re: /\bA\.?I\.?\b|\breceptionist\b|\bbots?\b|\balgorithm\b|\bautomation\b|\bsoftware\b/i, why: 'ai_language' },
+    { re: /\$|\bprice\b|\bpricing\b|\bprecio\b|\bfees?\b|per meeting|per month|monthly|retainer|starting at|cost estimate/i, why: 'price_talk' },
 ];
 // Words that legitimately follow a greeting and are not names.
 const NOT_A_GREETED_NAME = /^(there|soy|it|its|this|i|im|quick|just|hope|sorry|good|happy|we|so|the|team|guys|folks|habla|le|les)$/i;

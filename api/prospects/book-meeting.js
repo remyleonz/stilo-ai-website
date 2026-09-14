@@ -286,7 +286,7 @@ module.exports = async function handler(req, res) {
             '',
             clientCo
                 ? 'Sales call with ' + clientCo.business_name + (clientCo.contact_name ? ' (' + clientCo.contact_name + ')' : '') + ' for ' + businessName + '. Booked from the STILO SDR dashboard.'
-                : 'Discovery call to walk through the AI agent fit for ' + businessName + '. Booked from the STILO SDR dashboard.'
+                : 'Discovery call to walk through how we put booked sales meetings on the calendar for ' + businessName + '. Booked from the STILO SDR dashboard.'
         ].filter(function (l) { return l !== null; });
         const eventBody = {
             summary: clientCo

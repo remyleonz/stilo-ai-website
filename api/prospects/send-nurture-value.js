@@ -102,6 +102,8 @@ module.exports = async function handler(req, res) {
         }
 
         try {
+            const copyBlock = require('./_shared').copyGate((touch.subject || '') + ' ' + (touch.body || ''));
+            if (copyBlock) { skip('copy_gate_' + copyBlock); continue; }
             if (touch.channel === 'email') {
                 const to = lead.owner_email || lead.email;
                 if (!to) { skip('no_email'); continue; }
