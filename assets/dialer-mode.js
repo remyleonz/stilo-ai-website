@@ -138,7 +138,7 @@
         '#dmRoot ::-webkit-scrollbar-track{background:transparent;}',
 
         /* HUD */
-        '.dm-hud{display:flex;align-items:center;gap:22px;padding:14px 28px;flex-shrink:0;flex-wrap:wrap;}',
+        '.dm-hud{display:flex;align-items:center;gap:22px;padding:8px 28px;flex-shrink:0;flex-wrap:wrap;}',
         '.dm-wordmark{font-family:var(--font-mono,ui-monospace,monospace);font-size:11px;font-weight:700;letter-spacing:.22em;color:var(--blue,#2563eb);white-space:nowrap;}',
         '.dm-clock{font-family:var(--font-mono,ui-monospace,monospace);font-size:12px;color:var(--text-tertiary,#6e7083);}',
         '.dm-hud-stats{display:flex;gap:30px;flex:1;justify-content:center;flex-wrap:wrap;}',
@@ -152,9 +152,15 @@
 
         /* Main split — the script is what the rep reads mid-call: 65% */
         '.dm-main{flex:1;display:flex;min-height:0;}',
-        '.dm-lead{width:35%;min-width:400px;max-width:560px;overflow-y:auto;padding:30px 32px 40px;}',
-        '.dm-script{flex:1;overflow-y:auto;padding:30px 40px 0;min-width:0;background:rgba(255,255,255,.014);display:flex;flex-direction:column;}',
+        '.dm-lead{width:35%;min-width:400px;max-width:560px;overflow-y:auto;padding:20px 32px 40px;}',
+        '.dm-script{flex:1;overflow-y:auto;padding:14px 40px 0;min-width:0;background:rgba(255,255,255,.014);display:flex;flex-direction:column;}',
         '.dm-script-inner{max-width:900px;flex:1;padding-bottom:20px;}',
+
+        /* Language toggle pinned to the top of the script pane */
+        '.dm-langtog{position:sticky;top:0;z-index:2;display:flex;gap:4px;justify-content:flex-end;margin:0 -40px;padding:0 40px 8px;background:linear-gradient(to bottom,#0a0a10 60%,rgba(10,10,16,0));}',
+        '.dm-langbtn{padding:6px 16px;border:none;border-radius:999px;background:rgba(255,255,255,.06);color:#c9cbd4;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.03em;}',
+        '.dm-langbtn:hover{background:rgba(255,255,255,.11);color:#fff;}',
+        '.dm-langbtn.dm-lang-on{background:var(--blue,#2563eb);color:#fff;}',
 
         /* Sticky section jumps pinned to the bottom of the script pane */
         '.dm-scriptnav{position:sticky;bottom:0;margin:0 -40px;padding:10px 40px 14px;background:linear-gradient(to top,#0a0a10 55%,rgba(10,10,16,0));display:flex;gap:6px;flex-wrap:wrap;}',
@@ -233,9 +239,9 @@
         '.dm-vm p{margin:0;font-size:15px;line-height:1.65;color:var(--text-secondary,#c6c7d2);}',
 
         /* Footer */
-        '.dm-foot{flex-shrink:0;padding:18px 28px 14px;background:rgba(255,255,255,.02);}',
+        '.dm-foot{flex-shrink:0;padding:10px 28px 7px;background:rgba(255,255,255,.02);}',
         '.dm-foot-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}',
-        '.dm-callbtn{display:inline-flex;align-items:center;gap:12px;padding:15px 36px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.01em;font-family:inherit;box-shadow:0 10px 34px rgba(37,99,235,.28);}',
+        '.dm-callbtn{display:inline-flex;align-items:center;gap:12px;padding:11px 30px;background:var(--blue,#2563eb);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.01em;font-family:inherit;box-shadow:0 10px 34px rgba(37,99,235,.28);}',
         '.dm-callbtn:hover{filter:brightness(1.08);}',
         '.dm-key{display:inline-block;min-width:20px;text-align:center;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.08);font-family:var(--font-mono,ui-monospace,monospace);font-size:10.5px;font-weight:700;color:var(--text-secondary,#a2a3b4);}',
         '.dm-callbtn .dm-key{background:rgba(255,255,255,.22);color:#fff;}',
@@ -251,8 +257,8 @@
         '.dm-dbtn:hover{background:rgba(255,255,255,.09);}',
 
         /* Always-visible key legend — the ONE command surface, clickable */
-        '.dm-legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.04);}',
-        '.dm-lgd{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#d5d6de;font-weight:600;background:none;border:none;cursor:pointer;font-family:inherit;padding:5px 9px;border-radius:8px;}',
+        '.dm-legend{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.04);}',
+        '.dm-lgd{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#d5d6de;font-weight:600;background:none;border:none;cursor:pointer;font-family:inherit;padding:3px 8px;border-radius:8px;}',
         '.dm-lgd:hover{background:rgba(255,255,255,.07);color:#fff;}',
         '.dm-lgd .dm-key{font-size:10px;min-width:18px;padding:2px 6px;background:rgba(255,255,255,.12);color:#fff;}',
         '.dm-lgd.dm-lgd-dim{opacity:.35;cursor:default;}',
@@ -573,14 +579,34 @@
             + '<div class="dm-sec"><h4>Activity</h4><div id="dmActivityHost">' + activityHtml() + '</div></div>'
             + '<div class="dm-vm"><h4>Voicemail · read it word for word</h4><p>' + esc(vmScript(r)) + '</p></div>'
             + '</div>'
-            + '<div class="dm-script"><div class="dm-script-inner" id="dmScriptPane"><div class="dm-hint">Loading script…</div></div>'
+            + '<div class="dm-script"><div class="dm-langtog" id="dmLangTog">' + langTogHtml() + '</div>'
+            + '<div class="dm-script-inner" id="dmScriptPane"><div class="dm-hint">Loading script…</div></div>'
             + '<div class="dm-scriptnav" id="dmScriptNav"></div></div>';
 
-        // Script loads async through the page's own pipeline (client-pool
-        // firewall, language, agent resolution all live there).
-        var myIdx = S.idx;
-        Promise.resolve(cfg.loadScriptHtml(r)).then(function (html) {
-            if (!S || S.idx !== myIdx) return;
+        loadScript();
+        renderFoot();
+    }
+
+    /* ---------- script language toggle ----------
+       One clean language at a time: the toggle re-requests the script with
+       the chosen lang AND the renderer strips the other language's lines
+       (David's files carry Spanish + inline EN: translations). Defaults to
+       the lead's primary_language, per lead. */
+    function langTogHtml() {
+        var l = S.scriptLang;
+        return '<button class="dm-langbtn' + (l === 'en' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setScriptLang(\'en\')">EN</button>'
+            + '<button class="dm-langbtn' + (l === 'es' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setScriptLang(\'es\')">Español</button>';
+    }
+    function loadScript() {
+        var r = S.lead || S.queue[S.idx];
+        if (!S.scriptLang) S.scriptLang = (r.primary_language === 'es') ? 'es' : 'en';
+        var tog = el('dmLangTog'); if (tog) tog.innerHTML = langTogHtml();
+        var myIdx = S.idx, myLang = S.scriptLang;
+        // Loads through the page's own pipeline (client-pool firewall, agent
+        // resolution live there); the page passes lang to the endpoint and to
+        // STILO_SCRIPT.render for the single-language pass.
+        Promise.resolve(cfg.loadScriptHtml(r, myLang)).then(function (html) {
+            if (!S || S.idx !== myIdx || S.scriptLang !== myLang) return;
             var pane = el('dmScriptPane');
             if (pane) pane.innerHTML = html || '';
             buildScriptNav();
@@ -589,8 +615,13 @@
             var pane = el('dmScriptPane');
             if (pane) pane.innerHTML = '<div class="dm-hint">Could not load script.</div>';
         });
-
-        renderFoot();
+    }
+    function setScriptLang(l) {
+        if (!S || (l !== 'en' && l !== 'es') || S.scriptLang === l) return;
+        S.scriptLang = l;
+        var pane = el('dmScriptPane');
+        if (pane) pane.innerHTML = '<div class="dm-hint">Loading script…</div>';
+        loadScript();
     }
 
     /* ---------- script section jumps ----------
@@ -682,7 +713,6 @@
                 + '><span class="dm-key">' + key + '</span>' + label + '</button>';
         }
         var canDisp = S.phase === 'disposition' || S.phase === 'dialing';
-        var connected = S.currentCall && (S.currentCall.duration_seconds || 0) >= CONNECT_SECONDS;
         return '<div class="dm-legend">'
             + k('1', 'No answer / VM', 'DIALER_MODE.disposition(1)', !canDisp)
             + k('2', 'Callback', 'DIALER_MODE.disposition(2)', !canDisp)
@@ -690,8 +720,8 @@
             + k('4', 'Not interested', 'DIALER_MODE.disposition(4)', !canDisp)
             + k('5', 'Wrong number', 'DIALER_MODE.disposition(5)', !canDisp)
             + k('6', 'DNC', 'DIALER_MODE.disposition(6)', !canDisp)
-            + k('E', 'Email', 'DIALER_MODE.legendKey(\'e\')', S.phase !== 'disposition')
-            + k('T', 'Text', 'DIALER_MODE.legendKey(\'t\')', !(S.phase === 'disposition' && connected))
+            + k('E', 'Email', 'DIALER_MODE.legendKey(\'e\')', false)
+            + k('T', 'Text', 'DIALER_MODE.legendKey(\'t\')', !smsAllowed())
             + k('SPACE', 'Call / Next', 'DIALER_MODE.legendKey(\'space\')', !(S.phase === 'ready' || S.phase === 'advance'))
             + k('N', 'Skip', 'DIALER_MODE.legendKey(\'n\')', S.phase === 'advance')
             + k('ESC', 'Pause', 'DIALER_MODE.menu()', false)
@@ -699,8 +729,8 @@
     }
     function legendKey(k) {
         if (!S) return;
-        if (k === 'e' && S.phase === 'disposition' && !S.panel) openEmailPanel();
-        else if (k === 't' && S.phase === 'disposition' && !S.panel) openSmsPanel();
+        if (k === 'e' && !S.panel) openEmailPanel();
+        else if (k === 't' && !S.panel) openSmsPanel();
         else if (k === 'space') { if (S.phase === 'ready') dial(); else if (S.phase === 'advance') nextNow(); }
         else if (k === 'n' && S.phase !== 'advance') advance('Skipped', true);
     }
@@ -715,7 +745,9 @@
                 + '<button class="dm-callbtn" onclick="DIALER_MODE.dial()"><span class="dm-key">SPACE</span> Call in Quo</button>'
                 + '<span style="flex:1;"></span>'
                 + '<span class="dm-hint">Quo opens pre-dialed. Talk, hang up. This screen detects the hangup on its own.</span>'
-                + '</div>' + legendHtml();
+                + '</div>'
+                + '<div id="dmPanelHost"></div>'
+                + legendHtml();
             return;
         }
         if (S.phase === 'dialing') {
@@ -727,7 +759,9 @@
                 + '<span style="flex:1;"></span>'
                 + '<button class="dm-iconbtn" onclick="DIALER_MODE.redial()">Open Quo again</button>'
                 + '<button class="dm-send" onclick="DIALER_MODE.callEnded()">Call ended — log it</button>'
-                + '</div>' + legendHtml();
+                + '</div>'
+                + '<div id="dmPanelHost"></div>'
+                + legendHtml();
             return;
         }
         if (S.phase === 'disposition') {
@@ -748,7 +782,9 @@
                 + '<div class="dm-countwrap"><span class="dm-hint">Next lead in <b id="dmCountNum">' + S.advanceLeft + '</b>s</span>'
                 + '<div class="dm-countbar"><i id="dmCountBar" style="width:100%;"></i></div></div>'
                 + '<button class="dm-callbtn" style="padding:11px 24px;font-size:14px;" onclick="DIALER_MODE.nextNow()"><span class="dm-key">SPACE</span> Next now</button>'
-                + '</div>' + legendHtml();
+                + '</div>'
+                + '<div id="dmPanelHost"></div>'
+                + legendHtml();
             return;
         }
         foot.innerHTML = '';
@@ -764,6 +800,7 @@
         S.panel = null;
         S.activity = [];
         S.actShowAll = false;
+        S.scriptLang = null;   // re-derived from the next lead's primary_language
         if (S.idx >= S.queue.length) { S.phase = 'done'; renderSummary(); return; }
         S.phase = 'ready';
         S.lead = S.queue[S.idx];
@@ -903,15 +940,29 @@
             .catch(function (e) { console.warn('[dialer] log-call failed', e); });
     }
 
-    /* ---------- sub-panels (callback / dnc / email / sms) ---------- */
+    /* ---------- sub-panels (callback / dnc / email / sms) ----------
+       Every phase's footer carries a panel host now: email and SMS are
+       usable mid-call and even during the advance countdown (which pauses
+       while a panel is open so the compose never gets yanked away). */
     function panelHost() {
         var h = el('dmPanelHost');
-        if (!h && S.phase === 'dialing') {
-            S.phase = 'disposition';
-            renderFoot();
-            h = el('dmPanelHost');
+        if (h && S.phase === 'advance' && S.advTimer) {
+            clearInterval(S.advTimer); S.advTimer = null;
+            var n = el('dmCountNum'); if (n) n.textContent = '—';
         }
         return h;
+    }
+
+    // The SMS connected-call gate, honestly applied: a 20s+ connect on THIS
+    // call, or any 20s+ call already on the lead's record. Cold-texting a
+    // never-connected lead stays off, per the standing rule.
+    function smsAllowed() {
+        if (S.currentCall && (S.currentCall.duration_seconds || 0) >= CONNECT_SECONDS) return true;
+        var r = S.lead || {};
+        return ((r.call_history) || []).some(function (c) {
+            return (c.duration_seconds || 0) >= CONNECT_SECONDS
+                && c.direction !== 'inbound' && c.direction !== 'incoming';
+        });
     }
 
     function openCallbackPanel() {
@@ -1014,8 +1065,7 @@
     }
 
     function openSmsPanel() {
-        var c = S.currentCall;
-        if (!c || (c.duration_seconds || 0) < CONNECT_SECONDS) return;  // connected-call gate
+        if (!smsAllowed()) return;  // connected-call gate
         var h = panelHost(); if (!h) return;
         S.panel = 'sms';
         var r = S.lead || S.queue[S.idx];
@@ -1204,8 +1254,8 @@
             if (S.phase === 'ready' || S.phase === 'dialing' || S.phase === 'disposition') advance('Skipped', true);
             return;
         }
-        if (k === 'e' && S.phase === 'disposition') { ev.stopPropagation(); ev.preventDefault(); if (!S.panel) openEmailPanel(); return; }
-        if (k === 't' && S.phase === 'disposition') { ev.stopPropagation(); ev.preventDefault(); if (!S.panel) openSmsPanel(); return; }
+        if (k === 'e') { ev.stopPropagation(); ev.preventDefault(); if (!S.panel) openEmailPanel(); return; }
+        if (k === 't') { ev.stopPropagation(); ev.preventDefault(); if (!S.panel) openSmsPanel(); return; }
     }
 
     /* ---------- open / close ---------- */
@@ -1274,6 +1324,7 @@
         toggleAct: toggleAct, toggleTx: toggleTx, actAll: actAll,
         notesChanged: notesChanged, saveContact: saveContact,
         jumpTo: jumpTo, legendKey: legendKey,
-        callEnded: callEnded, redial: redial
+        callEnded: callEnded, redial: redial,
+        setScriptLang: setScriptLang
     };
 })(typeof window !== 'undefined' ? window : this);

@@ -3173,18 +3173,19 @@
            Full-screen session over the Cold Call queue. This wiring hands the
            module the page's own helpers so auth, impersonation scoping and the
            client-pool script firewall all keep working unchanged. */
-        async function dialerScriptHtml(r) {
+        async function dialerScriptHtml(r, lang) {
             const name = r.business_name || r.name || '';
             if (!name) return '<div style="color:var(--text-muted);">No business name on this lead.</div>';
+            const lg = (lang === 'es' || lang === 'en') ? lang : (r.primary_language === 'es' ? 'es' : 'en');
             let url = '/api/prospects/cold-call-script?business_name=' + encodeURIComponent(name)
-                + '&lang=' + encodeURIComponent(r.primary_language === 'es' ? 'es' : 'en');
+                + '&lang=' + encodeURIComponent(lg);
             if (r.client_id) url += '&client_pool=1';
             if (r.tentative_rep_assignment) url += '&rep=' + encodeURIComponent(String(r.tentative_rep_assignment).toLowerCase());
             try {
                 const data = await fetchJSON(url);
                 if (data && data.content_md) {
                     return agentBadge(resolveAgentName(data.content_md, r))
-                        + renderScriptMarkdown(stripScriptChrome(normalizeAgentSection(data.content_md, r)));
+                        + STILO_SCRIPT.render(stripScriptChrome(normalizeAgentSection(data.content_md, r)), lg);
                 }
                 throw { status: 404 };
             } catch (e) {
@@ -3192,7 +3193,7 @@
                     const synth = buildScriptFromResearch(r);
                     if (synth) {
                         return agentBadge(resolveAgentName(synth, r))
-                            + renderScriptMarkdown(stripScriptChrome(normalizeAgentSection(synth, r)));
+                            + STILO_SCRIPT.render(stripScriptChrome(normalizeAgentSection(synth, r)), lg);
                     }
                     return '<div style="color:var(--text-muted);">No cold-call script for this lead yet. Work off the notes on the left.</div>';
                 }

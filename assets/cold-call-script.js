@@ -327,12 +327,55 @@
         '- Never open with "vendemos equipos" to the desk — but never deny it\'s a sales call when asked straight.',
         '- Never pitch the desk. Never end a call with "call me back" as the plan.'
     ].join('\n');
-    function render(md) {
+    /**
+     * Single-language pass over bilingual script markdown. David's Blason
+     * scripts write the spoken line in Spanish and follow it with an
+     * `EN: "..."` translation, so the raw render shows both and the rep
+     * can't read one clean language (Remy, 2026-09-14).
+     *
+     *   lang 'es' -> drop every EN: line (pure Spanish read)
+     *   lang 'en' -> the EN: line REPLACES the nearest preceding spoken
+     *                line (its Spanish original); prefix stripped.
+     *   anything else -> untouched (drawer callers keep today's behavior)
+     *
+     * Pairing walks back over blanks and (stage directions) but stops at
+     * headings, tables and rules — an EN: line with no spoken line above
+     * it just loses its prefix. Spanish lines with NO translation stay in
+     * both modes: showing an untranslated line beats hiding a spoken line.
+     */
+    function langFilter(md, lang) {
+        if (lang !== 'en' && lang !== 'es') return md;
+        var lines = String(md).split('\n');
+        var out = [];
+        var EN_RE = /^(\s*>?\s*)\**\s*EN\s*:\s*\**\s*/i;
+        for (var i = 0; i < lines.length; i++) {
+            var l = lines[i];
+            if (EN_RE.test(l)) {
+                if (lang === 'es') continue;
+                var cleaned = l.replace(EN_RE, '$1'), placed = false;
+                for (var j = out.length - 1; j >= 0; j--) {
+                    var p = out[j], pt = p.trim();
+                    if (!pt) continue;
+                    if (/^\(.*\)$/.test(pt) || /^>\s*\(.*\)$/.test(pt)) continue;
+                    if (/^#{1,6}\s/.test(pt) || /^\|/.test(pt) || /^([-*_])\1{2,}$/.test(pt)) break;
+                    out[j] = cleaned;   // the EN line takes its original's exact slot
+                    placed = true;
+                    break;
+                }
+                if (!placed) out.push(cleaned);
+                continue;
+            }
+            out.push(l);
+        }
+        return out.join('\n');
+    }
+
+    function render(md, lang) {
         // David's generator ships CRLF line endings, and in JS regex `.` and
         // `$` refuse to cross a bare \r, so every heading match fails on the
         // raw text. Normalize first; renderBody strips trailing whitespace
         // per-line anyway, so this changes nothing downstream.
-        var src = String(md || '').replace(/\r\n?/g, '\n');
+        var src = langFilter(String(md || '').replace(/\r\n?/g, '\n'), lang);
         var lines = src.split('\n');
         var start = -1, end = lines.length;
         for (var i = 0; i < lines.length; i++) {
@@ -355,7 +398,7 @@
             + '<span style="font-family:var(--font-display);font-weight:800;color:#fff;font-size:15px;line-height:1.3;">Front desk answered? Tap here.<span style="display:block;font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:2px;">5 steps: name open \u00B7 the hinge \u00B7 the screens \u00B7 the three assets \u00B7 the owner ask.</span></span>'
             + '<span class="stilo-gk-hint" style="margin-left:auto;flex:none;font-size:11px;font-weight:700;color:rgba(245,158,11,0.9);">OPEN \u25BE</span>'
             + '</summary>'
-            + '<div style="padding:2px 14px 14px;border-top:1px solid rgba(245,158,11,0.25);">' + renderBody(GATEKEEPER_MD) + '</div>'
+            + '<div style="padding:2px 14px 14px;border-top:1px solid rgba(245,158,11,0.25);">' + renderBody(langFilter(GATEKEEPER_MD, lang)) + '</div>'
             + '</details>';
         return box + renderBody(rest);
     }
