@@ -49,6 +49,13 @@
 const { langForLead, t } = require('./_lang');
 
 const AGENT_FACTS = {
+    meetings: {
+        label: 'booked sales meetings',
+        how: 'We find the companies in your market that need what you do, reach out to them one by one as your team, and put the ready ones on your calendar as booked meetings. You just show up and close.',
+        benchmark: 'Most owner-operated businesses win work through referrals and repeat customers, which is real but not steerable. A steady outbound motion is the only version of growth you can turn up on purpose.',
+        proof: 'Measured on booked meetings with the right kind of company that actually show up, not on messages sent.',
+        objection: 'The fair question is whether these meetings are with real decision makers. Every one is booked off a live conversation with that business, not a form fill.',
+    },
     receptionist: {
         label: 'AI Receptionist',
         how: 'It answers on the first ring, in English or Spanish, holds a real conversation, qualifies the caller, books straight into your calendar, and writes the whole call up in your dashboard.',
@@ -127,7 +134,11 @@ function agentKeyFrom(pitchAgent) {
     if (/outbound|lead reply|lead response|ignite/.test(v)) return 'lead_response';
     if (/lead gen|scout|generator/.test(v)) return 'lead_gen';
     if (/receptionist|echo/.test(v)) return 'receptionist';
-    return 'receptionist';
+    // Post-pivot default: the offer is booked sales meetings. A niche name like
+    // "Commercial Cleaning" (or anything unrecognized) must NEVER fall through
+    // to a retired agent pitch. 2026-09-14: that fallback texted a booked client
+    // an "AI receptionist demo" promise three hours before their meeting.
+    return 'meetings';
 }
 
 /**

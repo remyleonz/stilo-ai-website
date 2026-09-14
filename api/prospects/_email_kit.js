@@ -50,6 +50,13 @@ function sanitizeCopy(text) {
 // punchy sentence, for the short variant), `oneLiner` (what the agent does), and
 // `subjectTag` (a short value phrase the value-led subject line interpolates).
 const PLAYBOOKS = {
+    meetings: {
+        agent: 'booked sales meetings',
+        pain: "Most of your new work comes from referrals and repeat customers, which is real revenue but not something you can turn up when you need more. The companies in your market that need what you do right now mostly never hear from you.",
+        painShort: "Referrals are real but you can't turn them up on purpose, and the companies that need you right now mostly never hear from you.",
+        oneLiner: "we find the companies in your market that need what you do, reach out as your team, and put the ready ones on your calendar as booked meetings.",
+        subjectTag: "booked meetings with buyers"
+    },
     receptionist: {
         agent: 'Receptionist',
         pain: "Most calls that come in after you close, or while your team is with a customer, never get answered. For local businesses that's roughly 62% of calls going to voicemail, and a lot of those callers just dial the next place on the list.",
@@ -156,7 +163,8 @@ function pickPlaybook(niche) {
     const n = String(niche || '').toLowerCase();
     if (/(roof|plumb|hvac|contract|landscap|electric|garage|remodel|construction|trade|paving|fence|pool)/.test(n)) return PLAYBOOKS.lead_response;
     if (/(gym|fitness|membership|yoga|pilates|crossfit|studio)/.test(n)) return PLAYBOOKS.reactivation;
-    return PLAYBOOKS.receptionist;
+    // Post-pivot default: booked meetings, never a retired agent pitch.
+    return PLAYBOOKS.meetings;
 }
 
 // Choose the playbook for a lead. Priority:

@@ -162,7 +162,7 @@ function callRef(repName) {
 
 function warmEmailA(lead, slug, link, repName) {
     const first = firstName(lead.owner_name, lead.name, lead.address);
-    const pitch = PITCH[slug] || PITCH['receptionist'];
+    const pitch = PITCH[slug] || 'finds the businesses in your area that need what you do and puts them on your calendar as booked meetings';
     const body = [
         first ? 'Hi ' + first + ',' : 'Hi,',
         '',
@@ -192,7 +192,7 @@ function warmEmailB(lead, slug, link, repName) {
         'website': 'Is your site actually booking work, or just sitting there?',
         'sales-agent': 'Are you recording your reps\' calls right now?',
     };
-    const ask = ASK[slug] || ASK['receptionist'];
+    const ask = ASK[slug] || 'Roughly how many new customers a month could you take on if they just showed up booked?';
     const body = [
         first ? 'Hi ' + first + ',' : 'Hi,',
         '',
