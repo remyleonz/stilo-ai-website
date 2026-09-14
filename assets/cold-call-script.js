@@ -260,18 +260,73 @@
     }
 
     /**
-     * The gatekeeper playbook ("If the front desk answers" + "MANUFACTURING
-     * STANDING") ships INSIDE David's Blason scripts, at the bottom, ~160
-     * lines. On a live dial the rep only needs it the moment a receptionist
-     * picks up, so render it as a collapsed drop-down pinned to the TOP of the
-     * script: one tap when the front desk answers, invisible otherwise
-     * (Remy, 2026-09-01). Pure render-time move; David's files are untouched.
+     * The gatekeeper playbook ships INSIDE David's Blason scripts, at the
+     * bottom, ~160 lines. On a live dial the rep only needs it the moment a
+     * receptionist picks up, so render it as a collapsed drop-down pinned to
+     * the TOP of the script (Remy, 2026-09-01). Pure render-time move.
+     *
+     * 2026-09-14: the file-shipped text is REPLACED at render time by the
+     * canonical GATEKEEPER_MD below (same trick as the appended Reference:
+     * one edit updates every script and survives David's regenerations).
+     * Remy's review of the first live week: the old block was too long to
+     * use mid-call, reps pitched the desk (which gets "she's not interested"
+     * declines FOR the owner), left numbers that never come back, and hung
+     * up on live owners without asking for the visit. This rewrite is the
+     * step-by-step distilled from the 2026-09 call transcripts.
      *
      * Block boundaries: starts at the H2 matching /front desk answers/i and
      * runs while the following H2s still match /manufacturing standing/i.
      * Scripts without the block (STILO scripts, older vintages) render as
-     * before.
+     * before, with no box.
      */
+    var GATEKEEPER_MD = [
+        '**The data so far: 63% of dials hit a front desk and almost none survive it. Messages left with the desk never come back. Pitches given to the desk get declined FOR the owner. She is a ROUTER, not a decider: route past her, or leave with the three assets. Never pitch her.**',
+        '',
+        '### 1. Open with the owner\'s NAME — a statement, not a question',
+        '> "Hola, con **[NOMBRE DE LA DUEÑA]**, por favor. Le habla [SU NOMBRE]."',
+        '> EN: "Hi — **[owner\'s name]**, please. It\'s [your name]."',
+        '',
+        'Then STOP TALKING. The silence is the ask. Opening by name is our strongest single move. No name on file: "con la dueña, por favor" — never guess a name, and never "¿puedo hablar con...?" (a question hands her a decision).',
+        '',
+        '### 2. "¿De parte de quién?" — the hinge',
+        '> "Soy [SU NOMBRE]. ¿Le puede decir que [SU NOMBRE] está en la línea, por favor?"',
+        '',
+        'Company asked? Answer straight and keep it small: **"[SU NOMBRE], de Blasón."** First mention only, anchor it: "Blasón — B, L, A, S, O, N." Never dodge a direct question; evasion is what gets screened.',
+        '',
+        '### 3. She screens you — one line each, NEVER the pitch',
+        '| She says | You say |',
+        '|---|---|',
+        '| "¿De qué se trata?" | "Es para invitar a [DUEÑA] al showroom de Blasón en Miami — las máquinas están funcionando para que las pruebe. ¿Me la pasa un segundo para coordinarlo?" |',
+        '| Pressed again | "Honestamente, es una llamada de venta. Treinta segundos y ella me dice sí o no. ¿Me la pasa?" |',
+        '| "No está." | "¿A qué hora está de verdad en su escritorio? ... Usted que la conoce mejor que nadie: ¿a qué hora llamaría usted?" **Win = a TIME. A message is a loss.** |',
+        '| "Mándele un correo." | "Con gusto — ¿cuál es el mejor correo para ella? ... Si no me contesta, ¿la llamo el jueves?" |',
+        '| "¿La está esperando?" | "No — primera vez que la llamo. Por eso son treinta segundos." |',
+        '| Vacation / back on [date] | "¿Cuándo vuelve? ... Perfecto, la llamo el [date + 2 days]." Log it as a dated callback. |',
+        '',
+        '**The wishlist question and the full pitch are OWNER-ONLY.** Every pitch delivered to a receptionist in the transcripts ended as "she\'s not interested" — the desk declining for the owner. And **never leave your number as the plan**: they never call back. YOU call back, at the time SHE names.',
+        '',
+        '### 4. Before you hang up — the three assets, every first call',
+        'Most first calls will not reach the owner. The call is still a WIN if you leave with all three. Type them into the dialer before the next dial:',
+        '- **Owner\'s name** — "¿Y cómo se llama la dueña?"',
+        '- **Best email** — "¿Cuál es el mejor correo para ella?" (send the five-liner the SAME day)',
+        '- **The desk\'s name** — "¿Con quién tengo el gusto? ... Gracias, [NOMBRE]."',
+        '',
+        'Call 2 is a different call — warm, expected, and every word true:',
+        '> "Hola [NOMBRE DEL DESK], soy [SU NOMBRE] otra vez — le mandé el correo a [DUEÑA] el martes. ¿Se lo pudo pasar?"',
+        '',
+        '### 5. The owner picks up — one sentence, one question, then ASK',
+        'No preamble. The "we work with spas all over Florida..." ramble confuses them into a no (it did, on tape).',
+        '> "[DUEÑA], le habla [SU NOMBRE], de Blasón en Miami. La llamo para invitarla al showroom — las máquinas están puestas y funcionando para que las pruebe antes de comprar. ¿Le viene mejor esta semana o la que viene?"',
+        '',
+        '- "Mándeme el catálogo" is the new "not interested". Send it AND keep the meeting: "Se lo mando hoy. Y aparte — ¿cuándo le viene bien pasar por el showroom, martes o jueves?"',
+        '- She names a brand or spec you\'re not sure of: "Puede ser — Manuel tiene el catálogo completo. Venga a verlo funcionando: ¿martes o jueves?" Never guess specs.',
+        '- **Do not hang up without asking for the visit.** The transcripts are full of owner conversations that end politely with no ask. Thirty seconds earned = ask, with two options.',
+        '',
+        '### Never — these burn the number, not just the call',
+        '- Never claim she\'s expecting you, that you\'ve spoken before, or that she asked you to call.',
+        '- Never open with "vendemos equipos" to the desk — but never deny it\'s a sales call when asked straight.',
+        '- Never pitch the desk. Never end a call with "call me back" as the plan.'
+    ].join('\n');
     function render(md) {
         // David's generator ships CRLF line endings, and in JS regex `.` and
         // `$` refuse to cross a bare \r, so every heading match fails on the
@@ -289,19 +344,18 @@
         }
         if (start === -1) return renderBody(src);
 
-        // Drop the block's own H2 (the summary row replaces it) but keep the
-        // day-1 stats paragraph right under it.
-        var gk = lines.slice(start + 1, end).join('\n');
+        // The file-shipped block is dropped entirely; the canonical rewrite
+        // renders in its place.
         var rest = lines.slice(0, start).concat(lines.slice(end)).join('\n');
 
         var box = '<style>.stilo-gk>summary::-webkit-details-marker{display:none}.stilo-gk>summary::marker{content:""}.stilo-gk[open] .stilo-gk-hint{display:none}</style>'
             + '<details class="stilo-gk" style="margin:0 0 16px;border:1px solid rgba(245,158,11,0.5);border-radius:10px;background:rgba(245,158,11,0.07);">'
             + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;">'
             + '<span style="flex:none;font-size:16px;">\uD83D\uDECE\uFE0F</span>'
-            + '<span style="font-family:var(--font-display);font-weight:800;color:#fff;font-size:15px;line-height:1.3;">Front desk answered? Tap here.<span style="display:block;font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:2px;">The call is won or lost at this turn. Openers, the four screens, the hinge line.</span></span>'
+            + '<span style="font-family:var(--font-display);font-weight:800;color:#fff;font-size:15px;line-height:1.3;">Front desk answered? Tap here.<span style="display:block;font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:2px;">5 steps: name open \u00B7 the hinge \u00B7 the screens \u00B7 the three assets \u00B7 the owner ask.</span></span>'
             + '<span class="stilo-gk-hint" style="margin-left:auto;flex:none;font-size:11px;font-weight:700;color:rgba(245,158,11,0.9);">OPEN \u25BE</span>'
             + '</summary>'
-            + '<div style="padding:2px 14px 14px;border-top:1px solid rgba(245,158,11,0.25);">' + renderBody(gk) + '</div>'
+            + '<div style="padding:2px 14px 14px;border-top:1px solid rgba(245,158,11,0.25);">' + renderBody(GATEKEEPER_MD) + '</div>'
             + '</details>';
         return box + renderBody(rest);
     }

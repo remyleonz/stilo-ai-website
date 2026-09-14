@@ -21,7 +21,7 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
-const EDITABLE_FIELDS = ['owner_name', 'front_desk_name'];
+const EDITABLE_FIELDS = ['owner_name', 'front_desk_name', 'owner_email'];
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
@@ -41,6 +41,19 @@ module.exports = async function handler(req, res) {
 
     const update = { updated_at: new Date().toISOString() };
     update[field] = value;
+
+    // An email a rep just heard on a call is the email of record — the same
+    // rule as the composer's To (send-email.js): it replaces owner_email and
+    // clears the lead-level bounce stamp, which belongs to the OLD address
+    // and would otherwise keep _email_guard blocking every automated send.
+    if (field === 'owner_email') {
+        const v = value ? value.toLowerCase() : null;
+        if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+            return res.status(400).json({ error: 'bad_email' });
+        }
+        update.owner_email = v;
+        if (v) update.bounced_at = null;
+    }
 
     if (field === 'owner_name') {
         const { data: cur } = await sb.from('leads').select('owner_name').eq('id', id).limit(1);

@@ -150,11 +150,33 @@
         '.dm-iconbtn{padding:7px 14px;background:transparent;border:none;border-radius:8px;color:var(--text-tertiary,#6e7083);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;}',
         '.dm-iconbtn:hover{color:var(--text-primary,#ecedf2);background:rgba(255,255,255,.05);}',
 
-        /* Main split — lead panel gets the room, script is reference */
+        /* Main split — the script is what the rep reads mid-call: 65% */
         '.dm-main{flex:1;display:flex;min-height:0;}',
-        '.dm-lead{width:48%;min-width:440px;overflow-y:auto;padding:30px 36px 40px;}',
-        '.dm-script{flex:1;overflow-y:auto;padding:30px 40px 40px;min-width:0;background:rgba(255,255,255,.014);}',
-        '.dm-script-inner{max-width:700px;}',
+        '.dm-lead{width:35%;min-width:400px;max-width:560px;overflow-y:auto;padding:30px 32px 40px;}',
+        '.dm-script{flex:1;overflow-y:auto;padding:30px 40px 0;min-width:0;background:rgba(255,255,255,.014);display:flex;flex-direction:column;}',
+        '.dm-script-inner{max-width:900px;flex:1;padding-bottom:20px;}',
+
+        /* Sticky section jumps pinned to the bottom of the script pane */
+        '.dm-scriptnav{position:sticky;bottom:0;margin:0 -40px;padding:10px 40px 14px;background:linear-gradient(to top,#0a0a10 55%,rgba(10,10,16,0));display:flex;gap:6px;flex-wrap:wrap;}',
+        '.dm-navchip{padding:7px 14px;background:rgba(255,255,255,.06);border:none;border-radius:999px;color:#d5d6de;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}',
+        '.dm-navchip:hover{background:rgba(37,99,235,.3);color:#fff;}',
+        '.dm-navchip.dm-nav-gk{background:rgba(245,158,11,.14);color:#fbbf24;}',
+        '.dm-navchip.dm-nav-gk:hover{background:rgba(245,158,11,.28);}',
+
+        /* Inline contact editing (owner / front desk / email) */
+        '.dm-cedit{width:100%;background:transparent;border:none;border-radius:7px;color:var(--text-primary,#ecedf2);font-family:inherit;font-size:15px;font-weight:600;padding:2px 6px;margin:-2px -6px;outline:none;}',
+        '.dm-cedit:hover{background:rgba(255,255,255,.05);}',
+        '.dm-cedit:focus{background:rgba(255,255,255,.08);}',
+        '.dm-cedit::placeholder{color:var(--text-muted,#565866);font-weight:400;font-style:italic;}',
+        '.dm-cmark{font-size:10px;color:var(--green,#10b981);margin-left:6px;}',
+
+        /* Missing-assets goal banner */
+        '.dm-goal{margin:0 0 22px;background:rgba(245,158,11,.08);border-radius:12px;padding:13px 16px;font-size:13.5px;line-height:1.55;color:#e8c882;position:relative;overflow:hidden;}',
+        '.dm-goal::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#f59e0b;}',
+        '.dm-goal b{color:#fbbf24;}',
+
+        /* Dialing-phase manual controls */
+        '.dm-dialnum{font-family:var(--font-mono,ui-monospace,monospace);font-size:19px;font-weight:600;letter-spacing:.03em;user-select:all;}',
 
         /* Status tokens: dot + small caps, no boxes */
         '.dm-chips{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}',
@@ -228,10 +250,13 @@
         '.dm-dbtn{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;background:rgba(255,255,255,.045);border:none;border-radius:11px;color:var(--text-primary,#ecedf2);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}',
         '.dm-dbtn:hover{background:rgba(255,255,255,.09);}',
 
-        /* Always-visible key legend */
-        '.dm-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.04);}',
-        '.dm-legend span{font-size:11.5px;color:var(--text-muted,#565866);display:inline-flex;align-items:center;gap:6px;}',
-        '.dm-legend .dm-key{font-size:9.5px;min-width:16px;padding:1px 5px;background:rgba(255,255,255,.06);color:var(--text-tertiary,#8a8c9c);}',
+        /* Always-visible key legend — the ONE command surface, clickable */
+        '.dm-legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.04);}',
+        '.dm-lgd{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#d5d6de;font-weight:600;background:none;border:none;cursor:pointer;font-family:inherit;padding:5px 9px;border-radius:8px;}',
+        '.dm-lgd:hover{background:rgba(255,255,255,.07);color:#fff;}',
+        '.dm-lgd .dm-key{font-size:10px;min-width:18px;padding:2px 6px;background:rgba(255,255,255,.12);color:#fff;}',
+        '.dm-lgd.dm-lgd-dim{opacity:.35;cursor:default;}',
+        '.dm-lgd.dm-lgd-dim:hover{background:none;color:#d5d6de;}',
 
         /* Sub-panels */
         '.dm-panel{margin-top:14px;padding:18px 20px;background:rgba(255,255,255,.035);border-radius:14px;}',
@@ -261,7 +286,7 @@
         '.dm-menu{background:#101017;border-radius:20px;padding:30px 34px;text-align:center;min-width:300px;}',
         '.dm-menu h3{margin:0 0 18px;font-size:18px;}',
 
-        '@media(max-width:980px){.dm-main{flex-direction:column;overflow-y:auto;}.dm-lead{width:100%;min-width:0;padding:20px;overflow-y:visible;flex-shrink:0;}.dm-script{padding:20px;overflow:visible;flex-shrink:0;background:none;}.dm-hud{padding:10px 16px;gap:12px;}.dm-hud-stats{gap:14px;}.dm-bizname{font-size:25px;}.dm-grid{grid-template-columns:100px 1fr;}.dm-foot{padding:12px 16px 10px;}}'
+        '@media(max-width:980px){.dm-main{flex-direction:column;overflow-y:auto;}.dm-lead{width:100%;min-width:0;max-width:none;padding:20px;overflow-y:visible;flex-shrink:0;}.dm-script{padding:20px;overflow:visible;flex-shrink:0;background:none;display:block;}.dm-scriptnav{position:static;margin:0 -20px;padding:10px 20px 12px;background:none;}.dm-hud{padding:10px 16px;gap:12px;}.dm-hud-stats{gap:14px;}.dm-bizname{font-size:25px;}.dm-grid{grid-template-columns:100px 1fr;}.dm-foot{padding:12px 16px 10px;}}'
     ].join('');
 
     function injectCss() {
@@ -495,9 +520,24 @@
         if (r.client_id) chips += '<span class="dm-chip dm-chip-client">' + esc(r.client_company || 'Client account') + '</span>';
         if (r.primary_language === 'es') chips += '<span class="dm-chip">Español</span>';
 
+        // Owner / front desk / email are EDITABLE in place — a name or address
+        // the rep just heard is the strongest data we ever get, and it must go
+        // in before the next dial (save-contacts stamps owner verification and
+        // makes an email the address of record).
+        function cRow(label, field, val, ph, mark) {
+            // The lead id and the rendered value ride ON the input: a change
+            // event can fire during DOM teardown (advancing to the next
+            // lead), and resolving the lead from session state at that moment
+            // would save the text onto the WRONG lead.
+            return '<span>' + label + (mark ? '<span class="dm-cmark">✓</span>' : '') + '</span>'
+                + '<b><input class="dm-cedit" data-dmfield="' + field + '" data-dmlead="' + r.id + '" data-dmorig="' + esc(val || '') + '" value="' + esc(val || '') + '" placeholder="' + ph + '"'
+                + ' onchange="DIALER_MODE.saveContact(this)" onkeydown="if(event.key===\'Enter\')this.blur()"></b>';
+        }
+        var verified = !!r.owner_name && (r.owner_name_verify_status === 'verified');
         var g = '';
-        g += '<span>Owner</span><b>' + (r.owner_name ? esc(r.owner_name) : '<i class="dm-dim">unknown</i>') + '</b>';
-        if (r.front_desk_name) g += '<span>Front desk</span><b>' + esc(r.front_desk_name) + '</b>';
+        g += cRow('Owner', 'owner_name', r.owner_name, 'unknown — ask + type it', verified);
+        g += cRow('Front desk', 'front_desk_name', r.front_desk_name, 'ask her name', false);
+        g += cRow('Email', 'owner_email', r.owner_email || r.email, 'get the best email', false);
         g += '<span>Phone</span><b class="dm-phone">' + esc(leadPhone(r)) + '</b>';
         var lastBits = [];
         if (r.last_called_outcome) lastBits.push(outcomeLabel(r.last_called_outcome));
@@ -508,6 +548,17 @@
             g += '<span>Callback due</span><b style="color:var(--blue,#60a5fa);">' + esc(cfg.fmtTime(r.next_action_due_at)) + '</b>';
         }
 
+        // The three-assets goal: the first call is a WIN if the rep leaves
+        // with these, even when the owner never picks up.
+        var missing = [];
+        if (!r.owner_name) missing.push('<b>owner\'s name</b>');
+        else if (!verified) missing.push('<b>confirm the owner\'s name</b>');
+        if (!r.front_desk_name) missing.push('<b>front desk name</b>');
+        if (!(r.owner_email || r.email)) missing.push('<b>best email</b>');
+        var goalHtml = missing.length
+            ? '<div class="dm-goal">Don\'t hang up without: ' + missing.join(' · ') + '. Type it in the moment you hear it — call two is only warm if call one collected.</div>'
+            : '';
+
         var notesVal = (r.rep_notes != null && r.rep_notes !== '') ? r.rep_notes : (r.call_notes || '');
 
         main.innerHTML =
@@ -516,12 +567,14 @@
             + '<h2 class="dm-bizname">' + esc(r.business_name || r.name || 'Lead #' + r.id) + '</h2>'
             + '<div class="dm-niche">' + esc(r.category || r.niche || '') + (r.city ? ' · ' + esc(r.city) : '') + '</div>'
             + '<div class="dm-grid">' + g + '</div>'
+            + goalHtml
             + '<div class="dm-sec"><h4>Notes <span class="dm-savedmsg" id="dmNotesSaved"></span></h4>'
             + '<textarea id="dmLiveNotes" class="dm-notes-edit" placeholder="Type while you talk. Saves on its own." oninput="DIALER_MODE.notesChanged()">' + esc(notesVal) + '</textarea></div>'
             + '<div class="dm-sec"><h4>Activity</h4><div id="dmActivityHost">' + activityHtml() + '</div></div>'
             + '<div class="dm-vm"><h4>Voicemail · read it word for word</h4><p>' + esc(vmScript(r)) + '</p></div>'
             + '</div>'
-            + '<div class="dm-script"><div class="dm-script-inner" id="dmScriptPane"><div class="dm-hint">Loading script…</div></div></div>';
+            + '<div class="dm-script"><div class="dm-script-inner" id="dmScriptPane"><div class="dm-hint">Loading script…</div></div>'
+            + '<div class="dm-scriptnav" id="dmScriptNav"></div></div>';
 
         // Script loads async through the page's own pipeline (client-pool
         // firewall, language, agent resolution all live there).
@@ -530,6 +583,7 @@
             if (!S || S.idx !== myIdx) return;
             var pane = el('dmScriptPane');
             if (pane) pane.innerHTML = html || '';
+            buildScriptNav();
         }).catch(function () {
             if (!S || S.idx !== myIdx) return;
             var pane = el('dmScriptPane');
@@ -539,14 +593,116 @@
         renderFoot();
     }
 
+    /* ---------- script section jumps ----------
+       Sticky chips at the bottom of the script pane. Sections are detected
+       from the RENDERED script (the transcripts show the moments a rep needs
+       to jump: the front-desk turn, objections, the value anchor, the close),
+       so whatever headings this lead's script actually has become the chips. */
+    var NAV_MAP = [
+        [/likely objections|^objections/i, 'Objections'],
+        [/suggested opener|^opener\b|^open\b|^the open/i, 'Opener'],
+        [/discovery|the one question/i, 'Discovery'],
+        [/value anchor|^value\b/i, 'Value'],
+        [/the ask|^close\b|booking|^the close/i, 'Close'],
+        [/selling the high ticket|high ticket/i, 'High ticket'],
+        [/medical director/i, 'Med director'],
+        [/hard rules/i, 'Hard rules'],
+        [/^reference$/i, 'Reference']
+    ];
+    function buildScriptNav() {
+        var pane = el('dmScriptPane'), nav = el('dmScriptNav');
+        if (!pane || !nav) return;
+        var chips = [];
+        S.navTargets = [];
+        var gk = pane.querySelector('details.stilo-gk');
+        if (gk) {
+            S.navTargets.push({ el: gk, open: true });
+            chips.push('<button class="dm-navchip dm-nav-gk" onclick="DIALER_MODE.jumpTo(0)">☎ Front desk</button>');
+        }
+        var found = {};
+        var nodes = pane.querySelectorAll('div,h1,h2,h3,h4,strong,th,span');
+        for (var i = 0; i < nodes.length; i++) {
+            var t = (nodes[i].textContent || '').trim();
+            if (!t || t.length > 42) continue;
+            for (var m = 0; m < NAV_MAP.length; m++) {
+                if (found[NAV_MAP[m][1]]) continue;
+                if (NAV_MAP[m][0].test(t)) {
+                    found[NAV_MAP[m][1]] = true;
+                    S.navTargets.push({ el: nodes[i] });
+                    chips.push('<button class="dm-navchip" onclick="DIALER_MODE.jumpTo(' + (S.navTargets.length - 1) + ')">' + NAV_MAP[m][1] + '</button>');
+                    break;
+                }
+            }
+        }
+        nav.innerHTML = chips.join('');
+        nav.style.display = chips.length ? 'flex' : 'none';
+    }
+    function jumpTo(i) {
+        var t = S && S.navTargets && S.navTargets[i];
+        if (!t || !t.el) return;
+        if (t.open && t.el.tagName === 'DETAILS') t.el.open = true;
+        t.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ---------- inline contact saves (owner / front desk / email) ---------- */
+    function saveContact(input) {
+        if (!S || !input) return;
+        var field = input.getAttribute('data-dmfield');
+        var leadId = parseInt(input.getAttribute('data-dmlead'), 10);
+        var value = input.value.trim();
+        if (!field || isNaN(leadId)) return;
+        if (value === (input.getAttribute('data-dmorig') || '')) return;   // nothing changed
+        input.setAttribute('data-dmorig', value);
+        cfg.fetchJson('/api/prospects/save-contacts', {
+            method: 'POST',
+            body: JSON.stringify({ id: leadId, field: field, value: value })
+        }).then(function () {
+            input.style.color = 'var(--green,#10b981)';
+            setTimeout(function () { input.style.color = ''; }, 900);
+            // Keep the session + board rows in sync so the edit survives —
+            // matched BY ID, never by current index.
+            if (S && S.lead && S.lead.id === leadId) {
+                S.lead[field] = value || null;
+                if (field === 'owner_name') S.lead.owner_name_verify_status = value ? 'verified' : null;
+            }
+            var qr = S && S.queue.find(function (q) { return q.id === leadId; });
+            if (qr) qr[field] = value || null;
+        }).catch(function (e) {
+            input.style.color = 'var(--red,#f87171)';
+            console.warn('[dialer] save-contacts failed', e);
+        });
+    }
+
     /* ---------- footer per phase ---------- */
+    // The legend is the ONE command surface: always visible, clickable, and
+    // it mirrors the keyboard exactly.
     function legendHtml() {
-        function k(key, label) { return '<span><span class="dm-key">' + key + '</span>' + label + '</span>'; }
+        function k(key, label, fn, dim) {
+            return '<button class="dm-lgd' + (dim ? ' dm-lgd-dim' : '') + '"' + (fn ? ' onclick="' + fn + '"' : '')
+                + '><span class="dm-key">' + key + '</span>' + label + '</button>';
+        }
+        var canDisp = S.phase === 'disposition' || S.phase === 'dialing';
+        var connected = S.currentCall && (S.currentCall.duration_seconds || 0) >= CONNECT_SECONDS;
         return '<div class="dm-legend">'
-            + k('1', 'No answer / VM') + k('2', 'Callback') + k('3', 'Booked')
-            + k('4', 'Not interested') + k('5', 'Wrong number') + k('6', 'DNC')
-            + k('E', 'Email') + k('T', 'Text') + k('SPACE', 'Call / Next') + k('N', 'Skip') + k('ESC', 'Pause')
+            + k('1', 'No answer / VM', 'DIALER_MODE.disposition(1)', !canDisp)
+            + k('2', 'Callback', 'DIALER_MODE.disposition(2)', !canDisp)
+            + k('3', 'Booked', 'DIALER_MODE.disposition(3)', !canDisp)
+            + k('4', 'Not interested', 'DIALER_MODE.disposition(4)', !canDisp)
+            + k('5', 'Wrong number', 'DIALER_MODE.disposition(5)', !canDisp)
+            + k('6', 'DNC', 'DIALER_MODE.disposition(6)', !canDisp)
+            + k('E', 'Email', 'DIALER_MODE.legendKey(\'e\')', S.phase !== 'disposition')
+            + k('T', 'Text', 'DIALER_MODE.legendKey(\'t\')', !(S.phase === 'disposition' && connected))
+            + k('SPACE', 'Call / Next', 'DIALER_MODE.legendKey(\'space\')', !(S.phase === 'ready' || S.phase === 'advance'))
+            + k('N', 'Skip', 'DIALER_MODE.legendKey(\'n\')', S.phase === 'advance')
+            + k('ESC', 'Pause', 'DIALER_MODE.menu()', false)
             + '</div>';
+    }
+    function legendKey(k) {
+        if (!S) return;
+        if (k === 'e' && S.phase === 'disposition' && !S.panel) openEmailPanel();
+        else if (k === 't' && S.phase === 'disposition' && !S.panel) openSmsPanel();
+        else if (k === 'space') { if (S.phase === 'ready') dial(); else if (S.phase === 'advance') nextNow(); }
+        else if (k === 'n' && S.phase !== 'advance') advance('Skipped', true);
     }
 
     function renderFoot() {
@@ -563,11 +719,14 @@
             return;
         }
         if (S.phase === 'dialing') {
+            var e164 = toE164(leadPhone(S.lead || S.queue[S.idx]));
             foot.innerHTML = '<div class="dm-foot-row">'
                 + '<span class="dm-pulse"></span><span class="dm-live" id="dmLiveTimer">0:00</span>'
-                + '<span class="dm-hint">In Quo. Waiting for the hangup…</span>'
+                + '<span class="dm-dialnum">' + esc(e164) + '</span>'
+                + '<span class="dm-hint">Number copied — if Quo didn\'t pre-dial, paste it (⌘V).</span>'
                 + '<span style="flex:1;"></span>'
-                + dispositionKeysHtml()
+                + '<button class="dm-iconbtn" onclick="DIALER_MODE.redial()">Open Quo again</button>'
+                + '<button class="dm-send" onclick="DIALER_MODE.callEnded()">Call ended — log it</button>'
                 + '</div>' + legendHtml();
             return;
         }
@@ -575,9 +734,9 @@
             var c = S.currentCall;
             var result = c
                 ? '<span class="dm-result"><span style="color:var(--green,#10b981);">●</span> ' + esc(outcomeLabel(c.outcome)) + (c.duration_seconds ? ' · ' + fmtDur(c.duration_seconds) : '') + '</span>'
-                : '<span class="dm-result dm-hint" style="font-weight:500;">No call detected yet — log it anyway</span>';
+                : '<span class="dm-result dm-hint" style="font-weight:500;">Call not detected yet — log it below; the recording syncs onto it when Quo reports in.</span>';
             foot.innerHTML = '<div class="dm-foot-row">' + result
-                + '<span style="flex:1;"></span>' + dispositionKeysHtml()
+                + '<span style="flex:1;"></span>'
                 + '</div>'
                 + '<div id="dmPanelHost"></div>'
                 + legendHtml();
@@ -593,16 +752,6 @@
             return;
         }
         foot.innerHTML = '';
-    }
-
-    function dispositionKeysHtml() {
-        function b(k, label) {
-            return '<button class="dm-dbtn" onclick="DIALER_MODE.disposition(' + k + ')"><span class="dm-key">' + k + '</span>' + label + '</button>';
-        }
-        return '<div class="dm-disp">'
-            + b(1, 'No answer / VM') + b(2, 'Callback') + b(3, 'Booked')
-            + b(4, 'Not interested') + b(5, 'Wrong number') + b(6, 'DNC')
-            + '</div>';
     }
 
     /* ---------- lead lifecycle ---------- */
@@ -651,6 +800,12 @@
         S.stats.dials++;
         renderFoot();
 
+        // Belt and suspenders for the deep link: the number goes to the
+        // clipboard FIRST, so even when quo:// opens the app without
+        // pre-filling (seen live 2026-09-14), the rep pastes instead of
+        // typing. The footer shows the number too.
+        try { navigator.clipboard.writeText(e164).catch(function () {}); } catch (e) {}
+
         // Deep link: quo:// first, web dialer fallback if nothing handles it
         // (same visibilitychange trick as the drawer's Call button).
         var enc = encodeURIComponent(e164);
@@ -672,10 +827,16 @@
     function startPoll() {
         stopPoll();
         var leadId = (S.lead || S.queue[S.idx]).id;
+        // Polls through 'dialing' AND through a manual 'disposition' that has
+        // no detected call yet ("Call ended" pressed before Quo reported in):
+        // when the webhook row lands late it still gets counted and shown.
+        var live = function () {
+            return S && (S.phase === 'dialing' || (S.phase === 'disposition' && !S.currentCall));
+        };
         S.pollTimer = setInterval(function () {
-            if (!S || S.phase !== 'dialing') { stopPoll(); return; }
+            if (!live()) { stopPoll(); return; }
             cfg.fetchJson('/api/prospects/timeline?id=' + encodeURIComponent(leadId)).then(function (data) {
-                if (!S || S.phase !== 'dialing') return;
+                if (!live()) return;
                 var calls = ((data && data.events) || []).filter(function (e) { return e.kind === 'call'; });
                 var fresh = calls.find(function (e) {
                     return e.id != null && !S.knownCallIds[e.id]
@@ -688,13 +849,31 @@
                     if (dur >= CONNECT_SECONDS) S.stats.connects++;
                     S.stats.talk += dur;
                     stopPoll();
+                    var keepPanel = S.panel;
                     S.phase = 'disposition';
-                    renderFoot();
+                    if (!keepPanel) renderFoot();   // don't blow away an open callback/DNC/email panel
                 }
             }).catch(function () { /* transient; keep polling */ });
         }, POLL_MS);
     }
     function stopPoll() { if (S && S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } }
+
+    // Manual hangup: the webhook usually pops the disposition on its own, but
+    // when it doesn't (Quo hiccup, number dialed by hand outside the deep
+    // link) the rep must never be stuck. Polling keeps running underneath so
+    // a late webhook row still attributes the call.
+    function callEnded() {
+        if (!S || S.phase !== 'dialing') return;
+        S.phase = 'disposition';
+        renderFoot();
+    }
+    function redial() {
+        if (!S || S.phase !== 'dialing') return;
+        var e164 = toE164(leadPhone(S.lead || S.queue[S.idx]));
+        if (!e164) return;
+        try { navigator.clipboard.writeText(e164).catch(function () {}); } catch (e) {}
+        window.location.href = 'quo://call?to=' + encodeURIComponent(e164);
+    }
 
     /* ---------- dispositions ---------- */
     // Poll-first-log-second discipline: when the webhook row exists,
@@ -1093,6 +1272,8 @@
         commitDnc: commitDnc, closePanel: closePanel,
         sendEmail: sendEmail, sendSms: sendSms,
         toggleAct: toggleAct, toggleTx: toggleTx, actAll: actAll,
-        notesChanged: notesChanged
+        notesChanged: notesChanged, saveContact: saveContact,
+        jumpTo: jumpTo, legendKey: legendKey,
+        callEnded: callEnded, redial: redial
     };
 })(typeof window !== 'undefined' ? window : this);
