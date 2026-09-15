@@ -144,121 +144,88 @@ function compose(lead, clientName) {
     const es = lead.primary_language === 'es';
     const fn = corroboratedFirstName(lead);
     const local = LOCAL_ZIP3.includes(zip3(lead.address));
+    const sender = process.env.STILO_SENDER_NAME || 'Remy';
+    // A/B by lead id, same idea as the SMS campaign so a lead always sees one
+    // arm and the two stay comparable. Arm A leads with WHAT WE CARRY, arm B
+    // leads with the direct-importer VALUE (Manuel + Miami parts and service).
+    const arm = (Math.abs(Number(lead.id) || 0) % 2 === 0) ? 'A' : 'B';
+
+    // Naming real, broadly med-spa-relevant machines is the point: it tells the
+    // reader in one line what Blason is, which is the gap a bare "question about
+    // your equipment" left. Kept generic enough to fit the whole aesthetic ICP;
+    // no price, no link (both fail preSendCheck), no specific model refs.
+    const machinesEn = 'RF microneedling, HIFU, laser hair removal, hydrafacial skin systems, and body contouring';
+    const machinesEs = 'microneedling con radiofrecuencia, HIFU, depilacion laser, sistemas de hidrafacial y contorno corporal';
+    const showroomEn = 'Whatever you name, odds are it is already set up and running at our Miami showroom, and you can put your hands on it before deciding anything.';
+    const showroomEs = 'La que me diga, lo mas seguro es que ya esta montada y funcionando en nuestro showroom de Miami, y la puede probar usted antes de decidir nada.';
+    const carriesEn = 'Whatever you name, I will tell you straight whether we carry it and whether it is worth it for you.';
+    const carriesEs = 'La que me diga, le digo de frente si la tenemos y si de verdad le conviene.';
 
     if (MODE === 'followup') {
-        // One bump, then silence. Same question, one new concrete fact (the
-        // showroom), and an explicit out so a no costs them one short reply
-        // instead of a spam report.
+        // One bump, then silence: same question, one new concrete fact (the
+        // showroom or the Florida-wide reach), and an explicit out.
         if (es) {
-            return {
-                subject: 're: una pregunta sobre sus equipos',
-                body: [
-                    (fn ? 'Hola ' + fn + ',' : 'Hola,'),
-                    '',
-                    'Le escribi la semana pasada y queria intentarlo una vez mas.',
-                    '',
-                    (local
-                        ? 'Las maquinas estan montadas y funcionando en nuestro showroom en Miami, las puede probar usted antes de decidir nada.'
-                        : 'Le vendemos equipos a spas por toda la Florida, no solo aqui en Miami.'),
-                    '',
-                    'La pregunta sigue en pie: cual es la proxima maquina que quiere meter en su spa?',
-                    '',
-                    'Y si no le interesa, digamelo y no le vuelvo a escribir.',
-                ].join('\n'),
-            };
+            return { arm: 'bump', subject: 're: una pregunta sobre sus equipos', body: [
+                (fn ? 'Hola ' + fn + ',' : 'Hola,'), '',
+                'Le escribi la semana pasada y queria intentarlo una vez mas.', '',
+                (local ? showroomEs : 'Le vendemos equipos a spas por toda la Florida, no solo aqui en Miami.'), '',
+                'La pregunta sigue en pie: cual es la proxima maquina que quiere meter en su spa?', '',
+                'Y si no le interesa, digamelo y no le vuelvo a escribir.',
+            ].join('\n') };
         }
-        return {
-            subject: 're: question about your equipment',
-            body: [
-                (fn ? 'Hi ' + fn + ',' : 'Hi,'),
-                '',
-                'I emailed you last week and figured it was worth one more try.',
-                '',
-                (local
-                    ? 'The machines are set up and running at our Miami showroom, so you can put your hands on them before deciding anything.'
-                    : 'We supply spas all over Florida, not just here in Miami.'),
-                '',
-                'Same question as before: what\'s the next machine on your wishlist?',
-                '',
-                'And if it\'s a no, just say so and I won\'t email you again.',
-            ].join('\n'),
-        };
+        return { arm: 'bump', subject: 're: question about your equipment', body: [
+            (fn ? 'Hi ' + fn + ',' : 'Hi,'), '',
+            'I emailed you last week and figured it was worth one more try.', '',
+            (local ? showroomEn : 'We supply spas all over Florida, not just here in Miami.'), '',
+            'Same question as before: what is the next machine on your wishlist?', '',
+            'And if it is a no, just say so and I will not email you again.',
+        ].join('\n') };
     }
 
-    if (MODE === 'warm') {
-        // These leads a rep actually reached by phone. Say the call happened
-        // ("I called" is always true here), never "we spoke", because the
-        // connected call is often with the front desk, not this reader.
-        if (es) {
-            return {
-                subject: 'llame a ' + String(lead.name || 'su negocio').slice(0, 40),
-                body: [
-                    (fn ? 'Hola ' + fn + ',' : 'Hola,'),
-                    '',
-                    'Soy ' + (process.env.STILO_SENDER_NAME || 'Remy') + ', de ' + clientName + ' en Miami. Llame a su negocio hace poco por el tema de los equipos.',
-                    '',
-                    'En vez de mandarle un catalogo, una sola pregunta: cual es la proxima maquina que quiere meter en su spa?',
-                    '',
-                    (local
-                        ? 'La que me diga, lo mas seguro es que ya esta montada y funcionando en nuestro showroom de Miami, y la puede probar usted antes de decidir nada.'
-                        : 'La que me diga, le digo de frente si Manuel, el dueno, la tiene o no.'),
-                    '',
-                    'Respondame con la maquina y yo me encargo del resto.',
-                ].join('\n'),
-            };
-        }
-        return {
-            subject: 'called you the other day',
-            body: [
-                (fn ? 'Hi ' + fn + ',' : 'Hi,'),
-                '',
-                'I\'m ' + (process.env.STILO_SENDER_NAME || 'Remy') + ' with ' + clientName + ' in Miami. I called ' + String(lead.name || 'your business').slice(0, 40) + ' recently about the equipment side of things.',
-                '',
-                'Rather than send a catalog, one question: what\'s the next machine on your wishlist?',
-                '',
-                (local
-                    ? 'Whatever you name, odds are it\'s already set up and running at our Miami showroom, and you can put your hands on it before deciding anything.'
-                    : 'Whatever you name, I\'ll tell you straight whether Manuel, the owner, has it or not.'),
-                '',
-                'Just reply with the machine and I\'ll take it from there.',
-            ].join('\n'),
-        };
-    }
+    const calledLine = (MODE === 'warm');
+    const opener = (whoLine) => (fn ? (es ? 'Hola ' + fn + ',' : 'Hi ' + fn + ',') : (es ? 'Hola,' : 'Hi,'));
 
     if (es) {
-        return {
-            subject: 'una pregunta sobre sus equipos',
-            body: [
-                (fn ? 'Hola ' + fn + ',' : 'Hola,'),
-                '',
-                'Soy ' + (process.env.STILO_SENDER_NAME || 'Remy') + ', de ' + clientName + ' en Miami. Ponemos maquinas en spas y centros de estetica por toda la Florida.',
-                '',
-                'Sin catalogo y sin discurso, una sola pregunta: cual es la proxima maquina que quiere meter en su spa?',
-                '',
-                (local
-                    ? 'La que me diga, lo mas seguro es que ya esta montada y funcionando en nuestro showroom de Miami, y la puede venir a probar usted antes de decidir nada.'
-                    : 'La que me diga, le digo de frente si Manuel, el dueno, la tiene o no.'),
-                '',
+        const intro = calledLine
+            ? 'Soy ' + sender + ', de ' + clientName + ' en Miami. Llame a su negocio hace poco por el tema de los equipos.'
+            : 'Soy ' + sender + ', de ' + clientName + ' en Miami.';
+        if (arm === 'A') {
+            return { arm: 'A', subject: (calledLine ? 'llame a ' + String(lead.name || 'su negocio').slice(0, 40) : 'una pregunta sobre sus equipos'), body: [
+                opener(), '',
+                intro + ' Somos importadores directos de equipos de estetica: ' + machinesEs + ', y los ponemos en spas por toda la Florida.', '',
+                'Una sola pregunta, sin catalogo: cual es la proxima maquina que quiere meter en su spa?', '',
+                (local ? showroomEs : carriesEs), '',
                 'Respondame con la maquina y yo me encargo del resto.',
-            ].join('\n'),
-        };
+            ].join('\n') };
+        }
+        return { arm: 'B', subject: (calledLine ? 'llame a ' + String(lead.name || 'su negocio').slice(0, 40) : 'sobre sus equipos de estetica'), body: [
+            opener(), '',
+            intro + ' Importamos los equipos directo de fabrica, ' + machinesEs + ', y se los vendemos directo a los spas, sin intermediarios.', '',
+            'Eso importa por dos cosas: Manuel, el dueno, le dice cual maquina de verdad le sirve para lo que quiere ofrecer y cual no vale la pena, y las piezas y el servicio salen de Miami, en ingles o espanol, no de un call center afuera.', '',
+            'Asi que, una pregunta: cual es la proxima maquina en su lista de deseos?', '',
+            (local ? showroomEs : 'Respondame con la maquina y yo me encargo del resto.'),
+        ].join('\n') };
     }
-    return {
-        subject: 'question about your equipment',
-        body: [
-            (fn ? 'Hi ' + fn + ',' : 'Hi,'),
-            '',
-            'I\'m ' + (process.env.STILO_SENDER_NAME || 'Remy') + ' with ' + clientName + ' in Miami. We put machines in med spas and aesthetic clinics all over Florida.',
-            '',
-            'No catalog, no pitch, just one question: what\'s the next machine on your wishlist?',
-            '',
-            (local
-                ? 'Whatever you name, odds are it\'s already set up and running at our Miami showroom, and you can come put your hands on it before deciding anything.'
-                : 'Whatever you name, I\'ll tell you straight whether Manuel, the owner, has it or not.'),
-            '',
-            'Just reply with the machine and I\'ll take it from there.',
-        ].join('\n'),
-    };
+
+    const intro = calledLine
+        ? "I'm " + sender + ' with ' + clientName + ' in Miami. I called ' + String(lead.name || 'your business').slice(0, 40) + ' recently about the equipment side of things.'
+        : "I'm " + sender + ' with ' + clientName + ' in Miami.';
+    if (arm === 'A') {
+        return { arm: 'A', subject: (calledLine ? 'called you the other day' : 'question about your equipment'), body: [
+            opener(), '',
+            intro + ' We are a direct importer of aesthetic machines: ' + machinesEn + ', and we put them in med spas all over Florida.', '',
+            'One question instead of a catalog: what is the next machine on your wishlist?', '',
+            (local ? showroomEn : carriesEn), '',
+            'Just reply with the machine and I will take it from there.',
+        ].join('\n') };
+    }
+    return { arm: 'B', subject: (calledLine ? 'called you the other day' : 'about your aesthetic equipment'), body: [
+        opener(), '',
+        intro + ' We import aesthetic machines direct from the factory, ' + machinesEn + ', and sell them straight to med spas with no middleman.', '',
+        'That matters for two reasons: Manuel, the owner, will tell you which machine actually fits what you want to offer and which one is not worth it, and parts and service come out of Miami in English or Spanish, not a call center overseas.', '',
+        'So, one question: what is the next machine on your wishlist?', '',
+        (local ? showroomEn : 'Just reply with the machine and I will take it from there.'),
+    ].join('\n') };
 }
 
 /** Correctness checks that must hold for every generated body. */
@@ -460,7 +427,7 @@ async function main() {
         const ok = await guard.canSend({ email: to });
         if (!ok.ok) { console.log('SKIP  ' + tag + '  guard: ' + ok.reason); stats.skipped++; continue; }
 
-        const { subject, body } = compose(lead, clientName);
+        const { subject, body, arm } = compose(lead, clientName);
         const fails = preSendCheck(subject, body);
         if (fails.length) { console.log('SKIP  ' + tag + '  copy: ' + fails.join('; ')); stats.skipped++; continue; }
 
@@ -477,7 +444,7 @@ async function main() {
             lead_id: lead.id, direction: 'outbound', channel: 'email', subject: subject,
             sent_at: new Date().toISOString(), sent_by: process.env.STILO_SENDER_EMAIL || null,
             to_address: to, provider: 'resend', status: 'sending', dedupe_key: dedupeKey,
-            variant: MODE === 'cold' ? 'blason_lane' + LANE : 'blason_' + MODE,
+            variant: (MODE === 'cold' ? 'blason_lane' + LANE : 'blason_' + MODE) + '_' + (arm || 'x'),
         }).select('id').single();
         if (claim.error) {
             if (String(claim.error.code) === '23505') { console.log('DUP   ' + tag); stats.dup++; continue; }
