@@ -55,6 +55,11 @@ const MAX_ATTEMPTS_PER_TARGET = Number(process.env.OUTBOUND_MAX_ATTEMPTS_PER_TAR
 // Campaign-level breaker: this many ticks IN A ROW where every attempt failed
 // (with at least 2 attempts made) pauses the campaign outright.
 const MAX_CONSECUTIVE_FAILED_TICKS = Number(process.env.OUTBOUND_MAX_FAILED_TICKS || 5);
+// Follow-up nudge to a non-replier who had a connected call. A lead that got a
+// first text and went quiet gets a second (and third) touch, but only after
+// this many days, so it reads as follow-up, not a blast. Prior contact makes it
+// legal; the spacing keeps it human. 3 days by default.
+const NUDGE_COOLDOWN_MS = Number(process.env.OUTBOUND_NUDGE_COOLDOWN_DAYS || 3) * 24 * 3600 * 1000;
 
 module.exports = async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
@@ -112,7 +117,7 @@ module.exports = async function handler(req, res) {
         // that have replied, and only when the body has been generated.
         const { data: due, error: dErr } = await sb.from('outbound_targets')
             .select('*').eq('campaign_id', campaign.id)
-            .in('stage', ['queued', 'replied'])
+            .in('stage', ['queued', 'replied', 'sent'])
             .order('updated_at', { ascending: true })
             .limit(500);
         if (dErr) { report.push({ campaign: campaign.id, error: dErr.message }); continue; }
@@ -171,6 +176,18 @@ module.exports = async function handler(req, res) {
                 continue;
             }
 
+            // NUDGE GATE. A 'sent' target is a first text that went out. It is only
+            // eligible for a follow-up nudge if the person never replied (a
+            // replier is handled by the 'replied' pitch path and must never be
+            // nudged) and enough days have passed since the last touch.
+            if (t.stage === 'sent') {
+                if (t.first_reply_at) { results.skipped.already_replied = (results.skipped.already_replied || 0) + 1; continue; }
+                const lastStamp = t['step' + (t.step || 1) + '_sent_at'] || t.step1_sent_at;
+                if (lastStamp && (now.getTime() - new Date(lastStamp).getTime()) < NUDGE_COOLDOWN_MS) {
+                    results.skipped.nudge_cooldown = (results.skipped.nudge_cooldown || 0) + 1;
+                    continue;
+                }
+            }
             const nextStep = t.stage === 'queued' ? 1 : (t.step >= 3 ? null : t.step + 1);
             if (!nextStep) { results.skipped.sequence_complete = (results.skipped.sequence_complete || 0) + 1; continue; }
             const bodyText = t['step' + nextStep + '_body'];

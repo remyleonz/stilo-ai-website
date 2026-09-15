@@ -73,6 +73,29 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
         console.log('step2 filled for target', t.id, w.ok ? 'ok' : w.status);
     }
 
+    // NUDGE: non-repliers who had a connected call and went quiet after step 1.
+    // The tick sends step 2 (and later step 3) to 'sent' targets past the
+    // cooldown; here we fill the body. Lighter than the reply pitch: a soft
+    // check-in, then a final touch with an explicit out. No price, no link.
+    const nudge2En = 'hey, circling back on my note. is upgrading or adding a machine on your radar at all this year? no rush, just want to point you to the right one if so.';
+    const nudge2Es = 'hola, dandole seguimiento a mi mensaje. tiene pensado meter o cambiar alguna maquina este ano? sin apuro, solo para orientarlo bien.';
+    const nudge3En = 'last one from me. if it is not the right time just say so and i will stop. whenever it is, we import direct and manuel will tell you straight what fits your room.';
+    const nudge3Es = 'ultimo de mi parte. si no es el momento digamelo y no le escribo mas. cuando lo sea, importamos directo y manuel le dice de frente que le sirve.';
+    for (const [step, bEn, bEs] of [[2, nudge2En, nudge2Es], [3, nudge3En, nudge3Es]]) {
+        const col = 'step' + step + '_body';
+        const rn = await fetch(`${URL_}/rest/v1/outbound_targets?campaign_id=eq.4&stage=eq.sent&step=eq.${step - 1}&first_reply_at=is.null&${col}=is.null&select=id,lead_id&order=id&limit=500`, { headers: H });
+        const nr = await rn.json();
+        for (const t of (Array.isArray(nr) ? nr : [])) {
+            const lr = await fetch(`${URL_}/rest/v1/leads?id=eq.${t.lead_id}&select=primary_language`, { headers: H });
+            const es = ((await lr.json())[0] || {}).primary_language === 'es';
+            const patch = {}; patch[col] = es ? bEs : bEn;
+            patch.body_generated_at = new Date().toISOString();
+            const w = await fetch(`${URL_}/rest/v1/outbound_targets?id=eq.${t.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(patch) });
+            if (!w.ok) console.log('nudge fill fail', t.id, w.status);
+        }
+        if (nr.length) console.log('nudge step' + step + ' filled: ' + nr.length);
+    }
+
     const r = await fetch(`${URL_}/rest/v1/outbound_targets?campaign_id=eq.4&step1_sent_at=is.null&step1_body=is.null&stage=eq.queued&select=id,lead_id,variant,assigned_to&order=id`, { headers: H });
     const targets = await r.json();
     if (!Array.isArray(targets) || !targets.length) { console.log('nothing to fill'); return; }
