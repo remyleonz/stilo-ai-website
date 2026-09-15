@@ -7,6 +7,7 @@
 # Logs: ~/Library/Logs/blason-autopilot.log
 set -u
 ENVF="/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/.env.local"
+export PATH="/opt/homebrew/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin"
 export ENVF
 CRON=$(grep '^CRON_SECRET=' "$ENVF" | cut -d= -f2- | tr -d '"')
 LOG="$HOME/Library/Logs/blason-autopilot.log"
