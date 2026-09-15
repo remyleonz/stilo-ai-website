@@ -16,6 +16,7 @@
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js"></script>
+    <script src="/assets/dial-companion.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -651,6 +652,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Call History
             </button>
+            <button class="nav-item" data-page="dialer" onclick="switchPage('dialer')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg>
+                Dialer
+            </button>
         </nav>
         <div class="sidebar-footer" style="position:relative;">
             <!-- Profile popover — opens above the sdr-card when the user clicks
@@ -1005,6 +1010,13 @@
         </section>
 
         <!-- ============ HISTORY ============ -->
+        <!-- Phone handset tab: the shared companion (assets/dial-companion.js)
+             mounted with the dashboard's own session — open this on your
+             phone and every laptop SPACE lands here as one Call button. -->
+        <section class="page-content hidden" id="page-dialer">
+            <div id="dialerCompanionHost" style="min-height:calc(100vh - 140px);display:flex;flex-direction:column;"></div>
+        </section>
+
         <section class="page-content hidden" id="page-history">
             <div class="section-title">Call History</div>
             <div class="section-subtitle">Every call you've logged, newest first.</div>
@@ -1345,14 +1357,21 @@
             if (target) target.classList.remove('hidden');
             document.getElementById('pageTitle').textContent = {
                 overview: 'Dashboard', leads: 'Leads', performance: 'Performance',
-                revenue: 'Revenue', messages: 'Messages', history: 'Call History'
+                revenue: 'Revenue', messages: 'Messages', history: 'Call History',
+                dialer: 'Dialer'
             }[page] || 'Dashboard';
+
+            // The handset only polls while its tab is open.
+            if (window.DIAL_COMPANION && page !== 'dialer') DIAL_COMPANION.unmount();
 
             if (page === 'leads') { if (!STATE._leadsLoaded) loadLeads(); }
             else if (page === 'performance') loadPerformance();
             else if (page === 'revenue') loadRevenue();
             else if (page === 'messages') loadMessages();
             else if (page === 'history') loadHistory();
+            else if (page === 'dialer' && window.DIAL_COMPANION) {
+                DIAL_COMPANION.mount({ host: 'dialerCompanionHost', fetchJson: fetchJSON });
+            }
         }
 
         /* ===== PROFILE POPOVER =====
