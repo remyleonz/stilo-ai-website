@@ -375,6 +375,7 @@
             + '</div>'
             + '<div class="dm-hud-right">'
             + '<span class="dm-pos" id="dmQueuePos"></span>'
+            + '<button class="dm-iconbtn" onclick="DIALER_MODE.phoneInfo()" title="Dial from your phone">📱 Phone</button>'
             + '<button class="dm-iconbtn" onclick="DIALER_MODE.menu()">Pause</button>'
             + '<button class="dm-iconbtn" onclick="DIALER_MODE.close()">End session</button>'
             + '</div>'
@@ -756,7 +757,7 @@
             foot.innerHTML = '<div class="dm-foot-row">'
                 + '<span class="dm-pulse"></span><span class="dm-live" id="dmLiveTimer">0:00</span>'
                 + '<span class="dm-dialnum">' + esc(e164) + '</span>'
-                + '<span class="dm-hint">Number copied — if Quo didn\'t pre-dial, paste it (⌘V).</span>'
+                + '<span class="dm-hint">Number copied — paste in Quo (⌘V), or tap Call on your phone\'s companion page.</span>'
                 + '<span style="flex:1;"></span>'
                 + '<button class="dm-iconbtn" onclick="DIALER_MODE.redial()">Open Quo again</button>'
                 + '<button class="dm-send" onclick="DIALER_MODE.callEnded()">Call ended — log it</button>'
@@ -863,6 +864,11 @@
 
         // Count the attempt (button-click stamp; the webhook row is the real call).
         cfg.fetchJson('/api/prospects/log-dial', { method: 'POST', body: JSON.stringify({ lead_id: r.id }) }).catch(function () {});
+
+        // Hand the number to the rep's PHONE too: most reps dial from the Quo
+        // app on their phone, and /dial/ (Phone Companion) polls this row and
+        // shows one big CALL button. Fire-and-forget.
+        cfg.fetchJson('/api/prospects/dialer-handoff', { method: 'POST', body: JSON.stringify({ lead_id: r.id }) }).catch(function () {});
 
         startPoll();
     }
@@ -1200,6 +1206,31 @@
         root.appendChild(wrap);
     }
 
+    /* ---------- phone companion how-to ---------- */
+    function phoneInfo() {
+        if (!S) return;
+        var root = el('dmRoot');
+        var old = root.querySelector('.dm-overlay-menu');
+        if (old) old.remove();
+        var wrap = document.createElement('div');
+        wrap.className = 'dm-overlay-menu';
+        wrap.onclick = function (e) { if (e.target === wrap) wrap.remove(); };
+        wrap.innerHTML = '<div class="dm-menu" style="max-width:420px;text-align:left;">'
+            + '<h3>Dial from your phone</h3>'
+            + '<div style="font-size:14px;line-height:1.7;color:var(--text-secondary,#a2a3b4);">'
+            + 'Laptop can\'t do calls? Use the phone as the handset:'
+            + '<ol style="margin:10px 0 14px;padding-left:20px;">'
+            + '<li>On your phone, open <b style="color:#fff;">stiloaipartners.com/dial</b></li>'
+            + '<li>Sign in once (same login as this dashboard)</li>'
+            + '<li>Keep it open next to you</li>'
+            + '</ol>'
+            + 'Every time you press <span class="dm-key">SPACE</span> here, the phone shows one big CALL button for that lead — tap it and the Quo app opens pre-dialed. Hangups, transcripts and outcomes land here exactly the same, because the call still goes out on your Quo line.'
+            + '</div>'
+            + '<button class="dm-callbtn" style="width:100%;justify-content:center;margin-top:16px;" onclick="this.closest(\'.dm-overlay-menu\').remove()">Got it</button>'
+            + '</div>';
+        root.appendChild(wrap);
+    }
+
     function renderSummary() {
         clearTimers(false);
         var main = el('dmMain'), foot = el('dmFoot');
@@ -1331,6 +1362,6 @@
         notesChanged: notesChanged, saveContact: saveContact,
         jumpTo: jumpTo, legendKey: legendKey,
         callEnded: callEnded, redial: redial,
-        setScriptLang: setScriptLang
+        setScriptLang: setScriptLang, phoneInfo: phoneInfo
     };
 })(typeof window !== 'undefined' ? window : this);
