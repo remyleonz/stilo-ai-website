@@ -2283,6 +2283,7 @@
                 // so the nurture panel fills in after the drawer paints. Failing
                 // to load it must never blank the drawer.
                 loadNurturePanel(leadId, r);
+                loadLeadTimeline(leadId);
             } catch (e) {
                 body.innerHTML = '<div style="color:var(--red);">Failed: ' + escapeHtml(e.message) + '</div>';
             }
@@ -2627,6 +2628,72 @@
             scriptLang = v;
             if (window.__lastProspectData) loadColdCallScript(window.__lastProspectData);
         }
+        // ─── Activity timeline (parity with the admin drawer) ───────────────
+        async function loadLeadTimeline(leadId) {
+            var host = document.getElementById('sdrTimelineBody');
+            if (!host) return;
+            var shortName = function (email) { return email ? String(email).split('@')[0] : 'system'; };
+            var STAGE_LABEL = { NEW:'New', CONTACTED:'Contacted', ENGAGED:'Engaged', QUALIFIED:'Qualified', MEETING_BOOKED:'Meeting booked', CLOSED_WON:'Closed — won', CLOSED_LOST:'Closed — lost' };
+            try {
+                var data = await fetchJSON('/api/prospects/timeline?id=' + encodeURIComponent(leadId));
+                var events = (data && data.events) || [];
+                if (!events.length) { host.innerHTML = '<span style="color:var(--text-tertiary);font-size:12px;">No activity yet.</span>'; return; }
+                host.innerHTML = events.map(function (e) {
+                    var when = e.ts ? new Date(e.ts).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York' }) : '';
+                    if (e.kind === 'stage') {
+                        var fromLabel = e.from_stage ? (STAGE_LABEL[e.from_stage] || e.from_stage) : null;
+                        var toLabel = STAGE_LABEL[e.to_stage] || e.to_stage;
+                        return '<div style="display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--border-medium);align-items:center;">'
+                            + '<span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;background:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,0.18);"></span>'
+                            + '<div style="flex:1;min-width:0;">'
+                              + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
+                                + '<span style="font-weight:700;color:var(--text-primary);font-size:12px;">' + (fromLabel ? 'Stage: ' + escapeHtml(fromLabel) + ' → ' + escapeHtml(toLabel) : 'Stage set to ' + escapeHtml(toLabel)) + '</span>'
+                                + '<span style="color:var(--text-tertiary);font-size:11px;white-space:nowrap;">' + escapeHtml(when) + '</span>'
+                              + '</div>'
+                              + '<div style="margin-top:3px;color:var(--text-tertiary);font-size:11px;">by ' + escapeHtml(shortName(e.changed_by)) + '</div>'
+                            + '</div></div>';
+                    }
+                    var iconColor, header, detail = '';
+                    if (e.kind === 'call') {
+                        iconColor = 'var(--purple-primary, #2563eb)';
+                        var arrow = e.direction === 'inbound' ? '↓ in' : '↑ out';
+                        header = arrow + ' · Call: ' + escapeHtml((e.outcome || 'no outcome').replace(/_/g,' ')) + ' · by ' + escapeHtml(shortName(e.logged_by));
+                        if (e.transcript_summary) detail = escapeHtml(String(e.transcript_summary).slice(0, 240));
+                    } else if (e.kind === 'message') {
+                        iconColor = '#0ea5e9';
+                        var marrow = e.direction === 'inbound' ? '↓ in' : '↑ out';
+                        header = marrow + ' · ' + (e.channel || 'message').toUpperCase() + (e.status ? ' · ' + escapeHtml(e.status.replace(/_/g,' ')) : '');
+                        var isEmail = (e.channel || '') === 'email';
+                        var toLine = e.to_address ? '<div style="margin-top:3px;font-size:11px;color:var(--text-tertiary);word-break:break-all;">to ' + escapeHtml(e.to_address) + (e.sent_by ? ' · by ' + escapeHtml(shortName(e.sent_by)) : '') + '</div>' : '';
+                        var subjLine = (isEmail && e.subject) ? '<div style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text-primary);">' + escapeHtml(e.subject) + '</div>' : '';
+                        var fullBody = e.body || e.body_preview || '';
+                        if (isEmail && /<[a-z][^>]*>/i.test(fullBody)) {
+                            fullBody = fullBody.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|tr|li|h[1-6])>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/\n{3,}/g,'\n\n').trim();
+                        }
+                        var bodyBlock = '';
+                        if (fullBody && isEmail) {
+                            bodyBlock = '<details style="margin-top:5px;"><summary style="cursor:pointer;font-size:11px;color:var(--purple-primary,#2563eb);user-select:none;">View full email</summary>'
+                                + '<div style="margin-top:6px;padding:9px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;">' + escapeHtml(fullBody) + '</div></details>';
+                        } else if (fullBody) {
+                            bodyBlock = '<div style="margin-top:5px;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:var(--text-secondary);font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(fullBody) + '</div>';
+                        }
+                        detail = toLine + subjLine + bodyBlock;
+                    } else { return ''; }
+                    return '<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--border-medium);">'
+                        + '<span style="flex-shrink:0;width:8px;height:8px;border-radius:50%;background:' + iconColor + ';margin-top:6px;"></span>'
+                        + '<div style="flex:1;min-width:0;">'
+                          + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
+                            + '<span style="font-weight:600;color:var(--text-primary);">' + header + '</span>'
+                            + '<span style="color:var(--text-tertiary);font-size:11px;white-space:nowrap;">' + escapeHtml(when) + '</span>'
+                          + '</div>'
+                          + (detail ? '<div style="margin-top:3px;color:var(--text-secondary);font-size:11px;line-height:1.45;">' + detail + '</div>' : '')
+                        + '</div></div>';
+                }).join('');
+            } catch (e) {
+                host.innerHTML = '<span style="color:var(--text-tertiary);font-size:12px;">Could not load activity.</span>';
+            }
+        }
+
         async function loadColdCallScript(r) {
             const host = document.getElementById('sdrScriptBody');
             const metaEl = document.getElementById('sdrScriptMeta');
@@ -3090,6 +3157,16 @@
                       + '</div>')
                 + nurtureBlock
                 + historyHtml
+                // ── Activity timeline (parity with admin) — every call, stage
+                // change and SMS/email for this lead, directly under Call history
+                // and above the script so it never hides below the copy. Filled
+                // by loadLeadTimeline; #sdrTimelineBody found by id. (2026-09-17)
+                + '<div style="margin-top:22px;">'
+                + '<div class="section-title" style="font-size:14px;margin-bottom:10px;">Activity timeline</div>'
+                + '<div id="sdrTimelineBody" data-lead-id="' + escapeHtml(String(r.id)) + '" style="font-size:12px;">'
+                +   '<span style="color:var(--text-tertiary);">Loading…</span>'
+                + '</div>'
+                + '</div>'
                 // ── Cold-call script (filled by loadColdCallScript) ──
                 + '<div style="margin-top:22px;">'
                 + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
