@@ -10835,6 +10835,24 @@
                 + historyHtml
                 + '</div>'
 
+                // Activity timeline — moved directly under Call history (2026-09-17,
+                // Remy): it was below the ~30KB sales script, so reading the lead's
+                // event feed meant scrolling past the entire script. The feed itself
+                // is unchanged; loadLeadTimeline still fills #prospectTimelineBody by id.
+                // Activity timeline — the canonical event feed for this lead:
+                // every call, every stage transition (NEW → CONTACTED →
+                // ENGAGED → DNC etc.), every SMS in/out. Calls themselves
+                // appear in the Call history block above with full transcripts;
+                // this pane is the chronological lifecycle view, useful for
+                // answering "when did this lead get marked DNC?" or "how many
+                // touchpoints have we had?"
+                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-top:16px;">'
+                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">Activity timeline</h3>'
+                + '<div id="prospectTimelineBody" data-lead-id="' + escapeAdminHtml(d.id) + '" style="font-size:12px;">'
+                +   '<span style="color:var(--text-muted);">Loading…</span>'
+                + '</div>'
+                + '</div>'
+
                 // Meeting transcripts — sales-meeting summaries (Tactiq) + pasted
                 // transcripts, so the future sales agent learns from real calls.
                 + renderMeetingsSection(d)
@@ -10854,20 +10872,6 @@
                         + '<div id="prospectScriptMeta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>'
                       + '</div>'
                     : '')
-
-                // Activity timeline — the canonical event feed for this lead:
-                // every call, every stage transition (NEW → CONTACTED →
-                // ENGAGED → DNC etc.), every SMS in/out. Calls themselves
-                // appear in the Call history block above with full transcripts;
-                // this pane is the chronological lifecycle view, useful for
-                // answering "when did this lead get marked DNC?" or "how many
-                // touchpoints have we had?"
-                + '<div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-top:16px;">'
-                + '<h3 style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">Activity timeline</h3>'
-                + '<div id="prospectTimelineBody" data-lead-id="' + escapeAdminHtml(d.id) + '" style="font-size:12px;">'
-                +   '<span style="color:var(--text-muted);">Loading…</span>'
-                + '</div>'
-                + '</div>'
 
                 // Convert-to-client — visible only when stage hits
                 // MEETING_BOOKED or QUALIFIED. Links the cold lead to a row in
