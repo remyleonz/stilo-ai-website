@@ -145,87 +145,77 @@ function compose(lead, clientName) {
     const fn = corroboratedFirstName(lead);
     const local = LOCAL_ZIP3.includes(zip3(lead.address));
     const sender = process.env.STILO_SENDER_NAME || 'Remy';
-    // A/B by lead id, same idea as the SMS campaign so a lead always sees one
-    // arm and the two stay comparable. Arm A leads with WHAT WE CARRY, arm B
-    // leads with the direct-importer VALUE (Manuel + Miami parts and service).
+    // A/B by lead id so a lead always sees ONE arm and the two stay comparable.
+    // 2026-09-17 rewrite from call intel. High-ticket aesthetic gear (laser, RF
+    // microneedling, body contouring) sells on two levers, one per arm:
+    //   Arm A = DE-RISK the big purchase (fear). On a $15k+ machine the risk is
+    //     not what you pay, it is buying the wrong one or getting orphaned on
+    //     service. Manuel imports direct, says which earns its keep, parts from
+    //     Miami not a rep who retired (real: Pareen's Candela rep did exactly that).
+    //   Arm B = REVENUE CAPTURE (greed). The treatment clients ask for and get
+    //     referred out for is one machine away from being the owner's revenue.
+    // Both name laser + body contouring up front so the copy pulls toward the
+    // big deals, not an $800 unit. Never the words price/cost (preSendCheck).
     const arm = (Math.abs(Number(lead.id) || 0) % 2 === 0) ? 'A' : 'B';
-
-    // Naming real, broadly med-spa-relevant machines is the point: it tells the
-    // reader in one line what Blason is, which is the gap a bare "question about
-    // your equipment" left. Kept generic enough to fit the whole aesthetic ICP;
-    // no price, no link (both fail preSendCheck), no specific model refs.
-    const machinesEn = 'RF microneedling, HIFU, laser hair removal, hydrafacial skin systems, and body contouring';
-    const machinesEs = 'microneedling con radiofrecuencia, HIFU, depilacion laser, sistemas de hidrafacial y contorno corporal';
-    const showroomEn = 'Whatever you name, odds are it is already set up and running at our Miami showroom, and you can put your hands on it before deciding anything.';
-    const showroomEs = 'La que me diga, lo mas seguro es que ya esta montada y funcionando en nuestro showroom de Miami, y la puede probar usted antes de decidir nada.';
-    const carriesEn = 'Whatever you name, I will tell you straight whether we carry it and whether it is worth it for you.';
-    const carriesEs = 'La que me diga, le digo de frente si la tenemos y si de verdad le conviene.';
+    const showroomEn = 'The machines are set up and running at our Miami showroom, so you can put your hands on one before deciding anything.';
+    const showroomEs = 'Las maquinas estan montadas y funcionando en nuestro showroom de Miami, asi que puede probar una antes de decidir nada.';
+    const tailEn = local ? [showroomEn, ''] : [];
+    const tailEs = local ? [showroomEs, ''] : [];
 
     if (MODE === 'followup') {
-        // One bump, then silence: same question, one new concrete fact (the
-        // showroom or the Florida-wide reach), and an explicit out.
         if (es) {
-            return { arm: 'bump', subject: 're: una pregunta sobre sus equipos', body: [
+            return { arm: 'bump', subject: 're: sobre sus equipos', body: [
                 (fn ? 'Hola ' + fn + ',' : 'Hola,'), '',
                 'Le escribi la semana pasada y queria intentarlo una vez mas.', '',
-                (local ? showroomEs : 'Le vendemos equipos a spas por toda la Florida, no solo aqui en Miami.'), '',
-                'La pregunta sigue en pie: cual es la proxima maquina que quiere meter en su spa?', '',
+                'La pregunta sigue en pie: cual es el tratamiento que sus clientes piden y que hoy tiene que mandar a otro lado? Casi siempre esta a una maquina de ser su ingreso.', '',
+            ].concat(local ? [showroomEs, ''] : ['Manuel importa directo, laser, radiofrecuencia, contorno corporal, y le dice de frente cual le conviene.', '']).concat([
                 'Y si no le interesa, digamelo y no le vuelvo a escribir.',
-            ].join('\n') };
+            ]).join('\n') };
         }
-        return { arm: 'bump', subject: 're: question about your equipment', body: [
+        return { arm: 'bump', subject: 're: your equipment', body: [
             (fn ? 'Hi ' + fn + ',' : 'Hi,'), '',
             'I emailed you last week and figured it was worth one more try.', '',
-            (local ? showroomEn : 'We supply spas all over Florida, not just here in Miami.'), '',
-            'Same question as before: what is the next machine on your wishlist?', '',
+            'The question still stands: what is the treatment your clients keep asking for that you have to send them elsewhere for? That is usually one machine away from being your revenue.', '',
+        ].concat(local ? [showroomEn, ''] : ['Manuel imports direct, laser, RF microneedling, body contouring, and tells you straight which one is worth it.', '']).concat([
             'And if it is a no, just say so and I will not email you again.',
-        ].join('\n') };
+        ]).join('\n') };
     }
 
     const calledLine = (MODE === 'warm');
-    const opener = (whoLine) => (fn ? (es ? 'Hola ' + fn + ',' : 'Hi ' + fn + ',') : (es ? 'Hola,' : 'Hi,'));
+    const openEn = fn ? 'Hi ' + fn + ',' : 'Hi,';
+    const openEs = fn ? 'Hola ' + fn + ',' : 'Hola,';
 
     if (es) {
-        const intro = calledLine
-            ? 'Soy ' + sender + ', de ' + clientName + ' en Miami. Llame a su negocio hace poco por el tema de los equipos.'
-            : 'Soy ' + sender + ', de ' + clientName + ' en Miami.';
+        const lead1 = calledLine ? 'Gracias por atender mi llamada.'
+            : 'Soy ' + sender + ', de ' + clientName + ' en Miami. Importamos equipos de estetica directo de fabrica.';
         if (arm === 'A') {
-            return { arm: 'A', subject: (calledLine ? 'llame a ' + String(lead.name || 'su negocio').slice(0, 40) : 'una pregunta sobre sus equipos'), body: [
-                opener(), '',
-                intro + ' Somos importadores directos de equipos de estetica: ' + machinesEs + ', y los ponemos en spas por toda la Florida.', '',
-                'Una sola pregunta, sin catalogo: cual es la proxima maquina que quiere meter en su spa?', '',
-                (local ? showroomEs : carriesEs), '',
-                'Respondame con la maquina y yo me encargo del resto.',
-            ].join('\n') };
+            return { arm: 'A', subject: (calledLine ? 'despues de nuestra llamada' : 'sobre sus equipos de estetica'), body: [
+                openEs, '',
+                lead1 + ' En las maquinas grandes, un laser, radiofrecuencia con microagujas, contorno corporal, el riesgo nunca fue lo que paga. Es comprar la equivocada, o quedarse sin servicio cuando falla.', '',
+                'Manuel las importa directo de fabrica, asi que le dice de frente cual le rinde y cual no vale la pena, y las piezas y el servicio salen de Miami, no de un representante que ya se retiro.', '',
+            ].concat(tailEs).concat(['Cual maquina esta mas cerca de agregar? Yo le digo exactamente que hace falta.']).join('\n') };
         }
-        return { arm: 'B', subject: (calledLine ? 'llame a ' + String(lead.name || 'su negocio').slice(0, 40) : 'sobre sus equipos de estetica'), body: [
-            opener(), '',
-            intro + ' Importamos los equipos directo de fabrica, ' + machinesEs + ', y se los vendemos directo a los spas, sin intermediarios.', '',
-            'Eso importa por dos cosas: Manuel, el dueno, le dice cual maquina de verdad le sirve para lo que quiere ofrecer y cual no vale la pena, y las piezas y el servicio salen de Miami, en ingles o espanol, no de un call center afuera.', '',
-            'Asi que, una pregunta: cual es la proxima maquina en su lista de deseos?', '',
-            (local ? showroomEs : 'Respondame con la maquina y yo me encargo del resto.'),
-        ].join('\n') };
+        return { arm: 'B', subject: (calledLine ? 'una pregunta despues de la llamada' : 'el tratamiento que le piden'), body: [
+            openEs, '',
+            lead1 + ' Una pregunta: cual es el tratamiento que sus clientes siempre piden y que usted tiene que mandar a otro lado?', '',
+            'Casi siempre esta a una maquina de ser su ingreso en vez de una referencia que se va por la puerta, y las de alto valor, laser y contorno corporal, se pagan solas mas rapido de lo que uno cree. Manuel las importa directo, asi que le muestra la maquina exacta y que hace falta para traerla a su spa.', '',
+        ].concat(tailEs).concat(['Digame cual tratamiento es y yo me encargo del resto.']).join('\n') };
     }
 
-    const intro = calledLine
-        ? "I'm " + sender + ' with ' + clientName + ' in Miami. I called ' + String(lead.name || 'your business').slice(0, 40) + ' recently about the equipment side of things.'
-        : "I'm " + sender + ' with ' + clientName + ' in Miami.';
+    const lead1 = calledLine ? 'Thanks for taking my call.'
+        : "I'm " + sender + ' with ' + clientName + ' in Miami. We import aesthetic machines direct from the factory.';
     if (arm === 'A') {
-        return { arm: 'A', subject: (calledLine ? 'called you the other day' : 'question about your equipment'), body: [
-            opener(), '',
-            intro + ' We are a direct importer of aesthetic machines: ' + machinesEn + ', and we put them in med spas all over Florida.', '',
-            'One question instead of a catalog: what is the next machine on your wishlist?', '',
-            (local ? showroomEn : carriesEn), '',
-            'Just reply with the machine and I will take it from there.',
-        ].join('\n') };
+        return { arm: 'A', subject: (calledLine ? 'after our call' : 'about your aesthetic equipment'), body: [
+            openEn, '',
+            lead1 + ' On the big machines, a laser, RF microneedling, body contouring, the risk was never what you pay. It is buying the wrong one, or getting stuck with no service when it fails.', '',
+            'Manuel imports them direct from the factory, so he tells you straight which one earns its keep and which is not worth it, and parts and service come out of Miami, not a rep who retired on you.', '',
+        ].concat(tailEn).concat(['What machine are you closest to adding? I will have Manuel tell you exactly what it takes.']).join('\n') };
     }
-    return { arm: 'B', subject: (calledLine ? 'called you the other day' : 'about your aesthetic equipment'), body: [
-        opener(), '',
-        intro + ' We import aesthetic machines direct from the factory, ' + machinesEn + ', and sell them straight to med spas with no middleman.', '',
-        'That matters for two reasons: Manuel, the owner, will tell you which machine actually fits what you want to offer and which one is not worth it, and parts and service come out of Miami in English or Spanish, not a call center overseas.', '',
-        'So, one question: what is the next machine on your wishlist?', '',
-        (local ? showroomEn : 'Just reply with the machine and I will take it from there.'),
-    ].join('\n') };
+    return { arm: 'B', subject: (calledLine ? 'one question after our call' : 'the treatment your clients keep asking for'), body: [
+        openEn, '',
+        lead1 + ' One question: what is the one treatment your clients keep asking for that you have to send them somewhere else for?', '',
+        'That is usually one machine away from being your revenue instead of a referral out the door, and the high-ticket ones, laser and body contouring, pay for themselves faster than most owners expect. Manuel imports them direct, so he will show you the exact machine and what it takes to bring it in-house.', '',
+    ].concat(tailEn).concat(['Tell me which treatment it is and I will take it from there.']).join('\n') };
 }
 
 /** Correctness checks that must hold for every generated body. */
