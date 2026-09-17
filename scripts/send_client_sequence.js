@@ -266,9 +266,16 @@ async function main() {
     const rBounced = (recent || []).filter(function (m) { return m.bounced_at; }).length;
     const rRate = rSent ? (rBounced / rSent) : 0;
     console.log('breaker:  ' + rBounced + '/' + rSent + ' bounced in the last 72h (' + (rRate * 100).toFixed(1) + '%)');
-    if (SEND && rSent >= 10 && rRate >= 0.08) {
+    // followup mode ONLY re-mails addresses that received email 1 and did NOT
+    // bounce, so it cannot be the source of the trailing bounce and is exempt
+    // from the aggregate breaker. The breaker exists to stop NEW bad lists
+    // (cold/warm lanes), not proven-deliverable follow-ups. 2026-09-17.
+    if (SEND && MODE !== 'followup' && rSent >= 10 && rRate >= 0.08) {
         console.error('REFUSING to send: trailing bounce rate is at or above 8%. Fix the list before feeding the domain more of it.');
         process.exit(2);
+    }
+    if (MODE === 'followup' && rRate >= 0.08) {
+        console.log('note: trailing bounce is ' + (rRate * 100).toFixed(1) + '% but followup only re-mails non-bounced addresses, so it proceeds.');
     }
 
     // Lane 1 is the proven pool: a real person's address, verified domain,

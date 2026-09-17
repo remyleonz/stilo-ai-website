@@ -430,6 +430,25 @@ module.exports = async function handler(req, res) {
     const bouncedLeads = new Set((bounces || []).map(function (r) { return r.lead_id; }));
     const bouncedAddrs = new Set((bounces || []).map(function (r) { return String(r.to_address || '').toLowerCase(); }));
 
+    // ---- BOUNCE BREAKER (2026-09-17) ------------------------------------
+    // Same protection Blason's client sequence has. The STILO cold lane had
+    // none: it ran at 7-10% bounce with nothing to stop it, quietly degrading
+    // the domain that also carries booking confirmations. Look at the trailing
+    // 72h of seq_ sends; 10+ sends at 8%+ bounce means the list is hurting the
+    // domain faster than the volume helps, and the run refuses to start.
+    const breakerSince = new Date(Date.now() - 72 * 3600 * 1000).toISOString();
+    const { data: recentSeq } = await sb.from('lead_messages')
+        .select('bounced_at').like('variant', 'seq_%').gte('sent_at', breakerSince).limit(5000);
+    const bSent = (recentSeq || []).length;
+    const bBounced = (recentSeq || []).filter(function (m) { return m.bounced_at; }).length;
+    const bRate = bSent ? (bBounced / bSent) : 0;
+    if (bSent >= 10 && bRate >= 0.08) {
+        return res.status(200).json({
+            ok: true, sent: 0, skipped: 'bounce_breaker',
+            note: 'Trailing 72h bounce ' + (bRate * 100).toFixed(1) + '% (' + bBounced + '/' + bSent + ') at or above 8%. Fix the list before feeding the domain more of it.',
+        });
+    }
+
     const { data: sup } = await pub.from('lcr_suppressions').select('email').limit(10000);
     const suppressed = new Set((sup || []).map(function (r) { return String(r.email || '').toLowerCase(); }));
 
