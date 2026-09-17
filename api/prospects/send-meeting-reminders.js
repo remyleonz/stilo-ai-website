@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
         .split(',').map(function (s) { return parseInt(s, 10); }).filter(function (n) { return !isNaN(n); });
 
     let q = sb.from('leads')
-        .select('id,name,owner_name,owner_email,email,owner_phone,phone,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_booked_by_sdr,client_id,' + LANG_COL)
+        .select('id,name,owner_name,owner_email,email,owner_phone,phone,bounced_at,meeting_scheduled_at,meeting_meet_link,meeting_event_link,meeting_booked_by_sdr,client_id,' + LANG_COL)
         .is('meeting_reminder_sent_at', null)
         .not('meeting_scheduled_at', 'is', null);
     if (explicitIds.length) {
@@ -151,12 +151,22 @@ module.exports = async function handler(req, res) {
 
         let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
         if (email) {
-            const eg = await guardOutbound(ld.id, 'email', body, reminderSubject);
-            if (!eg.ok) {
-                console.error('[send-meeting-reminders] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
-                er = { skip: eg.reason, blocked: true };
+            // Bounce guard (2026-09-17): a booked lead whose address already
+            // bounced kept getting confirmation, address and reminder emails,
+            // each one bouncing again and landing a failure notice in Remy's
+            // inbox (Chanel Studio). Skip the email leg for a dead address; the
+            // SMS reminder still carries the time and the link.
+            const bg = await require('./_email_guard').canSend({ email: email, leadId: ld.id, leadBouncedAt: ld.bounced_at });
+            if (!bg.ok) {
+                er = { skip: bg.reason, blocked: true };
             } else {
-                er = await sendEmail(email, reminderSubject, body);
+                const eg = await guardOutbound(ld.id, 'email', body, reminderSubject);
+                if (!eg.ok) {
+                    console.error('[send-meeting-reminders] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
+                    er = { skip: eg.reason, blocked: true };
+                } else {
+                    er = await sendEmail(email, reminderSubject, body);
+                }
             }
         }
         if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });

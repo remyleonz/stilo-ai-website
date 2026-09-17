@@ -130,16 +130,23 @@ async function sendConfirmationForLead(sb, pub, ld, opts) {
 
     let er = { skip: 'no_email' }, sr = { skip: 'no_phone' };
     if (email) {
-        // Email has no provider-side dedupe. Same backstop the SMS path gets:
-        // refuse a repeat subject to the same lead inside 24h. This is also what
-        // stops the inline send and the cron both mailing the same prospect if
-        // the stamp ever fails to land.
-        const eg = await guardOutbound(ld.id, 'email', body, subject);
-        if (!eg.ok) {
-            console.error('[confirmation] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
-            er = { skip: eg.reason, blocked: true };
+        // Bounce guard (2026-09-17): never re-mail an address that already
+        // bounced. The first confirmation goes (bounced_at is null at booking);
+        // once it bounces, the follow-up address/reminder confirmations stop
+        // instead of generating another failure notice. SMS still delivers.
+        const bg = await require('./_email_guard').canSend({ email: email, leadId: ld.id, leadBouncedAt: ld.bounced_at });
+        if (!bg.ok) {
+            er = { skip: bg.reason, blocked: true };
         } else {
-            er = await sendTransactional({ to: email, subject: subject, text: body, replyTo: REPLY_TO, headers: unsubHeaders(email) });
+            // Email has no provider-side dedupe. Same backstop the SMS path gets:
+            // refuse a repeat subject to the same lead inside 24h.
+            const eg = await guardOutbound(ld.id, 'email', body, subject);
+            if (!eg.ok) {
+                console.error('[confirmation] EMAIL BLOCKED lead=' + ld.id + ' reason=' + eg.reason);
+                er = { skip: eg.reason, blocked: true };
+            } else {
+                er = await sendTransactional({ to: email, subject: subject, text: body, replyTo: REPLY_TO, headers: unsubHeaders(email) });
+            }
         }
     }
     if (phone) sr = await sendSms(fromLine, phone, sms, { leadId: ld.id });
@@ -204,7 +211,7 @@ async function sendConfirmationForLead(sb, pub, ld, opts) {
 }
 
 module.exports = { sendConfirmationForLead, CONFIRM_LEAD_COLS: [
-    'id', 'name', 'address', 'owner_name', 'owner_email', 'email', 'owner_phone', 'phone',
+    'id', 'name', 'address', 'owner_name', 'owner_email', 'email', 'owner_phone', 'phone', 'bounced_at',
     'pitch_agent', 'matched_product_name', 'meeting_scheduled_at',
     'meeting_booked_by_sdr', 'meeting_booked_at',
     'confirmation_email_subject', 'confirmation_email_body',
