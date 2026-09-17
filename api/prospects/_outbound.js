@@ -459,8 +459,8 @@ function fallbackBody(lead, step, sender, variant, campaign) {
         }
         if (step === 1) {
             return variant === 'B'
-                ? hi + ', ' + sender.first_name + ' here from ' + brand + '. we have the machines set up and running in miami. worth a look?'
-                : hi + ', ' + sender.first_name + ' here from ' + brand + '. what treatment are your clients asking for that you cannot do right now?';
+                ? hi + ', ' + sender.first_name + ' here from ' + brand + '. what treatment do your clients keep wanting that you send elsewhere?'
+                : hi + ', ' + sender.first_name + ' here from ' + brand + '. what machine are you closest to adding? i can tell you straight what it takes.';
         }
         if (step === 2) {
             return 'the owner imports the machines himself, so he will tell you straight which one fits that and which one is not worth it. want me to set up a short call with him?';
@@ -492,6 +492,11 @@ function fallbackBody(lead, step, sender, variant, campaign) {
  * same variant.
  */
 function curatedSms(lead, step, sender, variant, campaign, es) {
+    // SMS is not email. Short, one idea, one question, texting register. No real
+    // person writes a paragraph in a text (Remy, 2026-09-17). Arm A = which
+    // machine / de-risk, Arm B = the treatment they refer out / revenue, same
+    // two levers as the email arms but stripped to one line. Sender named on
+    // step 1 only. No price, no link, no em dash.
     const n = ((sender && sender.first_name) || 'remy').toLowerCase();
     const vf = verifiedFirstNameOf(lead);
     const first = vf ? String(vf).toLowerCase() : null;
@@ -501,52 +506,49 @@ function curatedSms(lead, step, sender, variant, campaign, es) {
         // Blason Spa Equipment. Same banks as scripts/blason_copy_templates.js.
         if (step === 1) {
             const A_EN = [
-                hi + ', ' + n + ' here with blason spa equipment in miami, i called you the other day. quick one: what\'s the next machine on your wishlist?',
-                hi + ', ' + n + ' with blason spa equipment in miami, tried you by phone the other day. curious, what\'s the oldest machine in your room right now?',
-                hi + ', ' + n + ' here from blason spa equipment in miami, i called the other day. anything new coming for you guys, a new service or a second room?',
+                hi + ', ' + n + ' from blason spa equipment in miami. what machine are you closest to adding? i can tell you straight what it takes.',
+                hi + ', ' + n + ' with blason in miami. next machine you\'d add, laser, RF, body contouring? i\'ll tell you what fits.',
             ];
             const A_ES = [
-                hi + ', soy ' + n + ' de blason spa equipment en miami, los llame hace unos dias. una pregunta: cual es la proxima maquina en su lista de deseos?',
-                hi + ', soy ' + n + ' de blason spa equipment en miami, intente llamarlos hace poco. cual es la maquina mas vieja que tienen en cabina ahora?',
+                hi + ', soy ' + n + ' de blason spa equipment en miami. cual maquina esta mas cerca de agregar? le digo de frente que hace falta.',
+                hi + ', soy ' + n + ' de blason en miami. que maquina agregaria, laser, RF, contorno? le digo cual le sirve.',
             ];
             const B_EN = [
-                hi + ', ' + n + ' here with blason spa equipment in miami, i called you the other day. our machines are set up and running at the showroom in miami so you can put your hands on them before deciding anything. worth a look?',
-                hi + ', ' + n + ' from blason spa equipment in miami, tried to reach you by phone the other day. the machines are running live at our miami showroom, you can try them before deciding anything. worth a look?',
+                hi + ', ' + n + ' from blason spa equipment in miami. what treatment do your clients keep wanting that you send elsewhere?',
+                hi + ', ' + n + ' with blason in miami. any treatment your clients want that you can\'t offer yet? usually one machine from your own revenue.',
             ];
             const B_ES = [
-                hi + ', soy ' + n + ' de blason spa equipment en miami, los llame hace unos dias. las maquinas estan montadas y funcionando en nuestro showroom de miami, las puede probar antes de decidir nada. vale la pena una visita?',
+                hi + ', soy ' + n + ' de blason spa equipment en miami. que tratamiento le piden sus clientes que hoy manda a otro lado?',
             ];
             const pool = variant === 'A' ? (es ? A_ES : A_EN) : (es ? B_ES : B_EN);
             return pool[rot % pool.length];
         }
         if (step === 2) {
             return es
-                ? hi + ', gracias por responder. version corta: equipos de estetica y contorno corporal, laser, faciales, body sculpting. manuel, el dueno de blason aqui en miami, los importa el mismo y le dice directo cual le sirve. cual es la proxima maquina en su lista de deseos?'
-                : hi + ', thanks for getting back. short version: aesthetic and body contouring equipment, lasers, facials, body sculpting. manuel, the owner of blason here in miami, imports them himself, so he tells you straight which one fits. what\'s the next machine on your wishlist?';
+                ? hi + ', gracias. manuel los importa directo, laser, RF, contorno corporal, y le dice cual le sirve. cual agregaria primero?'
+                : hi + ', appreciate it. manuel imports these direct, laser, RF, body contouring, tells you straight which fits. what would you add first?';
         }
         return es
             ? 'perfecto. le puedo llamar de este numero en unos minutos?'
             : 'perfect. ok if i call you from this number in a few minutes?';
     }
-    // STILO. Arm A was retired 2026-08-20 (it asserted a call that often never
-    // reached the owner), so both arms get the honest opener.
+    // STILO. Short too. Arm A retired 2026-08-20; both arms get the honest opener.
     const topic = (campaign && campaign.topic_override)
-        || (es ? 'conseguirle mas reuniones de venta agendadas' : 'getting more booked sales meetings on your calendar');
+        || (es ? 'mas reuniones de venta agendadas' : 'getting you more booked sales meetings');
     if (step === 1) {
         return es
-            ? hi + ', soy ' + n + '. hemos hablado antes o me estoy confundiendo? era sobre ' + topic + '.'
+            ? hi + ', soy ' + n + '. hemos hablado antes o me confundo? era sobre ' + topic + '.'
             : hi + ', ' + n + ' here. have we spoken before or am i misremembering? was about ' + topic + '.';
     }
     if (step === 2) {
         return es
-            ? 'gracias por responder. version corta: encontramos las empresas de su mercado que necesitan lo que usted hace y le ponemos las que estan listas en el calendario como reuniones agendadas. usted solo llega y cierra. podria manejar mas trabajo ahora mismo si llegara?'
-            : 'appreciate you getting back. short version: we find the companies in your market that need what you do and put the ready ones on your calendar as booked meetings. you just show up and close. could you handle more work right now if it came in?';
+            ? 'gracias. encontramos empresas locales que necesitan lo que usted hace y se las agendamos. usted solo cierra. podria con mas trabajo ahora?'
+            : 'appreciate it. we find local companies that need what you do and book them onto your calendar. you just close. could you take on more work right now?';
     }
     return es
         ? 'perfecto. le puedo llamar de este numero en unos minutos?'
         : 'perfect. ok if i give you a quick call from this number in a few minutes?';
 }
-
 function generateStepBody(lead, campaign, step, sender, variant) {
     // Arm B only exists for step 1: the opener is what the test is about, and
     // splitting later steps too would confound the result (you could no longer

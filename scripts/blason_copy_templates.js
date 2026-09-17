@@ -39,22 +39,20 @@ const repFirst = rep => rep && rep.startsWith('remyleon') ? 'remy' : rep && rep.
 
 // hi(name) — verified first name only, else plain "hey"/"hola".
 const A_EN = [
-    (hi, n) => `${hi}, ${n} here with blason spa equipment in miami, i called you the other day. quick one: what's the next machine on your wishlist?`,
-    (hi, n) => `${hi}, ${n} with blason spa equipment in miami, tried you by phone the other day. curious, what's the oldest machine in your room right now?`,
-    (hi, n) => `${hi}, ${n} here from blason spa equipment in miami, i called the other day. anything new coming for you guys, a new service or a second room?`,
-];
+                hi + ', ' + n + ' from blason spa equipment in miami. what machine are you closest to adding? i can tell you straight what it takes.',
+                hi + ', ' + n + ' with blason in miami. next machine you\'d add, laser, RF, body contouring? i\'ll tell you what fits.',
+            ];
 const A_ES = [
-    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, los llamé hace unos días. una pregunta: ¿cuál es la próxima máquina en su lista de deseos?`,
-    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, intenté llamarlos hace poco. ¿cuál es la máquina más vieja que tienen en cabina ahora?`,
-    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, los llamé el otro día. ¿viene algo nuevo para ustedes, un servicio nuevo o una segunda cabina?`,
-];
+                hi + ', soy ' + n + ' de blason spa equipment en miami. cual maquina esta mas cerca de agregar? le digo de frente que hace falta.',
+                hi + ', soy ' + n + ' de blason en miami. que maquina agregaria, laser, RF, contorno? le digo cual le sirve.',
+            ];
 const B_EN = [
-    (hi, n) => `${hi}, ${n} here with blason spa equipment in miami, i called you the other day. our machines are set up and running at the showroom in miami so you can put your hands on them before deciding anything. worth a look?`,
-    (hi, n) => `${hi}, ${n} from blason spa equipment in miami, tried to reach you by phone the other day. the machines are running live at our miami showroom, you can try them before deciding anything. worth a look?`,
-];
+                hi + ', ' + n + ' from blason spa equipment in miami. what treatment do your clients keep wanting that you send elsewhere?',
+                hi + ', ' + n + ' with blason in miami. any treatment your clients want that you can\'t offer yet? usually one machine from your own revenue.',
+            ];
 const B_ES = [
-    (hi, n) => `${hi}, soy ${n} de blason spa equipment en miami, los llamé hace unos días. las máquinas están montadas y funcionando en nuestro showroom de miami, las puede probar antes de decidir nada. ¿vale la pena una visita?`,
-];
+                hi + ', soy ' + n + ' de blason spa equipment en miami. que tratamiento le piden sus clientes que hoy manda a otro lado?',
+            ];
 const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pueden hacer|asking for that/i;
 
 (async () => {
@@ -67,8 +65,8 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
         const lr = await fetch(`${URL_}/rest/v1/leads?id=eq.${t.lead_id}&select=primary_language`, { headers: H });
         const es = ((await lr.json())[0] || {}).primary_language === 'es';
         const body = es
-            ? 'gracias por responder. version corta: equipos de estetica y contorno corporal, laser, faciales, body sculpting. manuel, el dueno de blason aqui en miami, los importa el mismo y le dice directo cual le sirve. cual es la proxima maquina en su lista de deseos?'
-            : "thanks for getting back. short version: aesthetic and body contouring equipment, lasers, facials, body sculpting. manuel, the owner of blason here in miami, imports them himself, so he tells you straight which one fits. what's the next machine on your wishlist?";
+            ? 'gracias. manuel los importa directo, laser, RF, contorno corporal, y le dice cual le sirve. cual agregaria primero?'
+            : "appreciate it. manuel imports these direct, laser, RF, body contouring, tells you straight which fits. what would you add first?";
         const w = await fetch(`${URL_}/rest/v1/outbound_targets?id=eq.${t.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ step2_body: body, body_generated_at: new Date().toISOString() }) });
         console.log('step2 filled for target', t.id, w.ok ? 'ok' : w.status);
     }
@@ -77,10 +75,10 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
     // The tick sends step 2 (and later step 3) to 'sent' targets past the
     // cooldown; here we fill the body. Lighter than the reply pitch: a soft
     // check-in, then a final touch with an explicit out. No price, no link.
-    const nudge2En = 'hey, circling back on my note. is upgrading or adding a machine on your radar at all this year? no rush, just want to point you to the right one if so.';
-    const nudge2Es = 'hola, dandole seguimiento a mi mensaje. tiene pensado meter o cambiar alguna maquina este ano? sin apuro, solo para orientarlo bien.';
-    const nudge3En = 'last one from me. if it is not the right time just say so and i will stop. whenever it is, we import direct and manuel will tell you straight what fits your room.';
-    const nudge3Es = 'ultimo de mi parte. si no es el momento digamelo y no le escribo mas. cuando lo sea, importamos directo y manuel le dice de frente que le sirve.';
+    const nudge2En = 'hey, any machine on the radar to add this year? even a rough idea and i\'ll point you to the right one.';
+    const nudge2Es = 'hola, piensa agregar o cambiar alguna maquina este ano? aunque sea una idea y lo oriento.';
+    const nudge3En = 'last one from me. not the right time? no stress, just say so. whenever it is, we import direct and manuel tells you straight what fits.';
+    const nudge3Es = 'ultimo de mi parte. no es el momento? sin problema, digamelo. cuando lo sea, importamos directo y manuel le dice que le sirve.';
     for (const [step, bEn, bEs] of [[2, nudge2En, nudge2Es], [3, nudge3En, nudge3Es]]) {
         const col = 'step' + step + '_body';
         const rn = await fetch(`${URL_}/rest/v1/outbound_targets?campaign_id=eq.4&stage=eq.sent&step=eq.${step - 1}&first_reply_at=is.null&${col}=is.null&select=id,lead_id&order=id&limit=500`, { headers: H });
