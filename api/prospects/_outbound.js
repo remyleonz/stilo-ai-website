@@ -497,57 +497,70 @@ function curatedSms(lead, step, sender, variant, campaign, es) {
     // machine / de-risk, Arm B = the treatment they refer out / revenue, same
     // two levers as the email arms but stripped to one line. Sender named on
     // step 1 only. No price, no link, no em dash.
-    const n = ((sender && sender.first_name) || 'remy').toLowerCase();
+    // 2026-09-25 rewrite (Remy): texts must read like a person texting a
+    // business contact, not an outbound robot. Model: "Hey it's Austin from Pro
+    // Concrete, I just got your message. Is there anything I should know about
+    // your project before I give you a call? Oh and by the way, if you'd rather
+    // not receive texts, just reply stop." Sentence case, the rep's real name,
+    // why we're texting, ONE easy question, and the opt-out said like a person
+    // on the FIRST text (we had no opt-out line at all before this).
+    // Reply data behind the questions: the expansion question ("anything new
+    // coming, a new service or another room?") drew the only live buyer
+    // (Angel Aesthetics: new location, grand opening Oct 10). The "circling
+    // back" / "last one from me" nudges drew replies, but 13 of 13 were no.
+    const cap = (w) => w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+    const nRaw = ((sender && sender.first_name) || 'remy').toLowerCase();
+    const n = cap(nRaw);
     const vf = verifiedFirstNameOf(lead);
-    const first = vf ? String(vf).toLowerCase() : null;
-    const hi = es ? (first ? 'hola ' + first : 'hola') : (first ? 'hey ' + first : 'hey');
+    const first = vf ? cap(String(vf).toLowerCase()) : null;
+    const hi = es ? (first ? 'Hola ' + first : 'Hola') : (first ? 'Hey ' + first : 'Hey');
     const rot = Math.abs(Number(lead.id) || 0);
     if (campaign && campaign.client_id) {
         // Blason Spa Equipment. Same banks as scripts/blason_copy_templates.js.
         if (step === 1) {
             const A_EN = [
-                hi + ', ' + n + ' from blason spa equipment in miami. what machine are you closest to adding? i can tell you straight what it takes.',
-                hi + ', ' + n + ' with blason in miami. next machine you\'d add, laser, RF, body contouring? i\'ll tell you what fits.',
+                hi + ", it's " + n + " from Blason Spa Equipment, I called you the other day. Is there a machine you've been thinking about adding? Oh and if you'd rather not get texts from me, just reply stop.",
+                hi + ', ' + n + " from Blason Spa Equipment here, I called the other day. Anything new coming up for you guys, a new service or another room? And if texts aren't your thing, just reply stop.",
             ];
             const A_ES = [
-                hi + ', soy ' + n + ' de blason spa equipment en miami. cual maquina esta mas cerca de agregar? le digo de frente que hace falta.',
-                hi + ', soy ' + n + ' de blason en miami. que maquina agregaria, laser, RF, contorno? le digo cual le sirve.',
+                hi + ', es ' + n + ' de Blason Spa Equipment, le llamé el otro día. ¿Hay alguna máquina que ha estado pensando agregar? Y si prefiere que no le escriba por aquí, nada más responda stop.',
+                hi + ', ' + n + ' de Blason Spa Equipment, le llamé hace poco. ¿Viene algo nuevo para ustedes, un servicio nuevo u otra cabina? Si prefiere no recibir textos, responda stop y listo.',
             ];
             const B_EN = [
-                hi + ', ' + n + ' from blason spa equipment in miami. what treatment do your clients keep wanting that you send elsewhere?',
-                hi + ', ' + n + ' with blason in miami. any treatment your clients want that you can\'t offer yet? usually one machine from your own revenue.',
+                hi + ", it's " + n + " from Blason Spa Equipment. Random question since I called the other day, what's the oldest machine you've got running right now? If you'd rather I not text, just reply stop.",
+                hi + ', ' + n + " from Blason Spa Equipment here. Is there a treatment your clients keep asking about that you'd like to offer? Oh and if you'd rather not get texts, just reply stop.",
             ];
             const B_ES = [
-                hi + ', soy ' + n + ' de blason spa equipment en miami. que tratamiento le piden sus clientes que hoy manda a otro lado?',
+                hi + ', es ' + n + ' de Blason Spa Equipment. Una pregunta rápida desde que le llamé, ¿cuál es la máquina más vieja que tiene trabajando ahora? Si prefiere que no le escriba, responda stop.',
             ];
             const pool = variant === 'A' ? (es ? A_ES : A_EN) : (es ? B_ES : B_EN);
             return pool[rot % pool.length];
         }
         if (step === 2) {
             return es
-                ? hi + ', gracias. manuel los importa directo, laser, RF, contorno corporal, y le dice cual le sirve. cual agregaria primero?'
-                : hi + ', appreciate it. manuel imports these direct, laser, RF, body contouring, tells you straight which fits. what would you add first?';
+                ? 'Gracias por contestar. Manuel, el dueño, importa todo él mismo, así que le dice de frente cuál le sirve para su espacio. ¿Qué agregaría primero?'
+                : "Thanks for getting back to me. Manuel, the owner, imports everything himself, so he'll tell you straight which one fits your space. What would you add first?";
         }
         return es
-            ? 'perfecto. le puedo llamar de este numero en unos minutos?'
-            : 'perfect. ok if i call you from this number in a few minutes?';
+            ? 'Perfecto. ¿Le puedo llamar de este número en unos minutos?'
+            : 'Perfect. Ok if I give you a quick call from this number in a few minutes?';
     }
     // STILO. Short too. Arm A retired 2026-08-20; both arms get the honest opener.
     const topic = (campaign && campaign.topic_override)
-        || (es ? 'mas reuniones de venta agendadas' : 'getting you more booked sales meetings');
+        || (es ? 'más reuniones de venta agendadas' : 'getting you more booked sales meetings');
     if (step === 1) {
         return es
-            ? hi + ', soy ' + n + '. hemos hablado antes o me confundo? era sobre ' + topic + '.'
-            : hi + ', ' + n + ' here. have we spoken before or am i misremembering? was about ' + topic + '.';
+            ? hi + ', es ' + n + '. ¿Ya hablamos antes o lo estoy confundiendo? Era sobre ' + topic + '. Si prefiere no recibir textos, responda stop.'
+            : hi + ", it's " + n + '. Have we talked before or am I mixing you up with someone? It was about ' + topic + ". If you'd rather not get texts, just reply stop.";
     }
     if (step === 2) {
         return es
-            ? 'gracias. encontramos empresas locales que necesitan lo que usted hace y se las agendamos. usted solo cierra. podria con mas trabajo ahora?'
-            : 'appreciate it. we find local companies that need what you do and book them onto your calendar. you just close. could you take on more work right now?';
+            ? 'Gracias. Encontramos empresas locales que necesitan lo que usted hace y se las ponemos en su calendario. Usted solo cierra. ¿Podría con más trabajo ahora?'
+            : "Thanks. We find local companies that need what you do and put them on your calendar. You just close. Could you take on more work right now?";
     }
     return es
-        ? 'perfecto. le puedo llamar de este numero en unos minutos?'
-        : 'perfect. ok if i give you a quick call from this number in a few minutes?';
+        ? 'Perfecto. ¿Le puedo llamar de este número en unos minutos?'
+        : 'Perfect. Ok if I give you a quick call from this number in a few minutes?';
 }
 function generateStepBody(lead, campaign, step, sender, variant) {
     // Arm B only exists for step 1: the opener is what the test is about, and

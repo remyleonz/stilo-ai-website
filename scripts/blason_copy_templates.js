@@ -35,24 +35,27 @@ try {
 const URL_ = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_KEY;
 const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Accept-Profile': 'prospecting', 'Content-Profile': 'prospecting', 'Content-Type': 'application/json' };
 const DRY = process.argv.includes('--dry');
-const repFirst = rep => rep && rep.startsWith('remyleon') ? 'remy' : rep && rep.startsWith('aleb') ? 'alejandro' : 'jorge';
+const repFirst = rep => rep && rep.startsWith('remyleon') ? 'Remy' : rep && rep.startsWith('aleb') ? 'Alejandro' : 'Jorge';
 
-// hi(name) — verified first name only, else plain "hey"/"hola".
+// hi(name): verified first name only, else plain "Hey"/"Hola". Kept identical
+// to curatedSms in api/prospects/_outbound.js (2026-09-25 human-voice rewrite:
+// rep's real name, why we're texting, one easy question, opt-out said like a
+// person on the first text).
 const A_EN = [
-                (hi, n) => hi + ', ' + n + ' from blason spa equipment in miami. what machine are you closest to adding? i can tell you straight what it takes.',
-                (hi, n) => hi + ', ' + n + ' with blason in miami. next machine you\'d add, laser, RF, body contouring? i\'ll tell you what fits.',
-            ];
+    (hi, n) => hi + ", it's " + n + " from Blason Spa Equipment, I called you the other day. Is there a machine you've been thinking about adding? Oh and if you'd rather not get texts from me, just reply stop.",
+    (hi, n) => hi + ', ' + n + " from Blason Spa Equipment here, I called the other day. Anything new coming up for you guys, a new service or another room? And if texts aren't your thing, just reply stop.",
+];
 const A_ES = [
-                (hi, n) => hi + ', soy ' + n + ' de blason spa equipment en miami. cual maquina esta mas cerca de agregar? le digo de frente que hace falta.',
-                (hi, n) => hi + ', soy ' + n + ' de blason en miami. que maquina agregaria, laser, RF, contorno? le digo cual le sirve.',
-            ];
+    (hi, n) => hi + ', es ' + n + ' de Blason Spa Equipment, le llamé el otro día. ¿Hay alguna máquina que ha estado pensando agregar? Y si prefiere que no le escriba por aquí, nada más responda stop.',
+    (hi, n) => hi + ', ' + n + ' de Blason Spa Equipment, le llamé hace poco. ¿Viene algo nuevo para ustedes, un servicio nuevo u otra cabina? Si prefiere no recibir textos, responda stop y listo.',
+];
 const B_EN = [
-                (hi, n) => hi + ', ' + n + ' from blason spa equipment in miami. what treatment do your clients keep wanting that you send elsewhere?',
-                (hi, n) => hi + ', ' + n + ' with blason in miami. any treatment your clients want that you can\'t offer yet? usually one machine from your own revenue.',
-            ];
+    (hi, n) => hi + ", it's " + n + " from Blason Spa Equipment. Random question since I called the other day, what's the oldest machine you've got running right now? If you'd rather I not text, just reply stop.",
+    (hi, n) => hi + ', ' + n + " from Blason Spa Equipment here. Is there a treatment your clients keep asking about that you'd like to offer? Oh and if you'd rather not get texts, just reply stop.",
+];
 const B_ES = [
-                (hi, n) => hi + ', soy ' + n + ' de blason spa equipment en miami. que tratamiento le piden sus clientes que hoy manda a otro lado?',
-            ];
+    (hi, n) => hi + ', es ' + n + ' de Blason Spa Equipment. Una pregunta rápida desde que le llamé, ¿cuál es la máquina más vieja que tiene trabajando ahora? Si prefiere que no le escriba, responda stop.',
+];
 const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pueden hacer|asking for that/i;
 
 (async () => {
@@ -65,8 +68,8 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
         const lr = await fetch(`${URL_}/rest/v1/leads?id=eq.${t.lead_id}&select=primary_language`, { headers: H });
         const es = ((await lr.json())[0] || {}).primary_language === 'es';
         const body = es
-            ? 'gracias. manuel los importa directo, laser, RF, contorno corporal, y le dice cual le sirve. cual agregaria primero?'
-            : "appreciate it. manuel imports these direct, laser, RF, body contouring, tells you straight which fits. what would you add first?";
+            ? 'Gracias por contestar. Manuel, el dueño, importa todo él mismo, así que le dice de frente cuál le sirve para su espacio. ¿Qué agregaría primero?'
+            : "Thanks for getting back to me. Manuel, the owner, imports everything himself, so he'll tell you straight which one fits your space. What would you add first?";
         const w = await fetch(`${URL_}/rest/v1/outbound_targets?id=eq.${t.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ step2_body: body, body_generated_at: new Date().toISOString() }) });
         console.log('step2 filled for target', t.id, w.ok ? 'ok' : w.status);
     }
@@ -75,10 +78,12 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
     // The tick sends step 2 (and later step 3) to 'sent' targets past the
     // cooldown; here we fill the body. Lighter than the reply pitch: a soft
     // check-in, then a final touch with an explicit out. No price, no link.
-    const nudge2En = 'hey, any machine on the radar to add this year? even a rough idea and i\'ll point you to the right one.';
-    const nudge2Es = 'hola, piensa agregar o cambiar alguna maquina este ano? aunque sea una idea y lo oriento.';
-    const nudge3En = 'last one from me. not the right time? no stress, just say so. whenever it is, we import direct and manuel tells you straight what fits.';
-    const nudge3Es = 'ultimo de mi parte. no es el momento? sin problema, digamelo. cuando lo sea, importamos directo y manuel le dice que le sirve.';
+    // Nudges drew replies but 13 of 13 were a no (2026-09-25 read). Keep the
+    // permission to say no, drop the sales register.
+    const nudge2En = "Hey, me again from Blason. No rush at all, just curious if a new machine is on the radar this year?";
+    const nudge2Es = 'Hola, soy yo otra vez de Blason. Sin apuro, solo curiosidad, ¿tiene pensado agregar alguna máquina este año?';
+    const nudge3En = "Last one from me, promise. If the timing's off, totally fine. Whenever you're ready, Manuel's showroom is right here in Miami.";
+    const nudge3Es = 'Último mensaje, se lo prometo. Si no es el momento, no pasa nada. Cuando sea el momento, el showroom de Manuel está aquí en Miami.';
     for (const [step, bEn, bEs] of [[2, nudge2En, nudge2Es], [3, nudge3En, nudge3Es]]) {
         const col = 'step' + step + '_body';
         const rn = await fetch(`${URL_}/rest/v1/outbound_targets?campaign_id=eq.4&stage=eq.sent&step=eq.${step - 1}&first_reply_at=is.null&${col}=is.null&select=id,lead_id&order=id&limit=500`, { headers: H });
@@ -104,7 +109,8 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
         const es = l.primary_language === 'es';
         const verified = ['verified', 'rep_confirmed'].includes(l.owner_name_verify_status);
         const first = verified && l.owner_name ? String(l.owner_name).trim().split(/\s+/)[0].toLowerCase() : null;
-        const hi = es ? (first ? `hola ${first}` : 'hola') : (first ? `hey ${first}` : 'hey');
+        const F = first ? first.charAt(0).toUpperCase() + first.slice(1) : null;
+        const hi = es ? (F ? `Hola ${F}` : 'Hola') : (F ? `Hey ${F}` : 'Hey');
         const n = repFirst(t.assigned_to);
         let body;
         if (t.variant === 'A') { const p = es ? A_ES : A_EN; body = p[ai % p.length](hi, n); ai++; }
