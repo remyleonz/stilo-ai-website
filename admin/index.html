@@ -7822,7 +7822,7 @@
                 dial: function (rows) { startDialerMode(rows); },
                 onCounts: function (c) {
                     var badge = document.getElementById('prospectPipelineBadge');
-                    var live = (c.booked || 0) + (c.today || 0) + (c.overdue || 0);
+                    var live = (c.hottest || 0) + (c.booked || 0) + (c.today || 0) + (c.overdue || 0);
                     if (badge) { badge.textContent = String(live); badge.style.display = live ? 'inline-block' : 'none'; }
                 }
             });
@@ -10297,9 +10297,9 @@
         }
         function startDialerMode(listRows) {
             if (!window.DIALER_MODE) return;
-            // On the Pipeline tab the top button dials today + overdue.
+            // On the Pipeline tab the top button dials hottest, then today, then overdue.
             if (!Array.isArray(listRows) && pipelineTabActive() && window.CLIENT_PIPELINE) {
-                listRows = CLIENT_PIPELINE.rows('today').concat(CLIENT_PIPELINE.rows('overdue'));
+                listRows = CLIENT_PIPELINE.rows('hottest').concat(CLIENT_PIPELINE.rows('today'), CLIENT_PIPELINE.rows('overdue'));
             }
             var isList = Array.isArray(listRows);
             DIALER_MODE.configure({

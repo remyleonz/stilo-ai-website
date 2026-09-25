@@ -27,8 +27,9 @@
     try { open = JSON.parse(localStorage.getItem('cp_open') || '{}') || {}; } catch (e) { open = {}; }
 
     var SECTIONS = [
+        { key: 'hottest',  title: 'Hottest',   color: '#f59e0b', note: 'Named a machine or a real plan. These first, always. Star a row to pin it here.', dial: true, primary: true, defaultOpen: true },
         { key: 'booked',   title: 'Booked',    color: 'var(--s-pos, #34d399)',    note: 'On the calendar. Confirm the morning of, brief Manuel, show up.', dial: false, defaultOpen: true },
-        { key: 'today',    title: 'Due today', color: 'var(--s-accent, #2563eb)', note: 'Your dial list, in the order of the windows the desks gave you.', dial: true, primary: true, defaultOpen: true },
+        { key: 'today',    title: 'Due today', color: 'var(--s-accent, #2563eb)', note: 'Everyone else due today, in the order of the windows the desks gave you.', dial: true, defaultOpen: true },
         { key: 'overdue',  title: 'Overdue',   color: 'var(--s-neg, #f87171)',    note: 'Promised and missed. Call it or give it a new date.', dial: true, defaultOpen: true },
         { key: 'upcoming', title: 'Upcoming',  color: 'var(--s-warn, #fbbf24)',   note: 'A real next step with a future date.', dial: false, defaultOpen: false },
         { key: 'no_plan',  title: 'No plan',   color: 'var(--s-text-3, #6e7083)', note: 'Had a pulse, nobody wrote the next step. Date it or close it.', dial: true, defaultOpen: false },
@@ -54,6 +55,14 @@
     /* Left column answers "when": a time today, how late, or a date. */
     function whenCell(r, key) {
         if (key === 'booked') return '<div class="cp-when" style="color:var(--s-pos,#34d399);">' + esc(shortDate(r.meeting_at)) + '<small>' + esc(timeOf(r.meeting_at)) + '</small></div>';
+        if (key === 'hottest') {
+            var t = ms(r.due_at), now = Date.now();
+            var sameDay = t && et(t, { dateStyle: 'short' }) === et(now, { dateStyle: 'short' });
+            if (!t) return '<div class="cp-when" style="color:#f59e0b;">\u2605</div>';
+            if (sameDay) return '<div class="cp-when" style="color:#f59e0b;">' + esc(timeOf(r.due_at)) + '<small>today</small></div>';
+            if (t < now) { var dl = daysAgo(r.due_at); return '<div class="cp-when" style="color:var(--s-neg,#f87171);">' + dl + 'd<small>late</small></div>'; }
+            return '<div class="cp-when" style="color:#f59e0b;">' + esc(shortDate(r.due_at)) + '</div>';
+        }
         if (key === 'today') return '<div class="cp-when" style="color:var(--s-accent-hi,#60a5fa);">' + esc(timeOf(r.due_at) || 'today') + '</div>';
         if (key === 'overdue') { var d = daysAgo(r.due_at); return '<div class="cp-when" style="color:var(--s-neg,#f87171);">' + (d != null ? d + 'd' : '') + '<small>late</small></div>'; }
         if (key === 'upcoming') return '<div class="cp-when" style="color:var(--s-warn,#fbbf24);">' + esc(shortDate(r.due_at)) + '</div>';
@@ -84,6 +93,7 @@
             +   '<div class="cp-meta">' + meta.join(' · ') + '</div>'
             + '</div>'
             + '<div class="cp-right"><span class="cp-phone">' + esc(phone) + '</span>'
+            +   (key !== 'closed' ? '<button class="cp-star' + (r.pinned ? ' on' : '') + '" data-pin="' + r.id + '" title="' + (r.pinned ? 'Unpin from Hottest' : 'Pin to Hottest') + '">' + (r.pinned ? '\u2605' : '\u2606') + '</button>' : '')
             +   ((key !== 'closed' && phone) ? '<button class="cp-callbtn" data-dial-from="' + key + ':' + r.id + '" title="Dial this list starting here">Call</button>' : '')
             + '</div>'
             + '</div>';
@@ -114,6 +124,7 @@
     function summary() {
         var c = data.counts || {};
         var cells = [
+            ['hottest', 'Hottest', c.hottest || 0, '#f59e0b'],
             ['booked', 'Booked', c.booked || 0, 'var(--s-pos,#34d399)'],
             ['today', 'Due today', c.today || 0, 'var(--s-accent-hi,#60a5fa)'],
             ['overdue', 'Overdue', c.overdue || 0, (c.overdue ? 'var(--s-neg,#f87171)' : 'var(--s-text-3,#6e7083)')],
@@ -129,7 +140,7 @@
 
     var CSS = ''
         + '.cp-wrap{font-size:13px;color:var(--s-text,#ecedf2)}'
-        + '.cp-sum{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--s-line,rgba(255,255,255,.055));border:1px solid var(--s-line,rgba(255,255,255,.055));border-radius:14px;overflow:hidden;margin-bottom:22px}'
+        + '.cp-sum{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:1px;background:var(--s-line,rgba(255,255,255,.055));border:1px solid var(--s-line,rgba(255,255,255,.055));border-radius:14px;overflow:hidden;margin-bottom:22px}'
         + '.cp-sumcell{background:var(--s-surface,#0e0e14);padding:16px 14px 13px;display:flex;flex-direction:column;gap:3px;cursor:pointer;text-decoration:none}'
         + '.cp-sumcell:hover{background:var(--s-raised,#14141c)}'
         + '.cp-sumnum{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}'
@@ -160,6 +171,7 @@
         + '.cp-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}'
         + '.cp-phone{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-size:12px;color:var(--s-text-2,#a2a3b4);white-space:nowrap}'
         + '.cp-callbtn{border:none;background:transparent;color:var(--s-accent-hi,#60a5fa);font-size:12px;font-weight:700;cursor:pointer;padding:0}'
+        + '.cp-star{border:none;background:transparent;color:var(--s-text-4,#4b4d5e);font-size:16px;line-height:1;cursor:pointer;padding:0}.cp-star:hover,.cp-star.on{color:#f59e0b}'
         + '.cp-empty{padding:18px 4px;color:var(--s-text-3,#6e7083)}'
         + '@media (max-width:760px){.cp-sum{grid-template-columns:repeat(4,minmax(0,1fr))}.cp-sumcell:nth-child(n+5){display:none}.cp-note{display:none}'
         +   '.cp-row{grid-template-columns:48px minmax(0,1fr)}.cp-right{grid-column:2;flex-direction:row;align-items:center;gap:14px}.cp-dial{padding:8px 14px}}';
@@ -190,6 +202,17 @@
             var list = rowsFor(parts[0]);
             var i = list.findIndex(function (r) { return String(r.id) === parts[1]; });
             if (cfg.dial) cfg.dial(i > 0 ? list.slice(i) : list);
+            return;
+        }
+        var p = t.closest('[data-pin]');
+        if (p) {
+            ev.stopPropagation();
+            var pid = Number(p.getAttribute('data-pin'));
+            var nowPinned = !p.classList.contains('on');
+            p.textContent = nowPinned ? '\u2605' : '\u2606'; p.classList.toggle('on', nowPinned);
+            Promise.resolve(cfg.fetchJson('/api/prospects/client-pipeline', { method: 'POST', body: JSON.stringify({ id: pid, pinned: nowPinned }) }))
+                .then(function () { return mount(cfg); })
+                .catch(function (e) { alert('Could not pin: ' + ((e && e.message) || 'unknown')); mount(cfg); });
             return;
         }
         var j = t.closest('[data-jump]');

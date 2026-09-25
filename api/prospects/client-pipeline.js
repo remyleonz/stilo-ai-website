@@ -3,6 +3,9 @@
  *
  * The client-account CRM view (Blason). Grouped server-side into the questions
  * a rep asks at 8am:
+ *   hottest  : rep-pinned (pinned_at). Named a machine or a concrete plan.
+ *              Always on top regardless of call window (2026-09-25: Pareen
+ *              and Health Carpenter were rows 22 and 29 when sorted by time).
  *   booked   : a visit or meeting is on the calendar.
  *   today    : a written next step is due today, or they texted us and are
  *              waiting on a human. This is today's dial list.
@@ -19,13 +22,29 @@
  * Admins see the whole client pool. A client_account SDR sees their client's
  * pool, assigned to them only.
  */
-const { assertAdminOrSdr, methodNotAllowed, resolveClientScope } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed, resolveClientScope, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+    if (req.method !== 'GET' && req.method !== 'POST') return methodNotAllowed(res, 'GET, POST');
     const gate = await assertAdminOrSdr(req, res);
     if (!gate.ok) return;
+
+    // POST { id, pinned } pins/unpins a lead into Hottest. SDRs only their own.
+    if (req.method === 'POST') {
+        const body = await readJsonBody(req);
+        const id = safeNumberId(body && body.id);
+        if (id == null) return res.status(400).json({ error: 'id_required' });
+        const sbw = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+            auth: { persistSession: false }, db: { schema: 'prospecting' },
+        });
+        let q = sbw.from('leads').update({ pinned_at: body.pinned ? new Date().toISOString() : null }).eq('id', id).not('client_id', 'is', null);
+        if (!gate.isAdmin) q = q.eq('assigned_to', String(gate.email || '').toLowerCase());
+        const { data, error } = await q.select('id,pinned_at');
+        if (error) return res.status(500).json({ error: 'pin_failed', detail: error.message });
+        if (!data || !data.length) return res.status(404).json({ error: 'not_found_or_not_yours' });
+        return res.status(200).json({ ok: true, id, pinned_at: data[0].pinned_at });
+    }
 
     let clientId = String((req.query || {}).client_id || '2efae6bf-69d8-4c4d-ac25-6a693db50f8b');
     let repEmail = null;
@@ -39,7 +58,7 @@ module.exports = async function handler(req, res) {
         auth: { persistSession: false }, db: { schema: 'prospecting' },
     });
 
-    const COLS = 'id,name,owner_name,phone,owner_phone,address,niche,category,stage,last_called_outcome,last_called_at,call_attempts,next_step,next_step_due,next_action_type,next_action_due_at,meeting_scheduled_at,rep_notes,primary_language,do_not_call,assigned_to,email,owner_email';
+    const COLS = 'id,name,owner_name,phone,owner_phone,address,niche,category,stage,last_called_outcome,last_called_at,call_attempts,next_step,next_step_due,next_action_type,next_action_due_at,meeting_scheduled_at,rep_notes,primary_language,do_not_call,assigned_to,email,owner_email,pinned_at';
     let leads = [], from = 0;
     for (;;) {
         let q = sb.from('leads').select(COLS).eq('client_id', clientId);
@@ -77,7 +96,7 @@ module.exports = async function handler(req, res) {
         const t = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s.replace(' ', 'T') + 'Z').getTime();
         return isNaN(t) ? null : t;
     };
-    const out = { booked: [], today: [], overdue: [], upcoming: [], no_plan: [], working: [], closed: [] };
+    const out = { hottest: [], booked: [], today: [], overdue: [], upcoming: [], no_plan: [], working: [], closed: [] };
     for (const l of leads) {
         const reply = replyBy[l.id] || null;
         const dueMs = asUtcMs(l.next_action_due_at)
@@ -94,9 +113,11 @@ module.exports = async function handler(req, res) {
             meeting_at: l.meeting_scheduled_at || null,
             rep: String(l.assigned_to || '').split('@')[0] || null,
             notes: String(l.rep_notes || '').slice(-400),
+            pinned: !!l.pinned_at,
             reply: reply ? { body: String(reply.first_reply_body || '').slice(0, 160), at: reply.first_reply_at } : null,
         };
         if (['CLOSED_WON', 'CLOSED_LOST'].includes(l.stage)) { out.closed.push(row); continue; }
+        if (l.pinned_at && !l.do_not_call) { out.hottest.push(row); continue; }
         // A dead SMS thread hides the lead UNLESS a human has since written a
         // dated next step (Minik: Brian replied warmly, target still 'dead').
         // Opt-outs stay hidden regardless: they also carry do_not_call.
@@ -115,6 +136,7 @@ module.exports = async function handler(req, res) {
     }
 
     const byDue = (a, b) => new Date(a.due_at || '2999-01-01') - new Date(b.due_at || '2999-01-01');
+    out.hottest.sort(byDue);
     out.booked.sort((a, b) => new Date(a.meeting_at || 0) - new Date(b.meeting_at || 0));
     out.today.sort(byDue);
     out.overdue.sort(byDue);
