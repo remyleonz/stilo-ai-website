@@ -2525,6 +2525,7 @@
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js"></script>
+    <script src="/assets/client-pipeline.js"></script>
     <script src="/assets/dial-companion.js"></script>
     <script>
         /* ===========================================================
@@ -7749,7 +7750,8 @@
             document.getElementById('prospectFilterBar').style.display = hideFilter ? 'none' : 'flex';
             // Dialer consumes the Cold Call queue only.
             var dialerBtn = document.getElementById('dialerStartBtn');
-            if (dialerBtn) dialerBtn.style.display = (name === 'callable') ? 'inline-flex' : 'none';
+            // Dialer works the Cold Call queue and the client Pipeline (today + overdue).
+            if (dialerBtn) dialerBtn.style.display = (name === 'callable' || name === 'pipeline') ? 'inline-flex' : 'none';
             if (name === 'callable')          loadProspectCallable();
             else if (name === 'emailable')    loadProspectEmailable();
             else if (name === 'callbacks')    loadProspectCallbacks();
@@ -7810,24 +7812,24 @@
                 + rows.map(function (r) { return cpRow(r, kind); }).join('')
                 + '</div>';
         }
-        async function loadClientPipeline() {
-            var host = document.getElementById('prospectTablePipeline');
-            if (!host) return;
-            host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading the pipeline...</div>';
-            try {
-                var d = await prospectFetchJSON('/api/prospects/client-pipeline');
-                var sec = d.sections || {};
-                var badge = document.getElementById('prospectPipelineBadge');
-                var live = (d.counts ? (d.counts.booked + d.counts.hot) : 0);
-                if (badge) { badge.textContent = String(live); badge.style.display = live ? 'inline-block' : 'none'; }
-                var html = cpSection('Booked', 'a visit or meeting is on the calendar. Confirm, prep Manuel, show up.', sec.booked || [], 'booked', '#10b981')
-                    + cpSection('Hot', 'live conversations with a next step. Work top to bottom, overdue first.', sec.hot || [], 'hot', '#f59e0b')
-                    + cpSection('Working', 'reached a human, no resolution logged yet. Callable pool.', sec.working || [], 'working', '#8b93a7')
-                    + cpSection('Closed', 'won and lost, for the record.', sec.closed || [], 'closed', '#5A7BE8');
-                host.innerHTML = html || '<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px;">Nothing in the pipeline yet. Book something.</div>';
-            } catch (e) {
-                host.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:13px;">Could not load the pipeline: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
-            }
+        function loadClientPipeline() {
+            if (!window.CLIENT_PIPELINE) return;
+            CLIENT_PIPELINE.mount({
+                host: 'prospectTablePipeline',
+                fetchJson: prospectFetchJSON,
+                escape: escapeAdminHtml,
+                openLead: function (id) { openProspectDrawer(id); },
+                dial: function (rows) { startDialerMode(rows); },
+                onCounts: function (c) {
+                    var badge = document.getElementById('prospectPipelineBadge');
+                    var live = (c.booked || 0) + (c.today || 0) + (c.overdue || 0);
+                    if (badge) { badge.textContent = String(live); badge.style.display = live ? 'inline-block' : 'none'; }
+                }
+            });
+        }
+        function pipelineTabActive() {
+            var h = document.getElementById('prospectTablePipeline');
+            return !!(h && h.style.display !== 'none' && h.offsetParent !== null);
         }
 
         /* ===== EMAILED (leads we've sent an email to) =====
@@ -10293,8 +10295,13 @@
                 return '<div style="color:var(--red);font-size:12px;">Could not load script: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
             }
         }
-        function startDialerMode() {
+        function startDialerMode(listRows) {
             if (!window.DIALER_MODE) return;
+            // On the Pipeline tab the top button dials today + overdue.
+            if (!Array.isArray(listRows) && pipelineTabActive() && window.CLIENT_PIPELINE) {
+                listRows = CLIENT_PIPELINE.rows('today').concat(CLIENT_PIPELINE.rows('overdue'));
+            }
+            var isList = Array.isArray(listRows);
             DIALER_MODE.configure({
                 escape: escapeAdminHtml,
                 fmtTime: fmtETp,
@@ -10330,9 +10337,10 @@
                 dncExtra: function (leadId) {
                     prospectFetchJSON('/api/prospects/dnc', { method: 'POST', body: JSON.stringify({ id: leadId }) }).catch(function () {});
                 },
-                onClose: function () { try { loadProspectCallable(); } catch (e) {} }
+                onClose: function () { try { if (isList) loadClientPipeline(); else loadProspectCallable(); } catch (e) {} }
             });
-            DIALER_MODE.open({ rows: Array.isArray(prospectState.rows) ? prospectState.rows.slice() : [] });
+            if (isList) DIALER_MODE.open({ rows: listRows, noCallbacks: true });
+            else DIALER_MODE.open({ rows: Array.isArray(prospectState.rows) ? prospectState.rows.slice() : [] });
         }
 
         /* ===== MEETING TRANSCRIPTS (Tactiq + manual) ===== */

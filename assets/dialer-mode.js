@@ -1316,6 +1316,9 @@
                 start(buildQueue(queueRows, (cb && cb.results) || [], scope));
             }).catch(function () { start(buildQueue(queueRows, [], scope)); });
         };
+        // A list session (Pipeline "Dial these") dials exactly that list: no
+        // callbacks from other boards riding in front.
+        if (opts && opts.noCallbacks) { start(buildQueue(rows, [], scope)); return; }
         if (rows.length) boot(rows);
         else if (cfg.fetchQueue) {
             Promise.resolve(cfg.fetchQueue()).then(function (r2) { boot(r2 || []); }).catch(function () { boot([]); });

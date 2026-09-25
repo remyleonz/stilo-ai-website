@@ -16,6 +16,7 @@
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js"></script>
+    <script src="/assets/client-pipeline.js"></script>
     <script src="/assets/dial-companion.js"></script>
     <style>
         :root {
@@ -635,6 +636,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Leads
             </button>
+            <button class="nav-item hidden" id="navPipeline" data-page="pipeline" onclick="switchPage('pipeline')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M6 12h12"/><path d="M10 18h4"/></svg>
+                Pipeline
+            </button>
             <button class="nav-item" data-page="performance" onclick="switchPage('performance')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Performance
@@ -1013,6 +1018,14 @@
         <!-- Phone handset tab: the shared companion (assets/dial-companion.js)
              mounted with the dashboard's own session — open this on your
              phone and every laptop SPACE lands here as one Call button. -->
+        <section class="page-content hidden" id="page-pipeline">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
+                <div style="font-size:13px;color:var(--text-secondary);">Everyone with a pulse on your account, in the order to call them.</div>
+                <button onclick="loadSdrPipeline()" style="border:1px solid var(--border-medium);background:transparent;color:var(--text-primary);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Refresh</button>
+            </div>
+            <div id="sdrPipelineHost"></div>
+        </section>
+
         <section class="page-content hidden" id="page-dialer">
             <div id="dialerCompanionHost" style="min-height:calc(100vh - 140px);display:flex;flex-direction:column;"></div>
         </section>
@@ -1278,6 +1291,9 @@
                     return;
                 }
                 CURRENT.sdr = sdr;
+                // Pipeline is the client-account CRM; STILO reps have no client pool.
+                var np = document.getElementById('navPipeline');
+                if (np) np.classList.toggle('hidden', sdr.sdr_type !== 'client_account');
                 renderSdrIdentity(sdr);
                 // Fill the impersonation banner with the SDR's real name once
                 // we've resolved them via /api/sdr/profile?sdr_id=<id>.
@@ -1358,7 +1374,7 @@
             document.getElementById('pageTitle').textContent = {
                 overview: 'Dashboard', leads: 'Leads', performance: 'Performance',
                 revenue: 'Revenue', messages: 'Messages', history: 'Call History',
-                dialer: 'Dialer'
+                dialer: 'Dialer', pipeline: 'Pipeline'
             }[page] || 'Dashboard';
 
             // The handset only polls while its tab is open.
@@ -1369,6 +1385,7 @@
             else if (page === 'revenue') loadRevenue();
             else if (page === 'messages') loadMessages();
             else if (page === 'history') loadHistory();
+            else if (page === 'pipeline') loadSdrPipeline();
             else if (page === 'dialer' && window.DIAL_COMPANION) {
                 DIAL_COMPANION.mount({ host: 'dialerCompanionHost', fetchJson: fetchJSON });
             }
@@ -3298,8 +3315,19 @@
                 return '<div style="color:var(--red);">Could not load script: ' + escapeHtml(e.message || 'unknown') + '</div>';
             }
         }
-        function startDialerMode() {
+        function loadSdrPipeline() {
+            if (!window.CLIENT_PIPELINE) return;
+            CLIENT_PIPELINE.mount({
+                host: 'sdrPipelineHost',
+                fetchJson: fetchJSON,
+                escape: escapeHtml,
+                openLead: function (id) { openLeadDrawer(id); },
+                dial: function (rows) { startDialerMode(rows); }
+            });
+        }
+        function startDialerMode(listRows) {
             if (!window.DIALER_MODE) return;
+            var isList = Array.isArray(listRows);
             DIALER_MODE.configure({
                 escape: escapeHtml,
                 fmtTime: fmtET,
@@ -3319,9 +3347,10 @@
                 openBooking: function (lead) {
                     openLeadDrawer(lead.id).then(function () { openBookingPicker(lead.id); });
                 },
-                onClose: function () { loadLeads(); loadOverview(); }
+                onClose: function () { if (isList) loadSdrPipeline(); else { loadLeads(); loadOverview(); } }
             });
-            DIALER_MODE.open({ rows: Array.isArray(STATE.currentRows) ? STATE.currentRows.slice() : [] });
+            if (isList) DIALER_MODE.open({ rows: listRows, noCallbacks: true });
+            else DIALER_MODE.open({ rows: Array.isArray(STATE.currentRows) ? STATE.currentRows.slice() : [] });
         }
 
         // ── Interested → callback scheduler ──
