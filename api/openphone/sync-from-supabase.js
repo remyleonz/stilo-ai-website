@@ -148,27 +148,23 @@ module.exports = async function handler(req, res) {
         && !!ownerName
     );
 
-    // ---- DELETE PATH: lead is no longer eligible but has a Quo contact ----
+    // ---- NOT-ELIGIBLE PATH: keep the contact, just keep its name current ----
+    // Per Remy 2026-09-25: every lead stays a named Quo contact so callbacks are
+    // never "unknown". This used to DELETE the contact whenever a lead left the
+    // hot tier (or booked, or went DNC), which silently erased ~3,500 names as
+    // reps logged calls. Leads with no contact yet are picked up by the daily
+    // scripts/sync_quo_contacts.js --scope missing run.
     if (!eligibleNow) {
         if (!lead.quo_contact_id) {
             return res.status(200).json({ ok: true, action: 'noop_not_eligible' });
         }
-        const reason = lead.do_not_call === true
-            ? 'do_not_call'
-            : (lead.last_called_outcome === 'booked_meeting'
-                ? 'booked_meeting'
-                : (tierLc !== 'hot' ? 'tier_demoted_to_' + (tierLc || 'unknown') : 'no_phone'));
-        const del = await openphoneFetch({
-            method: 'DELETE',
-            path: '/contacts/' + encodeURIComponent(lead.quo_contact_id)
+        const f = require('./_shared').quoContactFields(lead);
+        const up = await openphoneFetch({
+            method: 'PATCH',
+            path: '/contacts/' + encodeURIComponent(lead.quo_contact_id),
+            body: { defaultFields: { firstName: f.firstName, lastName: f.lastName, company: f.company, phoneNumbers: f.phoneNumbers } }
         });
-        // 404 means it was already deleted on Quo side — treat as success.
-        const ok = del.status < 400 || del.status === 404;
-        if (ok) {
-            await sb.from('leads').update({ quo_contact_id: null }).eq('id', lead.id);
-            return res.status(200).json({ ok: true, action: 'deleted', reason: reason, lead_id: lead.id });
-        }
-        return res.status(del.status).json({ error: 'quo_delete_failed', detail: del.json, reason: reason });
+        return res.status(200).json({ ok: up.status < 400, action: 'kept_named', lead_id: lead.id, status: up.status });
     }
 
     // ---- UPSERT PATH: lead IS eligible, ensure Quo contact reflects state ----
