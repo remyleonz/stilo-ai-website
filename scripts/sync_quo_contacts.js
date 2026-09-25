@@ -76,19 +76,32 @@ async function pageAll(table, select, filter) {
     console.log('scope', SCOPE, '| leads to sync', leads.length, DRY ? '(dry)' : '');
 
     const st = { patched: 0, created: 0, failed: 0, relinked: 0 }; const errs = [];
-    for (let i = 0; i < leads.length; i++) {
+    // 4 workers share the global throttle in quo(): ~7 req/s total, well under
+    // Quo's 10/s, but per-request latency no longer serialises the whole run.
+    let next = 0, done = 0, aborted = false;
+    async function worker() {
+        while (!aborted && next < leads.length) {
+            const i = next++;
+            await one(i);
+            done++;
+            if (done % 100 === 0) console.log(new Date().toISOString().slice(11, 19), done, '/', leads.length, JSON.stringify(st), 'retries', stats429);
+            if (st.failed > 50 && st.failed > (st.patched + st.created)) { aborted = true; console.log('ABORT: failure rate too high', JSON.stringify(errs.slice(0, 5))); }
+        }
+    }
+    async function one(i) {
         const l = leads[i]; const f = quoContactFields(l);
-        if (!f.phoneNumbers.length) { st.failed++; continue; }
+        if (!f.phoneNumbers.length) { st.failed++; return; }
         const fields = { firstName: f.firstName, lastName: f.lastName, company: f.company, phoneNumbers: f.phoneNumbers, emails: f.emails };
-        if (DRY) { if (i < 25) console.log(l.id, '->', f.firstName, '|', f.phoneNumbers.map(p => p.value).join(' ')); continue; }
+        if (DRY) { if (i < 25) console.log(l.id, '->', f.firstName, '|', f.phoneNumbers.map(p => p.value).join(' ')); return; }
         let id = l.quo_contact_id || byExt['stilo_lead_' + l.id] || byExt['stilo_prospect_' + l.id] || null;
-        let ok = false;
+        let ok = false, mayCreate = !id;
         if (id) {
             const r = await quo('PATCH', '/contacts/' + id, { defaultFields: fields });
             if (r.status >= 200 && r.status < 300) { st.patched++; ok = true; }
-            else if (r.status !== 404) { errs.push([l.id, r.status, JSON.stringify(r.json).slice(0, 160)]); }
+            else if (r.status === 404) { mayCreate = true; }   // contact deleted in Quo: recreate
+            else { st.failed++; errs.push([l.id, r.status, JSON.stringify(r.json).slice(0, 160)]); }
         }
-        if (!ok) {
+        if (!ok && mayCreate) {
             const r = await quo('POST', '/contacts', { externalId: 'stilo_lead_' + l.id, defaultFields: fields });
             const newId = r.json && r.json.data && r.json.data.id;
             if (newId) { st.created++; ok = true; id = newId; }
@@ -98,9 +111,8 @@ async function pageAll(table, select, filter) {
             await fetch(`${U}/rest/v1/leads?id=eq.${l.id}`, { method: 'PATCH', headers: SH, body: JSON.stringify({ quo_contact_id: id }) });
             st.relinked++;
         }
-        if ((i + 1) % 50 === 0) console.log(new Date().toISOString().slice(11, 19), i + 1, '/', leads.length, JSON.stringify(st), 'retries', stats429);
-        if (st.failed > 50 && st.failed > (st.patched + st.created)) { console.log('ABORT: failure rate too high', JSON.stringify(errs.slice(0, 5))); break; }
     }
+    await Promise.all(Array.from({ length: DRY ? 1 : 4 }, worker));
     console.log('DONE', JSON.stringify(st), 'in', Math.round((Date.now() - t0) / 1000) + 's');
     if (errs.length) console.log('first errors', JSON.stringify(errs.slice(0, 8)));
 })().catch(e => { console.error('ERR', e.message); process.exit(1); });
