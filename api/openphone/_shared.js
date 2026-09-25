@@ -185,7 +185,9 @@ function quoContactFields(lead) {
     const add = (v, name) => { const n = normalizePhone(v); if (n && n.length === 12 && !nums.some(x => x.value === n)) nums.push({ name: name, value: n }); };
     add(lead.owner_phone, 'Owner');
     add(lead.phone, 'Business');
-    const em = lead.owner_email || lead.email || null;
+    // Quo 400s the whole contact on a malformed email, so drop it rather than lose the name.
+    const rawEm = String(lead.owner_email || lead.email || '').trim();
+    const em = /^[^\s@,;]+@[^\s@,;]+\.[a-z]{2,}$/i.test(rawEm) ? rawEm : null;
     return {
         firstName: label,
         lastName: '',
