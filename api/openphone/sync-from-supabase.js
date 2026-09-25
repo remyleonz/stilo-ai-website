@@ -42,14 +42,11 @@ function buildContactBody(lead) {
 
     return {
         externalId: 'stilo_lead_' + lead.id,
-        defaultFields: {
-            firstName: ownerNameParts[0] || '(unknown)',
-            lastName: ownerNameParts.slice(1).join(' ') || '',
-            company: businessName,
-            role: role,
-            phoneNumbers: ownerPhone ? [{ name: 'Owner', value: ownerPhone }] : [],
-            emails: ownerEmail ? [{ name: 'Work', value: ownerEmail }] : []
-        }
+        // Label rule shared with scripts/sync_quo_contacts.js: never "(unknown)".
+        defaultFields: Object.assign({ role: role }, (function () {
+            const f = require('./_shared').quoContactFields(lead);
+            return { firstName: f.firstName, lastName: f.lastName, company: f.company, phoneNumbers: f.phoneNumbers };
+        })(), { emails: ownerEmail ? [{ name: 'Work', value: ownerEmail }] : [] })
     };
 }
 

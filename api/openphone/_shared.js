@@ -162,3 +162,36 @@ module.exports.readRawBody = readRawBody;
 module.exports.normalizePhone = normalizePhone;
 module.exports.methodNotAllowed = methodNotAllowed;
 module.exports.OPENPHONE_API_BASE = OPENPHONE_API_BASE;
+
+/**
+ * The Quo contact label for a lead (Remy, 2026-09-25: "it should never be
+ * unknown"). First-name field = "<Owner first name> <Company>" so an incoming
+ * call reads "Andy Aesthetic Clinic"; with no usable owner name it is just the
+ * company. Last name stays blank. The first name goes through the ONE shared
+ * name rule (_names.firstName), which rejects the ~30% of scraped owner_name
+ * values that are cities, companies or placeholders.
+ */
+function quoContactFields(lead) {
+    const { firstName } = require('../prospects/_names');
+    const company = String(lead.name || lead.business_name || '').replace(/\s+/g, ' ').trim();
+    const fn = firstName(lead.owner_name, company, lead.address);
+    // Skip the prefix when the company already carries the first name
+    // ("Tory Sullivan MD: Sullivan Dermatology" would read "Tory Tory ...").
+    const already = fn && new RegExp('\\b' + fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(company);
+    let label = (fn && !already) ? (fn + ' ' + company) : company;
+    if (!label) label = normalizePhone(lead.owner_phone || lead.phone) || 'Lead ' + lead.id;
+    if (label.length > 60) label = label.slice(0, 60).replace(/\s+\S*$/, '');
+    const nums = [];
+    const add = (v, name) => { const n = normalizePhone(v); if (n && n.length === 12 && !nums.some(x => x.value === n)) nums.push({ name: name, value: n }); };
+    add(lead.owner_phone, 'Owner');
+    add(lead.phone, 'Business');
+    const em = lead.owner_email || lead.email || null;
+    return {
+        firstName: label,
+        lastName: '',
+        company: company || null,
+        phoneNumbers: nums,
+        emails: em ? [{ name: 'Work', value: em }] : [],
+    };
+}
+module.exports.quoContactFields = quoContactFields;

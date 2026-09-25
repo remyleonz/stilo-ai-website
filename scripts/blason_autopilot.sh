@@ -20,6 +20,8 @@ if [ "$LEG" = "sms" ]; then
     -H "Authorization: Bearer $CRON" -H "Content-Type: application/json" \
     -d '{"campaign_id":4,"audience":"warm"}' | head -c 300; echo ""
   node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/blason_copy_templates.js"
+  # Every lead a named Quo contact so no callback shows as unknown (2026-09-25).
+  node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/sync_quo_contacts.js" --scope missing 2>&1 | tail -2
   # Validation gate: wipe unsent bodies carrying banned patterns (retired question,
   # Hialeah, any price talk). A bodyless target just waits; a bad body would SEND.
   node -e '

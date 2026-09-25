@@ -22,6 +22,13 @@ const NOT_A_NAME = new RegExp('^(' + [
     'main', 'front', 'desk', 'customer', 'client', 'new', 'the', 'best', 'top',
     'north', 'south', 'east', 'west', 'beach', 'harbour', 'harbor', 'park',
     'miami', 'florida', 'doral', 'hialeah', 'brickell', 'kendall', 'aventura',
+    // Florida city first-words that arrive as two-token "names" ("Hallandale
+    // Beach", "Coral Gables") and pass the full-name path (2026-09-25).
+    'hallandale', 'coral', 'pembroke', 'boca', 'fort', 'ft', 'delray', 'pompano', 'hollywood',
+    'sunny', 'miramar', 'homestead', 'tampa', 'orlando', 'jacksonville', 'naples',
+    'sarasota', 'clearwater', 'kissimmee', 'weston', 'davie', 'plantation', 'sunrise',
+    'deerfield', 'jupiter', 'wellington', 'winter', 'palm', 'saint', 'st', 'port',
+    'cape', 'daytona', 'ocala', 'gainesville', 'tallahassee', 'lakeland', 'brandon', 'oviedo',
     // David's placeholder text, which is what owner_name holds ~30% of the
     // time: "ask for owner", "verify on call", "N/A", "TBD".
     'ask', 'verify', 'confirm', 'tbd', 'na', 'none', 'unknown', 'whoever',

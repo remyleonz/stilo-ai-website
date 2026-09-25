@@ -63,6 +63,7 @@ const CLIENT_ID = arg('client', null);
 const ALL = args.includes('--all');
 const LIMIT = parseInt(arg('limit', '200'), 10);
 const DRY = args.includes('--dry');
+const IDS_FILE = arg('ids', null);  // newline-separated lead ids (2026-09-25: target the leads that can call back)
 const CONCURRENCY = 12;
 const TIMEOUT_MS = 12000;
 
@@ -252,9 +253,21 @@ async function main() {
         .is('owner_name_verify_status', null)
         .limit(LIMIT);
     if (CLIENT_ID) q = q.eq('client_id', CLIENT_ID);
-    else if (!ALL) { console.error('pass --client <uuid> or --all'); process.exit(1); }
+    else if (!ALL && !IDS_FILE) { console.error('pass --client <uuid>, --all, or --ids <file>'); process.exit(1); }
 
-    const { data: leads, error } = await q;
+    let leads, error;
+    if (IDS_FILE) {
+        const ids = fs.readFileSync(IDS_FILE, 'utf8').split(/\s+/).filter(Boolean).map(Number);
+        leads = [];
+        for (let k = 0; k < ids.length; k += 150) {
+            const r = await db.from('leads').select('id,name,owner_name,website,owner_name_verify_status')
+                .in('id', ids.slice(k, k + 150)).not('website', 'is', null).is('owner_name_verify_status', null);
+            if (r.error) { error = r.error; break; }
+            leads = leads.concat(r.data || []);
+        }
+    } else {
+        ({ data: leads, error } = await q);
+    }
     if (error) { console.error(error); process.exit(1); }
     console.log(leads.length + ' leads to check' + (DRY ? '  (DRY RUN)' : '') + '\n');
 
@@ -282,6 +295,10 @@ async function main() {
                     owner_name_last_verified: new Date().toISOString(),
                 };
                 if (r.status === 'verified') patch.owner_direct_confirmed = true;
+                // A lead with NO owner name gets the proposal as its owner_name so
+                // the rep and the Quo contact show a person (2026-09-25). Status
+                // stays 'unverified', so outbound copy still won't greet with it.
+                if (r.proposed && !lead.owner_name && r.found) patch.owner_name = r.found;
                 if (r.status === 'contradicted') {
                     patch.owner_direct_confirmed = false;
                     patch.owner_name_previous = lead.owner_name || null;
