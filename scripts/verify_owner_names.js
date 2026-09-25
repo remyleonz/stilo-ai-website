@@ -295,10 +295,9 @@ async function main() {
                     owner_name_last_verified: new Date().toISOString(),
                 };
                 if (r.status === 'verified') patch.owner_direct_confirmed = true;
-                // A lead with NO owner name gets the proposal as its owner_name so
-                // the rep and the Quo contact show a person (2026-09-25). Status
-                // stays 'unverified', so outbound copy still won't greet with it.
-                if (r.proposed && !lead.owner_name && r.found) patch.owner_name = r.found;
+                // Proposals stay in owner_name_found for review. Auto-filling owner_name
+                // was tried 2026-09-25 and reverted: 3 of 14 proposals were real people
+                // ("Pool School", "Council Chairman", "Civil Engineering").
                 if (r.status === 'contradicted') {
                     patch.owner_direct_confirmed = false;
                     patch.owner_name_previous = lead.owner_name || null;
