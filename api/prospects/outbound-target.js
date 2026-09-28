@@ -68,7 +68,7 @@ module.exports = async function handler(req, res) {
         const { data: lead } = await sb.from('leads')
             .select('id,name,niche,category,do_not_call,scrub_status,scrub_phone').eq('id', t.lead_id).maybeSingle();
 
-        const nextStep = t.stage === 'queued' ? 1 : (t.step >= 3 ? null : t.step + 1);
+        const nextStep = t.stage === 'queued' ? 1 : (t.step >= ob.maxSteps(campaign) ? null : t.step + 1);
         if (!nextStep) return res.status(400).json({ error: 'sequence_complete' });
         const text = t['step' + nextStep + '_body'];
         if (!text) return res.status(400).json({ error: 'no_body_generated', detail: 'Generate step ' + nextStep + ' first.' });

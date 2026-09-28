@@ -71,7 +71,7 @@ const LANE = arg('lane', '1');   // 1 = medium+deliverable (proven 3.4%), 2 = ro
                                  // 3 = site_published (address the business prints on its own site; the
                                  //     2026-09-13 contact-page crawl stamps these)
 // cold     = never-emailed leads picked by LANE (the original behaviour)
-// followup = one bump to leads emailed 3+ days ago with no reply, no bounce, no unsubscribe
+// followup = the next due step (2 to 5) for leads already emailed, with no reply, no bounce, no unsubscribe
 // warm     = leads a rep actually reached on the phone (20s+ connected call) whose
 //            address passed DNS verification and who have never been emailed
 const MODE = arg('mode', 'cold');
@@ -129,6 +129,103 @@ function corroboratedFirstName(lead) {
 }
 
 /**
+ * Steps 2 to 5 of the sequence (2026-09-28). Step 1 is compose() below.
+ *
+ * Until now the sequence was one email and one bump. Each step here makes a
+ * DIFFERENT case for the same small ask (a showroom visit for South Florida, a
+ * 10 minute phone call with Manuel for everyone else), so a lead who ignored
+ * one angle meets a new one instead of the same note again:
+ *
+ *   2  the bump         did the first one get buried
+ *   3  the risk         buying the wrong machine, or being orphaned on parts
+ *   4  the invitation   a concrete visit or call, their pick of day
+ *   5  the close-out    last note, door left open
+ *
+ * Personalised from fields we actually hold: corroborated first name, the
+ * business name, what kind of practice it is, language, and distance from the
+ * showroom. Nothing here is invented per lead. Never a price, never a link.
+ */
+const LASER_LEGAL_RE = /medical spa|med spa|dermatolog|plastic surg|cosmetic surg|laser|medical clinic/i;
+const STEP_GAP_DAYS = { 2: 3, 3: 4, 4: 5, 5: 7 };   // days since the previous step
+const MAX_STEP = 5;
+
+function shortBusinessName(name) {
+    // "Hello Sugar | Orlando Sodo - Brazilian Wax" -> "Hello Sugar"
+    const n = String(name || '').split(/\s[|\-:]\s|\s*\|\s*/)[0].replace(/[®™]/g, '').trim();
+    return (n.length >= 3 && n.length <= 40) ? n : null;
+}
+
+function composeFollowup(lead, c) {
+    const step = lead.__step || 2;
+    const es = c.es, fn = c.fn, local = c.local;
+    const hi = es ? (fn ? 'Hola ' + fn + ',' : 'Hola,') : (fn ? 'Hi ' + fn + ',' : 'Hi,');
+    const opt = es ? c.optEs : c.optEn;
+    const biz = shortBusinessName(lead.name);
+    const medical = LASER_LEGAL_RE.test(String(lead.category || ''));
+    const join = function (lines) { return lines.join('\n'); };
+
+    if (step === 2) {
+        return es
+            ? { arm: 'step2', subject: 're: sus máquinas', body: join([hi, '',
+                'Le escribí la semana pasada y no quería que se perdiera en su bandeja.', '',
+                '¿Hay alguna máquina que ha estado pensando agregar este año? Aunque sea una idea, yo le digo cuál le conviene.' + c.showEs, '', opt]) }
+            : { arm: 'step2', subject: 're: your machines', body: join([hi, '',
+                "I emailed you last week and didn't want it to get buried.", '',
+                "Is there a machine you've been thinking about adding this year? Even a rough idea, and I'll tell you which one makes sense." + c.showEn, '', opt]) };
+    }
+
+    if (step === 3) {
+        const whatEn = medical ? 'a laser or an RF unit' : 'a new machine';
+        const whatEs = medical ? 'un láser o un equipo de radiofrecuencia' : 'una máquina nueva';
+        return es
+            ? { arm: 'step3', subject: 'lo que pasa después de comprar', body: join([hi, '',
+                'Casi nadie se arrepiente de comprar ' + whatEs + '. Se arrepienten de lo que pasa después: la pieza que tarda semanas, el representante que ya no contesta, el equipo que nadie le enseñó a usar bien.', '',
+                'Manuel importa los equipos él mismo y los atiende desde Miami. Las piezas están aquí, el entrenamiento lo da él y le deja su certificado.', '',
+                (biz ? 'En ' + biz + ', ' : '') + '¿qué equipo le ha dado más dolores de cabeza hasta ahora?', '', opt]) }
+            : { arm: 'step3', subject: 'what happens after you buy', body: join([hi, '',
+                'Almost nobody regrets buying ' + whatEn + '. They regret what comes after: the part that takes weeks, the rep who stops answering, the machine nobody trained the staff on.', '',
+                'Manuel imports the equipment himself and services it from Miami. Parts are here, he does the training, and you leave with a certificate.', '',
+                (biz ? 'At ' + biz + ', which' : 'Which') + ' machine has given you the most headaches so far?', '', opt]) };
+    }
+
+    if (step === 4) {
+        if (local) {
+            return es
+                ? { arm: 'step4', subject: 'venga a probarlas', body: join([hi, '',
+                    'Le propongo algo sencillo. Venga 20 minutos al showroom de Manuel aquí en Miami' + (biz ? ' con alguien de ' + biz : '') + ', pruebe los equipos encendidos y haga todas las preguntas que quiera. Si nada le sirve, se va sin compromiso.', '',
+                    '¿Qué le queda mejor, un día de esta semana o de la próxima? Dígame el día y yo lo cuadro con Manuel.', '', opt]) }
+                : { arm: 'step4', subject: 'come try them', body: join([hi, '',
+                    "Here's a simple idea. Come by Manuel's showroom here in Miami for 20 minutes" + (biz ? ' with whoever runs treatments at ' + biz : '') + ', try the machines while they are running, and ask anything you want. If nothing fits, you walk out and that is the end of it.', '',
+                    'Which works better, a day this week or next? Give me the day and I will set it up with Manuel.', '', opt]) };
+        }
+        return es
+            ? { arm: 'step4', subject: '10 minutos con Manuel', body: join([hi, '',
+                'Como no están en Miami, le propongo diez minutos por teléfono con Manuel, el dueño. Él le pregunta qué tratamientos hacen y le dice de frente qué equipo le conviene' + (biz ? ' a ' + biz : '') + ' o no.', '',
+                'Enviamos a toda la Florida y el entrenamiento va incluido.', '',
+                '¿Qué le queda mejor, un día de esta semana o de la próxima?', '', opt]) }
+            : { arm: 'step4', subject: '10 minutes with Manuel', body: join([hi, '',
+                "Since you're not in Miami, here's the easy version: ten minutes on the phone with Manuel, the owner. He asks what treatments you run and tells you straight which machine makes sense" + (biz ? ' for ' + biz : '') + ' or not.', '',
+                'We ship anywhere in Florida and training comes with it.', '',
+                'Which works better, a day this week or next?', '', opt]) };
+    }
+
+    // step 5
+    const askEn = local ? "Manuel's showroom is here in Miami" : 'Manuel is ten minutes away by phone and ships anywhere in Florida';
+    const askEs = local ? 'el showroom de Manuel está aquí en Miami' : 'Manuel está a diez minutos por teléfono y envía a toda la Florida';
+    return es
+        ? { arm: 'step5', subject: 'cierro el tema', body: join([hi, '',
+            'Este es mi último correo, no quiero llenarle la bandeja.', '',
+            'Si más adelante piensa agregar un equipo, abrir otra cabina o cambiar uno que ya está viejo, ' + askEs + '. Me responde a este correo y lo cuadramos el mismo día.', '',
+            'Y si ya tiene algo en mente ahora, dígame cuál y se lo paso a Manuel hoy.', '',
+            'Que le vaya muy bien' + (biz ? ' en ' + biz : '') + '.']) }
+        : { arm: 'step5', subject: 'closing the loop', body: join([hi, '',
+            "This is my last note, I don't want to crowd your inbox.", '',
+            "If down the road you're adding a machine, opening another room, or replacing one that's getting old, " + askEn + '. Reply to this email and we will set it up the same day.', '',
+            "And if something is already on your mind, tell me which machine and I'll put it in front of Manuel today.", '',
+            'Wishing you a great rest of the year' + (biz ? ' at ' + biz : '') + '.']) };
+}
+
+/**
  * Copy. Same question the phone script and the SMS campaign use, so results
  * stay comparable across channels. No price of any kind, no link to a page
  * carrying prices, no STILO branding, no booking link.
@@ -171,20 +268,7 @@ function compose(lead, clientName) {
     const showEs = local ? ' El showroom de Manuel está aquí en Miami, así que puede probar una máquina antes de decidir nada.' : ' Importamos todo directo y enviamos a cualquier parte de Florida.';
 
     if (MODE === 'followup') {
-        if (es) {
-            return { arm: 'bump', subject: 're: sus máquinas', body: [
-                (fn ? 'Hola ' + fn + ',' : 'Hola,'), '',
-                'Le escribí la semana pasada y no quería que se perdiera en su bandeja.', '',
-                '¿Hay alguna máquina que ha estado pensando agregar este año? Aunque sea una idea, yo le digo cuál le conviene.' + showEs, '',
-                optEs,
-            ].join('\n') };
-        }
-        return { arm: 'bump', subject: 're: your machines', body: [
-            (fn ? 'Hi ' + fn + ',' : 'Hi,'), '',
-            "I emailed you last week and didn't want it to get buried.", '',
-            "Is there a machine you've been thinking about adding this year? Even a rough idea, and I'll tell you which one makes sense." + showEn, '',
-            optEn,
-        ].join('\n') };
+        return composeFollowup(lead, { es: es, fn: fn, local: local, optEn: optEn, optEs: optEs, showEn: showEn, showEs: showEs });
     }
 
     const calledLine = (MODE === 'warm');
@@ -238,6 +322,18 @@ function preSendCheck(subject, body) {
     return fails;
 }
 
+/** The step this lead is due for right now, or null. */
+function nextStepFor(lead) {
+    for (let n = 2; n <= MAX_STEP; n++) {
+        if (lead['email_' + n + '_sent_at']) continue;
+        const prev = lead['email_' + (n - 1) + '_sent_at'];
+        if (!prev) return null;
+        const ageDays = (Date.now() - new Date(prev).getTime()) / 86400000;
+        return ageDays >= STEP_GAP_DAYS[n] ? n : null;
+    }
+    return null;
+}
+
 async function main() {
     const sb = sbLeads();
     const pub = sbPublic();
@@ -281,18 +377,19 @@ async function main() {
     // pool is unproven, which is exactly what the breaker above is for.
     const SELECT_COLS = 'id,name,owner_name,owner_email,email,email_verify_address,address,primary_language,'
         + 'email_verify_status,email_confidence,bounced_at,unsubscribed_at,email_1_sent_at,email_2_sent_at,'
-        + 'reply_received_at,last_called_outcome,stage,do_not_call,next_step,pinned_at,category';
+        + 'reply_received_at,last_called_outcome,stage,do_not_call,next_step,pinned_at,category,'
+        + 'email_3_sent_at,email_4_sent_at,email_5_sent_at';
     let q = sb.from('leads').select(SELECT_COLS)
         .eq('client_id', CLIENT_ID)
         .is('bounced_at', null)
         .is('unsubscribed_at', null);
     if (MODE === 'followup') {
-        // One bump per lead, 3+ days after email 1, only while they have
-        // neither replied nor bounced nor unsubscribed. email_2_sent_at is the
-        // idempotency stamp, so re-running tops up instead of re-bumping.
-        const cutoff = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
-        q = q.not('email_1_sent_at', 'is', null).lt('email_1_sent_at', cutoff)
-            .is('email_2_sent_at', null).is('reply_received_at', null);
+        // Steps 2 to 5. Anyone who got email 1, has not finished the sequence,
+        // and has neither replied nor bounced nor unsubscribed. WHICH step is
+        // due, and whether enough days have passed, is decided per lead below
+        // (nextStepFor). email_N_sent_at is the idempotency stamp for step N.
+        q = q.not('email_1_sent_at', 'is', null)
+            .is('email_5_sent_at', null).is('reply_received_at', null);
     } else if (MODE === 'warm') {
         // Reached on the phone (connected filter below), address passed DNS
         // verification, never emailed. DELIVERABLE ONLY. The 2026-09-04 warm
@@ -309,7 +406,9 @@ async function main() {
         q = q.is('email_1_sent_at', null).eq('email_verify_status', laneStatus);
         if (LANE === '1') q = q.eq('email_confidence', 'medium');
     }
-    const { data: leads, error } = await q.limit(MODE === 'followup' ? LIMIT * 3 : 2000);   // over-fetch, the filters below remove some
+    // Every mode reads the whole pool: which leads are DUE is decided in code
+    // below, so a small fetch would hide due leads behind ones that are not.
+    const { data: leads, error } = await q.limit(2000);
     if (error) { console.error(error); process.exit(1); }
 
     // Cold sends spend the daily cap on the best leads first, not on whatever
@@ -408,6 +507,17 @@ async function main() {
         return true;
     });
     const removed = leads.length - consented.length;
+    if (MODE === 'followup') {
+        // Oldest waiting first, so nobody sits between steps while newer leads
+        // take the cap.
+        for (const l of consented) l.__step = nextStepFor(l);
+        const due = consented.filter(function (l) { return l.__step; });
+        due.sort(function (a, b) {
+            return String(a['email_' + (a.__step - 1) + '_sent_at']).localeCompare(String(b['email_' + (b.__step - 1) + '_sent_at']));
+        });
+        consented.length = 0;
+        Array.prototype.push.apply(consented, due);
+    }
     const _seenAddr = new Set();
     const shielded = consented.filter(function (l) {
         const addr = String(l.email_verify_address || l.owner_email || l.email || '').trim().toLowerCase();
@@ -425,7 +535,7 @@ async function main() {
     if (removed) console.log('consent filter removed ' + removed + ' lead(s) who already said no');
 
     console.log('client:   ' + clientName);
-    const modeDesc = MODE === 'followup' ? 'emailed 3+ days ago, no reply, no bounce, no unsubscribe'
+    const modeDesc = MODE === 'followup' ? 'next step of 2 to 5 is due, no reply, no bounce, no unsubscribe'
         : MODE === 'warm' ? '20s+ connected call, DNS-verified address, never emailed'
         : (LANE === '2' ? 'role inbox on a live domain'
             : LANE === '3' ? 'address published on their own site'
@@ -458,7 +568,8 @@ async function main() {
 
         if (!SEND) {
             console.log('DRY   ' + tag + '  -> ' + to + (ok.role ? '  [role inbox]' : ''));
-            console.log('      ' + subject + ' | ' + body.split('\n')[0] + ' ...');
+            console.log('      ' + (lead.__step ? 'step ' + lead.__step + ' | ' : '') + subject + ' | ' + body.split('\n')[0] + ' ...');
+            if (args.includes('--show')) console.log(body.replace(/^/gm, '        ') + '\n');
             stats.sent++; continue;
         }
 
@@ -511,9 +622,10 @@ async function main() {
                 body: plain, body_preview: plain.slice(0, 280), from_address: fromEmail,
                 provider_message_id: j.id || null, status: 'sent',
             }).eq('id', claim.data.id);
-            const stamp = MODE === 'followup'
-                ? { email_2_sent_at: new Date().toISOString(), email_2_status: 'sent' }
-                : { email_1_sent_at: new Date().toISOString(), email_1_status: 'sent' };
+            const stepNo = MODE === 'followup' ? (lead.__step || 2) : 1;
+            const stamp = {};
+            stamp['email_' + stepNo + '_sent_at'] = new Date().toISOString();
+            stamp['email_' + stepNo + '_status'] = 'sent';
             await sb.from('leads').update(stamp).eq('id', lead.id);
             console.log('SENT  ' + tag + '  -> ' + to);
             stats.sent++;

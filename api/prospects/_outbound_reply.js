@@ -403,7 +403,8 @@ async function handleInboundSms(fromPhone, toPhone, text) {
         hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
     }).format(due);
 
-    const lastSent = t.step3_sent_at ? t.step3_body : (t.step2_sent_at ? t.step2_body : t.step1_body);
+    const lastSent = t.step5_sent_at ? t.step5_body : (t.step4_sent_at ? t.step4_body
+        : (t.step3_sent_at ? t.step3_body : (t.step2_sent_at ? t.step2_body : t.step1_body)));
 
     let alert = { skipped: 'not_attempted' };
     try {
