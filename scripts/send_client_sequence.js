@@ -281,7 +281,7 @@ async function main() {
     // pool is unproven, which is exactly what the breaker above is for.
     const SELECT_COLS = 'id,name,owner_name,owner_email,email,email_verify_address,address,primary_language,'
         + 'email_verify_status,email_confidence,bounced_at,unsubscribed_at,email_1_sent_at,email_2_sent_at,'
-        + 'reply_received_at,last_called_outcome,stage,do_not_call';
+        + 'reply_received_at,last_called_outcome,stage,do_not_call,next_step,pinned_at';
     let q = sb.from('leads').select(SELECT_COLS)
         .eq('client_id', CLIENT_ID)
         .is('bounced_at', null)
@@ -383,6 +383,9 @@ async function main() {
         if (declined.has(l.last_called_outcome)) return false;
         if (CLOSED.includes(l.stage)) return false;
         if (killedIds.has(l.id)) return false;
+        // A lead a human is working (dated next step or pinned to Hottest) never gets a
+        // generic intro email on top of the real conversation (Natasha, 9/28).
+        if (l.pinned_at || String(l.next_step || '').trim()) return false;
         return true;
     });
     const removed = leads.length - consented.length;
