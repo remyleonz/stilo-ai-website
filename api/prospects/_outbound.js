@@ -90,6 +90,28 @@ const DEFAULT_GUIDANCE_B = [
     'Two sentences maximum. Lowercase, texting register, no marketing voice.'
 ].join('\n');
 
+// Hard ceiling on steps per target, and the stamp column for each. Every
+// counter (daily cap, per-line cap, drip) reads SENT_STAMP_COLS. A campaign
+// opts into more than 3 steps through outbound_campaigns.max_steps.
+const MAX_STEPS_CEILING = 5;
+const SENT_STAMP_COLS = [1, 2, 3, 4, 5].map(function (n) { return 'step' + n + '_sent_at'; });
+
+/** Steps this campaign may send. Defaults to 3; never above the ceiling. */
+function maxSteps(campaign) {
+    const n = Number(campaign && campaign.max_steps) || 3;
+    return Math.max(1, Math.min(MAX_STEPS_CEILING, n));
+}
+
+/**
+ * Days a silent lead must sit before the nudge for `step` may go. The gaps
+ * WIDEN: 3 days, 3 days, then a week, then two. Five texts at a fixed 3 day
+ * beat is a blast; five over a month is someone checking in.
+ */
+function nudgeGapDays(step) {
+    const base = Number(process.env.OUTBOUND_NUDGE_COOLDOWN_DAYS || 3);
+    return ({ 2: base, 3: base, 4: 7, 5: 14 })[step] || base;
+}
+
 function serviceClient() {
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false }, db: { schema: 'prospecting' },
@@ -196,17 +218,19 @@ function windowState(campaign, now) {
  * correct after a manual DB edit, a resume, or a re-run.
  */
 async function sentTodayByLine(sb, campaign, now) {
+    // SENT_STAMP_COLS, not a hand-written list: the daily caps are counted off
+    // these stamps, so a step missing here is a step that sends uncounted.
     const tz = campaign.timezone || 'America/New_York';
     const today = localParts(now || new Date(), tz).ymd;
     const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
     const { data, error } = await sb.from('outbound_targets')
-        .select('from_line, step1_sent_at, step2_sent_at, step3_sent_at')
+        .select('from_line, ' + SENT_STAMP_COLS.join(', '))
         .eq('campaign_id', campaign.id)
-        .or('step1_sent_at.gte.' + since + ',step2_sent_at.gte.' + since + ',step3_sent_at.gte.' + since);
+        .or(SENT_STAMP_COLS.map(function (c) { return c + '.gte.' + since; }).join(','));
     if (error) throw new Error('pacing read failed: ' + error.message);
     const counts = {};
     for (const r of (data || [])) {
-        for (const stamp of [r.step1_sent_at, r.step2_sent_at, r.step3_sent_at]) {
+        for (const stamp of SENT_STAMP_COLS.map(function (c) { return r[c]; })) {
             if (!stamp) continue;
             if (localParts(new Date(stamp), tz).ymd !== today) continue;
             counts[r.from_line] = (counts[r.from_line] || 0) + 1;
@@ -230,13 +254,13 @@ async function sentTodayByLine(sb, campaign, now) {
 async function lastSendByLine(sb, campaign, now) {
     const since = new Date((now ? now.getTime() : Date.now()) - 24 * 3600 * 1000).toISOString();
     const { data, error } = await sb.from('outbound_targets')
-        .select('from_line, step1_sent_at, step2_sent_at, step3_sent_at')
+        .select('from_line, ' + SENT_STAMP_COLS.join(', '))
         .eq('campaign_id', campaign.id)
-        .or('step1_sent_at.gte.' + since + ',step2_sent_at.gte.' + since + ',step3_sent_at.gte.' + since);
+        .or(SENT_STAMP_COLS.map(function (c) { return c + '.gte.' + since; }).join(','));
     if (error) throw new Error('drip pacing read failed: ' + error.message);
     const newest = {};
     for (const r of (data || [])) {
-        for (const stamp of [r.step1_sent_at, r.step2_sent_at, r.step3_sent_at]) {
+        for (const stamp of SENT_STAMP_COLS.map(function (c) { return r[c]; })) {
             if (!stamp) continue;
             const ms = new Date(stamp).getTime();
             if (!newest[r.from_line] || ms > newest[r.from_line]) newest[r.from_line] = ms;
@@ -787,6 +811,7 @@ function preSendCheck(campaign, target, lead) {
 }
 
 module.exports = {
+    MAX_STEPS_CEILING, SENT_STAMP_COLS, maxSteps, nudgeGapDays,
     SEND_ENABLED, DEFAULT_GUIDANCE, DEFAULT_GUIDANCE_B,
     serviceClient, publicClient, loadReps, loadCampaignClient, clientToken,
     windowState, localParts, sentTodayByLine, lastSendByLine,

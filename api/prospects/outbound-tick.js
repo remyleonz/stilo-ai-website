@@ -58,8 +58,8 @@ const MAX_CONSECUTIVE_FAILED_TICKS = Number(process.env.OUTBOUND_MAX_FAILED_TICK
 // Follow-up nudge to a non-replier who had a connected call. A lead that got a
 // first text and went quiet gets a second (and third) touch, but only after
 // this many days, so it reads as follow-up, not a blast. Prior contact makes it
-// legal; the spacing keeps it human. 3 days by default.
-const NUDGE_COOLDOWN_MS = Number(process.env.OUTBOUND_NUDGE_COOLDOWN_DAYS || 3) * 24 * 3600 * 1000;
+// legal; the spacing keeps it human. Gaps per step live in ob.nudgeGapDays and
+// the step limit in ob.maxSteps(campaign) (outbound_campaigns.max_steps).
 
 module.exports = async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
@@ -183,12 +183,13 @@ module.exports = async function handler(req, res) {
             if (t.stage === 'sent') {
                 if (t.first_reply_at) { results.skipped.already_replied = (results.skipped.already_replied || 0) + 1; continue; }
                 const lastStamp = t['step' + (t.step || 1) + '_sent_at'] || t.step1_sent_at;
-                if (lastStamp && (now.getTime() - new Date(lastStamp).getTime()) < NUDGE_COOLDOWN_MS) {
+                const gapMs = ob.nudgeGapDays((t.step || 1) + 1) * 24 * 3600 * 1000;
+                if (lastStamp && (now.getTime() - new Date(lastStamp).getTime()) < gapMs) {
                     results.skipped.nudge_cooldown = (results.skipped.nudge_cooldown || 0) + 1;
                     continue;
                 }
             }
-            const nextStep = t.stage === 'queued' ? 1 : (t.step >= 3 ? null : t.step + 1);
+            const nextStep = t.stage === 'queued' ? 1 : (t.step >= ob.maxSteps(campaign) ? null : t.step + 1);
             if (!nextStep) { results.skipped.sequence_complete = (results.skipped.sequence_complete || 0) + 1; continue; }
             const bodyText = t['step' + nextStep + '_body'];
             if (!bodyText) { results.skipped.no_body_generated = (results.skipped.no_body_generated || 0) + 1; continue; }

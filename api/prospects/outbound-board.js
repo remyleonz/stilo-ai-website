@@ -22,7 +22,7 @@ const ADMINS = ['remyleon11@gmail.com', 'stiloaiconsulting@gmail.com', 'remyleon
 // Stages that mean the conversation has moved on. A delivery error recorded
 // before any of these is history by definition.
 const SETTLED_STAGES = ['replied', 'booked', 'dead', 'opted_out'];
-const SENT_COLS = ['step1_sent_at', 'step2_sent_at', 'step3_sent_at'];
+const SENT_COLS = ['step1_sent_at', 'step2_sent_at', 'step3_sent_at', 'step4_sent_at', 'step5_sent_at'];
 
 /**
  * Is this row's last_error a live problem, or a leftover?
@@ -150,6 +150,8 @@ module.exports = async function handler(req, res) {
             step1_body: t.step1_body, step1_sent_at: t.step1_sent_at,
             step2_body: t.step2_body, step2_sent_at: t.step2_sent_at,
             step3_body: t.step3_body, step3_sent_at: t.step3_sent_at,
+            step4_body: t.step4_body, step4_sent_at: t.step4_sent_at,
+            step5_body: t.step5_body, step5_sent_at: t.step5_sent_at,
             first_reply_at: t.first_reply_at,
             first_reply_body: t.first_reply_body,
             callback_due_at: t.callback_due_at,
