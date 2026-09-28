@@ -406,8 +406,29 @@ async function main() {
         q = q.is('email_1_sent_at', null).eq('email_verify_status', laneStatus);
         if (LANE === '1') q = q.eq('email_confidence', 'medium');
     }
-    const { data: leads, error } = await q.limit(MODE === 'warm' ? 2000 : LIMIT * 3);   // over-fetch, the filters below remove some
+    // Every mode reads the whole pool: which leads are DUE is decided in code
+    // below, so a small fetch would hide due leads behind ones that are not.
+    const { data: leads, error } = await q.limit(2000);
     if (error) { console.error(error); process.exit(1); }
+
+    // Cold sends spend the daily cap on the best leads first, not on whatever
+    // order the database returns. The 9/24 transcript read: Orlando 145 called
+    // / 0 booked, South FL 4 of 5 bookings, and only laser-legal practices
+    // (med spas, derms, surgeons) buy the big units. Lower rank sends first.
+    // This is wider than LOCAL_ZIP3 on purpose: that one gates showroom copy.
+    if (MODE === 'cold') {
+        const SOUTH_FL_ZIP3 = ['330', '331', '332', '333', '334'];
+        const rank = function (l) {
+            const south = SOUTH_FL_ZIP3.includes(zip3(l.address)) ? 0 : 2;
+            const cat = String(l.category || '');
+            const seg = /medical spa|med spa|dermatolog|plastic surg|cosmetic surg|laser|medical clinic/i.test(cat) ? 0
+                : /beauty salon|hair salon|nail|barber|massage|wellness/i.test(cat) ? 3 : 1;
+            return south + seg;
+        };
+        leads.sort(function (a, b) {
+            return (rank(a) - rank(b)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+        });
+    }
 
     // ---- CONSENT FILTER -------------------------------------------------
     // Bounced / unsubscribed / suppressed are DELIVERABILITY gates. They say
