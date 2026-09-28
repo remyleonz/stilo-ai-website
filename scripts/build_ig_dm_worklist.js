@@ -15,7 +15,7 @@
  *
  * A/B varies exactly ONE thing, matching the SMS test so results are comparable:
  *   arm A = the treatment-gap question (the one that works on the phone)
- *   arm B = the proximity offer (showroom if zip3 is 330-333, else video call)
+ *   arm B = the proximity offer (showroom if zip3 is 330-333, else a 10-minute phone call with Manuel)
  * Assignment is a deterministic hash of the lead id, so it is balanced across
  * language and geography rather than confounded with either.
  *
