@@ -83,7 +83,7 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
     // the same text twice:
     //   2  the easy question     is a machine on the radar
     //   3  the reason to trust   Manuel imports it, parts and training in Miami
-    //   4  the invitation        showroom (South Florida) or 15 min video call
+    //   4  the invitation        showroom (South Florida) or 10 min phone call with Manuel
     //   5  the close-out         last text, door open, opt-out said like a person
     //
     // Personalised from what we hold: verified first name, language, distance
@@ -122,18 +122,18 @@ const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pue
             en: [
                 (c) => c.local
                     ? `${c.hey}, easy idea: come by Manuel's showroom in Miami for 20 minutes and try the machines while they're running. Would this week or next be better?`
-                    : `${c.hey}, easy idea since you're not in Miami: 15 minutes on video with Manuel, he shows you the machine running. Would this week or next be better?`,
+                    : `${c.hey}, easy idea since you're not in Miami: ten minutes on the phone with Manuel, he'll tell you straight which machine fits. Would this week or next be better?`,
                 (c) => c.local
                     ? `${c.hey}, ${c.rep} from Blason. The machines are set up and running at the Miami showroom. Want me to hold 20 minutes for you with Manuel? Tell me a day.`
-                    : `${c.hey}, ${c.rep} from Blason. Manuel does a 15 minute video walk-through and ships anywhere in Florida. Want me to hold a slot? Tell me a day.`,
+                    : `${c.hey}, ${c.rep} from Blason. Ten minutes on the phone with Manuel and you'll know which machine fits. He ships anywhere in Florida. Want me to hold a time? Tell me a day.`,
             ],
             es: [
                 (c) => c.local
                     ? `${c.hey}, una idea fácil: pase 20 minutos por el showroom de Manuel en Miami y pruebe las máquinas encendidas. ¿Le queda mejor esta semana o la próxima?`
-                    : `${c.hey}, una idea fácil ya que no están en Miami: 15 minutos por video con Manuel, él le muestra la máquina funcionando. ¿Esta semana o la próxima?`,
+                    : `${c.hey}, una idea fácil ya que no están en Miami: diez minutos por teléfono con Manuel, él le dice de frente cuál máquina le conviene. ¿Esta semana o la próxima?`,
                 (c) => c.local
                     ? `${c.hey}, ${c.rep} de Blason. Las máquinas están montadas y encendidas en el showroom de Miami. ¿Le aparto 20 minutos con Manuel? Dígame el día.`
-                    : `${c.hey}, ${c.rep} de Blason. Manuel hace una videollamada de 15 minutos y envía a toda la Florida. ¿Le aparto un espacio? Dígame el día.`,
+                    : `${c.hey}, ${c.rep} de Blason. Diez minutos por teléfono con Manuel y ya sabe cuál máquina le conviene. Envía a toda la Florida. ¿Le aparto una hora? Dígame el día.`,
             ],
         },
         5: {

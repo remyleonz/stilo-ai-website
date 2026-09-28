@@ -133,7 +133,7 @@ function corroboratedFirstName(lead) {
  *
  * Until now the sequence was one email and one bump. Each step here makes a
  * DIFFERENT case for the same small ask (a showroom visit for South Florida, a
- * 15 minute video call with Manuel for everyone else), so a lead who ignored
+ * 10 minute phone call with Manuel for everyone else), so a lead who ignored
  * one angle meets a new one instead of the same note again:
  *
  *   2  the bump         did the first one get buried
@@ -199,19 +199,19 @@ function composeFollowup(lead, c) {
                     'Which works better, a day this week or next? Give me the day and I will set it up with Manuel.', '', opt]) };
         }
         return es
-            ? { arm: 'step4', subject: '15 minutos con Manuel', body: join([hi, '',
-                'Como no están en Miami, le propongo una videollamada de 15 minutos con Manuel, el dueño. Él le muestra el equipo funcionando en cámara y le dice de frente si le conviene' + (biz ? ' a ' + biz : '') + ' o no.', '',
+            ? { arm: 'step4', subject: '10 minutos con Manuel', body: join([hi, '',
+                'Como no están en Miami, le propongo diez minutos por teléfono con Manuel, el dueño. Él le pregunta qué tratamientos hacen y le dice de frente qué equipo le conviene' + (biz ? ' a ' + biz : '') + ' o no.', '',
                 'Enviamos a toda la Florida y el entrenamiento va incluido.', '',
                 '¿Qué le queda mejor, un día de esta semana o de la próxima?', '', opt]) }
-            : { arm: 'step4', subject: '15 minutes with Manuel', body: join([hi, '',
-                "Since you're not in Miami, here's the easy version: a 15 minute video call with Manuel, the owner. He shows you the machine running on camera and tells you straight whether it makes sense" + (biz ? ' for ' + biz : '') + ' or not.', '',
+            : { arm: 'step4', subject: '10 minutes with Manuel', body: join([hi, '',
+                "Since you're not in Miami, here's the easy version: ten minutes on the phone with Manuel, the owner. He asks what treatments you run and tells you straight which machine makes sense" + (biz ? ' for ' + biz : '') + ' or not.', '',
                 'We ship anywhere in Florida and training comes with it.', '',
                 'Which works better, a day this week or next?', '', opt]) };
     }
 
     // step 5
-    const askEn = local ? "Manuel's showroom is here in Miami" : 'Manuel does video calls and ships anywhere in Florida';
-    const askEs = local ? 'el showroom de Manuel está aquí en Miami' : 'Manuel hace videollamadas y envía a toda la Florida';
+    const askEn = local ? "Manuel's showroom is here in Miami" : 'Manuel is ten minutes away by phone and ships anywhere in Florida';
+    const askEs = local ? 'el showroom de Manuel está aquí en Miami' : 'Manuel está a diez minutos por teléfono y envía a toda la Florida';
     return es
         ? { arm: 'step5', subject: 'cierro el tema', body: join([hi, '',
             'Este es mi último correo, no quiero llenarle la bandeja.', '',
