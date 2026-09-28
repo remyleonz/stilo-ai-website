@@ -685,6 +685,13 @@ function preSendCheck(campaign, target, lead) {
     // a scrub for a lead nobody had actually looked at. Hard-fail instead.
     if (!lead) return { ok: false, reason: 'lead_read_failed' };
 
+    // A lead a human is working (pinned to Hottest, or a dated next step in the
+    // pipeline) is off the automated sequence. Pareen got the automated "last one
+    // from me" nudge while pinned and replied STOP the next morning (9/28).
+    // Only the tick selects these two columns, so a rep's manual send through
+    // outbound-target.js is unaffected.
+    if (lead.pinned_at || String(lead.next_step || '').trim()) return { ok: false, reason: 'human_owned_lead' };
+
     // POOL FIREWALL, checked at send time and not only at enqueue.
     //
     // outbound-enqueue.js now matches leads.client_id against the campaign's,
