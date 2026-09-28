@@ -281,7 +281,7 @@ async function main() {
     // pool is unproven, which is exactly what the breaker above is for.
     const SELECT_COLS = 'id,name,owner_name,owner_email,email,email_verify_address,address,primary_language,'
         + 'email_verify_status,email_confidence,bounced_at,unsubscribed_at,email_1_sent_at,email_2_sent_at,'
-        + 'reply_received_at,last_called_outcome,stage,do_not_call,next_step,pinned_at';
+        + 'reply_received_at,last_called_outcome,stage,do_not_call,next_step,pinned_at,category';
     let q = sb.from('leads').select(SELECT_COLS)
         .eq('client_id', CLIENT_ID)
         .is('bounced_at', null)
@@ -309,8 +309,27 @@ async function main() {
         q = q.is('email_1_sent_at', null).eq('email_verify_status', laneStatus);
         if (LANE === '1') q = q.eq('email_confidence', 'medium');
     }
-    const { data: leads, error } = await q.limit(MODE === 'warm' ? 2000 : LIMIT * 3);   // over-fetch, the filters below remove some
+    const { data: leads, error } = await q.limit(MODE === 'followup' ? LIMIT * 3 : 2000);   // over-fetch, the filters below remove some
     if (error) { console.error(error); process.exit(1); }
+
+    // Cold sends spend the daily cap on the best leads first, not on whatever
+    // order the database returns. The 9/24 transcript read: Orlando 145 called
+    // / 0 booked, South FL 4 of 5 bookings, and only laser-legal practices
+    // (med spas, derms, surgeons) buy the big units. Lower rank sends first.
+    // This is wider than LOCAL_ZIP3 on purpose: that one gates showroom copy.
+    if (MODE === 'cold') {
+        const SOUTH_FL_ZIP3 = ['330', '331', '332', '333', '334'];
+        const rank = function (l) {
+            const south = SOUTH_FL_ZIP3.includes(zip3(l.address)) ? 0 : 2;
+            const cat = String(l.category || '');
+            const seg = /medical spa|med spa|dermatolog|plastic surg|cosmetic surg|laser|medical clinic/i.test(cat) ? 0
+                : /beauty salon|hair salon|nail|barber|massage|wellness/i.test(cat) ? 3 : 1;
+            return south + seg;
+        };
+        leads.sort(function (a, b) {
+            return (rank(a) - rank(b)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+        });
+    }
 
     // ---- CONSENT FILTER -------------------------------------------------
     // Bounced / unsubscribed / suppressed are DELIVERABILITY gates. They say
