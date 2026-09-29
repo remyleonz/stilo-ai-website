@@ -21,7 +21,7 @@
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
-const EDITABLE_FIELDS = ['owner_name', 'front_desk_name', 'owner_email'];
+const EDITABLE_FIELDS = ['owner_name', 'front_desk_name', 'owner_email', 'owner_phone'];
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
@@ -53,6 +53,24 @@ module.exports = async function handler(req, res) {
         }
         update.owner_email = v;
         if (v) update.bounced_at = null;
+    }
+
+    // The number the dialer calls. leadPhone() reads owner_phone_e164 first,
+    // so a rep's correction goes there (and in owner_phone, formatted); the
+    // listing's business `phone` is left as scraped. The old dial number is
+    // kept in rep_notes so a wrong edit can be undone (Remy, 2026-09-29).
+    if (field === 'owner_phone') {
+        const d = String(value || '').replace(/\D/g, '');
+        const ten = d.length === 11 && d.charAt(0) === '1' ? d.slice(1) : d;
+        if (value && ten.length !== 10) return res.status(400).json({ error: 'bad_phone' });
+        const { data: cur } = await sb.from('leads').select('owner_phone,owner_phone_e164,rep_notes').eq('id', id).limit(1);
+        const old = cur && cur[0] ? (cur[0].owner_phone_e164 || cur[0].owner_phone) : null;
+        update.owner_phone = value ? '(' + ten.slice(0, 3) + ') ' + ten.slice(3, 6) + '-' + ten.slice(6) : null;
+        update.owner_phone_e164 = value ? '+1' + ten : null;
+        if (old && old !== update.owner_phone_e164) {
+            update.rep_notes = ((cur[0].rep_notes || '') + '\n[' + new Date().toISOString().slice(0, 10)
+                + '] Dial number changed by rep from ' + old + ' to ' + (update.owner_phone_e164 || 'none') + '.').trim();
+        }
     }
 
     if (field === 'owner_name') {
