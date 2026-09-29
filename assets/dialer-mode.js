@@ -383,7 +383,9 @@
             + '<div class="dm-stat"><b id="dmStPace">0</b><span>Dials/hr</span></div>'
             + '</div>'
             + '<div class="dm-hud-right">'
+            + '<button class="dm-iconbtn" onclick="DIALER_MODE.prevLead()" title="Previous lead (←)">‹ Prev</button>'
             + '<span class="dm-pos" id="dmQueuePos"></span>'
+            + '<button class="dm-iconbtn" onclick="DIALER_MODE.goNext()" title="Next lead (→)">Next ›</button>'
             + '<span id="dmDialToggles" style="display:inline-flex;align-items:center;gap:6px;"></span>'
             + '<button class="dm-iconbtn" onclick="DIALER_MODE.phoneInfo()" title="Dial from your phone">📱 Phone</button>'
             + '<button class="dm-iconbtn" onclick="DIALER_MODE.menu()">Pause</button>'
@@ -836,6 +838,26 @@
     }
 
     /* ---------- lead lifecycle ---------- */
+    /* ---------- manual navigation ----------
+       Prev / Next move through the queue by hand (Remy, 2026-09-29: skipped a
+       lead by accident while fixing an owner name). Never while a call is
+       live: the poll is attributing that call to the lead on screen. Nothing
+       is logged, and auto-dial does NOT fire on a lead reached this way; the
+       rep presses SPACE when ready. */
+    function canNavigate() {
+        return S && S.phase !== 'dialing' && S.phase !== 'done' && !S.panel && !S.pausedFor;
+    }
+    function prevLead() {
+        if (!canNavigate() || S.idx <= 0) return;
+        S.manualNav = true;
+        S.idx -= 2;          // nextLead() adds one back
+        nextLead();
+    }
+    function goNext() {
+        if (!canNavigate() || S.idx >= S.queue.length - 1) return;
+        S.manualNav = true;
+        nextLead();
+    }
     function nextLead() {
         flushNotes();
         clearTimers(false);
@@ -851,7 +873,8 @@
         S.phase = 'ready';
         S.lead = S.queue[S.idx];
         renderLead();
-        if (autoDial() && S.stats.dials > 0) {
+        var manual = S.manualNav; S.manualNav = false;
+        if (autoDial() && S.stats.dials > 0 && !manual) {
             var autoIdx = S.idx;
             setTimeout(function () {
                 if (S && S.idx === autoIdx && S.phase === 'ready' && !S.pausedFor && !S.panel) dial();
@@ -1409,6 +1432,11 @@
             disposition(parseInt(ev.key, 10));
             return;
         }
+        if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+            ev.stopPropagation(); ev.preventDefault();
+            if (ev.key === 'ArrowLeft') prevLead(); else goNext();
+            return;
+        }
         var k = (ev.key || '').toLowerCase();
         if (k === 'n') {
             ev.stopPropagation(); ev.preventDefault();
@@ -1489,6 +1517,7 @@
         notesChanged: notesChanged, saveContact: saveContact,
         jumpTo: jumpTo, legendKey: legendKey,
         callEnded: callEnded, redial: redial,
-        setScriptLang: setScriptLang, phoneInfo: phoneInfo, setDialVia: setDialVia, setAutoDial: setAutoDial
+        setScriptLang: setScriptLang, phoneInfo: phoneInfo, setDialVia: setDialVia, setAutoDial: setAutoDial,
+        prevLead: prevLead, goNext: goNext
     };
 })(typeof window !== 'undefined' ? window : this);
