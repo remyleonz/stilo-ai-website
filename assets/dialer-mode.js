@@ -906,14 +906,21 @@
     function openDialer(e164) {
         var enc = encodeURIComponent(e164);
         if (dialVia() === 'app') { window.location.href = 'tel:' + e164; return; }
+        // The desktop app taking focus BLURS the browser window but does not
+        // hide the tab (macOS keeps it visible), so visibilitychange alone
+        // missed it and the web dialer opened on top of the app (Remy,
+        // 2026-09-29). Either signal means the app answered: no web fallback.
         var appOpened = false;
         var onHide = function () { if (document.hidden) appOpened = true; };
+        var onBlur = function () { appOpened = true; };
         document.addEventListener('visibilitychange', onHide);
+        window.addEventListener('blur', onBlur);
         window.location.href = 'quo://call?to=' + enc;
         setTimeout(function () {
             document.removeEventListener('visibilitychange', onHide);
-            if (!appOpened && !document.hidden) window.open('https://my.openphone.com/calls/new?to=' + enc, '_blank');
-        }, 1400);
+            window.removeEventListener('blur', onBlur);
+            if (!appOpened && !document.hidden && document.hasFocus()) window.open('https://my.openphone.com/calls/new?to=' + enc, '_blank');
+        }, 1600);
     }
 
     function dial() {
