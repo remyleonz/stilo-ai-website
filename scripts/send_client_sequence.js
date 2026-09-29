@@ -155,7 +155,36 @@ function shortBusinessName(name) {
     return (n.length >= 3 && n.length <= 40) ? n : null;
 }
 
+/**
+ * Manuel's laser special (flyer from Remy, 2026-09-29): diode and YAG lasers,
+ * through Friday 10/2/2026. A real deadline is the one urgency lever the call
+ * transcripts show working, so it rides the emails while it is TRUE, and only
+ * to practices that can legally run a laser. Never the numbers, never the
+ * flyer (it lists prices and an unverified "FDA approved"). It switches itself
+ * off after the last day, Eastern time.
+ */
+const SPECIAL_LAST_DAY_ET = '2026-10-02';
+function specialLine(lead, es) {
+    const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    if (todayEt > SPECIAL_LAST_DAY_ET) return null;
+    if (!LASER_LEGAL_RE.test(String(lead.category || ''))) return null;
+    return es
+        ? 'Un dato: Manuel tiene sus láseres en especial hasta este viernes, 2 de octubre, así que conviene hablar antes.'
+        : 'One thing worth knowing: Manuel has his lasers on a special through this Friday, October 2, so it is worth talking before then.';
+}
+/** Put the special line just above the closing paragraph of a composed email. */
+function addSpecial(r, lead, es) {
+    const sp = specialLine(lead, es);
+    if (!sp || !r || !r.body) return r;
+    const i = r.body.lastIndexOf('\n\n');
+    r.body = i > 0 ? r.body.slice(0, i) + '\n\n' + sp + r.body.slice(i) : r.body + '\n\n' + sp;
+    return r;
+}
+
 function composeFollowup(lead, c) {
+    return addSpecial(composeFollowupBase(lead, c), lead, c.es);
+}
+function composeFollowupBase(lead, c) {
     const step = lead.__step || 2;
     const es = c.es, fn = c.fn, local = c.local;
     const hi = es ? (fn ? 'Hola ' + fn + ',' : 'Hola,') : (fn ? 'Hi ' + fn + ',' : 'Hi,');
@@ -238,6 +267,10 @@ function composeFollowup(lead, c) {
  * respond to on the phone.
  */
 function compose(lead, clientName) {
+    const r = composeBase(lead, clientName);
+    return MODE === 'followup' ? r : addSpecial(r, lead, lead.primary_language === 'es');
+}
+function composeBase(lead, clientName) {
     const es = lead.primary_language === 'es';
     const fn = corroboratedFirstName(lead);
     const local = LOCAL_ZIP3.includes(zip3(lead.address));

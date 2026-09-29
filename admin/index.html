@@ -10343,7 +10343,11 @@
                 onClose: function () { try { if (isList) loadClientPipeline(); else loadProspectCallable(); } catch (e) {} }
             });
             if (isList) DIALER_MODE.open({ rows: listRows, noCallbacks: true });
-            else DIALER_MODE.open({ rows: Array.isArray(prospectState.rows) ? prospectState.rows.slice() : [] });
+            // The session dials EXACTLY the list on screen, in the order on
+            // screen: same filters, same "Last called" sort, nothing riding in
+            // front (Remy, 2026-09-29). Callbacks are dialed from the Call
+            // Back tab, where they ARE the list.
+            else DIALER_MODE.open({ rows: applyLastTouchSort(Array.isArray(prospectState.rows) ? prospectState.rows.slice() : []), noCallbacks: true });
         }
 
         /* ===== MEETING TRANSCRIPTS (Tactiq + manual) ===== */
