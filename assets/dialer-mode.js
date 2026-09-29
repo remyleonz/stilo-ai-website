@@ -384,6 +384,7 @@
             + '</div>'
             + '<div class="dm-hud-right">'
             + '<span class="dm-pos" id="dmQueuePos"></span>'
+            + '<span id="dmDialToggles" style="display:inline-flex;align-items:center;gap:6px;"></span>'
             + '<button class="dm-iconbtn" onclick="DIALER_MODE.phoneInfo()" title="Dial from your phone">📱 Phone</button>'
             + '<button class="dm-iconbtn" onclick="DIALER_MODE.menu()">Pause</button>'
             + '<button class="dm-iconbtn" onclick="DIALER_MODE.close()">End session</button>'
@@ -766,7 +767,19 @@
         else if (k === 'n' && S.phase !== 'advance') advance('Skipped', true);
     }
 
+    // Dial settings live in the top bar so they are visible in EVERY phase
+    // (with auto-dial on, the 'ready' footer lasts under a second).
+    function renderDialToggles() {
+        var h = el('dmDialToggles');
+        if (!h) return;
+        h.innerHTML = '<span class="dm-hint" style="margin:0;">Dial with</span>'
+            + '<button class="dm-langbtn' + (dialVia() === 'app' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'app\')" title="Quo desktop app, number pre-filled. Needs Quo as the Mac default for calls (FaceTime > Settings > Default for calls).">Quo app</button>'
+            + '<button class="dm-langbtn' + (dialVia() === 'web' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'web\')">Quo web</button>'
+            + '<span class="dm-hint" style="margin:0 0 0 6px;">Auto-dial</span>'
+            + '<button class="dm-langbtn' + (autoDial() ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setAutoDial(' + (autoDial() ? 'false' : 'true') + ')">' + (autoDial() ? 'On' : 'Off') + '</button>';
+    }
     function renderFoot() {
+        renderDialToggles();
         var foot = el('dmFoot');
         if (!foot) return;
         S.panel = null;
@@ -775,11 +788,7 @@
             foot.innerHTML = '<div class="dm-foot-row">'
                 + '<button class="dm-callbtn" onclick="DIALER_MODE.dial()"><span class="dm-key">SPACE</span> Call in Quo</button>'
                 + '<span style="flex:1;"></span>'
-                + '<span class="dm-hint">Dial with '
-                + '<button class="dm-langbtn' + (dialVia() === 'app' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'app\')" title="Quo desktop app. It must be your Mac\'s default for calls: FaceTime > Settings > Default for calls > Quo">Quo app</button>'
-                + '<button class="dm-langbtn' + (dialVia() === 'web' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'web\')">Quo web</button>'
-                + ' · Auto-dial '
-                + '<button class="dm-langbtn' + (autoDial() ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setAutoDial(' + (autoDial() ? 'false' : 'true') + ')">' + (autoDial() ? 'On' : 'Off') + '</button></span>'
+                + '<span class="dm-hint">' + (dialVia() === 'app' ? 'Quo opens with the number filled in. Press Call.' : 'Quo opens. Talk, hang up, this screen detects the hangup.') + '</span>'
                 + '</div>'
                 + '<div id="dmPanelHost"></div>'
                 + legendHtml();
@@ -790,7 +799,7 @@
             foot.innerHTML = '<div class="dm-foot-row">'
                 + '<span class="dm-pulse"></span><span class="dm-live" id="dmLiveTimer">0:00</span>'
                 + '<span class="dm-dialnum">' + esc(e164) + '</span>'
-                + '<span class="dm-hint">Number copied — paste in Quo (⌘V), or tap Call on your phone\'s companion page.</span>'
+                + '<span class="dm-hint">' + (dialVia() === 'app' ? 'Number sent to the Quo app. Press Call there.' : 'Number copied. Paste in Quo (⌘V), or tap Call on your phone\'s companion page.') + '</span>'
                 + '<span style="flex:1;"></span>'
                 + '<button class="dm-iconbtn" onclick="DIALER_MODE.redial()">Open Quo again</button>'
                 + '<button class="dm-send" onclick="DIALER_MODE.callEnded()">Call ended — log it</button>'
