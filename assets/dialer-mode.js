@@ -320,6 +320,10 @@
             var t = tsToMs(r.next_action_due_at);
             return t && t <= now + 30 * 60 * 1000 && leadPhone(r) && inScope(r, scope);
         });
+        // Callbacks ride in front, but only the ones the board would show:
+        // a South Florida session must never open on an Orlando callback
+        // (Remy, 2026-09-29). The page passes its own filter (city today).
+        if (typeof cfg.filterCallbacks === 'function') due = cfg.filterCallbacks(due) || [];
         due.forEach(function (r) { r.__dmCallback = true; });
         var seen = {};
         var q = [];
@@ -514,6 +518,24 @@
     }
 
     /* ---------- lead rendering ---------- */
+    // City: the board row's parsed city, else the town in the raw address.
+    function cityOf(r) {
+        if (r && r.city) return String(r.city).trim();
+        var parts = String((r && r.address) || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        if (parts.length && /^(usa|united states)$/i.test(parts[parts.length - 1])) parts.pop();
+        if (parts.length < 2) return '';
+        var c = parts[parts.length - 2];
+        return /^[A-Z]{2}\s*\d{5}/.test(c) ? '' : c;
+    }
+    function websiteHtml(r) {
+        var w = String((r && r.website) || '').trim();
+        if (!w) return '<i class="dm-dim">none on file</i>';
+        var href = /^https?:\/\//i.test(w) ? w : 'https://' + w;
+        var shown = w.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '');
+        if (shown.length > 34) shown = shown.slice(0, 33) + '…';
+        return '<a href="' + esc(href) + '" target="_blank" rel="noopener" style="color:var(--blue,#60a5fa);text-decoration:none;">' + esc(shown) + ' ↗</a>';
+    }
+
     function renderLead() {
         var r = S.lead || S.queue[S.idx];
         var main = el('dmMain');
@@ -546,6 +568,8 @@
         g += cRow('Front desk', 'front_desk_name', r.front_desk_name, 'ask her name', false);
         g += cRow('Email', 'owner_email', r.owner_email || r.email, 'get the best email', false);
         g += '<span>Phone</span><b class="dm-phone">' + esc(leadPhone(r)) + '</b>';
+        g += '<span>City</span><b>' + (cityOf(r) ? esc(cityOf(r)) : '<i class="dm-dim">unknown</i>') + '</b>';
+        g += '<span>Website</span><b>' + websiteHtml(r) + '</b>';
         var lastBits = [];
         if (r.last_called_outcome) lastBits.push(outcomeLabel(r.last_called_outcome));
         if (r.last_called_at) lastBits.push(cfg.fmtTime(r.last_called_at));
@@ -572,7 +596,7 @@
             '<div class="dm-lead">'
             + '<div class="dm-chips">' + chips + '</div>'
             + '<h2 class="dm-bizname">' + esc(r.business_name || r.name || 'Lead #' + r.id) + '</h2>'
-            + '<div class="dm-niche">' + esc(r.category || r.niche || '') + (r.city ? ' · ' + esc(r.city) : '') + '</div>'
+            + '<div class="dm-niche">' + esc(r.category || r.niche || '') + (cityOf(r) ? ' · ' + esc(cityOf(r)) : '') + '</div>'
             + '<div class="dm-grid">' + g + '</div>'
             + goalHtml
             + '<div class="dm-sec"><h4>Notes <span class="dm-savedmsg" id="dmNotesSaved"></span></h4>'
@@ -746,7 +770,10 @@
             foot.innerHTML = '<div class="dm-foot-row">'
                 + '<button class="dm-callbtn" onclick="DIALER_MODE.dial()"><span class="dm-key">SPACE</span> Call in Quo</button>'
                 + '<span style="flex:1;"></span>'
-                + '<span class="dm-hint">Quo opens pre-dialed. Talk, hang up. This screen detects the hangup on its own.</span>'
+                + '<span class="dm-hint">Dial with '
+                + '<button class="dm-langbtn' + (dialVia() === 'app' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'app\')" title="Quo desktop app. It must be your Mac\'s default for calls: FaceTime > Settings > Default for calls > Quo">Quo app</button>'
+                + '<button class="dm-langbtn' + (dialVia() === 'web' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'web\')">Quo web</button>'
+                + ' · talk, hang up, this screen detects the hangup.</span>'
                 + '</div>'
                 + '<div id="dmPanelHost"></div>'
                 + legendHtml();
@@ -834,6 +861,34 @@
         }).catch(function () { /* queue row is enough to dial */ });
     }
 
+    /* ---------- how SPACE dials ----------
+       'app': a tel: link. The Quo desktop app picks it up once it is the
+         Mac's default calling app (FaceTime > Settings > Default for calls:
+         Quo). Documented Quo click-to-call path.
+       'web': the original quo:// deep link, web dialer if nothing answers.
+       Per browser, remembered. Default stays 'web' because a tel: link on a
+       Mac WITHOUT Quo as default rings out through FaceTime from the rep's
+       personal iPhone: unrecorded, off the Quo line. */
+    function dialVia() {
+        try { return localStorage.getItem('dm_dial_via') === 'app' ? 'app' : 'web'; } catch (e) { return 'web'; }
+    }
+    function setDialVia(v) {
+        try { localStorage.setItem('dm_dial_via', v === 'app' ? 'app' : 'web'); } catch (e) {}
+        if (S && S.phase === 'ready') renderFoot();
+    }
+    function openDialer(e164) {
+        var enc = encodeURIComponent(e164);
+        if (dialVia() === 'app') { window.location.href = 'tel:' + e164; return; }
+        var appOpened = false;
+        var onHide = function () { if (document.hidden) appOpened = true; };
+        document.addEventListener('visibilitychange', onHide);
+        window.location.href = 'quo://call?to=' + enc;
+        setTimeout(function () {
+            document.removeEventListener('visibilitychange', onHide);
+            if (!appOpened && !document.hidden) window.open('https://my.openphone.com/calls/new?to=' + enc, '_blank');
+        }, 1400);
+    }
+
     function dial() {
         if (!S || S.phase !== 'ready') return;
         var r = S.lead || S.queue[S.idx];
@@ -850,17 +905,7 @@
         // typing. The footer shows the number too.
         try { navigator.clipboard.writeText(e164).catch(function () {}); } catch (e) {}
 
-        // Deep link: quo:// first, web dialer fallback if nothing handles it
-        // (same visibilitychange trick as the drawer's Call button).
-        var enc = encodeURIComponent(e164);
-        var appOpened = false;
-        var onHide = function () { if (document.hidden) appOpened = true; };
-        document.addEventListener('visibilitychange', onHide);
-        window.location.href = 'quo://call?to=' + enc;
-        setTimeout(function () {
-            document.removeEventListener('visibilitychange', onHide);
-            if (!appOpened && !document.hidden) window.open('https://my.openphone.com/calls/new?to=' + enc, '_blank');
-        }, 1400);
+        openDialer(e164);
 
         // Count the attempt (button-click stamp; the webhook row is the real call).
         cfg.fetchJson('/api/prospects/log-dial', { method: 'POST', body: JSON.stringify({ lead_id: r.id }) }).catch(function () {});
@@ -921,7 +966,7 @@
         var e164 = toE164(leadPhone(S.lead || S.queue[S.idx]));
         if (!e164) return;
         try { navigator.clipboard.writeText(e164).catch(function () {}); } catch (e) {}
-        window.location.href = 'quo://call?to=' + encodeURIComponent(e164);
+        openDialer(e164);
     }
 
     /* ---------- dispositions ---------- */
@@ -1364,6 +1409,6 @@
         notesChanged: notesChanged, saveContact: saveContact,
         jumpTo: jumpTo, legendKey: legendKey,
         callEnded: callEnded, redial: redial,
-        setScriptLang: setScriptLang, phoneInfo: phoneInfo
+        setScriptLang: setScriptLang, phoneInfo: phoneInfo, setDialVia: setDialVia
     };
 })(typeof window !== 'undefined' ? window : this);

@@ -3337,6 +3337,7 @@
                     return n ? n.split(' ')[0] : 'me';
                 },
                 loadScriptHtml: dialerScriptHtml,
+                filterCallbacks: applyCityFilter,
                 // Fallback queue fetch honors the rep's tier filter; server
                 // scoping (JWT + impersonation param) already keeps the pool.
                 fetchQueue: function () {
