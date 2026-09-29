@@ -7,7 +7,9 @@
  * of these.
  *
  * AUDIENCE (every condition required):
- *   - owner_email present AND email_search_status = 'found' (the new scrape)
+ *   - owner_email present AND either email_search_status = 'found' (the
+ *     scrape) or email_verify_status = 'deliverable' (MX-verified; covers
+ *     addresses a rep collected on the phone)
  *   - owner_email passes a basic shape check (local@domain.tld). A malformed
  *     scrape is a guaranteed Resend 422, and 422s cost reputation.
  *   - active: archived_batch IS NULL
@@ -384,7 +386,13 @@ module.exports = async function handler(req, res) {
             .select('id,name,owner_name,owner_email,address,niche,category,assigned_to,'
                 + 'last_called_outcome,'
                 + 'email_1_sent_at,email_2_sent_at,email_3_sent_at')
-            .eq('email_search_status', 'found')
+            // Two ways in (2026-09-29): the email finder FOUND the address, or
+            // the address passed MX verification as 'deliverable' (rep-collected
+            // and pending-search addresses land here; 82 phone-connected STILO
+            // leads were locked out because their search status was never
+            // 'found'). Role inboxes are still excluded below by ROLE_RE, and
+            // the dead-domain rule still applies to the found branch.
+            .or('and(email_search_status.eq.found,or(email_verify_status.is.null,email_verify_status.neq.' + DEAD_VERIFY_STATUS + ')),email_verify_status.eq.deliverable')
             .not('owner_email', 'is', null)
             // STILO's cold-email sequence must never touch a client's lead
             // pool (they'd get STILO offer emails while a rep dials them as
@@ -399,7 +407,6 @@ module.exports = async function handler(req, res) {
             // is NULL, not true, so a plain .neq would silently drop the ~1,568
             // never-probed leads along with the 239 dead ones. The explicit
             // is.null OR neq keeps unverified in and takes only the dead out.
-            .or('email_verify_status.is.null,email_verify_status.neq.' + DEAD_VERIFY_STATUS)
             .order('id', { ascending: true })
             .range(from, from + AUDIENCE_PAGE - 1);
         if (error) return res.status(500).json({ error: 'read_failed', detail: error.message });
