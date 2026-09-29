@@ -131,6 +131,7 @@ const M = {
 const PLAN = {
     medical: ['galaxy', 'modena', 'morfo', 'hifu'],
     surgeon: ['co2', 'morfo', 'hifu', 'galaxy'],
+    derm: ['galaxy', 'co2', 'morfo', 'hifu'],
     laser: ['galaxy', 'fashion', 'planet', 'morfo'],
     wellness: ['bodypulse', 'bella', 'hifu', 'cold'],
     esthetic: ['bodypulse', 'bella', 'hydra7', 'destroy'],
@@ -139,7 +140,8 @@ const PLAN = {
     other: [],
 };
 function planKey(lead, seg) {
-    if (seg === 'medical' && /dermatolog|plastic|cosmetic surg|surgeon/i.test(lead.category || '')) return 'surgeon';
+    if (seg === 'medical' && /dermatolog/i.test(lead.category || '')) return 'derm';
+    if (seg === 'medical' && /plastic|cosmetic surg|surgeon/i.test(lead.category || '')) return 'surgeon';
     return seg;
 }
 
@@ -159,6 +161,8 @@ const T = {
     why: {
         medical: ['A medical practice can bill the expensive treatments, so this is a laser conversation. Open buyers get the laser, not a small add-on.',
             'Una práctica médica puede cobrar los tratamientos caros, así que esta es una conversación de láser. Al que está abierto se le ofrece el láser, no un accesorio.'],
+        derm: ['A dermatologist can fire every laser in the catalog, and the independents buy for themselves. Group practices send it to corporate: if the desk says that, get the name and move on. Lead with the laser, then RF microneedling.',
+            'Un dermatólogo puede usar cualquier láser del catálogo, y los independientes compran por su cuenta. Los grupos lo mandan a corporativo: si la recepción dice eso, pida el nombre y siga. Empiece por el láser, después la radiofrecuencia fraccionada.'],
         surgeon: ['The surgeon is the medical director. HIFU and RF microneedling catch the patient who is not ready for surgery. Reach the practice manager and ask who bought the last machine.',
             'El cirujano es el director médico. HIFU y radiofrecuencia fraccionada atrapan al paciente que no está listo para cirugía. Busque al practice manager y pregunte quién compró la última máquina.'],
         laser: ['They already sell laser hair removal, so they know what a laser earns. The angle is the next machine, the oldest one, or darker skin they turn away.',
@@ -273,9 +277,11 @@ function build(rawLead, hist, es) {
     p(T.why[pk] ? T.why[pk][L] : T.why[seg][L]);
     p('');
     if (machines.length) {
-        p(es ? '| Máquina | Por qué a ellos | Precio (nunca lo diga) | Su 8% |' : '| Machine | Why them | Price (never say it) | Your 8% |');
-        p('|---|---|---|---|');
-        for (const m of machines) p('| ' + m[0] + ' | ' + (es ? m[4] : m[3]) + ' | ' + m[1] + ' | ' + m[2] + ' |');
+        // Three columns: the drawer is narrow, and on a phone a fourth column
+        // scrolls off screen.
+        p(es ? '| Máquina | Por qué a ellos | Precio / su 8% (nunca lo diga) |' : '| Machine | Why them | Price / your 8% (never say it) |');
+        p('|---|---|---|');
+        for (const m of machines) p('| ' + m[0] + ' | ' + (es ? m[4] : m[3]) + ' | ' + m[1] + ' / ' + m[2] + ' |');
         p('');
         p(es ? '*Empiece por la primera. Si mencionan algo pequeño, "le consigo la respuesta" y vuelva a la grande.*'
             : '*Lead with the first one. If they raise a small item, "I\'ll get you an answer on that," then back to the big one.*');
