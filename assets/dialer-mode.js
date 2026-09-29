@@ -575,7 +575,7 @@
         g += cRow('Owner', 'owner_name', r.owner_name, 'unknown — ask + type it', verified);
         g += cRow('Front desk', 'front_desk_name', r.front_desk_name, 'ask her name', false);
         g += cRow('Email', 'owner_email', r.owner_email || r.email, 'get the best email', false);
-        g += '<span>Phone</span><b class="dm-phone">' + esc(leadPhone(r)) + '</b>';
+        g += cRow('Phone', 'owner_phone', leadPhone(r), 'the number to dial', false);
         g += '<span>City</span><b>' + (cityOf(r) ? esc(cityOf(r)) : '<i class="dm-dim">unknown</i>') + '</b>';
         g += '<span>Website</span><b>' + websiteHtml(r) + '</b>';
         var lastBits = [];
@@ -726,6 +726,13 @@
             setTimeout(function () { input.style.color = ''; }, 900);
             // Keep the session + board rows in sync so the edit survives —
             // matched BY ID, never by current index.
+            // A corrected dial number must win leadPhone() everywhere.
+            if (field === 'owner_phone') {
+                var e = toE164(value);
+                [S && S.lead && S.lead.id === leadId ? S.lead : null, S && S.queue.find(function (q) { return q.id === leadId; })]
+                    .forEach(function (o) { if (o) { o.owner_phone_e164 = e || null; o.owner_phone = value || null; } });
+                return;
+            }
             if (S && S.lead && S.lead.id === leadId) {
                 S.lead[field] = value || null;
                 if (field === 'owner_name') S.lead.owner_name_verify_status = value ? 'verified' : null;
