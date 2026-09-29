@@ -77,7 +77,7 @@ Ask it in the first minute. It decides which half of the catalog you are selling
 Low ticket sells on cost. **High ticket sells on return.** Get the number from them:
 
 > "What do you charge for a hair removal package right now?"
-> "And how many people a month ask you for something you can't do?"
+> "And how many of those do you do in a month?"
 
 Then stop. Ten packages at $1,200 is $12,000 from one room. It is their number, not your claim.
 
@@ -103,7 +103,7 @@ There is no such thing as a medical director certificate. It is a licensed MD or
 | They say | You say |
 |---|---|
 | "How much is it?" | "Depends which unit fits what your clients are asking for, and Manuel does financing. What's one new treatment worth to you over a year?" **Never a number. Never the website.** |
-| "Send me info / a price list" | "Happy to. So I send the right thing: what treatment are they asking for that you can't do? ... Perfect. And let's put 15 minutes on the calendar so it doesn't sit in your inbox." |
+| "Send me info / a price list" | "Happy to. So I send the right thing: what's the next machine on your list? ... Perfect. And let's put ten minutes with Manuel on the calendar so it doesn't sit in your inbox. Tomorrow at 10 or Thursday at 2?" |
 | "We're not licensed for that" | "Good to know, that changes what I'd show you. Half of what we carry needs no medical director at all." Then the sub-$3k catalog. |
 | "I already bought from [competitor]" | "Congrats. Two quick things: who's training your staff on it, and where's the part coming from when it's down? And what's the next one on your list?" Log the brand, callback in 60 days. |
 | "We have all the lasers already" | "Then you're past the hard part. What's the oldest machine in the room, and what did downtime cost you this year?" |

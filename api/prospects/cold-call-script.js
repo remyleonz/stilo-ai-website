@@ -316,6 +316,43 @@ module.exports = async function handler(req, res) {
     // Per David: render that file ONLY. NEVER read the Supabase cold-call-briefs
     // bucket — those are his SAGE agent's internal RESEARCH (lead flags, objection
     // lists), not the rep script. Showing the brief was the bug.
+    // 0) BLASON SCRIPT V2 (2026-09-29). Per-lead scripts rebuilt from each
+    //    lead's own history by scripts/build_blason_scripts_v2.js, keyed on
+    //    lead id so two locations of one chain never share a script. Served
+    //    FIRST for client-pool leads: the older files on every other path
+    //    still ask the retired "what can't your equipment do" question and
+    //    quote a price range. Gated on the v2 marker so a stray file in the
+    //    folder can never render.
+    const leadId = /^\d+$/.test(String(q.lead_id || '')) ? String(q.lead_id) : null;
+    if (clientPool && leadId) try {
+        const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+        let blob = null, servedLang = lang;
+        if (lang === 'es') {
+            const r = await sb.storage.from(GENERATED_BUCKET).download('blason-v2/' + leadId + '.es.md');
+            if (!r.error && r.data) blob = r.data;
+            else servedLang = 'en';
+        }
+        if (!blob) {
+            const r = await sb.storage.from(GENERATED_BUCKET).download('blason-v2/' + leadId + '.md');
+            if (!r.error && r.data) blob = r.data;
+        }
+        const md = blob ? await blob.text() : null;
+        if (md && /Script v2/.test(md)) {
+            res.setHeader('Cache-Control', 'private, max-age=60');
+            return res.status(200).json({
+                slug: slug,
+                filename: GENERATED_BUCKET + '/blason-v2/' + leadId + (servedLang === 'es' ? '.es.md' : '.md'),
+                generated_at: null,
+                content_md: appendPlaybook(md),
+                lang: servedLang,
+                langs: ['en', 'es'],
+                source: 'blason-v2',
+            });
+        }
+    } catch (e) {
+        console.error('[cold-call-script] blason v2 read failed, falling through:', e.message);
+    }
+
     let token = null;
     try { token = await getAccessToken(); }
     catch (e) {
