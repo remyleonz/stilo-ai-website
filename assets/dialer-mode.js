@@ -1083,18 +1083,9 @@
     function openCallbackPanel() {
         var h = panelHost(); if (!h) return;
         S.panel = 'callback';
-        function slot(label, ms) {
-            return '<button class="dm-qbtn" onclick="DIALER_MODE.setCallback(' + ms + ')">' + label + '</button>';
-        }
-        var now = new Date();
-        var tomorrow10 = new Date(now); tomorrow10.setDate(now.getDate() + 1); tomorrow10.setHours(10, 0, 0, 0);
-        var tomorrow2 = new Date(now); tomorrow2.setDate(now.getDate() + 1); tomorrow2.setHours(14, 0, 0, 0);
-        var monday = new Date(now); monday.setDate(now.getDate() + ((8 - now.getDay()) % 7 || 7)); monday.setHours(10, 0, 0, 0);
+        // Callback slots are the next Monday to Friday at 9 AM, and the date
+        // picker below for anything else (Remy, 2026-09-29).
         h.innerHTML = '<div class="dm-panel"><h4>Callback time</h4>'
-            + slot('In 2 hours', now.getTime() + 2 * 3600000)
-            + slot('Tomorrow 10 AM', tomorrow10.getTime())
-            + slot('Tomorrow 2 PM', tomorrow2.getTime())
-            + slot('Monday 10 AM', monday.getTime())
             + weekdaySlots()
             + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;">'
             + '<input type="datetime-local" id="dmCbCustom" class="dm-input">'
@@ -1117,7 +1108,7 @@
             out.push(d);
         }
         out.sort(function (a, b) { return a - b; });
-        return '<div style="margin-top:8px;">' + out.map(function (d) {
+        return '<div>' + out.map(function (d) {
             return '<button class="dm-qbtn" onclick="DIALER_MODE.setCallback(' + d.getTime() + ')">'
                 + names[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate() + ' 9 AM</button>';
         }).join('') + '</div>';
