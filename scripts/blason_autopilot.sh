@@ -44,9 +44,11 @@ else
   # remainder. Every run passes the 8% trailing-bounce breaker and the
   # bounce-domain blacklist + shared-inbox dedupe inside the script.
   SEQ="/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/send_client_sequence.js"
-  node "$SEQ" --mode followup --limit 20 --send 2>&1 | tail -2
+  # 2026-09-29: lane 2 (role inboxes) OFF. It bounced 19 of 60 in 14 days
+  # (~30%) and kept tripping the 8% breaker, which also froze lane 1. Its
+  # slots go to follow-ups (steps 2 to 5), which bounce 3 to 7%.
+  node "$SEQ" --mode followup --limit 40 --send 2>&1 | tail -2
   node "$SEQ" --lane 1 --limit 10 --send 2>&1 | tail -2
-  node "$SEQ" --lane 2 --limit 20 --send 2>&1 | tail -2
 fi
 echo "[$STAMP] === leg $LEG done ==="
 } >> "$LOG" 2>&1
