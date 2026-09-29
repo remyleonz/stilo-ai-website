@@ -44,6 +44,7 @@
 
     var POLL_MS = 3500;
     var ADVANCE_SECONDS = 5;
+    var AUTO_ADVANCE_SECONDS = 4;   // auto-logged no-answer: time to override with a key
     var CONNECT_SECONDS = 20;   // same threshold as outbound-enqueue + vsl-nurture
 
     /* ---------- voicemail + sms templates ----------
@@ -330,6 +331,10 @@
         due.concat(rows || []).forEach(function (r) {
             if (!r || r.id == null || seen[r.id]) return;
             if (!leadPhone(r)) return;
+            // A closed deal is never a dial, even when an old callback
+            // reminder still points at it (the client himself showed up as
+            // "callback due" in a Blason session, 2026-09-29).
+            if (/^CLOSED/i.test(String(r.stage || ''))) return;
             seen[r.id] = 1;
             q.push(r);
         });
@@ -773,7 +778,8 @@
                 + '<span class="dm-hint">Dial with '
                 + '<button class="dm-langbtn' + (dialVia() === 'app' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'app\')" title="Quo desktop app. It must be your Mac\'s default for calls: FaceTime > Settings > Default for calls > Quo">Quo app</button>'
                 + '<button class="dm-langbtn' + (dialVia() === 'web' ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setDialVia(\'web\')">Quo web</button>'
-                + ' · talk, hang up, this screen detects the hangup.</span>'
+                + ' · Auto-dial '
+                + '<button class="dm-langbtn' + (autoDial() ? ' dm-lang-on' : '') + '" onclick="DIALER_MODE.setAutoDial(' + (autoDial() ? 'false' : 'true') + ')">' + (autoDial() ? 'On' : 'Off') + '</button></span>'
                 + '</div>'
                 + '<div id="dmPanelHost"></div>'
                 + legendHtml();
@@ -808,7 +814,8 @@
         if (S.phase === 'advance') {
             foot.innerHTML = '<div class="dm-foot-row">'
                 + '<span class="dm-result" style="color:var(--green,#10b981);">✓ ' + esc(S.lastLoggedLabel || 'Logged') + '</span>'
-                + '<div class="dm-countwrap"><span class="dm-hint">Next lead in <b id="dmCountNum">' + S.advanceLeft + '</b>s</span>'
+                + '<div class="dm-countwrap"><span class="dm-hint">' + (autoDial() ? 'Next lead dials in ' : 'Next lead in ') + '<b id="dmCountNum">' + S.advanceLeft + '</b>s'
+                + (S.autoLogged ? ' · wrong? press 2 to 6' : '') + '</span>'
                 + '<div class="dm-countbar"><i id="dmCountBar" style="width:100%;"></i></div></div>'
                 + '<button class="dm-callbtn" style="padding:11px 24px;font-size:14px;" onclick="DIALER_MODE.nextNow()"><span class="dm-key">SPACE</span> Next now</button>'
                 + '</div>'
@@ -835,6 +842,12 @@
         S.phase = 'ready';
         S.lead = S.queue[S.idx];
         renderLead();
+        if (autoDial() && S.stats.dials > 0) {
+            var autoIdx = S.idx;
+            setTimeout(function () {
+                if (S && S.idx === autoIdx && S.phase === 'ready' && !S.pausedFor && !S.panel) dial();
+            }, 900);
+        }
         // Enrich from detail (notes, history, contacts, client info) and
         // snapshot the existing call ids so the poll can spot the NEW row.
         var myIdx = S.idx;
@@ -861,6 +874,20 @@
         }).catch(function () { /* queue row is enough to dial */ });
     }
 
+    /* ---------- auto-dial ----------
+       On by default (Remy, 2026-09-29: "the next call should get made as
+       soon as the first one gets hung up"). A no-answer or short call logs
+       itself and the next lead dials after a short, overridable countdown;
+       a real conversation waits for the rep's outcome key, then the next
+       lead dials immediately. The FIRST dial of a session always waits for
+       SPACE, so opening the dialer never rings anyone. */
+    function autoDial() {
+        try { return localStorage.getItem('dm_autodial') !== 'off'; } catch (e) { return true; }
+    }
+    function setAutoDial(on) {
+        try { localStorage.setItem('dm_autodial', on ? 'on' : 'off'); } catch (e) {}
+        if (S) renderFoot();
+    }
     /* ---------- how SPACE dials ----------
        'app': a tel: link. The Quo desktop app picks it up once it is the
          Mac's default calling app (FaceTime > Settings > Default for calls:
@@ -946,6 +973,13 @@
                     var keepPanel = S.panel;
                     S.phase = 'disposition';
                     if (!keepPanel) renderFoot();   // don't blow away an open callback/DNC/email panel
+                    // Auto-dial: a call that never became a conversation logs
+                    // itself (key 1 writes nothing; the webhook row already
+                    // carries the outcome) and the queue moves on.
+                    if (autoDial() && dur < CONNECT_SECONDS && !keepPanel && !S.pausedFor) {
+                        S.autoLogged = true;
+                        advance('No answer / voicemail · logged for you', false, AUTO_ADVANCE_SECONDS);
+                    }
                 }
             }).catch(function () { /* transient; keep polling */ });
         }, POLL_MS);
@@ -977,6 +1011,14 @@
     // (rep_notes), which autosaves independently of outcomes.
     function disposition(k) {
         if (!S) return;
+        // Override an auto-logged no-answer while its countdown runs (the
+        // desk said "call back at 9": press 2 instead of losing the lead).
+        if (S.phase === 'advance' && S.autoLogged && k !== 1) {
+            if (S.advTimer) { clearInterval(S.advTimer); S.advTimer = null; }
+            S.autoLogged = false;
+            S.phase = 'disposition';
+            renderFoot();
+        }
         if (S.phase !== 'disposition' && S.phase !== 'dialing') return;
         if (S.panel) return;   // a sub-panel is open; its own buttons handle input
         stopPoll();
@@ -1206,22 +1248,32 @@
     }
 
     /* ---------- advance ---------- */
-    function advance(label, silent) {
+    function advance(label, silent, seconds) {
         flushNotes();
         closePanel();
         S.lastLoggedLabel = label;
         S.phase = 'advance';
-        S.advanceLeft = ADVANCE_SECONDS;
+        if (!seconds) S.autoLogged = false;
+        // With auto-dial on, a rep-logged outcome moves straight on: they
+        // already chose, there is nothing to wait for.
+        S.advanceTotal = seconds || (autoDial() ? 1 : ADVANCE_SECONDS);
+        S.advanceLeft = S.advanceTotal;
         renderFoot();
         startAdvanceTimer();
         if (!silent && cfg.onLogged) { try { cfg.onLogged((S.lead || S.queue[S.idx]).id); } catch (e) {} }
     }
     function startAdvanceTimer() {
         if (S.advTimer) clearInterval(S.advTimer);
-        var total = ADVANCE_SECONDS * 1000;
+        var total = (S.advanceTotal || ADVANCE_SECONDS) * 1000;
         var end = Date.now() + S.advanceLeft * 1000;
         S.advTimer = setInterval(function () {
             if (!S) return;
+            // Typing notes freezes the countdown; clicking out resumes it.
+            if (document.activeElement && document.activeElement.id === 'dmLiveNotes') {
+                end = Date.now() + Math.max(1, S.advanceLeft) * 1000;
+                var hold = el('dmCountNum'); if (hold) hold.textContent = S.advanceLeft + ' (paused while you type)';
+                return;
+            }
             var left = end - Date.now();
             S.advanceLeft = Math.max(0, Math.ceil(left / 1000));
             var n = el('dmCountNum'); if (n) n.textContent = S.advanceLeft;
@@ -1409,6 +1461,6 @@
         notesChanged: notesChanged, saveContact: saveContact,
         jumpTo: jumpTo, legendKey: legendKey,
         callEnded: callEnded, redial: redial,
-        setScriptLang: setScriptLang, phoneInfo: phoneInfo, setDialVia: setDialVia
+        setScriptLang: setScriptLang, phoneInfo: phoneInfo, setDialVia: setDialVia, setAutoDial: setAutoDial
     };
 })(typeof window !== 'undefined' ? window : this);
