@@ -1095,11 +1095,32 @@
             + slot('Tomorrow 10 AM', tomorrow10.getTime())
             + slot('Tomorrow 2 PM', tomorrow2.getTime())
             + slot('Monday 10 AM', monday.getTime())
+            + weekdaySlots()
             + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;">'
             + '<input type="datetime-local" id="dmCbCustom" class="dm-input">'
             + '<button class="dm-send" onclick="DIALER_MODE.setCallbackCustom()">Set</button>'
             + '<button class="dm-cancel" onclick="DIALER_MODE.closePanel()">Cancel (Esc)</button>'
             + '</div></div>';
+    }
+    // The next Monday to Friday at 9 AM, soonest first (Remy, 2026-09-29).
+    // "Next" means strictly after now: at 9:30 on a Tuesday, Tuesday 9 AM is
+    // next week's.
+    function weekdaySlots() {
+        var now = new Date();
+        var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        var out = [];
+        for (var wd = 1; wd <= 5; wd++) {
+            var d = new Date(now); d.setHours(9, 0, 0, 0);
+            var add = (wd - d.getDay() + 7) % 7;
+            d.setDate(d.getDate() + add);
+            if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 7);
+            out.push(d);
+        }
+        out.sort(function (a, b) { return a - b; });
+        return '<div style="margin-top:8px;">' + out.map(function (d) {
+            return '<button class="dm-qbtn" onclick="DIALER_MODE.setCallback(' + d.getTime() + ')">'
+                + names[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate() + ' 9 AM</button>';
+        }).join('') + '</div>';
     }
     function setCallback(ms) { commitCallback(new Date(ms).toISOString()); }
     function setCallbackCustom() {
