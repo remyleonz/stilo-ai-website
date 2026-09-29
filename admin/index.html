@@ -10322,6 +10322,9 @@
                     var f = prospectState.filters || {};
                     return { clientId: f.account || null };
                 },
+                filterCallbacks: function (rows) {
+                    return (prospectState.filters && prospectState.filters.city) ? rows.filter(matchesCityFilter) : rows;
+                },
                 callbacksPath: function () {
                     var f = prospectState.filters || {};
                     return '/api/prospects/callbacks' + (f.sdr ? '?assigned_to=' + encodeURIComponent(f.sdr) : '');
