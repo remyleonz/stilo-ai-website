@@ -289,7 +289,14 @@ function build(rawLead, hist, es) {
     }
 
     // ---- 1. Front desk -----------------------------------------------------
-    p(es ? '## 1. La recepción' : '## 1. The front desk');
+    // The empty "front desk answers" section is a hook, not content: the
+    // shared renderer (assets/cold-call-script.js) swaps it for the
+    // "Front desk answered? Tap here." dropdown (name open, the hinge, the
+    // screens, the three assets, the owner ask). Without it the dropdown
+    // never shows. The lead-specific lines stay in the section below it.
+    p('## When the front desk answers');
+    p('');
+    p(es ? '## 1. La recepción: sus líneas para este negocio' : '## 1. The front desk: your lines for this lead');
     p(es ? '**Siempre la compañía, deletreada, y una razón:**' : '**Always the company, spelled, plus one reason:**');
     p('> ' + (es ? '"Hola, le habla Remy de ' + blason + '. Es sobre las máquinas, ¿está ' + nameOrOwner + '?"'
         : '"Hi, it\'s Remy with ' + blason + '. It\'s about the machines. Is ' + nameOrOwner + ' in?"'));
