@@ -288,7 +288,7 @@ function build(rawLead, hist, es) {
     // 2. One question that finds the reason to buy.
     p(es ? '## 2. La pregunta' : '## 2. The question');
     if (seg === 'wellness') S('Sus pacientes de pérdida de peso, cuando ya bajaron, ¿le preguntan qué hacer con la piel suelta o con el músculo que perdieron?', 'Your weight-loss patients, once the weight comes off, are they asking what to do about loose skin or the muscle they lost?');
-    else if (seg === 'salon') S('¿Tienen cabina para faciales o tratamientos? ¿Qué es lo que más le piden las clientas que hoy no hacen?', 'Do you have a treatment room? What do clients ask for most that you don\'t do today?');
+    else if (seg === 'salon') S('¿Tienen cabina para faciales o tratamientos? ¿Cuál es el próximo servicio que quieren agregar?', 'Do you have a treatment room? What\'s the next service you want to add?');
     else if (seg === 'school') S('¿Con qué máquinas entrenan a las alumnas, y cuál les falta?', 'What machines do your students train on, and what\'s missing?');
     else {
         S('¿Ustedes hacen depilación láser hoy?', 'Are you doing laser hair removal there today?');
@@ -368,7 +368,7 @@ async function getAll(pathQuery) {
     return rows;
 }
 
-const BANNED = [/what (treatment|treatments)[^.?]*can'?t/i, /no pueden? hacer/i, /nothing urgent|nada urgente/i, /hialeah/i, /\bvideo\b|videollamada/i,
+const BANNED = [/what (treatment|treatments)[^.?]*can'?t/i, /that you don'?t do|que hoy no hacen/i, /no pueden? hacer/i, /nothing urgent|nada urgente/i, /hialeah/i, /\bvideo\b|videollamada/i,
     /blasononline|www\.|https?:/i, /[—–]/, /equipaje/i, /\bstilo\b|\bagency\b|\bAI\b/,
     // v3 (2026-10-01): dead question, the screen-baiting line, claims we can't back, prices out loud.
     /looking to add any|buscando a(ñ|n)adir/i, /thirty seconds|treinta segundos/i, /certifi/i, /\bFDA\b/, /\$\s?\d/];

@@ -969,6 +969,7 @@
         if (!e164) { advance('No phone number', true); return; }
         S.phase = 'dialing';
         S.dialStartedAt = Date.now();
+        S.dialLeadId = r.id;
         S.stats.dials++;
         renderFoot();
 
@@ -1032,6 +1033,41 @@
     }
     function stopPoll() { if (S && S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } }
 
+    // Late attribution (2026-10-01): Quo's webhook row lands seconds AFTER the
+    // hangup. A rep who presses an outcome key first stopped the poll, so the
+    // call was never counted: 4 dials, 0 connects, 0:00 talk all session.
+    // Keep watching each dialed lead for 3 minutes after moving on and count
+    // the call whenever its row shows up.
+    function queueLate() {
+        if (!S || S.currentCall || !S.dialStartedAt || !S.dialLeadId) return;
+        S.late = S.late || [];
+        var key = S.dialLeadId + ':' + S.dialStartedAt;
+        if (S.late.some(function (x) { return x.key === key; })) return;
+        S.late.push({ key: key, leadId: S.dialLeadId, since: S.dialStartedAt, until: Date.now() + 180000 });
+        if (!S.lateTimer) S.lateTimer = setInterval(lateTick, 5000);
+    }
+    function lateTick() {
+        if (!S) return;
+        var now = Date.now();
+        S.late = (S.late || []).filter(function (x) { return x.until > now; });
+        if (!S.late.length) { clearInterval(S.lateTimer); S.lateTimer = null; return; }
+        S.late.forEach(function (x) {
+            cfg.fetchJson('/api/prospects/timeline?id=' + encodeURIComponent(x.leadId)).then(function (data) {
+                if (!S || !S.late || S.late.indexOf(x) === -1) return;
+                var calls = ((data && data.events) || []).filter(function (e) { return e.kind === 'call'; });
+                var fresh = calls.find(function (e) {
+                    return e.id != null && !S.knownCallIds[e.id] && tsToMs(e.called_at) > x.since - 120000;
+                });
+                if (!fresh) return;
+                S.knownCallIds[fresh.id] = 1;
+                var dur = fresh.duration_seconds || 0;
+                if (dur >= CONNECT_SECONDS) S.stats.connects++;
+                S.stats.talk += dur;
+                S.late = S.late.filter(function (y) { return y !== x; });
+            }).catch(function () { /* transient; next tick retries */ });
+        });
+    }
+
     // Manual hangup: the webhook usually pops the disposition on its own, but
     // when it doesn't (Quo hiccup, number dialed by hand outside the deep
     // link) the rep must never be stuck. Polling keeps running underneath so
@@ -1067,6 +1103,7 @@
         }
         if (S.phase !== 'disposition' && S.phase !== 'dialing') return;
         if (S.panel) return;   // a sub-panel is open; its own buttons handle input
+        queueLate();
         stopPoll();
         var r = S.lead || S.queue[S.idx];
 
@@ -1307,6 +1344,7 @@
 
     /* ---------- advance ---------- */
     function advance(label, silent, seconds) {
+        queueLate();
         flushNotes();
         closePanel();
         S.lastLoggedLabel = label;
@@ -1499,6 +1537,7 @@
 
     function close() {
         if (!S) return;
+        if (S.lateTimer) { clearInterval(S.lateTimer); S.lateTimer = null; }
         flushNotes();
         clearTimers(true);
         document.removeEventListener('keydown', onKeyDown, true);
