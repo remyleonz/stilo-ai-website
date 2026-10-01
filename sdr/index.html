@@ -1238,6 +1238,20 @@
             return path + join + params.join('&');
         }
 
+        // Call recordings come from Quo on click (api/prospects/call-recording).
+        async function playCallRecording(ev, callId, el) {
+            if (ev) ev.preventDefault();
+            if (!callId || !el) return;
+            el.textContent = 'Loading recording...';
+            try {
+                const d = await fetchJSON('/api/prospects/call-recording?call_id=' + encodeURIComponent(callId));
+                if (!d || !d.url) { el.textContent = 'No recording on this call'; return; }
+                const a = document.createElement('audio');
+                a.controls = true; a.autoplay = true; a.preload = 'auto'; a.src = d.url;
+                a.style.cssText = 'display:block;width:100%;height:34px;margin-top:6px;';
+                el.replaceWith(a);
+            } catch (e) { el.textContent = 'No recording on this call'; }
+        }
         async function fetchJSON(path, opts) {
             opts = opts || {};
             const scopedPath = withImpersonationParam(path);
@@ -2993,7 +3007,7 @@
                             ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:11px;color:var(--blue);">View full transcript</summary>'
                               + '<div style="margin-top:6px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:4px;color:var(--text-secondary);font-size:11px;line-height:1.5;white-space:pre-wrap;max-height:240px;overflow-y:auto;">' + escapeHtml(c.transcript) + '</div></details>'
                             : '';
-                        const rec = c.recording_url ? ' · <a href="' + escapeHtml(c.recording_url) + '" target="_blank" style="color:var(--blue);">▶ recording</a>' : '';
+                        const rec = (c.id && (c.openphone_call_id || c.recording_url) && (c.duration_seconds || 0) >= 5) ? ' · <a href="#" onclick="playCallRecording(event, ' + Number(c.id) + ', this)" style="color:var(--blue);font-weight:600;text-decoration:none;">▶ Play recording</a>' : '';
                         return '<div style="border-left:2px solid var(--border-medium);padding:2px 0 12px 12px;margin-left:4px;">'
                             + '<div style="font-size:12px;color:var(--text-secondary);">' + escapeHtml(when) + (dur ? ' · ' + dur : '') + ' · <strong style="color:var(--text-primary);">' + escapeHtml((c.outcome || c.direction || 'call').replace(/_/g, ' ')) + '</strong>' + (c.logged_by ? ' · ' + escapeHtml(c.logged_by) : '') + rec + '</div>'
                             + summ + trans
@@ -3960,7 +3974,7 @@
                     const summary = r.transcript_summary
                         ? '<div style="margin-top:5px;font-size:12px;color:var(--text-primary);line-height:1.45;background:rgba(37,99,235,0.06);border-left:2px solid var(--blue);border-radius:4px;padding:6px 8px;">' + escapeHtml(r.transcript_summary) + '</div>'
                         : '';
-                    const rec = r.recording_url ? '<a href="' + escapeHtml(r.recording_url) + '" target="_blank" style="color:var(--blue);font-size:11px;">▶ recording</a>' : '';
+                    const rec = (r.call_id && (r.openphone_call_id || r.recording_url) && (r.duration_seconds || 0) >= 5) ? '<a href="#" onclick="playCallRecording(event, ' + Number(r.call_id) + ', this)" style="color:var(--blue);font-size:11px;font-weight:600;text-decoration:none;">▶ Play recording</a>' : '';
                     const trans = r.transcript
                         ? '<details style="margin-top:5px;"><summary style="cursor:pointer;font-size:11px;color:var(--blue);">View full transcript</summary>'
                           + '<div style="margin-top:5px;padding:8px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:4px;color:var(--text-secondary);font-size:11px;line-height:1.5;white-space:pre-wrap;max-height:220px;overflow-y:auto;">' + escapeHtml(r.transcript) + '</div></details>'

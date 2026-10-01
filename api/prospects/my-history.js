@@ -103,7 +103,7 @@ module.exports = async function handler(req, res) {
 
         // Stage 2: pull the freshest call per scoped lead (any logger).
         let detailQuery = sb.from('lead_calls')
-            .select('lead_id, called_at, outcome, notes, logged_by, transcript, transcript_summary, recording_url, duration_seconds')
+            .select('id, openphone_call_id, lead_id, called_at, outcome, notes, logged_by, transcript, transcript_summary, recording_url, duration_seconds')
             .in('lead_id', scopedLeadIds)
             .order('called_at', { ascending: false })
             .limit(2000);
@@ -159,7 +159,10 @@ module.exports = async function handler(req, res) {
                 transcript: call.transcript || null,
                 transcript_summary: call.transcript_summary || null,
                 recording_url: call.recording_url || null,
-                duration_seconds: call.duration_seconds || null
+                duration_seconds: call.duration_seconds || null,
+                // The CALL's ids (row.id is the lead's): the Play recording button needs them.
+                call_id: call.id || null,
+                openphone_call_id: call.openphone_call_id || null
             };
         }).filter(Boolean);
 
