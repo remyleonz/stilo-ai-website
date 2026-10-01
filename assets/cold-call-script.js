@@ -274,58 +274,75 @@
      * up on live owners without asking for the visit. This rewrite is the
      * step-by-step distilled from the 2026-09 call transcripts.
      *
+     * 2026-10-01 (v3): desk-only. Its separate owner pitch ("invitarla al
+     * showroom", "treinta segundos") is gone so the drawer shows ONE owner
+     * script: the per-lead v3 file below the box.
+     *
      * Block boundaries: starts at the H2 matching /front desk answers/i and
      * runs while the following H2s still match /manufacturing standing/i.
      * Scripts without the block (STILO scripts, older vintages) render as
      * before, with no box.
      */
     var GATEKEEPER_MD = [
-        '**The data so far: 63% of dials hit a front desk and almost none survive it. Messages left with the desk never come back. Pitches given to the desk get declined FOR the owner. She is a ROUTER, not a decider: route past her, or leave with the three assets. Never pitch her.**',
+        '**Your goal with the desk: the owner\'s name, when they\'re actually free, and a cell or WhatsApp. The desk routes, it doesn\'t decide. Never pitch the desk. A desk "not interested" is logged NOT PITCHED, never as lost.**',
         '',
-        '### 1. Open with the owner\'s NAME — a statement, not a question',
-        '> "Hola, con **[NOMBRE DE LA DUEÑA]**, por favor. Le habla [SU NOMBRE]."',
-        '> EN: "Hi — **[owner\'s name]**, please. It\'s [your name]."',
+        '### 1. Open: company spelled, then one question',
+        '> "Hola, le habla [SU NOMBRE] de Blasón. B-L-A-S-O-N. Somos los importadores de láser con el showroom en Miami."',
+        '> EN: "Hi, it\'s [your name] with Blason. B-L-A-S-O-N. We\'re the laser importer with the showroom in Miami."',
+        '*(pausa · pause)*',
+        '> "¿Quién decide lo de los láseres ahí, el doctor o la gerente?"',
+        '> EN: "Who decides on the lasers there, the doctor or a practice manager?"',
         '',
-        'Then STOP TALKING. The silence is the ask. Opening by name is our strongest single move. No name on file: "con la dueña, por favor" — never guess a name, and never "¿puedo hablar con...?" (a question hands her a decision).',
+        '### 2. Get the time, the cell and the desk\'s name',
+        '> "Perfecto. ¿Y a qué hora consigo a [NOMBRE] entre pacientes? ¿Temprano en la mañana o al final del día?"',
+        '> EN: "Perfect. And when is [name] actually between patients? First thing in the morning, or end of day?"',
+        '> "¿Tiene un celular o WhatsApp que sí mire? Yo sé que esta línea siempre está sonando."',
+        '> EN: "Is there a cell or a WhatsApp [name] actually checks? I know this line\'s always slammed."',
+        '> "¿Y con quién tengo el gusto? ... Gracias, [NOMBRE]."',
+        '> EN: "And who am I speaking with? ... Thanks, [desk name]."',
         '',
-        '### 2. "¿De parte de quién?" — the hinge',
-        '> "Soy [SU NOMBRE]. ¿Le puede decir que [SU NOMBRE] está en la línea, por favor?"',
+        '### 3. Leave a question, not a message',
+        '> "¿Me le pregunta una cosa a [NOMBRE]? ¿Cuántos años tiene el láser de depilación? Le llamo mañana a las 9 y 5."',
+        '> EN: "Would you ask [name] one thing for me? How old is the hair removal laser? I\'ll call at 9:05 tomorrow."',
         '',
-        'Company asked? Answer straight and keep it small: **"[SU NOMBRE], de Blasón."** First mention only, anchor it: "Blasón — B, L, A, S, O, N." Never dodge a direct question; evasion is what gets screened.',
+        '### 4. When the desk screens you: one line each, never the pitch',
+        '**"¿Es paciente?" / "Are you a patient?"**',
+        '> "No soy paciente. Es una llamada de proveedor sobre los equipos de láser, para el dueño."',
+        '> EN: "I\'m not a patient. It\'s a vendor call about the laser equipment, for the owner."',
         '',
-        '### 3. She screens you — one line each, NEVER the pitch',
-        '| She says | You say |',
-        '|---|---|',
-        '| "¿De qué se trata?" | "Es para invitar a [DUEÑA] al showroom de Blasón en Miami — las máquinas están funcionando para que las pruebe. ¿Me la pasa un segundo para coordinarlo?" |',
-        '| Pressed again | "Honestamente, es una llamada de venta. Treinta segundos y ella me dice sí o no. ¿Me la pasa?" |',
-        '| "No está." | "¿A qué hora está de verdad en su escritorio? ... Usted que la conoce mejor que nadie: ¿a qué hora llamaría usted?" **Win = a TIME. A message is a loss.** |',
-        '| "Mándele un correo." | "Con gusto — ¿cuál es el mejor correo para ella? ... Si no me contesta, ¿la llamo el jueves?" |',
-        '| "¿La está esperando?" | "No — primera vez que la llamo. Por eso son treinta segundos." |',
-        '| Vacation / back on [date] | "¿Cuándo vuelve? ... Perfecto, la llamo el [date + 2 days]." Log it as a dated callback. |',
+        '**"¿De qué se trata?" / "What is this regarding?"**',
+        '> "Del láser de depilación. Es una decisión del dueño, así que no le quiero quitar su tiempo. ¿A qué hora le consigo?"',
+        '> EN: "The hair removal laser. It\'s an owner decision, so I\'d rather not take up your time with it. When\'s the best time to catch [name]?"',
         '',
-        '**The wishlist question and the full pitch are OWNER-ONLY.** Every pitch delivered to a receptionist in the transcripts ended as "she\'s not interested" — the desk declining for the owner. And **never leave your number as the plan**: they never call back. YOU call back, at the time SHE names.',
+        '**"Mándelo al correo de info" / "Send it to info@"**',
+        '> "Con gusto. Pero el correo de info se llena y eso se pierde. ¿Hay un correo directo?"',
+        '> EN: "Happy to. Info inboxes get buried, though. Is there a direct email for [name]?"',
+        '> "Perfecto. Se lo mando en diez minutos, y le llamo el jueves a las 9 para que no se quede ahí. ¿Le parece?"',
+        '> EN: "Great. I\'ll send it in the next ten minutes, and I\'ll call [name] Thursday at 9 so it doesn\'t sit there. Does that work?"',
         '',
-        '### 4. Before you hang up — the three assets, every first call',
-        'Most first calls will not reach the owner. The call is still a WIN if you leave with all three. Type them into the dialer before the next dial:',
-        '- **Owner\'s name** — "¿Y cómo se llama la dueña?"',
-        '- **Best email** — "¿Cuál es el mejor correo para ella?" (send the five-liner the SAME day)',
-        '- **The desk\'s name** — "¿Con quién tengo el gusto? ... Gracias, [NOMBRE]."',
+        '*Send it before you say you sent it. Subject: "Remy from Blason, re: the hair removal laser."*',
         '',
-        'Call 2 is a different call — warm, expected, and every word true:',
-        '> "Hola [NOMBRE DEL DESK], soy [SU NOMBRE] otra vez — le mandé el correo a [DUEÑA] el martes. ¿Se lo pudo pasar?"',
+        '**"Si le interesa, le llama" / "If they\'re interested, they\'ll call you"**',
+        '> "Me parece bien. Entonces pregúntele una sola cosa: ¿cuántos años tiene el láser? Si me dice que es nuevecito, no llamo más. Se lo prometo."',
+        '> EN: "Totally fair. Then just ask one thing: how old is the laser? If the answer is brand new, tell me and I\'ll stop calling. Promise."',
         '',
-        '### 5. The owner picks up — one sentence, one question, then ASK',
-        'No preamble. The "we work with spas all over Florida..." ramble confuses them into a no (it did, on tape).',
-        '> "[DUEÑA], le habla [SU NOMBRE], de Blasón en Miami. La llamo para invitarla al showroom — las máquinas están puestas y funcionando para que las pruebe antes de comprar. ¿Le viene mejor esta semana o la que viene?"',
+        '**"No le interesa" (the desk, for the owner)**',
+        '> "Entendido, y por eso mismo no le quiero hacer el cuento a usted. ¿A qué hora mira su propio teléfono, temprano o cuando cierran?"',
+        '> EN: "Understood, and that\'s exactly why I don\'t want to pitch you. When do they look at their own phone, first thing or after close?"',
         '',
-        '- "Mándeme el catálogo" is the new "not interested". Send it AND keep the meeting: "Se lo mando hoy. Y aparte — ¿cuándo le viene bien pasar por el showroom, martes o jueves?"',
-        '- She names a brand or spec you\'re not sure of: "Puede ser — Manuel tiene el catálogo completo. Venga a verlo funcionando: ¿martes o jueves?" Never guess specs.',
-        '- **Do not hang up without asking for the visit.** The transcripts are full of owner conversations that end politely with no ask. Thirty seconds earned = ask, with two options.',
+        '**"No coge llamadas" / "They\'re never here"**',
+        '> "No hay problema. Cuando está en un procedimiento, ¿quién se encarga de las compras? ¿La gerente?"',
+        '> EN: "No problem. When they\'re in a procedure, who handles purchasing? The office manager?"',
         '',
-        '### Never — these burn the number, not just the call',
-        '- Never claim she\'s expecting you, that you\'ve spoken before, or that she asked you to call.',
-        '- Never open with "vendemos equipos" to the desk — but never deny it\'s a sales call when asked straight.',
-        '- Never pitch the desk. Never end a call with "call me back" as the plan.'
+        '**Phone menu:** press the vendor, sales, manager or operator option. Never hang up without pressing something.',
+        '',
+        '### 5. Second call, same desk',
+        '> "Hola [NOMBRE], es Remy de Blasón otra vez. Usted me dijo que [DUEÑO] estaba libre como a las 9. ¿Ahora es buen momento?"',
+        '> EN: "Hi [desk name], it\'s Remy from Blason again. You told me [name] is free around 9. Is now good?"',
+        '',
+        '### Never with the desk',
+        '- The product list, "thirty seconds", "it\'s nothing urgent", "just give me a callback", or "I sent the email" before you did. In Spanish, never "equipaje": say "máquinas".',
+        '- The owner conversation is in the script below this box. When the owner picks up, close this and go to Step 2.'
     ].join('\n');
     /**
      * Single-language pass over bilingual script markdown. David's Blason
@@ -396,7 +413,7 @@
             + '<details class="stilo-gk" style="margin:0 0 16px;border:1px solid rgba(245,158,11,0.5);border-radius:10px;background:rgba(245,158,11,0.07);">'
             + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;">'
             + '<span style="flex:none;font-size:16px;">\uD83D\uDECE\uFE0F</span>'
-            + '<span style="font-family:var(--font-display);font-weight:800;color:#fff;font-size:15px;line-height:1.3;">Front desk answered? Tap here.<span style="display:block;font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:2px;">5 steps: name open \u00B7 the hinge \u00B7 the screens \u00B7 the three assets \u00B7 the owner ask.</span></span>'
+            + '<span style="font-family:var(--font-display);font-weight:800;color:#fff;font-size:15px;line-height:1.3;">Front desk answered? Tap here.<span style="display:block;font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:2px;">Open \u00B7 time, cell, name \u00B7 leave a question \u00B7 the screens \u00B7 call two.</span></span>'
             + '<span class="stilo-gk-hint" style="margin-left:auto;flex:none;font-size:11px;font-weight:700;color:rgba(245,158,11,0.9);">OPEN \u25BE</span>'
             + '</summary>'
             + '<div style="padding:2px 14px 14px;border-top:1px solid rgba(245,158,11,0.25);">' + renderBody(langFilter(GATEKEEPER_MD, lang)) + '</div>'
