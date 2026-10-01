@@ -9650,7 +9650,10 @@
                 msgEl.style.color = 'var(--blue)';
                 msgEl.innerHTML = '<strong>' + escapeAdminHtml(phone) + ' copied.</strong> Paste in Quo with Cmd+V, hit call. Lead is dimmed in your Cold Call list — log the outcome when done.';
             }
-            // Don't preventDefault — the anchor still opens Quo.
+            // Open the Quo Mac app (shared opener: app first, web dialer only if
+            // nothing answers). The href used to be the web dialer itself, so the
+            // button never reached the installed app (Remy, 2026-10-01).
+            if (window.DIALER_MODE && DIALER_MODE.openQuo && DIALER_MODE.openQuo(phone)) ev.preventDefault();
         }
 
         // Optimistic visual update: demote the row in-place so the user sees
@@ -10588,13 +10591,13 @@
                     + '</div>';
             } else if (phone) {
                 var encPhone = encodeURIComponent(phone);
-                var appUrl = 'https://my.openphone.com/calls/new?to=' + encPhone;
+                var appUrl = 'quo://call?to=' + encodeURIComponent('+' + (String(phone).replace(/\D/g, '').length === 10 ? '1' : '') + String(phone).replace(/\D/g, ''));
                 phoneCardHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg,rgba(37,99,235,0.10),rgba(37,99,235,0.02));border:1px solid rgba(37,99,235,0.35);border-radius:12px;padding:16px 18px;margin-bottom:12px;">'
                     + '<div style="min-width:0;">'
                       + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:2px;">Direct line' + strictPill + '</div>'
                       + '<div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.01em;">' + escapeAdminHtml(phone) + '</div>'
                     + '</div>'
-                    + '<a href="' + escapeAdminHtml(appUrl) + '" target="_blank" rel="noopener" onclick="onCallButtonClick(event, ' + JSON.stringify(phone) + ')" '
+                    + '<a href="' + escapeAdminHtml(appUrl) + '" onclick="onCallButtonClick(event, ' + JSON.stringify(phone) + ')" '
                       + 'style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:13px 20px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 14px rgba(37,99,235,0.35);">' + callSvg + 'Call in Quo</a>'
                     + '</div>'
                     + (lineOptions ? '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--text-secondary);">From <select id="openphoneLinePicker" onchange="selectOpenPhoneLine(this.value)" style="margin-left:6px;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;">' + lineOptions + '</select></label></div>' : '')

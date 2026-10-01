@@ -3269,6 +3269,7 @@
             const r = CURRENT.lead || {};
             const e164 = toE164(leadPhone(r));
             if (!e164) { outcomeMsg('No phone number on this lead.', 'var(--red)'); return; }
+            if (window.DIALER_MODE && DIALER_MODE.openQuo && DIALER_MODE.openQuo(e164)) return;
             const enc = encodeURIComponent(e164);
             const deep = 'quo://call?to=' + enc;
             const web = 'https://my.openphone.com/calls/new?to=' + enc;

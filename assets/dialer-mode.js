@@ -1525,6 +1525,15 @@
         jumpTo: jumpTo, legendKey: legendKey,
         callEnded: callEnded, redial: redial,
         setScriptLang: setScriptLang, phoneInfo: phoneInfo, setDialVia: setDialVia, setAutoDial: setAutoDial,
-        prevLead: prevLead, goNext: goNext
+        prevLead: prevLead, goNext: goNext,
+        // One opener for every Call-in-Quo button (lead panels too): Quo Mac app
+        // first, web dialer only if nothing answered. Takes any phone format.
+        openQuo: function (raw) {
+            var d = String(raw || '').replace(/\D/g, '');
+            if (d.length === 10) d = '1' + d;
+            if (d.length < 11) return false;
+            openDialer('+' + d);
+            return true;
+        }
     };
 })(typeof window !== 'undefined' ? window : this);

@@ -13,6 +13,9 @@ CRON=$(grep '^CRON_SECRET=' "$ENVF" | cut -d= -f2- | tr -d '"')
 LOG="$HOME/Library/Logs/blason-autopilot.log"
 STAMP=$(date '+%Y-%m-%d %H:%M')
 LEG="${1:-sms}"
+# Wait for the network. launchd runs a missed 9:30 job the moment the Mac wakes,
+# before Wi-Fi is back, and every fetch then fails (ERR fetch failed, 9/30 and 10/1).
+for i in $(seq 1 36); do curl -s -o /dev/null --max-time 5 https://stiloaipartners.com && break; sleep 5; done
 {
 echo "[$STAMP] === autopilot leg: $LEG ==="
 if [ "$LEG" = "sms" ]; then
