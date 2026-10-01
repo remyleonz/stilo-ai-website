@@ -9,13 +9,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/assets/cold-call-script.js"></script>
+    <script src="/assets/cold-call-script.js?v=20261001"></script>
     <script src="/assets/nurture-stepper.js"></script>
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
-    <script src="/assets/dialer-mode.js"></script>
+    <script src="/assets/dialer-mode.js?v=20261001"></script>
     <script src="/assets/client-pipeline.js"></script>
     <script src="/assets/dial-companion.js"></script>
     <style>
@@ -2644,7 +2644,7 @@
 
         // Fetch + render the cold-call brief (David's per-lead talk track) into
         // Canonical renderer: /assets/cold-call-script.js (shared with /admin/).
-        const renderScriptMarkdown = (md) => STILO_SCRIPT.render(md);
+        const renderScriptMarkdown = (md) => STILO_SCRIPT.render(md, scriptLang);
         // the drawer. The `rep` hint (A/B/C tag) speeds the storage lookup.
         // EN/ES switch. Campaign scripts are generated in both languages, so the
         // rep can flip mid-call when the prospect answers in the other one.

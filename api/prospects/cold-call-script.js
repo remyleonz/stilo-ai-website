@@ -337,13 +337,16 @@ module.exports = async function handler(req, res) {
             if (!r.error && r.data) blob = r.data;
         }
         const md = blob ? await blob.text() : null;
-        if (md && /Script v2/.test(md)) {
+        // v3/v4 files say so in their header; the old v2-only test made every
+        // lead fall back to the stale GCS scripts after the 10/1 upload.
+        if (md && /Script v[234]\b/.test(md)) {
             res.setHeader('Cache-Control', 'private, max-age=60');
             return res.status(200).json({
                 slug: slug,
                 filename: GENERATED_BUCKET + '/blason-v2/' + leadId + (servedLang === 'es' ? '.es.md' : '.md'),
                 generated_at: null,
-                content_md: appendPlaybook(md),
+                // v4 is the whole call on one screen: no long bilingual reference appended.
+                content_md: /Script v4\b/.test(md) ? md : appendPlaybook(md),
                 lang: servedLang,
                 langs: ['en', 'es'],
                 source: 'blason-v2',
