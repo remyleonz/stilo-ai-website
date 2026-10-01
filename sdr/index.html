@@ -1247,9 +1247,15 @@
                 const d = await fetchJSON('/api/prospects/call-recording?call_id=' + encodeURIComponent(callId));
                 if (!d || !d.url) { el.textContent = 'No recording on this call'; return; }
                 const a = document.createElement('audio');
-                a.controls = true; a.autoplay = true; a.preload = 'auto'; a.src = d.url;
+                a.controls = true; a.preload = 'auto';
+                // Download the file and hand the player a blob: the <audio> tag on the
+                // raw share.quo.com link sat at 0:00 (Chrome defers media loads), and a
+                // blob also makes seeking instant.
+                try { const resp = await fetch(d.url); if (!resp.ok) throw new Error(resp.status); a.src = URL.createObjectURL(await resp.blob()); }
+                catch (e2) { a.src = d.url; }
                 a.style.cssText = 'display:block;width:100%;height:34px;margin-top:6px;';
                 el.replaceWith(a);
+                a.play().catch(function () {});
             } catch (e) { el.textContent = 'No recording on this call'; }
         }
         async function fetchJSON(path, opts) {
