@@ -303,8 +303,15 @@ function machineGuide(es) {
         ['- **HIFEM:** an electromagnetic field that contracts the muscle thousands of times per session.', ''],
         ['*Manuel confirms exact specs per model. Never "certified" or "FDA".*', ''],
     ];
+    // The drawer is narrow: a 3-column table cut off "what it does" and hid the
+    // price. Render each row as one list line instead.
     const out = [];
-    for (const g of G) { out.push(g[0]); if (g[1]) out.push(g[1]); }
+    for (const g of G) {
+        const line = g[0];
+        const cells = /^\|/.test(line) ? line.split('|').slice(1, -1).map(function (c) { return c.trim(); }) : null;
+        if (cells && /^(Machine|Máquina)$/.test(cells[0])) continue;
+        out.push(cells ? '- **' + cells[0] + ':** ' + cells[1] + ' *(' + cells[2] + ')*' : line);
+    }
     return out;
 }
 
