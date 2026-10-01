@@ -228,6 +228,86 @@ function discovery(seg, es) {
 // ---------------------------------------------------------------------------
 const REP_FIRST = { 'remyleon@stiloaipartners.com': 'Remy', 'aleb1027@gmail.com': 'Alejandro', 'davidcoira@stiloaipartners.com': 'David', 'ayesjorge911@gmail.com': 'Jorge' };
 
+// What Blason sells, grouped by what it does (live catalog, blasononline.com, 2026-10-01).
+// At the bottom of every script so a rep never has to guess. Prices are for the
+// rep's eyes only. Sold out (do not pitch): HIFU 1495, Bella Corpo 1468.
+function machineGuide(es) {
+    const G = es ? [
+        ['## Nuestras máquinas (para no olvidarlas)', ''],
+        ['*Precios solo para usted, nunca los diga. Agotadas, no las ofrezca: HIFU 1495 y Bella Corpo 1468.*', ''],
+        ['### Láser (necesita médico, enfermera practicante o PA)', ''],
+        ['| Máquina | Qué hace | Precio / su 8% |', '|---|---|---|'],
+        ['| Scala Ice Modena (1123) | Depilación láser de diodo. La de entrada: 4 longitudes de onda, punta fría. Primer láser o cambiar uno viejo. | $10,000 / $800 |', ''],
+        ['| Scala Ice Galaxy (1122) | Depilación con 755, 808, 940 y 1064 nm en una pieza de mano. La 1064 trata piel oscura (Fitzpatrick IV a VI). | $15,000 / $1,200 |', ''],
+        ['| Scala Ice Planet (1121) | Diodo de alta potencia para clínicas que depilan todo el día. | $15,000 / $1,200 |', ''],
+        ['| Scala Ice Ibiza (1124) | Diodo + IPL: depilación, más manchas, rojeces y daño solar. Dos servicios en una cabina. | $12,000 / $960 |', ''],
+        ['| Scala Ice Fashion + YAG (1195) | Diodo + Nd:YAG: depilación, quitar tatuajes, manchas y carbon peel. | $16,500 / $1,320 |', ''],
+        ['| CO2 fraccionado (1486) | Láser ablativo fraccionado: cicatrices, arrugas profundas, textura, estrías. | $15,000 / $1,200 |', ''],
+        ['| Carbon Peel / Tattoo (1197), PicoLaser (1497) | Quitar tatuajes y manchas, carbon peel ("Hollywood peel"). | $3,000 / $240; $2,200 / $176 |', ''],
+        ['| Morfolifting (1389) | Radiofrecuencia fraccionada con microagujas (categoría Morpheus8): textura, cicatrices de acné, tensado. Puntas de 25, 49 y 81. | $3,900 / $312 |', ''],
+        ['### Cuerpo (la mayoría sin láser; confirme lo que cubre su licencia)', ''],
+        ['| Máquina | Qué hace | Precio / su 8% |', '|---|---|---|'],
+        ['| BodyPulse Pro (1493), 2 en 1 (1499) | HIFEM (estimulación electromagnética) + RF, categoría Emsculpt: construye músculo, quema grasa, levanta glúteos. | $7,500 / $600; $5,000 / $400 |', ''],
+        ['| Cavitación Destroy + RF (1453), Vulcano (1454), Cav-RF-Lipolaser (1444, 1496) | Cavitación ultrasónica rompe grasa, la RF tensa la piel: reducir medidas sin cirugía. | $1,500 a $5,000 / $120 a $400 |', ''],
+        ['| Cold Therapy (1467) | Criolipólisis (congelar grasa, categoría CoolSculpting) + cavitación + RF. | $5,000 / $400 |', ''],
+        ['| ShockWave Slimming (1387) | Ondas acústicas: celulitis y circulación. | $5,200 / $416 |', ''],
+        ['| Bella Corpo Rodillo y Vacío (1447-B) | Rodillo + vacío + RF: celulitis, drenaje linfático, moldeo. | $5,000 / $400 |', ''],
+        ['| Presoterapia (6126) | Botas de presión de aire: drenaje linfático, post-operatorio. | $1,800 / $144 |', ''],
+        ['### Cara (esteticistas)', ''],
+        ['| Máquina | Qué hace | Precio / su 8% |', '|---|---|---|'],
+        ['| Hidra Acqua Skin (1584) | Hidrodermoabrasión (categoría HydraFacial): limpia, exfolia, hidrata. El facial que repiten cada mes. | $3,500 / $280 |', ''],
+        ['| Máquina facial 17 funciones (1430) | Vapor de ozono, alta frecuencia, microdermoabrasión, ultrasonido y más en un equipo. | $2,500 / $200 |', ''],
+        ['| Sistema multifunción 7 colores LED (1487) | LED + RF + microcorriente para faciales antiedad. | $2,300 / $184 |', ''],
+        ['| Panel de luz 7 colores (1471) | Fototerapia LED: acné, cicatrización, colágeno. Complemento, nunca la venta principal. | $1,500 / $120 |', ''],
+        ['### Palabras técnicas con médicos', ''],
+        ['- **Longitud de onda:** 755 (alexandrita, vello fino y claro), 808 (diodo, el estándar), 1064 (Nd:YAG, más profundo, seguro en piel oscura).', ''],
+        ['- **Fitzpatrick I a VI:** la escala de tipo de piel. "¿Qué tipos de piel atienden?"', ''],
+        ['- **Fluencia (J/cm²), ancho de pulso, tamaño de spot:** la energía, el tiempo y el área de cada disparo.', ''],
+        ['- **Enfriamiento de contacto (zafiro):** protege la piel, menos dolor.', ''],
+        ['- **Ablativo vs. no ablativo, fraccionado:** el CO2 quita piel en columnas; la RF fraccionada calienta sin quitarla.', ''],
+        ['- **HIFEM:** campo electromagnético que contrae el músculo miles de veces por sesión.', ''],
+        ['*Las especificaciones exactas de cada modelo las confirma Manuel. Nunca "certificado" ni "FDA".*', ''],
+    ] : [
+        ['## Our machines (so you never forget)', ''],
+        ['*Prices are for your eyes only, never say them. Sold out, do not pitch: HIFU 1495 and Bella Corpo 1468.*', ''],
+        ['### Laser (needs a doctor, NP or PA on staff)', ''],
+        ['| Machine | What it does | Price / your 8% |', '|---|---|---|'],
+        ['| Scala Ice Modena (1123) | Diode laser hair removal. The entry model: 4 wavelengths, cooled tip. First laser, or replacing an old one. | $10,000 / $800 |', ''],
+        ['| Scala Ice Galaxy (1122) | Hair removal with 755, 808, 940 and 1064 nm in one handpiece. The 1064 treats darker skin (Fitzpatrick IV to VI). | $15,000 / $1,200 |', ''],
+        ['| Scala Ice Planet (1121) | High-power diode for clinics doing hair removal all day. | $15,000 / $1,200 |', ''],
+        ['| Scala Ice Ibiza (1124) | Diode + IPL: hair removal, plus spots, redness and sun damage. Two services, one room. | $12,000 / $960 |', ''],
+        ['| Scala Ice Fashion + YAG (1195) | Diode + Nd:YAG: hair removal, tattoo removal, pigment and carbon peel. | $16,500 / $1,320 |', ''],
+        ['| CO2 Fractional (1486) | Ablative fractional resurfacing: scars, deep wrinkles, texture, stretch marks. | $15,000 / $1,200 |', ''],
+        ['| Carbon Peel / Tattoo (1197), PicoLaser (1497) | Tattoo and pigment removal, carbon peel ("Hollywood peel"). | $3,000 / $240; $2,200 / $176 |', ''],
+        ['| Morfolifting (1389) | Fractional RF microneedling (Morpheus8 category): texture, acne scars, tightening. 25, 49 and 81-pin tips. | $3,900 / $312 |', ''],
+        ['### Body (mostly non-laser; check what their license covers)', ''],
+        ['| Machine | What it does | Price / your 8% |', '|---|---|---|'],
+        ['| BodyPulse Pro (1493), 2-in-1 (1499) | HIFEM (electromagnetic muscle stimulation) + RF, Emsculpt category: builds muscle, burns fat, butt lift. | $7,500 / $600; $5,000 / $400 |', ''],
+        ['| Cavitation Destroy + RF (1453), Vulcano (1454), Cav-RF-Lipolaser (1444, 1496) | Ultrasonic cavitation breaks down fat, RF tightens skin: inch loss without surgery. | $1,500 to $5,000 / $120 to $400 |', ''],
+        ['| Cold Therapy (1467) | Cryolipolysis (fat freezing, CoolSculpting category) + cavitation + RF. | $5,000 / $400 |', ''],
+        ['| ShockWave Slimming (1387) | Acoustic waves: cellulite and circulation. | $5,200 / $416 |', ''],
+        ['| Bella Corpo Roller & Vacuum (1447-B) | Roller + vacuum + RF: cellulite, lymphatic drainage, contouring. | $5,000 / $400 |', ''],
+        ['| Pressotherapy (6126) | Air-compression boots: lymphatic drainage, post-op. | $1,800 / $144 |', ''],
+        ['### Face (estheticians)', ''],
+        ['| Machine | What it does | Price / your 8% |', '|---|---|---|'],
+        ['| Hidra Acqua Skin (1584) | Hydrodermabrasion (HydraFacial category): cleanse, exfoliate, hydrate. The facial clients rebook every month. | $3,500 / $280 |', ''],
+        ['| 17-Function Facial Machine (1430) | Ozone steamer, high frequency, microdermabrasion, ultrasound and more in one unit. | $2,500 / $200 |', ''],
+        ['| Multifunction 7-color LED system (1487) | LED + RF + microcurrent for anti-aging facials. | $2,300 / $184 |', ''],
+        ['| 7-color light panel (1471) | LED phototherapy: acne, healing, collagen. An add-on, never the main sale. | $1,500 / $120 |', ''],
+        ['### Technical words for doctors', ''],
+        ['- **Wavelength:** 755 (alexandrite, fine and light hair), 808 (diode, the standard), 1064 (Nd:YAG, deeper, safe on darker skin).', ''],
+        ['- **Fitzpatrick I to VI:** the skin-type scale. "Which skin types do you see most?"', ''],
+        ['- **Fluence (J/cm²), pulse width, spot size:** the energy, timing and area of each pulse.', ''],
+        ['- **Contact (sapphire) cooling:** protects the skin, less pain.', ''],
+        ['- **Ablative vs. non-ablative, fractional:** CO2 removes skin in micro-columns; fractional RF heats without removing it.', ''],
+        ['- **HIFEM:** an electromagnetic field that contracts the muscle thousands of times per session.', ''],
+        ['*Manuel confirms exact specs per model. Never "certified" or "FDA".*', ''],
+    ];
+    const out = [];
+    for (const g of G) { out.push(g[0]); if (g[1]) out.push(g[1]); }
+    return out;
+}
+
 function build(rawLead, hist, es) {
     const lead = Object.assign({}, rawLead, { name: clean(rawLead.name) });
     const seg = segmentOf(lead.category);
@@ -348,6 +428,9 @@ function build(rawLead, hist, es) {
     const biz = /hialeah/i.test(lead.name) ? (es ? 'su clínica' : 'your clinic') : lead.name;
     S('Hola' + hi + ', le habla ' + rep + ' de Blasón, B-L-A-S-O-N, en Miami. Le llamo por ' + (nonLaser ? 'un tratamiento nuevo' : 'la depilación láser') + ' en ' + biz + '. 786-837-6639. Otra vez, 786-837-6639.',
       'Hi' + hi + ', it\'s ' + rep + ' with Blason, B-L-A-S-O-N, in Miami. I\'m calling about ' + (nonLaser ? 'a new treatment' : 'laser hair removal') + ' at ' + biz + '. 786-837-6639. Again, 786-837-6639.');
+    p('');
+    p('---');
+    for (const line of machineGuide(es)) p(line);
     p('');
     p('*Lead ' + lead.id + ' · Script v4 · ' + TODAY + '*');
     return out.join('\n');
