@@ -2524,7 +2524,7 @@
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
-    <script src="/assets/dialer-mode.js?v=20261002g"></script>
+    <script src="/assets/dialer-mode.js?v=20261002h"></script>
     <script src="/assets/client-pipeline.js"></script>
     <script src="/assets/dial-companion.js"></script>
     <script>
@@ -9701,7 +9701,12 @@
             // Open the Quo Mac app (shared opener: app first, web dialer only if
             // nothing answers). The href used to be the web dialer itself, so the
             // button never reached the installed app (Remy, 2026-10-01).
-            if (window.DIALER_MODE && DIALER_MODE.openQuo && DIALER_MODE.openQuo(phone)) ev.preventDefault();
+            // A real <button> now, exactly like the power dialer's: no quo:// anchor
+            // default racing the tel: hand-off (Remy, 2026-10-02).
+            if (ev && ev.preventDefault) ev.preventDefault();
+            if (!(window.DIALER_MODE && DIALER_MODE.openQuo && DIALER_MODE.openQuo(phone))) {
+                window.open('https://my.openphone.com/calls/new?to=' + encodeURIComponent(phone), '_blank');
+            }
         }
 
         // Optimistic visual update: demote the row in-place so the user sees
@@ -10651,8 +10656,8 @@
                       + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:2px;">Direct line' + strictPill + '</div>'
                       + '<div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.01em;">' + escapeAdminHtml(phone) + '</div>'
                     + '</div>'
-                    + '<a href="' + escapeAdminHtml(appUrl) + '" onclick="onCallButtonClick(event, ' + escapeAdminHtml(JSON.stringify(phone)) + ')" '
-                      + 'style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:13px 20px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 14px rgba(37,99,235,0.35);">' + callSvg + 'Call in Quo</a>'
+                    + '<button type="button" onclick="onCallButtonClick(event, ' + escapeAdminHtml(JSON.stringify(phone)) + ')" '
+                      + 'style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:13px 20px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 14px rgba(37,99,235,0.35);">' + callSvg + 'Call in Quo</button>'
                     + '</div>'
                     + (lineOptions ? '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--text-secondary);">From <select id="openphoneLinePicker" onchange="selectOpenPhoneLine(this.value)" style="margin-left:6px;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;">' + lineOptions + '</select></label></div>' : '')
                     + '<div id="prospectDialerMsg" style="margin-bottom:16px;font-size:12px;color:var(--text-muted);min-height:16px;">Call in Quo opens the Quo app with the number filled in. Just hit call. Transcript lands here about a second after you hang up.</div>';
