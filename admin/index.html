@@ -1665,6 +1665,7 @@
                     <button class="crm-subtab" data-crm-tab="meetings" onclick="crmSwitchTab('meetings')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid transparent;opacity:0.55;">Meetings</button>
                     <button class="crm-subtab" data-crm-tab="sales" onclick="crmSwitchTab('sales')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid transparent;opacity:0.55;">Sales</button>
                     <button class="crm-subtab" data-crm-tab="revenue" onclick="crmSwitchTab('revenue')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid transparent;opacity:0.55;">Revenue</button>
+                    <button class="crm-subtab" data-crm-tab="funnel" onclick="crmSwitchTab('funnel')" style="padding:10px 16px;background:none;border:none;color:inherit;font-size:0.9rem;cursor:pointer;border-bottom:3px solid transparent;opacity:0.55;">Funnel</button>
                 </div>
 
                 <div id="crmTab-leads">
@@ -1735,7 +1736,50 @@
                         <div id="crmRevenueStatus" style="padding:8px 16px 16px;font-size:0.9rem;color:var(--text-secondary,#8a8aa0);"></div>
                     </section>
                 </div>
+                <!-- Funnel: the client's VSL landing page (page -> video -> quiz ->
+                     contact -> booking) from public.funnel_events, plus the call
+                     list of every identified visitor. api/admin/clients/funnel.js -->
+                <div id="crmTab-funnel" style="display:none;">
+                    <div class="stilo-hero-grid" id="crmFunnelKpis" style="margin-bottom:16px;">
+                        <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Visits (human)</div><div class="stilo-hero-value" id="fnK_sessions">—</div></div>
+                        <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Pressed play</div><div class="stilo-hero-value" id="fnK_plays">—</div></div>
+                        <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Watched 75%+</div><div class="stilo-hero-value" id="fnK_v75">—</div></div>
+                        <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Finished quiz</div><div class="stilo-hero-value" id="fnK_quiz">—</div></div>
+                        <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Left contact</div><div class="stilo-hero-value" id="fnK_contacts">—</div></div>
+                        <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Booked</div><div class="stilo-hero-value" id="fnK_bookings">—</div></div>
+                    </div>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                        <section class="stilo-section" style="flex:1 1 320px;">
+                            <div class="stilo-section-header"><h3 class="stilo-section-title">STEP BY STEP</h3><span class="stilo-section-count" id="fnDays"></span>
+                                <div class="stilo-section-actions" style="margin-left:auto;">
+                                    <select id="fnRange" onchange="crmLoadFunnel()" style="padding:6px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:8px;color:inherit;font-size:0.8rem;">
+                                        <option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="fnSteps" style="padding:6px 16px 16px;"></div>
+                        </section>
+                        <section class="stilo-section" style="flex:1 1 320px;">
+                            <div class="stilo-section-header"><h3 class="stilo-section-title">WHAT THEY ANSWERED</h3></div>
+                            <div id="fnAnswers" style="padding:6px 16px 16px;font-size:0.85rem;"></div>
+                        </section>
+                    </div>
+                    <section class="stilo-section" style="margin-top:16px;">
+                        <div class="stilo-section-header">
+                            <h3 class="stilo-section-title">CALL LIST: EVERYONE WE CAN IDENTIFY</h3>
+                            <span class="stilo-section-count" id="fnWorkCount"></span>
+                            <span id="fnAnon" style="margin-left:auto;font-size:0.8rem;color:var(--text-muted);"></span>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="stilo-table">
+                                <thead><tr><th>Got to</th><th>Business / person</th><th>Cell</th><th>Answers</th><th>Last seen</th><th>Lead status</th></tr></thead>
+                                <tbody id="fnWorkBody"><tr><td colspan="6" class="stilo-empty">Open the tab to load.</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
             </div>
+
 
             <!-- Log-sale modal for the client CRM -->
             <div id="crmSaleModal" style="display:none;position:fixed;inset:0;z-index:120;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;">
@@ -3185,15 +3229,86 @@
         }
 
         function crmSwitchTab(name) {
-            ['leads', 'meetings', 'sales', 'revenue'].forEach(function (t) {
+            ['leads', 'meetings', 'sales', 'revenue', 'funnel'].forEach(function (t) {
                 var pane = document.getElementById('crmTab-' + t);
                 if (pane) pane.style.display = (t === name) ? '' : 'none';
             });
+            if (name === 'funnel') crmLoadFunnel();
             document.querySelectorAll('.crm-subtab').forEach(function (btn) {
                 var isActive = btn.getAttribute('data-crm-tab') === name;
                 btn.style.borderBottom = isActive ? '3px solid var(--blue)' : '3px solid transparent';
                 btn.style.opacity = isActive ? '1' : '0.55';
             });
+        }
+
+        // ---- Funnel tab (VSL landing page) ----------------------------------
+        var FN_STAGE = { booking_confirmed: ['Booked', '#10b981'], contact_submitted: ['Left contact', '#10b981'], calendar_open: ['Picking a time', '#10b981'],
+            quiz_complete: ['Finished quiz', '#2563EB'], contact_view: ['Finished quiz', '#2563EB'], quiz_step: ['Quiz', '#2563EB'],
+            video_complete: ['Watched to the end', '#8b5cf6'], video_progress: ['Watching', '#8b5cf6'], video_play: ['Pressed play', '#8b5cf6'],
+            quiz_start: ['Started quiz', '#2563EB'], cta_click: ['Clicked the button', '#64748b'], page_view: ['Opened the page', '#64748b'], lang_switch: ['Opened the page', '#64748b'] };
+        async function crmLoadFunnel() {
+            var body = document.getElementById('fnWorkBody');
+            var days = (document.getElementById('fnRange') || {}).value || '30';
+            body.innerHTML = '<tr><td colspan="6" class="stilo-empty">Loading…</td></tr>';
+            try {
+                var j = await crmFetch('/api/admin/clients/funnel?client_id=' + encodeURIComponent(crmClientId) + '&days=' + days);
+                if (!j.site || !j.numbers) {
+                    body.innerHTML = '<tr><td colspan="6" class="stilo-empty">No landing page funnel for this client.</td></tr>';
+                    document.getElementById('fnSteps').innerHTML = ''; document.getElementById('fnAnswers').innerHTML = '';
+                    return;
+                }
+                var n = j.numbers;
+                document.getElementById('fnK_sessions').textContent = n.sessions;
+                document.getElementById('fnK_plays').textContent = n.plays;
+                document.getElementById('fnK_v75').textContent = n.video_75;
+                document.getElementById('fnK_quiz').textContent = n.quiz_complete;
+                document.getElementById('fnK_contacts').textContent = n.contacts;
+                document.getElementById('fnK_bookings').textContent = n.bookings;
+                document.getElementById('fnDays').textContent = 'last ' + n.days + ' days · ' + n.bots_excluded + ' scanner hits excluded';
+                var rows = [['Opened the page', n.sessions], ['Pressed play', n.plays], ['Watched half', n.video_50], ['Watched 75%+', n.video_75],
+                    ['Started the quiz', n.quiz_start], ['Q1 business type', n.steps[0]], ['Q2 machine', n.steps[1]], ['Q3 medical director', n.steps[2]],
+                    ['Q4 timeline', n.steps[3]], ['Q5 showroom or call', n.steps[4]], ['Saw the contact form', n.contact_view], ['Left contact', n.contacts],
+                    ['Opened the calendar', n.calendar_open], ['Booked', n.bookings]];
+                var max = Math.max(1, n.sessions);
+                document.getElementById('fnSteps').innerHTML = rows.map(function (r, i) {
+                    var pct = Math.round(r[1] / max * 100);
+                    var prev = i > 0 ? rows[i - 1][1] : null;
+                    var drop = (prev && prev > 0) ? Math.round((1 - r[1] / prev) * 100) : null;
+                    return '<div style="display:grid;grid-template-columns:150px 1fr 40px 60px;gap:10px;align-items:center;margin:6px 0;font-size:0.82rem;">'
+                        + '<span style="color:var(--text-secondary);">' + r[0] + '</span>'
+                        + '<div style="height:10px;background:var(--bg-input);border-radius:99px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:var(--blue,#2563EB);"></div></div>'
+                        + '<strong style="text-align:right;">' + r[1] + '</strong>'
+                        + '<span style="color:' + (drop != null && drop >= 50 ? '#ef4444' : 'var(--text-muted)') + ';font-size:0.75rem;">' + (drop != null && r[1] < prev ? '-' + drop + '%' : '') + '</span></div>';
+                }).join('');
+                var groups = [['segment', 'Business type'], ['interest', 'Looking for'], ['medical', 'Medical director'], ['timeline', 'Timeline'], ['path_pref', 'Showroom or call']];
+                document.getElementById('fnAnswers').innerHTML = groups.map(function (g) {
+                    var list = (n.answers[g[0]] || []);
+                    if (!list.length) return '';
+                    return '<div style="margin:8px 0 12px;"><div style="font-weight:700;color:var(--text-secondary);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">' + g[1] + '</div>'
+                        + list.map(function (a) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:2px 0;"><span>' + crmEsc(a.label) + '</span><strong>' + a.n + '</strong></div>'; }).join('') + '</div>';
+                }).join('') || '<div class="stilo-empty">No quiz answers yet.</div>';
+                document.getElementById('fnWorkCount').textContent = j.worklist.length;
+                document.getElementById('fnAnon').textContent = j.anonymous_sessions ? j.anonymous_sessions + ' anonymous visits (no link, no form): nobody to call' : '';
+                if (!j.worklist.length) { body.innerHTML = '<tr><td colspan="6" class="stilo-empty">Nobody identified yet. Visits from emailed links and form submits show up here.</td></tr>'; return; }
+                body.innerHTML = j.worklist.map(function (w) {
+                    var st = FN_STAGE[w.furthest] || [w.furthest, '#64748b'];
+                    var who = w.contact ? (w.contact.business || w.contact.name) : (w.lead ? w.lead.name : 'Lead #' + w.lead_id);
+                    var person = w.contact ? w.contact.name : (w.lead ? w.lead.owner_name : '');
+                    var cell = (w.contact && w.contact.phone) || (w.lead && (w.lead.owner_phone || w.lead.phone)) || '';
+                    var extra = w.furthest === 'quiz_step' ? ' (Q' + w.quiz_step + ')' : (w.video_pct && /video/.test(w.furthest) ? ' (' + w.video_pct + '%)' : '');
+                    var when = w.contact && w.contact.meeting_at ? 'Meeting ' + new Date(w.contact.meeting_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+                    var status = w.lead ? (w.lead.stage || '') + (w.lead.last_called_outcome ? ' · ' + w.lead.last_called_outcome.replace(/_/g, ' ') : '') + (when ? ' · ' + when : '') : '';
+                    return '<tr' + (w.lead_id ? ' onclick="openProspectDrawer(\'' + w.lead_id + '\', \'callable\')" style="cursor:pointer;"' : '') + '>'
+                        + '<td><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:' + st[1] + '22;color:' + st[1] + ';">' + st[0] + extra + '</span>' + (w.lang === 'es' ? ' <span style="font-size:0.7rem;color:var(--text-muted);">ES</span>' : '') + '</td>'
+                        + '<td><strong>' + crmEsc(who || '') + '</strong>' + (person ? '<div style="font-size:0.78rem;color:var(--text-muted);">' + crmEsc(person) + '</div>' : '') + '</td>'
+                        + '<td>' + (cell ? '<a href="tel:' + crmEsc(cell) + '" onclick="event.stopPropagation()" style="color:var(--blue,#2563EB);">' + crmEsc(cell) + '</a>' : '<span style="color:var(--text-muted);">none</span>') + '</td>'
+                        + '<td style="font-size:0.8rem;color:var(--text-secondary);">' + crmEsc((w.answers_labels || []).join(' · ')) + '</td>'
+                        + '<td style="white-space:nowrap;font-size:0.8rem;">' + new Date(w.last_seen).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</td>'
+                        + '<td style="font-size:0.78rem;color:var(--text-muted);">' + crmEsc(status) + '</td></tr>';
+                }).join('');
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="6" class="stilo-empty">Error: ' + crmEsc(e.message) + '</td></tr>';
+            }
         }
 
         // Search goes to the SERVER. The endpoint returns at most 1000 of a

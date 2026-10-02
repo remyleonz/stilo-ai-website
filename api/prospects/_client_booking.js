@@ -71,16 +71,29 @@ async function sendClientBookingPackage(sb, lead, clientCo, opts) {
     const prospectPhone = lead.owner_phone || lead.phone || null;
     const dateKey = String(whenIso).slice(0, 10);
     const out = { email: null, sms: null, client_brief: null };
+    // 2026-10-02: the Blason VSL page books two things, not one. mode 'call' is
+    // the 10-minute phone call with Manuel (no address, Manuel calls them);
+    // 'showroom' (default, the rep-drawer behaviour) is the visit. origin 'vsl'
+    // swaps "thank you for the call" for a line that fits a self-booking, and
+    // skipClientBrief holds Manuel's brief until Remy has confirmed by phone.
+    const mode = (opts.mode === 'call') ? 'call' : 'showroom';
+    const selfBooked = opts.origin === 'vsl';
+    const thanksEs = selfBooked ? 'Gracias por apartar un espacio.' : 'Gracias por la llamada.';
+    const thanksEn = selfBooked ? 'Thanks for grabbing a time.' : 'Thank you for the call.';
+    const whatEs = mode === 'call' ? 'Le confirmo la llamada de 10 minutos con Manuel:' : 'Le confirmo la visita:';
+    const whatEn = mode === 'call' ? 'Your 10-minute call with Manuel is set:' : 'You are confirmed:';
+    const whereEs = mode === 'call' ? 'Como: Manuel lo llama' + (prospectPhone ? ' al ' + prospectPhone : '') : 'Donde: ' + company + (address ? ', ' + address : '');
+    const whereEn = mode === 'call' ? 'How: Manuel calls you' + (prospectPhone ? ' at ' + prospectPhone : '') : 'Where: ' + company + (address ? ', ' + address : '');
 
     // 1. Prospect confirmation email
     const subj = es ? ('Confirmado: ' + date + ' a la ' + time) : ('Confirmed: ' + date + ' at ' + time);
     const emailBody = es
         ? ['Hola' + (ownerFirst ? ' ' + ownerFirst : '') + ',',
            '',
-           'Gracias por la llamada. Le confirmo la visita:',
+           thanksEs + ' ' + whatEs,
            '',
            'Cuando: ' + date + ', ' + time,
-           'Donde: ' + company + (address ? ', ' + address : ''),
+           whereEs,
            '',
            'Si algo cambia, responda a este correo o mandeme un texto.',
            '',
@@ -90,10 +103,10 @@ async function sendClientBookingPackage(sb, lead, clientCo, opts) {
            'de parte de ' + company].join('\n')
         : ['Hi' + (ownerFirst ? ' ' + ownerFirst : '') + ',',
            '',
-           'Thank you for the call. You are confirmed:',
+           thanksEn + ' ' + whatEn,
            '',
            'When: ' + date + ' at ' + time,
-           'Where: ' + company + (address ? ', ' + address : ''),
+           whereEn,
            '',
            'If anything changes, just reply here or text me.',
            '',
@@ -118,9 +131,11 @@ async function sendClientBookingPackage(sb, lead, clientCo, opts) {
     }
 
     // 2. Prospect confirmation SMS (rep line with Remy fallback inside sendSms)
+    const smsTailEs = mode === 'call' ? '. Manuel lo llama a este numero' : (address ? '. Direccion: ' + address : '');
+    const smsTailEn = mode === 'call' ? '. Manuel will call you at this number' : (address ? '. Address: ' + address : '');
     const smsBody = es
-        ? ('Hola' + (ownerFirst ? ' ' + ownerFirst : '') + ', Remy de ' + company + '. Gracias por la llamada. Confirmado: ' + date + ', ' + time + (address ? '. Direccion: ' + address : '') + '. Si algo cambia, escribame aqui.')
-        : ('Hi' + (ownerFirst ? ' ' + ownerFirst : '') + ', Remy from ' + company + '. Thank you for the call. Confirmed: ' + date + ' at ' + time + (address ? '. Address: ' + address : '') + '. If anything changes, just text me here.');
+        ? ('Hola' + (ownerFirst ? ' ' + ownerFirst : '') + ', Remy de ' + company + '. ' + thanksEs + ' Confirmado: ' + date + ', ' + time + smsTailEs + '. Si algo cambia, escribame aqui.')
+        : ('Hi' + (ownerFirst ? ' ' + ownerFirst : '') + ', Remy from ' + company + '. ' + thanksEn + ' Confirmed: ' + date + ' at ' + time + smsTailEn + '. If anything changes, just text me here.');
     if (prospectPhone) {
         try {
             out.sms = await sendSms(opts.fromLine || REMY_LINE, prospectPhone, smsBody, { leadId: lead.id });
@@ -140,11 +155,12 @@ async function sendClientBookingPackage(sb, lead, clientCo, opts) {
     }
 
     // 3. Brief to the client contact (Spanish for Blason: Manuel)
-    if (clientCo.email) {
+    if (clientCo.email && !opts.skipClientBrief) {
         const notesTail = String(lead.rep_notes || '').trim().slice(-600);
-        const briefSubj = 'Visita confirmada: ' + (lead.name || 'prospecto') + ' (' + date + ', ' + time + ')';
+        const briefWhat = mode === 'call' ? 'Llamada de 10 min' : 'Visita confirmada';
+        const briefSubj = briefWhat + ': ' + (lead.name || 'prospecto') + ' (' + date + ', ' + time + ')';
         const briefBody = [
-            (clientCo.contact_name ? clientCo.contact_name.split(/\s+/)[0] : 'Hola') + ', te confirmo una visita:',
+            (clientCo.contact_name ? clientCo.contact_name.split(/\s+/)[0] : 'Hola') + (mode === 'call' ? ', te confirmo una llamada de 10 minutos (tu los llamas):' : ', te confirmo una visita:'),
             '',
             'Cuando: ' + date + ', ' + time,
             'Negocio: ' + (lead.name || 'n/a'),

@@ -6,6 +6,26 @@
       "has": [
         {
           "type": "host",
+          "value": "go.blasononline.com"
+        }
+      ],
+      "destination": "/blason/$1"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "go.blasononline.com"
+        }
+      ],
+      "destination": "/blason/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
           "value": "app.stiloaipartners.com"
         }
       ],
