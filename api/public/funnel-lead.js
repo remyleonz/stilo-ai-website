@@ -38,10 +38,13 @@ function rateLimited(req) {
     return false;
 }
 
-const SEGMENT_CATEGORY = {
-    medspa: 'Medical spa', clinic: 'Laser hair removal service', spa: 'Spa',
-    salon: 'Beauty salon', wellness: 'Wellness center',
-};
+// Category for a brand-new lead row. The quiz no longer asks business type
+// (2026-10-02 reorder); a provider on staff is the closest signal we have.
+function categoryFor(answers) {
+    if (answers.medical === 'yes') return 'Medical spa';
+    if (answers.medical === 'planning') return 'Medical spa';
+    return 'Spa';
+}
 
 function nowIso() { return new Date().toISOString(); }
 function noteLine(s) { return '[' + nowIso().slice(0, 16).replace('T', ' ') + ' VSL form] ' + s; }
@@ -68,8 +71,10 @@ module.exports = async function handler(req, res) {
     const lang = /^es/i.test(String(body.lang || '')) ? 'es' : 'en';
     const a = (body.answers && typeof body.answers === 'object') ? body.answers : {};
     const answers = {
-        segment: F.str(a.segment, 40), interest: F.str(a.interest, 40), medical: F.str(a.medical, 40),
-        timeline: F.str(a.timeline, 40), path_pref: F.str(a.path_pref, 40),
+        interest: F.str(a.interest, 40), quoted: F.str(a.quoted, 40), medical: F.str(a.medical, 40),
+        motive: F.str(a.motive, 40), path_pref: F.str(a.path_pref, 40),
+        // older page versions still send these two; keep them if present
+        segment: F.str(a.segment, 40), timeline: F.str(a.timeline, 40),
     };
 
     if (!name) return res.status(400).json({ error: 'missing_name' });
@@ -88,7 +93,7 @@ module.exports = async function handler(req, res) {
     catch (e) { console.warn('[funnel-lead] findLead failed:', e && e.message); }
 
     let leadId = null, created = false, how = found ? found.how : 'new';
-    const summary = ['segment', 'interest', 'medical', 'timeline', 'path_pref']
+    const summary = F.QUIZ_KEYS
         .filter(function (k) { return answers[k]; })
         .map(function (k) { return F.label(k, answers[k]); }).join(' / ');
     const nextStep = (lang === 'es' ? 'Llamar: llenó el quiz del video' : 'Call back: finished the VSL quiz')
@@ -127,7 +132,7 @@ module.exports = async function handler(req, res) {
                 owner_phone_source: 'vsl_form', owner_phone_confidence: 'high',
                 owner_email: email || null, client_id: site.client_id, stage: 'NEW',
                 lead_source: site.lead_source, lead_source_detail: 'landing page quiz',
-                primary_language: lang, category: SEGMENT_CATEGORY[answers.segment] || null,
+                primary_language: lang, category: categoryFor(answers),
                 owner_name_verify_status: 'verified', owner_name_verify_source: 'vsl_form', owner_name_last_verified: nowIso(),
                 next_step: nextStep, next_step_due: nowIso(),
                 rep_notes: noteLine('new lead from the VSL page. quiz: ' + (summary || 'no answers')),
@@ -149,7 +154,7 @@ module.exports = async function handler(req, res) {
             site: body.site, session_id: sessionId, visitor_id: visitorId, lead_id: leadId, lead_created: created,
             name: name, business: business, phone: phoneFmt, phone_e164: e164, email: email, lang: lang,
             segment: answers.segment, interest: answers.interest, medical: answers.medical, timeline: answers.timeline,
-            path_pref: answers.path_pref, answers: answers, ua: ua, ip_hash: F.ipHash(req),
+            quoted: answers.quoted, motive: answers.motive, path_pref: answers.path_pref, answers: answers, ua: ua, ip_hash: F.ipHash(req),
         }).select('id').single();
         submissionId = sub && sub.id;
         await pub.from('funnel_events').insert({
@@ -161,7 +166,7 @@ module.exports = async function handler(req, res) {
 
     // --- alert Remy ----------------------------------------------------------
     try {
-        const lines = ['segment', 'interest', 'medical', 'timeline', 'path_pref']
+        const lines = F.QUIZ_KEYS
             .filter(function (k) { return answers[k]; })
             .map(function (k) { return '<li>' + F.esc(k.replace('_pref', '')) + ': <strong>' + F.esc(F.label(k, answers[k])) + '</strong></li>'; }).join('');
         await F.notify(
