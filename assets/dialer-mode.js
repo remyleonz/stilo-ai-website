@@ -1208,12 +1208,26 @@
         out.sort(function (a, b) { return a - b; });
         return out;
     }
+    // Longer follow-ups: 2 weeks and 1 month out, 9 AM, pushed to Monday if
+    // they land on a weekend (Remy, 2026-10-02).
+    function laterSlots() {
+        var now = new Date();
+        var twoWk = new Date(now); twoWk.setDate(twoWk.getDate() + 14);
+        var oneMo = new Date(now); oneMo.setMonth(oneMo.getMonth() + 1);
+        return [['In 2 weeks', twoWk], ['In 1 month', oneMo]].map(function (p) {
+            var d = p[1]; d.setHours(9, 0, 0, 0);
+            while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+            return [p[0], d];
+        });
+    }
     function weekdaySlots() {
         var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return '<div>' + nextWeekdays().map(function (d) {
-            return '<button class="dm-qbtn" onclick="DIALER_MODE.setCallback(' + d.getTime() + ')">'
-                + names[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate() + ' 9 AM</button>';
-        }).join('') + '</div>';
+        function btn(label, d) {
+            return '<button class="dm-qbtn" onclick="DIALER_MODE.setCallback(' + d.getTime() + ')">' + label + '</button>';
+        }
+        function day(d) { return names[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate() + ' 9 AM'; }
+        return '<div>' + nextWeekdays().map(function (d) { return btn(day(d), d); }).join('')
+            + laterSlots().map(function (p) { return btn(p[0] + ' · ' + day(p[1]), p[1]); }).join('') + '</div>';
     }
     function setCallback(ms) { commitCallback(new Date(ms).toISOString()); }
     function setCallbackCustom() {
