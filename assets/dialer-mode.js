@@ -548,7 +548,7 @@
         S.notes.dirty = false;
         cfg.fetchJson('/api/prospects/save-notes', { method: 'POST', body: JSON.stringify({ id: id, notes: val }) })
             .then(function () { if (S) setText('dmNotesSaved', 'saved'); })
-            .catch(function () { if (S) { S.notes.dirty = true; setText('dmNotesSaved', 'not saved — retrying'); if (S.notes.timer) clearTimeout(S.notes.timer); S.notes.timer = setTimeout(flushNotes, 4000); } });
+            .catch(function () { if (S) { S.notes.dirty = true; setText('dmNotesSaved', 'not saved, retrying'); if (S.notes.timer) clearTimeout(S.notes.timer); S.notes.timer = setTimeout(flushNotes, 4000); } });
         if (S.lead && S.lead.id === id) S.lead.rep_notes = val;
     }
 
@@ -599,7 +599,7 @@
         }
         var verified = !!r.owner_name && (r.owner_name_verify_status === 'verified');
         var g = '';
-        g += cRow('Owner', 'owner_name', r.owner_name, 'unknown — ask + type it', verified);
+        g += cRow('Owner', 'owner_name', r.owner_name, 'unknown, ask + type it', verified);
         g += cRow('Front desk', 'front_desk_name', r.front_desk_name, 'ask her name', false);
         g += cRow('Email', 'owner_email', r.owner_email || r.email, 'get the best email', false);
         g += cRow('Phone', 'owner_phone', leadPhone(r), 'the number to dial', false);
@@ -619,7 +619,7 @@
         if (!r.front_desk_name) missing.push('<b>front desk name</b>');
         if (!(r.owner_email || r.email)) missing.push('<b>best email</b>');
         var goalHtml = missing.length
-            ? '<div class="dm-goal">Don\'t hang up without: ' + missing.join(' · ') + '. Type it in the moment you hear it — call two is only warm if call one collected.</div>'
+            ? '<div class="dm-goal">Don\'t hang up without: ' + missing.join(' · ') + '. Type it in the moment you hear it: call two is only warm if call one collected.</div>'
             : '';
 
         var notesVal = (r.rep_notes != null && r.rep_notes !== '') ? r.rep_notes : (r.call_notes || '');
@@ -836,7 +836,7 @@
                 + '<span class="dm-hint">' + (dialVia() === 'app' ? 'Number sent to the Quo app. Press Call there.' : 'Number copied. Paste in Quo (⌘V), or tap Call on your phone\'s companion page.') + '</span>'
                 + '<span style="flex:1;"></span>'
                 + '<button class="dm-iconbtn" onclick="DIALER_MODE.redial()">Open Quo again</button>'
-                + '<button class="dm-send" onclick="DIALER_MODE.callEnded()">Call ended — log it</button>'
+                + '<button class="dm-send" onclick="DIALER_MODE.callEnded()">Call ended, log it</button>'
                 + '</div>'
                 + '<div id="dmPanelHost"></div>'
                 + legendHtml();
@@ -846,7 +846,7 @@
             var c = S.currentCall;
             var result = c
                 ? '<span class="dm-result"><span style="color:var(--green,#10b981);">●</span> ' + esc(outcomeLabel(c.outcome)) + (c.duration_seconds ? ' · ' + fmtDur(c.duration_seconds) : '') + '</span>'
-                : '<span class="dm-result dm-hint" style="font-weight:500;">Call not detected yet — log it below; the recording syncs onto it when Quo reports in.</span>';
+                : '<span class="dm-result dm-hint" style="font-weight:500;">Call not detected yet. Log it below; the recording syncs onto it when Quo reports in.</span>';
             foot.innerHTML = '<div class="dm-foot-row">' + result
                 + '<span style="flex:1;"></span>'
                 + '</div>'
@@ -1441,7 +1441,7 @@
             + '<li>On your phone, open your SDR dashboard and tap the <b style="color:#fff;">Dialer</b> tab (or go straight to <b style="color:#fff;">stiloaipartners.com/dial</b>)</li>'
             + '<li>Keep it open next to you</li>'
             + '</ol>'
-            + 'Every time you press <span class="dm-key">SPACE</span> here, the phone shows one big CALL button for that lead — tap it and the Quo app opens pre-dialed. Hangups, transcripts and outcomes land here exactly the same, because the call still goes out on your Quo line.'
+            + 'Every time you press <span class="dm-key">SPACE</span> here, the phone shows one big CALL button for that lead. Tap it and the Quo app opens pre-dialed. Hangups, transcripts and outcomes land here exactly the same, because the call still goes out on your Quo line.'
             + '</div>'
             + '<button class="dm-callbtn" style="width:100%;justify-content:center;margin-top:16px;" onclick="this.closest(\'.dm-overlay-menu\').remove()">Got it</button>'
             + '</div>';
