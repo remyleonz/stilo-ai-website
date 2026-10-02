@@ -183,15 +183,15 @@ STEPS[3] = function (c) {
 // 4. What your oldest machine is really taking from you
 STEPS[4] = function (c) {
     if (c.es) {
-        return { s: 'su máquina más vieja', p: [
-            'Su máquina más vieja probablemente es la que más le sale cara, y eso no aparece en ninguna factura.',
+        return { s: 'lo que se lleva un día parado', p: [
+            'La máquina que más le cuesta es la que está parada, y eso no aparece en ninguna factura.',
             'Cada día que está parada es un día de citas que mueve o pierde. Una reparación casi nunca es de un día: si la pieza viene de otro estado, pueden ser dos o tres semanas. Y la clienta a la que le cambia la cita dos veces, la próxima vez se va a otro lado.',
             'Apunte tres números: días que estuvo parada este año, citas que movió y clientas que no volvió a ver. Casi nadie lo ha sumado.',
             ask(c, 'Si el total le duele, Manuel le dice de frente si conviene arreglarla o cambiarla.'),
         ] };
     }
-    return { s: 'your oldest machine', p: [
-        "Your oldest machine is probably your most expensive one, and that number isn't on any invoice.",
+    return { s: 'what one down day takes', p: [
+        "The most expensive machine in your clinic is the one that's down, and that number isn't on any invoice.",
         "Every day it's down is a day of booked sessions you move or lose. Repairs rarely take one day: if the part ships from out of state, it can be two or three weeks. And a client you rebook twice often books somewhere else next time.",
         'Write down three numbers: days it was down this year, sessions you moved, and clients you never saw again. Most owners have never added it up.',
         ask(c, 'If the total stings, Manuel will tell you straight whether to fix it or replace it.'),

@@ -42,19 +42,19 @@ const repFirst = rep => rep && rep.startsWith('remyleon') ? 'Remy' : rep && rep.
 // rep's real name, why we're texting, one easy question, opt-out said like a
 // person on the first text).
 const A_EN = [
-    (hi, n) => hi + ", it's " + n + " from Blason Spa Equipment, I called you the other day. Is there a machine you've been thinking about adding? Oh and if you'd rather not get texts from me, just reply stop.",
+    (hi, n) => hi + ", it's " + n + " from Blason Spa Equipment, I called you the other day. One thing I didn't ask: with what you have now, which clients are the hardest to treat? And if you'd rather not get texts from me, just reply stop.",
     (hi, n) => hi + ', ' + n + " from Blason Spa Equipment here, I called the other day. Anything new coming up for you guys, a new service or another room? And if texts aren't your thing, just reply stop.",
 ];
 const A_ES = [
-    (hi, n) => hi + ', es ' + n + ' de Blason Spa Equipment, le llamé el otro día. ¿Hay alguna máquina que ha estado pensando agregar? Y si prefiere que no le escriba por aquí, nada más responda stop.',
+    (hi, n) => hi + ', es ' + n + ' de Blason Spa Equipment, le llamé el otro día. Algo que no le pregunté: con el equipo que tienen, ¿qué clientas se les complican más? Y si prefiere que no le escriba por aquí, nada más responda stop.',
     (hi, n) => hi + ', ' + n + ' de Blason Spa Equipment, le llamé hace poco. ¿Viene algo nuevo para ustedes, un servicio nuevo u otra cabina? Si prefiere no recibir textos, responda stop y listo.',
 ];
 const B_EN = [
-    (hi, n) => hi + ", it's " + n + " from Blason Spa Equipment. Random question since I called the other day, what's the oldest machine you've got running right now? If you'd rather I not text, just reply stop.",
-    (hi, n) => hi + ', ' + n + " from Blason Spa Equipment here. Is there a treatment your clients keep asking about that you'd like to offer? Oh and if you'd rather not get texts, just reply stop.",
+    (hi, n) => hi + ", it's " + n + " from Blason Spa Equipment. Since I called the other day, one thing: is your treatment room booked solid these days, or do you have open slots? If you'd rather I not text, just reply stop.",
+    (hi, n) => hi + ', ' + n + " from Blason Spa Equipment here. Following up on my call: with the equipment you have, which clients are the hardest to treat? Oh and if you'd rather not get texts, just reply stop.",
 ];
 const B_ES = [
-    (hi, n) => hi + ', es ' + n + ' de Blason Spa Equipment. Una pregunta rápida desde que le llamé, ¿cuál es la máquina más vieja que tiene trabajando ahora? Si prefiere que no le escriba, responda stop.',
+    (hi, n) => hi + ', es ' + n + ' de Blason Spa Equipment. Desde que le llamé me quedé con una duda: ¿tienen la agenda de cabina llena, o tienen espacio? Si prefiere que no le escriba, responda stop.',
 ];
 const BANNED = /hialeah|price|precio|\$|cost|financing|cannot do|can.t do|no pueden hacer|asking for that/i;
 

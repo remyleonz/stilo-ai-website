@@ -172,8 +172,8 @@ const T = {
             'Un dermatólogo puede usar cualquier láser del catálogo, y los independientes compran por su cuenta. Los grupos lo mandan a corporativo: si la recepción dice eso, pida el nombre y siga. Empiece por el láser, después la radiofrecuencia fraccionada.'],
         surgeon: ['The surgeon is the medical director. RF microneedling and the CO2 catch the patient who is not ready for surgery. Reach the practice manager and ask who bought the last machine.',
             'El cirujano es el director médico. La radiofrecuencia fraccionada y el CO2 atrapan al paciente que no está listo para cirugía. Busque al practice manager y pregunte quién compró la última máquina.'],
-        laser: ['They already sell laser hair removal, so they know what a laser earns. The angle is the next machine, the oldest one, or darker skin they turn away.',
-            'Ya venden depilación láser, saben lo que produce un láser. El ángulo es la próxima máquina, la más vieja, o la piel oscura que rechazan.'],
+        laser: ['They already sell laser hair removal, so they know what a laser earns. The angle is the clients their laser struggles with (darker skin, fine or light hair, colored tattoos), a full schedule, or a new room.',
+            'Ya venden depilación láser, saben lo que produce un láser. El ángulo son las clientas que su láser no resuelve bien (piel oscura, vello fino o claro, tatuajes de colores), una agenda llena, o una cabina nueva.'],
         wellness: ['Their patients lose weight fast, then want two things: tighter skin and the muscle back. Those are body machines. Never pitch a laser here.',
             'Sus pacientes bajan de peso rápido y después quieren dos cosas: piel firme y recuperar músculo. Eso son máquinas de cuerpo. Aquí nunca se ofrece láser.'],
         esthetic: ['Ask about a medical director in the first minute. Yes means the laser line. No means body and facial machines, never a laser.',
@@ -194,11 +194,11 @@ const T = {
 function discovery(seg, es) {
     const q = {
         medical: es
-            ? ['"¿Cuántos láseres tienen trabajando, y cuál es el más viejo? ¿Todavía produce igual?"', '"¿Su láser de depilación trata piel oscura, o esas clientas se van a otro lado?"']
-            : ['"How many lasers are running now, and which one is the oldest? Still earning what it used to?"', '"Does your hair removal laser treat darker skin, or do those clients go somewhere else?"'],
+            ? ['"Con el láser que tienen, ¿qué clientas se les complican más?"', '"¿Su láser de depilación trata piel oscura, o esas clientas se van a otro lado?"']
+            : ['"With the laser you have now, which clients are the hardest to treat?"', '"Does your hair removal laser treat darker skin, or do those clients go somewhere else?"'],
         laser: es
-            ? ['"¿Cuál es el láser más viejo que tienen? ¿Todavía produce igual?"', '"¿Tratan piel oscura con lo que tienen, o esas clientas se van?"']
-            : ['"What\'s the oldest laser in the room? Still earning what it used to?"', '"Can you treat darker skin with what you have, or do those clients walk?"'],
+            ? ['"Con lo que tienen, ¿qué clientas se les complican más?"', '"¿Tratan piel oscura con lo que tienen, o esas clientas se van?"']
+            : ['"With what you have, which clients are the hardest to treat?"', '"Can you treat darker skin with what you have, or do those clients walk?"'],
         wellness: es
             ? ['"Sus pacientes de pérdida de peso, cuando ya bajaron, ¿le preguntan qué hacer con la piel suelta o con el músculo que perdieron?"', '"¿Tienen alguna cabina donde podrían hacer tratamientos de cuerpo?"']
             : ['"Your weight-loss patients, once the weight comes off, are they asking what to do about loose skin or the muscle they lost?"', '"Do you have a room you could run body treatments in?"'],
@@ -415,7 +415,7 @@ function build(rawLead, hist, es) {
     const obj = [
         ['"¿Cuánto cuesta?"', '"How much is it?"', 'Depende de cuál le sirve, y casi todos lo ponen en una mensualidad. Eso se lo dice Manuel en ' + mins + ' minutos. ¿' + Two[0] + '?', 'Depends which one fits, and most owners put it on a monthly. Manuel answers that in ' + mins + ' minutes. ' + Two[1] + '?'],
         ['"Mándeme información"', '"Send me some info"', 'Se la mando hoy. Pero un catálogo no le dice cuál le sirve a su clínica. Pongamos los ' + mins + ' minutos y le mando la información junto.', 'I\'ll send it today. But a catalog won\'t tell you which one fits your clinic. Let\'s put the ' + mins + ' minutes down and I\'ll send the info with it.'],
-        ['"Ya tenemos todo"', '"We\'re all set"', 'Qué bueno. ¿Cuál es la máquina más vieja que tienen?', 'Good. Which machine is the oldest one you have?'],
+        ['"Ya tenemos todo"', '"We\'re all set"', 'Qué bueno. ¿Y con lo que tienen, qué clientas se les complican más?', 'Good. With what you have, which clients are the hardest to treat?'],
         ['"No me interesa"', '"Not interested"', 'Perfecto. Una sola cosa: ¿las máquinas ya están resueltas, o es mal momento?', 'All good. One thing: is the equipment handled, or is it just a bad time?'],
         ['"Lo consigo más barato en Alibaba"', '"I can get it cheaper on Alibaba"', 'Puede ser. Cuando esa se para, ¿a quién llama? Manuel tiene las piezas en Miami y entrena a su equipo.', 'You can. When that one goes down, who do you call? Manuel keeps the parts in Miami and trains your team.'],
         ['"Conozco a Manuel, lo llamo yo"', '"I know Manuel, I\'ll call him"', 'Perfecto. Le aviso hoy que usted va para que lo tenga listo. ¿Qué día lo va a ver?', 'Perfect. I\'ll let him know today you\'re coming so he has it ready. What day are you seeing him?'],

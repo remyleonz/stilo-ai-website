@@ -365,9 +365,9 @@ function composeBase(lead, clientName) {
                 optEs,
             ].join('\n') };
         }
-        return { arm: 'B', subject: (calledLine ? 'una pregunta después de la llamada' : 'la máquina más vieja de su cabina'), body: [
+        return { arm: 'B', subject: (calledLine ? 'una pregunta después de la llamada' : 'las clientas más difíciles'), body: [
             openEs, '', intro, '',
-            '¿Cuál es la máquina más vieja que tienen en cabina hoy, y cuántos años tiene? Si me dice cuál, Manuel, el dueño, le dice de frente si le conviene arreglarla o cambiarla.' + showEs, '',
+            'Con el equipo que tienen hoy, ¿qué clientas se les complican más? Si me dice cuáles, Manuel, el dueño, le dice de frente si tiene algo que lo resuelva.' + showEs, '',
             optEs,
         ].join('\n') };
     }
@@ -381,9 +381,9 @@ function composeBase(lead, clientName) {
             optEn,
         ].join('\n') };
     }
-    return { arm: 'B', subject: (calledLine ? 'one question after our call' : 'the oldest machine in your room'), body: [
+    return { arm: 'B', subject: (calledLine ? 'one question after our call' : 'your hardest clients'), body: [
         openEn, '', intro, '',
-        "What's the oldest machine in your treatment room right now, and how many years does it have? Tell me which and Manuel, the owner, will tell you straight whether to fix it or replace it." + showEn, '',
+        "With the equipment you have today, which clients are the hardest to treat? Tell me which and Manuel, the owner, will tell you straight whether he has something that fixes it." + showEn, '',
         optEn,
     ].join('\n') };
 }
