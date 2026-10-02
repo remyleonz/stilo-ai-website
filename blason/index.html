@@ -76,13 +76,17 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 .floor .lede{font-size:clamp(17px,1.6vw,20px);color:var(--ink-2);max-width:60ch;margin-top:12px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:28px}
 @media(min-width:640px){.grid{grid-template-columns:repeat(3,1fr)}}
-@media(min-width:900px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:900px){.grid{grid-template-columns:repeat(5,1fr)}}
 .tile{display:block;width:100%;text-align:left;font:inherit;text-decoration:none;color:var(--ink);background:var(--bg-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;padding:0;transition:border-color .2s,transform .2s}
 .tile:hover{border-color:var(--navy);transform:translateY(-2px)}
-.tile img{width:100%;aspect-ratio:1/1;object-fit:contain;background:#fff;padding:8px}
-.tile figcaption{padding:12px 14px 14px}
-.tile b{display:block;font-size:16px;font-weight:700;line-height:1.3}
-.tile small{display:block;font-size:13.5px;color:var(--muted);margin-top:3px}
+.tile img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;background:#fff;display:block}
+.tile figcaption{padding:10px 12px 12px;border-top:1px solid var(--line)}
+.tile b{display:block;font-size:14px;font-weight:700;line-height:1.3}
+.tile small{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.tile.more{background:var(--navy);color:#fff;border-color:var(--navy);display:flex;flex-direction:column;justify-content:space-between;padding:18px;min-height:100%}
+.tile.more b{font-size:20px;line-height:1.15;color:#fff}
+.tile.more small{color:rgba(255,255,255,.8);font-size:14px;margin-top:10px}
+.tile.more .arrow{font-size:28px;line-height:1;align-self:flex-end}
 .floor .after{margin-top:18px;font-size:15px;color:var(--muted)}
 
 /* social */
@@ -281,15 +285,12 @@ var MACHINES = [
   ['galaxy',   'Scala Ice Galaxy',          'Diode laser, 4 wavelengths',     'Láser diodo, 4 longitudes',        'laser_hair'],
   ['fashion',  'Scala Ice Fashion + YAG',   'Hair removal, pigment, tattoo',  'Depilación, manchas, tatuajes',    'laser_hair'],
   ['planet',   'Scala Ice Planet',          'High-volume hair removal',       'Depilación de alto volumen',       'laser_hair'],
-  ['modena',   'Scala Ice Modena',          'Diode laser, entry model',       'Láser diodo, modelo de entrada',   'laser_hair'],
   ['co2',      'CO2 Fractional',            'Scars, wrinkles, texture',       'Cicatrices, arrugas, textura',     'resurfacing'],
   ['pico',     'PicoLaser',                 'Tattoo and pigment removal',     'Tatuajes y manchas',               'tattoo'],
   ['hidra',    'Hidra Acqua Skin',          'Hydrodermabrasion facials',      'Hidrodermoabrasión',               'facials'],
   ['cold',     'Cold Therapy',              'Fat freezing + RF + cavitation', 'Criolipólisis + RF + cavitación',  'body'],
   ['destroy',  'Cavitation Destroy + RF',   'Body contouring',                'Moldeo corporal',                  'body'],
   ['bella',    'Bella Corpo Roller & Vacuum', 'Cellulite, drainage',          'Celulitis, drenaje',               'body'],
-  ['facial17', '17-Function Facial Machine', 'One facial station',            'Una estación facial',              'facials'],
-  ['led',      '7-Color LED System',        'LED + RF + microcurrent',        'LED + RF + microcorriente',        'facials'],
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -323,6 +324,7 @@ var T = {
     ctaMicro: 'Five quick questions, then pick a time with Manuel, the owner.',
     floorTtl: 'What Manuel carries',
     floorLede: "Most of these are on the floor in Miami. Tap the one you're shopping for and the questions start there.",
+    moreTtl: 'And more', moreSub: 'LED, facial stations, beds, pressotherapy, microneedling. Take the two minutes and ask Manuel.',
     floorAfter: "In Florida, lasers, IPL and most energy devices have to run under a doctor, NP or PA. Facials and most body machines don't. Manuel tells you where your license lands.",
     socTtl: 'Watch the machines running on real clients',
     socP: 'Manuel posts from the showroom floor and from client visits. Have a look, then come back and pick your time.',
@@ -392,6 +394,7 @@ var T = {
     ctaMicro: 'Cinco preguntas rápidas y elija una hora con Manuel, el dueño.',
     floorTtl: 'Lo que Manuel trae',
     floorLede: 'La mayoría están en el showroom de Miami. Toque la que anda buscando y las preguntas empiezan por ahí.',
+    moreTtl: 'Y más', moreSub: 'LED, estaciones faciales, camillas, presoterapia, microagujas. Tome los dos minutos y pregúntele a Manuel.',
     floorAfter: 'En Florida, los láseres, la IPL y la mayoría de los equipos de energía trabajan bajo un médico, enfermera practicante o PA. Las faciales y la mayoría de las de cuerpo, no. Manuel le dice dónde cae su licencia.',
     socTtl: 'Vea las máquinas funcionando con clientas reales',
     socP: 'Manuel publica desde el showroom y desde las visitas a clientes. Véalo, y después vuelva y elija su hora.',
@@ -465,9 +468,9 @@ function applyLang() {
   }).join('');
   document.getElementById('grid').innerHTML = MACHINES.map(function (m) {
     return '<button type="button" class="tile" data-machine="' + m[0] + '" data-interest="' + m[4] + '">'
-      + '<figure><img src="/blason/machines/' + m[0] + '.jpg" alt="' + esc(m[1]) + '" loading="lazy" width="800" height="800">'
+      + '<figure><img src="/blason/machines/' + m[0] + '.jpg" alt="' + esc(m[1]) + '" loading="lazy" width="800" height="1000">'
       + '<figcaption><b>' + esc(m[1]) + '</b><small>' + esc(lang === 'es' ? m[3] : m[2]) + '</small></figcaption></figure></button>';
-  }).join('');
+  }).join('') + '<button type="button" class="tile more" data-machine="more" data-interest="notsure"><b>' + esc(t('moreTtl')) + '</b><small>' + esc(t('moreSub')) + '</small><span class="arrow">&rarr;</span></button>';
   document.querySelectorAll('.tile').forEach(function (a) {
     a.addEventListener('click', function () {
       track('cta_click', { answer: 'machine_' + a.getAttribute('data-machine') });
