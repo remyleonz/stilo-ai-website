@@ -15,7 +15,7 @@
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
-    <script src="/assets/dialer-mode.js?v=20261001"></script>
+    <script src="/assets/dialer-mode.js?v=20261002"></script>
     <script src="/assets/client-pipeline.js"></script>
     <script src="/assets/dial-companion.js"></script>
     <style>
@@ -1786,14 +1786,17 @@
         // next_action_due_at or the legacy next_callback_at, so coalesce; rows
         // with neither sort last. This is the surface for editing a callback
         // that isn't on the day you're looking at.
-        function callbackTableHtml(rows) {
+        function cbSortByDue(rows) {
             var FAR = 8640000000000000;
-            var sorted = (rows || []).slice().sort(function (a, b) {
+            return (rows || []).slice().sort(function (a, b) {
                 var ax = new Date(a.next_action_due_at || a.next_callback_at || FAR).getTime();
                 var bx = new Date(b.next_action_due_at || b.next_callback_at || FAR).getTime();
                 if (isNaN(ax)) ax = FAR; if (isNaN(bx)) bx = FAR;
                 return ax - bx;
             });
+        }
+        function callbackTableHtml(rows) {
+            var sorted = cbSortByDue(rows);
             var now = Date.now();
             if (!sorted.length) return '<div class="cbcal-empty">No callbacks on the list.</div>';
             var html = '<table><thead><tr><th>Due (ET)</th><th>Business</th><th>Owner</th><th>Phone</th><th>Last call</th><th>Edit</th></tr></thead><tbody>';
@@ -1826,6 +1829,9 @@
           + '.cbcal-views{display:flex;gap:4px;background:var(--bg-elevated,#151519);border:1px solid var(--border-medium,#2a2a33);border-radius:9px;padding:3px}'
           + '.cbcal-views button{background:none;border:none;color:var(--text-secondary,#a7a7b4);padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}'
           + '.cbcal-views button.on{background:var(--blue,#2563EB);color:#fff}'
+          + '.cbcal-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}'
+          + '.cbcal-dial{display:inline-flex;align-items:center;gap:7px;padding:7px 18px;background:var(--blue,#2563EB);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}'
+          + '.cbcal-dial:disabled{opacity:.4;cursor:default}'
           + '.cbm-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}'
           + '.cbm-dows>div{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-tertiary,#6c6c79);text-align:center}'
           + '.cbm-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(94px,auto);gap:6px}'
@@ -1970,6 +1976,7 @@
             var nav = v === 'list'
                 ? '<div class="cbcal-nav"><span class="cbcal-title" style="margin-left:0;">' + escapeHtml(title) + '</span></div>'
                 : '<div class="cbcal-nav"><button onclick="cbShift(\'' + kind + '\',-1)">&lsaquo;</button><button class="cbcal-today" onclick="cbToday()">Today</button><button onclick="cbShift(\'' + kind + '\',1)">&rsaquo;</button><span class="cbcal-title">' + escapeHtml(title) + '</span></div>';
+            var nDial = cbVisibleRows().length;
             var m = STATE.cbMsg;
             var msg = m
                 ? '<div class="cbcal-msg" style="color:' + m.color + ';border-color:' + m.color + ';background:rgba(255,255,255,0.03);">' + escapeHtml(m.text) + '</div>'
@@ -1977,7 +1984,10 @@
             return CBCAL_STYLE
                 + '<div class="cbcal-bar">'
                 + nav
+                + '<div class="cbcal-right">'
                 + '<div class="cbcal-views"><button class="' + (v === 'month' ? 'on' : '') + '" onclick="cbSetView(\'month\')">Month</button><button class="' + (v === 'week' ? 'on' : '') + '" onclick="cbSetView(\'week\')">Week</button><button class="' + (v === 'day' ? 'on' : '') + '" onclick="cbSetView(\'day\')">Day</button><button class="' + (v === 'list' ? 'on' : '') + '" onclick="cbSetView(\'list\')">List</button></div>'
+                + '<button class="cbcal-dial" id="cbDialBtn" onclick="startCallbackDialer()"' + (nDial ? '' : ' disabled') + ' title="Dial the callbacks in this view, in the order shown">▶ Start Dialer (' + nDial + ')</button>'
+                + '</div>'
                 + '</div>'
                 + msg
                 + (v === 'list' ? '' : '<div class="cbcal-legend"><span class="lg up">Callback</span><span class="lg cx">Called</span><span class="lg od">Overdue</span><span class="lg mtg">Meeting confirmed</span><span class="lg mtgx">Meeting, needs confirm call</span></div>');
@@ -2034,6 +2044,29 @@
             }
             return '<div class="cbd-wrap">' + rows + '</div>';
         }
+        // The callbacks the CURRENT view shows, in the order it shows them:
+        // the Power Dialer's queue (Remy, 2026-10-02: "if I'm on today's 10,
+        // dial those 10"). Day = that day; Week = Sun to Sat; Month = the
+        // month in the title; List = the whole sorted list. Booked meetings
+        // drawn on the calendar are not callbacks and stay out. Reuses the
+        // renderers' own bucketing and sort so the queue never drifts.
+        function cbVisibleRows() {
+            cbFocusInit();
+            var f = STATE.cbFocus, v = STATE.cbView;
+            if (v === 'list') return cbSortByDue(STATE.cbRows).slice(0, 200);
+            var bucket = cbBucket(), days = [], i, cd;
+            if (v === 'day') days.push(new Date(Date.UTC(f.y, f.m - 1, f.d, 12)));
+            else if (v === 'week') {
+                var startDow = new Date(Date.UTC(f.y, f.m - 1, f.d, 12)).getUTCDay();
+                for (i = 0; i < 7; i++) days.push(new Date(Date.UTC(f.y, f.m - 1, f.d - startDow + i, 12)));
+            } else {
+                for (i = 1; i <= 31; i++) { cd = new Date(Date.UTC(f.y, f.m - 1, i, 12)); if (cd.getUTCMonth() === f.m - 1) days.push(cd); }
+            }
+            var out = [];
+            days.forEach(function (d) { (bucket[d.toISOString().slice(0, 10)] || []).forEach(function (it) { if (it.type === 'callback') out.push(it.r); }); });
+            return out;
+        }
+        function startCallbackDialer() { startDialerMode(cbVisibleRows(), 'callbacks'); }
         function callbackCalendarHtml() {
             cbFocusInit();
             var v = STATE.cbView;
@@ -3346,9 +3379,10 @@
                 dial: function (rows) { startDialerMode(rows); }
             });
         }
-        function startDialerMode(listRows) {
+        function startDialerMode(listRows, source) {
             if (!window.DIALER_MODE) return;
             var isList = Array.isArray(listRows);
+            var fromCallbacks = source === 'callbacks';
             DIALER_MODE.configure({
                 escape: escapeHtml,
                 fmtTime: fmtET,
@@ -3369,8 +3403,11 @@
                 openBooking: function (lead) {
                     openLeadDrawer(lead.id).then(function () { openBookingPicker(lead.id); });
                 },
-                onClose: function () { if (isList) loadSdrPipeline(); else { loadLeads(); loadOverview(); } }
+                onClose: function () { if (isList && !fromCallbacks) loadSdrPipeline(); else { loadLeads(); loadOverview(); } }
             });
+            // List sessions (Pipeline "Dial these", Call Back tab) dial exactly
+            // the rows handed in, in that order. noCallbacks only stops the
+            // callbacks endpoint being prepended; the rows themselves are kept.
             if (isList) DIALER_MODE.open({ rows: listRows, noCallbacks: true });
             // Dial exactly the list on screen, in its on-screen order; callbacks
             // are dialed from their own tab (Remy, 2026-09-29).

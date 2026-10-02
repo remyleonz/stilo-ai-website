@@ -98,6 +98,27 @@
         return isNaN(m) ? 0 : m;
     }
     function leadPhone(r) { return r.owner_phone_e164 || r.owner_phone || r.phone || ''; }
+    // A callback is live when it is typed 'callback', has a time, and was not
+    // dismissed (set-callback stamps callback_dismissed_at instead of clearing).
+    // Shown as "Tue, Oct 6, 10:00 AM ET", always Eastern.
+    function callbackDueMs(r) {
+        if (!r || r.callback_dismissed_at) return 0;
+        if (r.next_action_type !== 'callback' || !r.next_action_due_at) return 0;
+        return tsToMs(r.next_action_due_at);
+    }
+    function fmtCallbackET(ms) {
+        return new Date(ms).toLocaleString('en-US', {
+            timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric',
+            hour: 'numeric', minute: '2-digit'
+        }) + ' ET';
+    }
+    function callbackLineHtml(r) {
+        var ms = callbackDueMs(r);
+        if (!ms) return '<div class="dm-cbline dm-cb-off">No callback scheduled</div>';
+        var od = ms < Date.now();
+        return '<div class="dm-cbline ' + (od ? 'dm-cb-od' : 'dm-cb-on') + '">Callback scheduled: '
+            + esc(fmtCallbackET(ms)) + (od ? ' (overdue)' : '') + '</div>';
+    }
     function toE164(raw) {
         if (!raw) return '';
         var d = String(raw).replace(/\D/g, '');
@@ -196,6 +217,12 @@
 
         '.dm-bizname{font-family:var(--font-display,inherit);font-size:33px;font-weight:700;line-height:1.1;margin:0 0 6px;letter-spacing:-.01em;}',
         '.dm-niche{font-size:14px;color:var(--text-tertiary,#6e7083);margin-bottom:24px;}',
+        /* Callback status: always present, so "no callback" is a statement, not a blank */
+        '.dm-cbline{margin:-12px 0 22px;font-size:14px;line-height:20px;font-weight:600;display:flex;align-items:flex-start;gap:8px;}',
+        '.dm-cbline::before{content:"";width:7px;height:7px;margin-top:7px;border-radius:50%;background:currentColor;flex:none;}',
+        '.dm-cb-on{color:var(--blue,#60a5fa);}',
+        '.dm-cb-od{color:#f87171;}',
+        '.dm-cb-off{color:var(--text-tertiary,#6e7083);font-weight:500;}',
 
         /* Identity + status: quiet grid, no rules */
         '.dm-grid{display:grid;grid-template-columns:118px 1fr;row-gap:11px;column-gap:16px;margin-bottom:26px;}',
@@ -583,9 +610,6 @@
         if (r.last_called_at) lastBits.push(cfg.fmtTime(r.last_called_at));
         g += '<span>Last call</span><b>' + (lastBits.length ? esc(lastBits.join(' · ')) : '<i class="dm-dim">never called</i>')
             + (r.call_attempts ? ' <span class="dm-dim">· ' + esc(r.call_attempts) + ' attempts</span>' : '') + '</b>';
-        if (r.next_action_type === 'callback' && r.next_action_due_at) {
-            g += '<span>Callback due</span><b style="color:var(--blue,#60a5fa);">' + esc(cfg.fmtTime(r.next_action_due_at)) + '</b>';
-        }
 
         // The three-assets goal: the first call is a WIN if the rep leaves
         // with these, even when the owner never picks up.
@@ -605,6 +629,7 @@
             + '<div class="dm-chips">' + chips + '</div>'
             + '<h2 class="dm-bizname">' + esc(r.business_name || r.name || 'Lead #' + r.id) + '</h2>'
             + '<div class="dm-niche">' + esc(r.category || r.niche || '') + (cityOf(r) ? ' · ' + esc(cityOf(r)) : '') + '</div>'
+            + callbackLineHtml(r)
             + '<div class="dm-grid">' + g + '</div>'
             + goalHtml
             + '<div class="dm-sec"><h4>Notes <span class="dm-savedmsg" id="dmNotesSaved"></span></h4>'

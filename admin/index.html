@@ -2524,7 +2524,7 @@
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
-    <script src="/assets/dialer-mode.js?v=20261001"></script>
+    <script src="/assets/dialer-mode.js?v=20261002"></script>
     <script src="/assets/client-pipeline.js"></script>
     <script src="/assets/dial-companion.js"></script>
     <script>
@@ -9165,6 +9165,9 @@
           + '.acb-views{display:flex;gap:4px;background:var(--bg-card,#151519);border:1px solid var(--border-subtle,#2a2a33);border-radius:9px;padding:3px}'
           + '.acb-views button{background:none;border:none;color:var(--text-secondary,#a7a7b4);padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}'
           + '.acb-views button.on{background:var(--blue,#2563EB);color:#fff}'
+          + '.acb-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}'
+          + '.acb-dial{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:var(--blue,#2563EB);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}'
+          + '.acb-dial:disabled{opacity:.4;cursor:default}'
           + '.acb-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}'
           + '.acb-dows>div{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted,#6c6c79);text-align:center}'
           + '.acb-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(94px,auto);gap:6px}'
@@ -9287,6 +9290,7 @@
             var nav = v === 'list'
                 ? '<div class="acb-nav"><span class="acb-title" style="margin-left:0;">' + escapeAdminHtml(title) + '</span></div>'
                 : '<div class="acb-nav"><button onclick="acbShift(\'' + kind + '\',-1)">&lsaquo;</button><button class="acb-today" onclick="acbToday()">Today</button><button onclick="acbShift(\'' + kind + '\',1)">&rsaquo;</button><span class="acb-title">' + escapeAdminHtml(title) + '</span></div>';
+            var nDial = acbVisibleRows().length;
             var m = ADMIN_CB.msg;
             var msg = m
                 ? '<div class="acb-msg" style="color:' + m.color + ';border-color:' + m.color + ';background:rgba(255,255,255,0.03);">' + escapeAdminHtml(m.text) + '</div>'
@@ -9294,7 +9298,10 @@
             return CBCAL_STYLE_A
                 + '<div class="acb-bar">'
                 + nav
+                + '<div class="acb-right">'
                 + '<div class="acb-views"><button class="' + (v === 'month' ? 'on' : '') + '" onclick="acbSetView(\'month\')">Month</button><button class="' + (v === 'week' ? 'on' : '') + '" onclick="acbSetView(\'week\')">Week</button><button class="' + (v === 'day' ? 'on' : '') + '" onclick="acbSetView(\'day\')">Day</button><button class="' + (v === 'list' ? 'on' : '') + '" onclick="acbSetView(\'list\')">List</button></div>'
+                + '<button class="acb-dial" id="acbDialBtn" onclick="startCallbackDialer()"' + (nDial ? '' : ' disabled') + ' title="Dial the callbacks in this view, in the order shown">▶ Start Dialer (' + nDial + ')</button>'
+                + '</div>'
                 + '</div>'
                 + msg;
         }
@@ -9372,6 +9379,28 @@
             });
             return html + '</tbody></table>';
         }
+        // The rows the CURRENT view shows, in the order it shows them: the
+        // Power Dialer's queue (Remy, 2026-10-02: "if I'm on today's 10, dial
+        // those 10"). Day = that day; Week = Sun to Sat; Month = the month in
+        // the title; List = the whole sorted list. Reuses the renderers' own
+        // bucketing and sort so the queue can never drift from the screen.
+        function acbVisibleRows() {
+            acbFocusInit();
+            var f = ADMIN_CB.focus, v = ADMIN_CB.view;
+            if (v === 'list') return sortByCallbackDue(ADMIN_CB.rows || []).slice(0, 400);
+            var bucket = acbBucket(), days = [], i, cd;
+            if (v === 'day') days.push(new Date(Date.UTC(f.y, f.m - 1, f.d, 12)));
+            else if (v === 'week') {
+                var startDow = new Date(Date.UTC(f.y, f.m - 1, f.d, 12)).getUTCDay();
+                for (i = 0; i < 7; i++) days.push(new Date(Date.UTC(f.y, f.m - 1, f.d - startDow + i, 12)));
+            } else {
+                for (i = 1; i <= 31; i++) { cd = new Date(Date.UTC(f.y, f.m - 1, i, 12)); if (cd.getUTCMonth() === f.m - 1) days.push(cd); }
+            }
+            var out = [];
+            days.forEach(function (d) { (bucket[d.toISOString().slice(0, 10)] || []).forEach(function (it) { out.push(it.r); }); });
+            return out;
+        }
+        function startCallbackDialer() { startDialerMode(acbVisibleRows(), 'callbacks'); }
         function adminCallbackCalendarHtml() {
             acbFocusInit();
             var v = ADMIN_CB.view;
@@ -10317,8 +10346,9 @@
                 return '<div style="color:var(--red);font-size:12px;">Could not load script: ' + escapeAdminHtml(e.message || 'unknown') + '</div>';
             }
         }
-        function startDialerMode(listRows) {
+        function startDialerMode(listRows, source) {
             if (!window.DIALER_MODE) return;
+            var fromCallbacks = source === 'callbacks';
             // On the Pipeline tab the top button dials hottest, then today, then overdue.
             if (!Array.isArray(listRows) && pipelineTabActive() && window.CLIENT_PIPELINE) {
                 listRows = CLIENT_PIPELINE.rows('hottest').concat(CLIENT_PIPELINE.rows('today'), CLIENT_PIPELINE.rows('overdue'));
@@ -10362,8 +10392,11 @@
                 dncExtra: function (leadId) {
                     prospectFetchJSON('/api/prospects/dnc', { method: 'POST', body: JSON.stringify({ id: leadId }) }).catch(function () {});
                 },
-                onClose: function () { try { if (isList) loadClientPipeline(); else loadProspectCallable(); } catch (e) {} }
+                onClose: function () { try { if (fromCallbacks) loadProspectCallbacks({ force: true }); else if (isList) loadClientPipeline(); else loadProspectCallable(); } catch (e) {} }
             });
+            // List sessions (Pipeline "Dial these", Call Back tab) dial exactly
+            // the rows handed in, in that order. noCallbacks only stops the
+            // callbacks endpoint being prepended; the rows themselves are kept.
             if (isList) DIALER_MODE.open({ rows: listRows, noCallbacks: true });
             // The session dials EXACTLY the list on screen, in the order on
             // screen: same filters, same "Last called" sort, nothing riding in
