@@ -2519,12 +2519,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/assets/cold-call-script.js?v=20261002"></script>
-    <script src="/assets/nurture-stepper.js"></script>
+    <script src="/assets/nurture-stepper.js?v=20261002"></script>
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
-    <script src="/assets/dialer-mode.js?v=20261002f"></script>
+    <script src="/assets/dialer-mode.js?v=20261002g"></script>
     <script src="/assets/client-pipeline.js"></script>
     <script src="/assets/dial-companion.js"></script>
     <script>
@@ -7599,7 +7599,7 @@
                         + '<td style="padding:11px 10px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);white-space:nowrap;">' + escapeAdminHtml(phone) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-secondary);font-size:12px;white-space:nowrap;">' + escapeAdminHtml(niche) + '</td>'
                         + '<td style="padding:11px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap;">' + lastCallStr + '</td>'
-                        + '<td style="padding:10px 14px;white-space:nowrap;"><button onclick="event.stopPropagation();dialProspect(' + JSON.stringify(id) + ')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Call now</button></td>'
+                        + '<td style="padding:10px 14px;white-space:nowrap;"><button onclick="event.stopPropagation();dialProspect(' + escapeAdminHtml(JSON.stringify(id)) + ')" style="padding:5px 10px;background:var(--blue);border:none;border-radius:6px;color:white;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Call now</button></td>'
                         + '</tr>';
                 }
                 if (mode === 'booked') {
@@ -10651,7 +10651,7 @@
                       + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:2px;">Direct line' + strictPill + '</div>'
                       + '<div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.01em;">' + escapeAdminHtml(phone) + '</div>'
                     + '</div>'
-                    + '<a href="' + escapeAdminHtml(appUrl) + '" onclick="onCallButtonClick(event, ' + JSON.stringify(phone) + ')" '
+                    + '<a href="' + escapeAdminHtml(appUrl) + '" onclick="onCallButtonClick(event, ' + escapeAdminHtml(JSON.stringify(phone)) + ')" '
                       + 'style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:13px 20px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 14px rgba(37,99,235,0.35);">' + callSvg + 'Call in Quo</a>'
                     + '</div>'
                     + (lineOptions ? '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--text-secondary);">From <select id="openphoneLinePicker" onchange="selectOpenPhoneLine(this.value)" style="margin-left:6px;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:6px;color:inherit;font-size:12px;">' + lineOptions + '</select></label></div>' : '')
@@ -10665,8 +10665,8 @@
             var shareIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
             var mailIconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>';
             var actionPillsHtml = '<div style="display:flex;gap:8px;margin-bottom:18px;">'
-                + '<button type="button" onclick="openEmailComposer(' + JSON.stringify(d.id) + ')" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;">' + mailIconSvg + 'Email this lead</button>'
-                + '<button id="prospectShareBtn" type="button" onclick="adminShareToRep(' + JSON.stringify(d.id) + ')" title="Send this lead to a rep" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">' + shareIconSvg + 'Share</button>'
+                + '<button type="button" onclick="openEmailComposer(' + escapeAdminHtml(JSON.stringify(d.id)) + ')" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;">' + mailIconSvg + 'Email this lead</button>'
+                + '<button id="prospectShareBtn" type="button" onclick="adminShareToRep(' + escapeAdminHtml(JSON.stringify(d.id)) + ')" title="Send this lead to a rep" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">' + shareIconSvg + 'Share</button>'
                 + '</div>';
 
             // The "alert me when they watch the video" checkbox used to live
@@ -10898,7 +10898,7 @@
                         + '</select>';
                 })()
                 + '<button type="submit" style="display:none;width:100%;padding:10px 14px;background:var(--blue);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">' + submitLabel + '</button>'
-                + (mode === 'emailable' ? '' : '<button type="button" onclick="addProspectToCallbackList(' + JSON.stringify(d.id) + ')" style="width:100%;margin-top:8px;padding:8px 14px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">Add to callback list</button>')
+                + (mode === 'emailable' ? '' : '<button type="button" onclick="addProspectToCallbackList(' + escapeAdminHtml(JSON.stringify(d.id)) + ')" style="width:100%;margin-top:8px;padding:8px 14px;background:transparent;border:1px solid var(--border-medium);border-radius:8px;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">Add to callback list</button>')
                 + '<div id="prospectFormMsg" style="margin-top:10px;font-size:12px;color:var(--text-muted);"></div>'
                 + '</form>'
 
@@ -10954,7 +10954,7 @@
                       + (d.client_id
                           ? '<div style="font-size:13px;color:var(--text-primary);">Already linked to client <code style="font-family:var(--font-mono);background:rgba(255,255,255,0.04);padding:1px 6px;border-radius:4px;font-size:11px;">' + escapeAdminHtml(d.client_id) + '</code>.</div>'
                           : '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">Once this lead signs, link the cold record to a public.clients row so cost-per-acquisition math works.</div>'
-                            + '<button type="button" onclick="openConvertToClientPrompt(' + JSON.stringify(d.id) + ')" style="padding:9px 14px;background:var(--green,#10b981);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">Convert this lead → client</button>')
+                            + '<button type="button" onclick="openConvertToClientPrompt(' + escapeAdminHtml(JSON.stringify(d.id)) + ')" style="padding:9px 14px;background:var(--green,#10b981);border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;">Convert this lead → client</button>')
                       + '</div>'
                     : '')
                 + '</div>';

@@ -195,7 +195,7 @@
                     + '">' + linkify(body) + '</div>'
                 : '<div style="font-size:12px;color:var(--text-muted);">No body was stored for this send.</div>')
             + (long
-                ? '<div onclick="NURTURE_STEPPER.expand(' + JSON.stringify(String(m.id)) + ')" style="margin-top:6px;font-size:11px;font-weight:600;color:var(--blue,#2563EB);cursor:pointer;">'
+                ? '<div onclick="NURTURE_STEPPER.expand(' + A.escape(JSON.stringify(String(m.id))) + ')" style="margin-top:6px;font-size:11px;font-weight:600;color:var(--blue,#2563EB);cursor:pointer;">'
                     + (open ? 'Show less' : 'Read full message') + '</div>'
                 : '')
             + (summaryOnly ? '<div style="margin-top:7px;font-size:10.5px;color:var(--text-muted);font-style:italic;">'
