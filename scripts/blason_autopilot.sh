@@ -53,7 +53,13 @@ else
   # (~30%) and kept tripping the 8% breaker, which also froze lane 1. Its
   # slots go to follow-ups (steps 2 to 5), which bounce 3 to 7%.
   node "$SEQ" --mode followup --limit 40 --send 2>&1 | tail -2
+  # 2026-10-01: value series (10 teaching emails, every 3 days after the last
+  # email of any kind). Runs AFTER followup so a lead that just got a step
+  # today is skipped by the 3-day / same-day gate.
+  node "$SEQ" --mode value --limit 40 --send 2>&1 | tail -2
   node "$SEQ" --lane 1 --limit 10 --send 2>&1 | tail -2
+  # Lane 4: deliverable at any confidence, 10/day test pool, 8% breaker on.
+  node "$SEQ" --lane 4 --limit 10 --send 2>&1 | tail -2
 fi
 echo "[$STAMP] === leg $LEG done ==="
 } >> "$LOG" 2>&1

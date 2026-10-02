@@ -45,6 +45,17 @@
  *
  * --send is required to actually send. Without it the script always dry-runs,
  * because the failure mode of a mistaken batch is unrecoverable.
+ *
+ * VALUE SERIES (2026-10-01): --mode value sends the 10-step teaching series in
+ * scripts/blason_value_copy.js to leads already emailed (email 1), one every
+ * 3 days measured from the most recent email of ANY kind. Claimed on the lead
+ * (value_step, guarded update) and on lead_messages (dedupe_key per lead+step)
+ * before the send. Every template is rendered and validated at startup; one
+ * failing template stops the run, dry or live.
+ *   node scripts/send_client_sequence.js --mode value --limit 40 [--show] [--send]
+ *
+ * LANE 4 (2026-10-01): email_verify_status='deliverable' at ANY confidence,
+ * never emailed. A 10/day test pool; the 8% breaker stays in force for it.
  */
 const fs = require('fs');
 const path = require('path');
@@ -61,6 +72,7 @@ try {
 const { createClient } = require('@supabase/supabase-js');
 const guard = require(path.join(ROOT, 'api/prospects/_email_guard.js'));
 const kit = require(path.join(ROOT, 'api/prospects/_email_kit.js'));
+const valueCopy = require(path.join(__dirname, 'blason_value_copy.js'));
 
 const args = process.argv.slice(2);
 function arg(n, d) { const i = args.indexOf('--' + n); return i >= 0 && args[i + 1] ? args[i + 1] : d; }
@@ -70,12 +82,16 @@ const SEND = args.includes('--send');
 const LANE = arg('lane', '1');   // 1 = medium+deliverable (proven 3.4%), 2 = role inboxes on live domains,
                                  // 3 = site_published (address the business prints on its own site; the
                                  //     2026-09-13 contact-page crawl stamps these)
+                                 // 4 = deliverable at ANY confidence (test pool, 10/day, breaker on)
 // cold     = never-emailed leads picked by LANE (the original behaviour)
 // followup = the next due step (2 to 5) for leads already emailed, with no reply, no bounce, no unsubscribe
 // warm     = leads a rep actually reached on the phone (20s+ connected call) whose
 //            address passed DNS verification and who have never been emailed
+// value    = the 10-step teaching series (blason_value_copy.js), one every 3 days
+//            after the most recent email of any kind, to leads who got email 1
 const MODE = arg('mode', 'cold');
-if (!['cold', 'followup', 'warm'].includes(MODE)) { console.error('bad --mode'); process.exit(1); }
+if (!['cold', 'followup', 'warm', 'value'].includes(MODE)) { console.error('bad --mode'); process.exit(1); }
+if (MODE === 'cold' && !['1', '2', '3', '4'].includes(LANE)) { console.error('bad --lane'); process.exit(1); }
 const GAP_MS = parseInt(arg('gap', '4000'), 10);   // pace so a fresh subdomain does not spike
 const LOCAL_ZIP3 = ['330', '331', '332', '333'];
 
@@ -102,6 +118,19 @@ function zip3(address) {
     const m = String(address || '').match(/\b(\d{5})(?:-\d{4})?\s*$/);
     return m ? m[1].slice(0, 3) : null;
 }
+
+/**
+ * email_1..4_sent_at are `timestamp without time zone` holding naive UTC, and
+ * `new Date('2026-09-28T14:00:00')` parses that as LOCAL time (4h off on this
+ * Mac). Treat a stamp with no zone as UTC.
+ */
+function tsMs(v) {
+    if (!v) return 0;
+    const s = String(v);
+    const t = new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(s) ? s : s.replace(' ', 'T') + 'Z').getTime();
+    return isNaN(t) ? 0 : t;
+}
+function etDay(ms) { return new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
 
 /**
  * Only greet by name when the address CORROBORATES the name.
@@ -267,8 +296,26 @@ function composeFollowupBase(lead, c) {
  * respond to on the phone.
  */
 function compose(lead, clientName) {
+    if (MODE === 'value') return addSpecial(composeValueFor(lead), lead, lead.primary_language === 'es');
     const r = composeBase(lead, clientName);
     return MODE === 'followup' ? r : addSpecial(r, lead, lead.primary_language === 'es');
+}
+
+/**
+ * Value series step for one lead. The name only goes in when the owner name is
+ * verified (or rep-confirmed) AND the address corroborates it; otherwise the
+ * neutral "Hi,". Local = the same LOCAL_ZIP3 rule the showroom copy uses.
+ */
+function composeValueFor(lead) {
+    const es = lead.primary_language === 'es';
+    const verified = ['verified', 'rep_confirmed'].includes(lead.owner_name_verify_status);
+    return valueCopy.composeValue(lead.__vstep, {
+        es: es,
+        seg: valueCopy.valueSegment(lead.category),
+        local: LOCAL_ZIP3.includes(zip3(lead.address)),
+        fn: verified ? corroboratedFirstName(lead) : null,
+        slots: valueCopy.showroomSlots(Date.now(), es),
+    });
 }
 function composeBase(lead, clientName) {
     const es = lead.primary_language === 'es';
@@ -312,15 +359,15 @@ function composeBase(lead, clientName) {
         const intro = calledLine ? 'Gracias por atender mi llamada el otro día.'
             : 'Soy ' + sender + ', de ' + clientName + ' aquí en Miami. Importamos máquinas de estética directo de fábrica.';
         if (arm === 'A') {
-            return { arm: 'A', subject: (calledLine ? 'después de nuestra llamada' : 'una pregunta rápida'), body: [
+            return { arm: 'A', subject: (calledLine ? 'después de nuestra llamada' : 'algo nuevo este año'), body: [
                 openEs, '', intro, '',
                 '¿Viene algo nuevo para ustedes este año? ¿Un servicio nuevo, otra cabina, o una máquina que ya está vieja? Si me dice cuál, le pido a Manuel, el dueño, que le diga de frente cuál le conviene.' + showEs, '',
                 optEs,
             ].join('\n') };
         }
-        return { arm: 'B', subject: (calledLine ? 'una pregunta después de la llamada' : 'una pregunta rápida'), body: [
+        return { arm: 'B', subject: (calledLine ? 'una pregunta después de la llamada' : 'la máquina más vieja de su cabina'), body: [
             openEs, '', intro, '',
-            '¿Hay algún tratamiento que sus clientes le piden y que le gustaría ofrecer? Casi siempre está a una máquina de distancia, y Manuel le puede decir exactamente cuál.' + showEs, '',
+            '¿Cuál es la máquina más vieja que tienen en cabina hoy, y cuántos años tiene? Si me dice cuál, Manuel, el dueño, le dice de frente si le conviene arreglarla o cambiarla.' + showEs, '',
             optEs,
         ].join('\n') };
     }
@@ -328,15 +375,15 @@ function composeBase(lead, clientName) {
     const intro = calledLine ? 'Thanks for taking my call the other day.'
         : "I'm " + sender + ' with ' + clientName + ' here in Miami. We import aesthetic machines direct from the factory.';
     if (arm === 'A') {
-        return { arm: 'A', subject: (calledLine ? 'after our call' : 'quick question'), body: [
+        return { arm: 'A', subject: (calledLine ? 'after our call' : 'anything new this year'), body: [
             openEn, '', intro, '',
             "Anything new coming up for you this year? A new service, another room, or a machine that's getting old? Tell me which and I'll have Manuel, the owner, tell you straight what makes sense." + showEn, '',
             optEn,
         ].join('\n') };
     }
-    return { arm: 'B', subject: (calledLine ? 'one question after our call' : 'quick question'), body: [
+    return { arm: 'B', subject: (calledLine ? 'one question after our call' : 'the oldest machine in your room'), body: [
         openEn, '', intro, '',
-        "Is there a treatment your clients keep asking about that you'd like to offer? It's usually one machine away, and Manuel can tell you exactly which one." + showEn, '',
+        "What's the oldest machine in your treatment room right now, and how many years does it have? Tell me which and Manuel, the owner, will tell you straight whether to fix it or replace it." + showEn, '',
         optEn,
     ].join('\n') };
 }
@@ -371,6 +418,18 @@ async function main() {
     const sb = sbLeads();
     const pub = sbPublic();
 
+    // Value series: render and validate EVERY template combination (with the
+    // live special-line gate applied) before touching a lead. One bad template
+    // stops the run, dry or live.
+    if (MODE === 'value') {
+        const bad = valueCopy.selfTest(addSpecial);
+        if (bad.length) {
+            console.error('VALUE COPY FAILED VALIDATION (' + bad.length + '):\n  ' + bad.join('\n  '));
+            process.exit(3);
+        }
+        console.log('value copy: all templates pass validation');
+    }
+
     const { data: client } = await pub.from('clients')
         .select('business_name, website').eq('id', CLIENT_ID).maybeSingle();
     const clientName = (client && client.business_name) || 'Blason Spa Equipment';
@@ -395,12 +454,14 @@ async function main() {
     // bounce, so it cannot be the source of the trailing bounce and is exempt
     // from the aggregate breaker. The breaker exists to stop NEW bad lists
     // (cold/warm lanes), not proven-deliverable follow-ups. 2026-09-17.
-    if (SEND && MODE !== 'followup' && rSent >= 10 && rRate >= 0.08) {
+    // value mode is exempt for the same reason: it only re-mails addresses
+    // that already took email 1 without bouncing (2026-10-01).
+    if (SEND && MODE !== 'followup' && MODE !== 'value' && rSent >= 10 && rRate >= 0.08) {
         console.error('REFUSING to send: trailing bounce rate is at or above 8%. Fix the list before feeding the domain more of it.');
         process.exit(2);
     }
-    if (MODE === 'followup' && rRate >= 0.08) {
-        console.log('note: trailing bounce is ' + (rRate * 100).toFixed(1) + '% but followup only re-mails non-bounced addresses, so it proceeds.');
+    if ((MODE === 'followup' || MODE === 'value') && rRate >= 0.08) {
+        console.log('note: trailing bounce is ' + (rRate * 100).toFixed(1) + '% but ' + MODE + ' only re-mails non-bounced addresses, so it proceeds.');
     }
 
     // Lane 1 is the proven pool: a real person's address, verified domain,
@@ -411,7 +472,7 @@ async function main() {
     const SELECT_COLS = 'id,name,owner_name,owner_email,email,email_verify_address,address,primary_language,'
         + 'email_verify_status,email_confidence,bounced_at,unsubscribed_at,email_1_sent_at,email_2_sent_at,'
         + 'reply_received_at,last_called_outcome,stage,do_not_call,next_step,pinned_at,category,'
-        + 'email_3_sent_at,email_4_sent_at,email_5_sent_at';
+        + 'email_3_sent_at,email_4_sent_at,email_5_sent_at,value_step,value_last_sent_at,owner_name_verify_status';
     let q = sb.from('leads').select(SELECT_COLS)
         .eq('client_id', CLIENT_ID)
         .is('bounced_at', null)
@@ -423,6 +484,11 @@ async function main() {
         // (nextStepFor). email_N_sent_at is the idempotency stamp for step N.
         q = q.not('email_1_sent_at', 'is', null)
             .is('email_5_sent_at', null).is('reply_received_at', null);
+    } else if (MODE === 'value') {
+        // Value series: got email 1, has not finished the 10 steps, no reply.
+        // Cadence and the any-channel reply check are decided per lead below.
+        q = q.not('email_1_sent_at', 'is', null).is('reply_received_at', null)
+            .or('value_step.is.null,value_step.lt.' + valueCopy.MAX_VALUE_STEP);
     } else if (MODE === 'warm') {
         // Reached on the phone (connected filter below), address passed DNS
         // verification, never emailed. DELIVERABLE ONLY. The 2026-09-04 warm
@@ -435,6 +501,8 @@ async function main() {
             .eq('email_verify_status', 'deliverable')
             .not('last_called_at', 'is', null);
     } else {
+        // Lane 4 is lane 1 without the confidence gate: 'deliverable' at any
+        // confidence. Unproven, so it runs at 10/day under the 8% breaker.
         const laneStatus = LANE === '2' ? 'role_inbox' : (LANE === '3' ? 'site_published' : 'deliverable');
         q = q.is('email_1_sent_at', null).eq('email_verify_status', laneStatus);
         if (LANE === '1') q = q.eq('email_confidence', 'medium');
@@ -477,6 +545,7 @@ async function main() {
     // (b) Address dedupe: several leads share one inbox (franchises). Lowest
     //     lead id in the batch owns the address; the rest wait.
     const bounceDomains = new Set();
+    const FREE_MAIL_DOMAINS = new Set(['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'live.com', 'msn.com', 'me.com']);
     {
         let from = 0;
         while (true) {
@@ -486,7 +555,9 @@ async function main() {
             if (!rows || !rows.length) break;
             for (const r of rows) {
                 const d = String(r.to_address || '').split('@')[1];
-                if (d) bounceDomains.add(d.toLowerCase());
+                // Free-mail domains never go on the domain blacklist: one bad gmail
+                // address says nothing about every other gmail inbox.
+                if (d && !FREE_MAIL_DOMAINS.has(d.toLowerCase())) bounceDomains.add(d.toLowerCase());
             }
             if (rows.length < 1000) break; from += 1000;
         }
@@ -527,7 +598,40 @@ async function main() {
         }
     }
 
+    // Value series reads each candidate's message history: ANY inbound message
+    // (an SMS reply never stamps reply_received_at) or a captured reply on any
+    // outbound row is a reply, and the newest outbound email of any kind (a
+    // manual one from the dashboard included) anchors the 3-day cadence.
+    const repliedIds = new Set();
+    const lastEmailMs = {};
+    if (MODE === 'value') {
+        const ids = leads.map(function (l) { return l.id; });
+        for (let i = 0; i < ids.length; i += 150) {
+            const { data: msgs, error: mErr } = await sb.from('lead_messages')
+                .select('lead_id, direction, channel, sent_at, replied_at, status')
+                .in('lead_id', ids.slice(i, i + 150)).limit(5000);
+            if (mErr) { console.error(mErr); process.exit(1); }
+            for (const m of (msgs || [])) {
+                if (m.direction === 'inbound' || m.replied_at) repliedIds.add(m.lead_id);
+                if (m.direction === 'outbound' && m.channel === 'email') {
+                    lastEmailMs[m.lead_id] = Math.max(lastEmailMs[m.lead_id] || 0, tsMs(m.sent_at));
+                }
+            }
+        }
+    }
+    const skipWhy = {};
+    const skipped = function (why) { skipWhy[why] = (skipWhy[why] || 0) + 1; return false; };
+
     const consented = leads.filter(function (l) {
+        if (MODE === 'value') {
+            if (l.do_not_call) return skipped('do_not_call');
+            if (declined.has(l.last_called_outcome)) return skipped('declined on a call');
+            if (CLOSED.includes(l.stage)) return skipped('stage ' + l.stage);
+            if (killedIds.has(l.id)) return skipped('dead/opted out on SMS');
+            if (l.pinned_at || String(l.next_step || '').trim()) return skipped('human-owned (pinned or next step)');
+            if (repliedIds.has(l.id)) return skipped('replied in some channel');
+            return true;
+        }
         if (connectedIds && !connectedIds.has(l.id)) return false;
         if (MODE === 'warm' && queuedIds.has(l.id)) return false;
         if (l.do_not_call) return false;
@@ -540,10 +644,29 @@ async function main() {
         return true;
     });
     const removed = leads.length - consented.length;
+    if (MODE === 'value') {
+        // Due = 3+ days since the newest email of any kind (steps 1 to 5, the
+        // last value step, or any outbound email row). Oldest waiting first.
+        const now = Date.now();
+        const due = [];
+        for (const l of consented) {
+            const last = Math.max(tsMs(l.email_1_sent_at), tsMs(l.email_2_sent_at), tsMs(l.email_3_sent_at),
+                tsMs(l.email_4_sent_at), tsMs(l.email_5_sent_at), tsMs(l.value_last_sent_at), lastEmailMs[l.id] || 0);
+            if (etDay(last) === etDay(now)) { skipped('emailed today'); continue; }
+            if (now - last < valueCopy.VALUE_GAP_DAYS * 86400000) { skipped('under 3 days since last email'); continue; }
+            l.__vstep = (l.value_step || 0) + 1;
+            l.__vlast = last;
+            due.push(l);
+        }
+        due.sort(function (a, b) { return a.__vlast - b.__vlast; });
+        consented.length = 0;
+        Array.prototype.push.apply(consented, due);
+    }
     if (MODE === 'followup') {
         // Oldest waiting first, so nobody sits between steps while newer leads
-        // take the cap.
-        for (const l of consented) l.__step = nextStepFor(l);
+        // take the cap. Never a second email the same ET day as a value email.
+        const today = etDay(Date.now());
+        for (const l of consented) l.__step = (tsMs(l.value_last_sent_at) && Date.now() - tsMs(l.value_last_sent_at) < 3 * 86400e3) ? null : nextStepFor(l);  // 3-day gap after a value email
         const due = consented.filter(function (l) { return l.__step; });
         due.sort(function (a, b) {
             return String(a['email_' + (a.__step - 1) + '_sent_at']).localeCompare(String(b['email_' + (b.__step - 1) + '_sent_at']));
@@ -565,13 +688,22 @@ async function main() {
         console.log('bounce shields removed ' + (consented.length - shielded.length) + ' (blacklisted domain or duplicate inbox)');
     }
     const eligible = shielded.slice(0, LIMIT);
-    if (removed) console.log('consent filter removed ' + removed + ' lead(s) who already said no');
+    if (removed && MODE !== 'value') console.log('consent filter removed ' + removed + ' lead(s) who already said no');
+    if (MODE === 'value') {
+        console.log('value pool: ' + leads.length + ' leads got email 1, not finished, no reply_received_at, not bounced/unsubscribed');
+        Object.keys(skipWhy).forEach(function (k) { console.log('  skip ' + String(skipWhy[k]).padStart(4) + '  ' + k); });
+        const bySteps = {};
+        eligible.forEach(function (l) { bySteps[l.__vstep] = (bySteps[l.__vstep] || 0) + 1; });
+        console.log('  due by step: ' + JSON.stringify(bySteps) + (shielded.length > eligible.length ? '  (' + (shielded.length - eligible.length) + ' more due, held by --limit)' : ''));
+    }
 
     console.log('client:   ' + clientName);
     const modeDesc = MODE === 'followup' ? 'next step of 2 to 5 is due, no reply, no bounce, no unsubscribe'
+        : MODE === 'value' ? 'value step due, 3+ days since any email, no reply in any channel'
         : MODE === 'warm' ? '20s+ connected call, DNS-verified address, never emailed'
         : (LANE === '2' ? 'role inbox on a live domain'
             : LANE === '3' ? 'address published on their own site'
+            : LANE === '4' ? 'deliverable at any confidence (test pool)'
             : 'medium confidence + MX clean') + ', never emailed';
     console.log('mode ' + MODE + (MODE === 'cold' ? ' lane ' + LANE : '') + ':   '
         + eligible.length + ' eligible (' + modeDesc + ')');
@@ -596,19 +728,41 @@ async function main() {
         if (!ok.ok) { console.log('SKIP  ' + tag + '  guard: ' + ok.reason); stats.skipped++; continue; }
 
         const { subject, body, arm } = compose(lead, clientName);
-        const fails = preSendCheck(subject, body);
+        const fails = preSendCheck(subject, body).concat(MODE === 'value' ? valueCopy.validateValueCopy(subject, body) : []);
         if (fails.length) { console.log('SKIP  ' + tag + '  copy: ' + fails.join('; ')); stats.skipped++; continue; }
 
         if (!SEND) {
             console.log('DRY   ' + tag + '  -> ' + to + (ok.role ? '  [role inbox]' : ''));
-            console.log('      ' + (lead.__step ? 'step ' + lead.__step + ' | ' : '') + subject + ' | ' + body.split('\n')[0] + ' ...');
+            console.log('      ' + (lead.__step ? 'step ' + lead.__step + ' | ' : '') + (lead.__vstep ? 'value ' + lead.__vstep + ' ' + arm + ' | ' : '') + subject + ' | ' + body.split('\n')[0] + ' ...');
             if (args.includes('--show')) console.log(body.replace(/^/gm, '        ') + '\n');
             stats.sent++; continue;
         }
 
+        // VALUE: claim the step on the lead FIRST, guarded on the step we read.
+        // A second runner (or a re-run) finds value_step already moved and
+        // backs off. Released below if the send fails.
+        let vClaimed = false;
+        const vPrev = { value_step: lead.value_step == null ? null : lead.value_step, value_last_sent_at: lead.value_last_sent_at || null };
+        if (MODE === 'value') {
+            let cq = sb.from('leads').update({ value_step: lead.__vstep, value_last_sent_at: new Date().toISOString() })
+                .eq('id', lead.id);
+            cq = (lead.__vstep === 1) ? cq.is('value_step', null) : cq.eq('value_step', lead.__vstep - 1);
+            const { data: vc, error: vcErr } = await cq.select('id');
+            if (vcErr) { console.log('FAIL  ' + tag + '  value claim: ' + vcErr.message); stats.failed++; continue; }
+            if (!vc || !vc.length) { console.log('DUP   ' + tag + '  value step ' + lead.__vstep + ' already claimed'); stats.dup++; continue; }
+            vClaimed = true;
+        }
+        const releaseValue = async function () {
+            if (!vClaimed) return;
+            await sb.from('leads').update(vPrev).eq('id', lead.id).eq('value_step', lead.__vstep);
+        };
+
         // CLAIM before sending. A read-then-check loses the race; see send-email.js.
+        // Value steps key on lead + step (not time), so one step can never go
+        // to one lead twice, whatever happens to the lead row.
         const dedupeKey = crypto.createHash('sha1')
-            .update([lead.id, 'email', to, subject, Math.floor(Date.now() / 300000)].join('|')).digest('hex');
+            .update(MODE === 'value' ? ['blason_value', lead.id, lead.__vstep].join('|')
+                : [lead.id, 'email', to, subject, Math.floor(Date.now() / 300000)].join('|')).digest('hex');
         const claim = await sb.from('lead_messages').insert({
             lead_id: lead.id, direction: 'outbound', channel: 'email', subject: subject,
             sent_at: new Date().toISOString(), sent_by: process.env.STILO_SENDER_EMAIL || null,
@@ -616,7 +770,10 @@ async function main() {
             variant: (MODE === 'cold' ? 'blason_lane' + LANE : 'blason_' + MODE) + '_' + (arm || 'x'),
         }).select('id').single();
         if (claim.error) {
+            // Value: a 23505 means this lead+step already has a message row, so
+            // it WAS sent; keep the lead stamp. Any other claim error releases it.
             if (String(claim.error.code) === '23505') { console.log('DUP   ' + tag); stats.dup++; continue; }
+            await releaseValue();
             console.log('FAIL  ' + tag + '  claim: ' + claim.error.message); stats.failed++; continue;
         }
 
@@ -648,6 +805,7 @@ async function main() {
             const j = await r.json().catch(function () { return {}; });
             if (!r.ok) {
                 await sb.from('lead_messages').delete().eq('id', claim.data.id);   // release the claim
+                await releaseValue();
                 console.log('FAIL  ' + tag + '  resend: ' + (j.message || ('http_' + r.status)));
                 stats.failed++; continue;
             }
@@ -655,15 +813,18 @@ async function main() {
                 body: plain, body_preview: plain.slice(0, 280), from_address: fromEmail,
                 provider_message_id: j.id || null, status: 'sent',
             }).eq('id', claim.data.id);
-            const stepNo = MODE === 'followup' ? (lead.__step || 2) : 1;
-            const stamp = {};
-            stamp['email_' + stepNo + '_sent_at'] = new Date().toISOString();
-            stamp['email_' + stepNo + '_status'] = 'sent';
-            await sb.from('leads').update(stamp).eq('id', lead.id);
+            if (MODE !== 'value') {   // value steps were stamped by the claim
+                const stepNo = MODE === 'followup' ? (lead.__step || 2) : 1;
+                const stamp = {};
+                stamp['email_' + stepNo + '_sent_at'] = new Date().toISOString();
+                stamp['email_' + stepNo + '_status'] = 'sent';
+                await sb.from('leads').update(stamp).eq('id', lead.id);
+            }
             console.log('SENT  ' + tag + '  -> ' + to);
             stats.sent++;
         } catch (e) {
             await sb.from('lead_messages').delete().eq('id', claim.data.id);
+            await releaseValue();
             console.log('FAIL  ' + tag + '  ' + String(e.message || e));
             stats.failed++; continue;
         }
