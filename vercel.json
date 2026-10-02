@@ -2,6 +2,26 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "blasonspaequipment.stiloaipartners.com"
+        }
+      ],
+      "destination": "/blason/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "blasonspaequipment.stiloaipartners.com"
+        }
+      ],
+      "destination": "/blason/$1"
+    },
+    {
       "source": "/(.*)",
       "has": [
         {
