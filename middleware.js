@@ -7,7 +7,7 @@
  * (observed 2026-10-02: blasonspaequipment., app. and admin. all returned the
  * marketing page at "/"). Edge Middleware runs first, so the rewrite here wins.
  *
- * blasonspaequipment.stiloaipartners.com -> /blason/<path>
+ * blasononline.stiloaipartners.com (and blasonspaequipment.) -> /blason/<path>
  *
  * Excluded from the matcher so they pass straight through to the file or
  * function: /api (the page's own endpoints), /_vercel (analytics), /assets, and
@@ -19,7 +19,8 @@ export const config = {
 };
 
 const HOSTS = {
-    'blasonspaequipment.stiloaipartners.com': '/blason',
+    'blasononline.stiloaipartners.com': '/blason',      // the one in the emails (matches blasononline.com)
+    'blasonspaequipment.stiloaipartners.com': '/blason', // first name used 2026-10-02, kept so old links work
 };
 
 export default function middleware(request) {

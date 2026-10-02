@@ -73,3 +73,11 @@ create index if not exists funnel_submissions_lead_idx on public.funnel_submissi
 
 alter table public.funnel_events enable row level security;
 alter table public.funnel_submissions enable row level security;
+
+-- 2026-10-02 (later the same day): the quiz was reordered after a closer's
+-- review. "Business type" and "timeline" gave way to "have you been quoted"
+-- and "what's driving it", which are what the September call transcripts said
+-- actually predicted a booking. The old columns stay (nullable) for the rows
+-- that already used them.
+alter table public.funnel_submissions add column if not exists quoted text;
+alter table public.funnel_submissions add column if not exists motive text;

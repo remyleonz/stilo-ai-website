@@ -185,23 +185,24 @@ function etStamp(iso) {
 // Human-readable labels for the quiz answer keys. The page and the admin tab
 // both read these so a key change is one edit.
 const LABELS = {
-    segment: {
-        medspa: 'Med spa', clinic: 'Laser / derm / plastic surgery clinic', spa: 'Spa or esthetics studio',
-        salon: 'Salon or beauty school', wellness: 'Wellness or weight loss',
-    },
     interest: {
         laser_hair: 'Laser hair removal', resurfacing: 'Skin: resurfacing, scars, tightening',
-        body: 'Body: contouring, muscle, fat', facials: 'Facials: hydro, LED, multifunction',
+        body: 'Body: contouring, fat, cellulite', facials: 'Facials: hydro, LED, multifunction',
         tattoo: 'Tattoo or pigment removal', notsure: 'Not sure yet',
     },
+    quoted: { brand: 'Quoted by a brand name', importer: 'Quoted by another importer', replacing: 'Replacing a machine they own', none: 'Not quoted yet' },
     medical: { yes: 'Has MD / NP / PA', no: 'No medical director', planning: 'Planning to add one' },
-    timeline: { now: 'Ready now', d30: 'Next 30 days', d90: '1 to 3 months', looking: 'Just looking' },
+    motive: { expansion: 'New room or location', demand: 'Clients keep asking', aging: 'Machine old or down', shopping: 'Shopping a quote they dislike' },
     path_pref: { showroom: 'Miami showroom visit', call: '10-minute call with Manuel' },
+    // kept for rows written before the 2026-10-02 reorder
+    segment: { medspa: 'Med spa', clinic: 'Laser / derm / plastic surgery clinic', spa: 'Spa or esthetics studio', salon: 'Salon or beauty school', wellness: 'Wellness or weight loss' },
+    timeline: { now: 'Ready now', d30: 'Next 30 days', d90: '1 to 3 months', looking: 'Just looking' },
 };
+const QUIZ_KEYS = ['interest', 'quoted', 'medical', 'motive', 'path_pref'];
 function label(group, key) { return (LABELS[group] && LABELS[group][key]) || key || ''; }
 
 module.exports = {
-    SITES, EVENTS, MAX_BODY_BYTES, LABELS, label,
+    SITES, EVENTS, MAX_BODY_BYTES, LABELS, QUIZ_KEYS, label,
     botReason, sbPublic, sbProspecting, configured, readJsonBody, str, intOrNull,
     ipOf, ipHash, normalizePhone, phoneDisplay, isEmail, verifiedLeadId, findLead,
     notify, esc, etStamp, signLead,

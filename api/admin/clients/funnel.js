@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
         if (!data || data.length < 1000) break;
     }
     const { data: subs } = await pub.from('funnel_submissions')
-        .select('id,created_at,session_id,lead_id,lead_created,name,business,phone,email,lang,segment,interest,medical,timeline,path_pref,booked_at,meeting_at')
+        .select('id,created_at,session_id,lead_id,lead_created,name,business,phone,email,lang,segment,interest,medical,timeline,quoted,motive,path_pref,booked_at,meeting_at')
         .eq('site', site).gte('created_at', since).order('created_at', { ascending: false }).limit(2000);
 
     // --- sessions ---------------------------------------------------------------
@@ -103,7 +103,7 @@ module.exports = async function handler(req, res) {
         bookings: count(has('booking_confirmed')),
         bots_excluded: all.length - human.length,
         by_lang: human.reduce(function (o, s) { const l = s.lang || 'en'; o[l] = (o[l] || 0) + 1; return o; }, {}),
-        answers: ['segment', 'interest', 'medical', 'timeline', 'path_pref'].reduce(function (o, q) {
+        answers: F.QUIZ_KEYS.reduce(function (o, q) {
             const dist = {};
             human.forEach(function (s) { const v = s.answers[q]; if (v) dist[v] = (dist[v] || 0) + 1; });
             o[q] = Object.keys(dist).sort(function (a, b) { return dist[b] - dist[a]; }).map(function (k) { return { key: k, label: F.label(q, k), n: dist[k] }; });
@@ -138,7 +138,7 @@ module.exports = async function handler(req, res) {
         const sub = subBySession[s.session_id] || null;
         const lid = s.lead_id || (sub && sub.lead_id) || null;
         const L = leads[lid] || null;
-        const answers = Object.assign({}, s.answers, sub ? { segment: sub.segment, interest: sub.interest, medical: sub.medical, timeline: sub.timeline, path_pref: sub.path_pref } : {});
+        const answers = Object.assign({}, s.answers, sub ? { interest: sub.interest, quoted: sub.quoted, medical: sub.medical, motive: sub.motive, path_pref: sub.path_pref, segment: sub.segment, timeline: sub.timeline } : {});
         Object.keys(answers).forEach(function (k) { if (!answers[k]) delete answers[k]; });
         return {
             session_id: s.session_id, lead_id: lid, first_seen: s.first, last_seen: s.last, lang: s.lang || 'en',

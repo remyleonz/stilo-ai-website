@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
                 const pros = F.sbProspecting();
                 const { data: lead } = await pros.from('leads').select('id,name,owner_name,owner_phone,phone,owner_email,address').eq('id', leadId).maybeSingle();
                 const a = meta.answers || {};
-                const lines = ['segment', 'interest', 'medical', 'timeline', 'path_pref']
+                const lines = F.QUIZ_KEYS
                     .filter(function (k) { return a[k]; })
                     .map(function (k) { return '<li>' + F.esc(k.replace('_pref', '')) + ': <strong>' + F.esc(F.label(k, a[k])) + '</strong></li>'; }).join('');
                 const phone = lead && (lead.owner_phone || lead.phone);
