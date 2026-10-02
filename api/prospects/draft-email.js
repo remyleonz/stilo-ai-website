@@ -98,7 +98,9 @@ module.exports = async function handler(req, res) {
 
         // A/B arm. Deterministic by lead id so a re-draft of the same lead
         // keeps its arm (and the test stays honest); the composer can force one.
-        const cVariant = (body.variant === 'ctx' || body.variant === 'ask')
+        // 'desk' = the rep only reached the front desk (owner in a meeting or
+        // out), so the email can't say "thanks for taking the call" (Remy, 2026-10-02).
+        const cVariant = (body.variant === 'ctx' || body.variant === 'ask' || body.variant === 'desk')
             ? body.variant
             : (parseInt(id, 10) % 2 === 0 ? 'ctx' : 'ask');
         // Spanish has no natural equivalent of "Hi there", so a nameless lead
@@ -108,9 +110,34 @@ module.exports = async function handler(req, res) {
             ? ('Hola' + (cfName ? ' ' + cfName : '') + ',')
             : ('Hi ' + (cfName || 'there') + ',');
         const SHOWROOM = '3110 W 84th St Unit 4, Miami, FL 33018';
+        const cSender = await kit.getSenderIdentity(gate.email);
+        const senderFirst = String((cSender && cSender.name) || 'Remy').trim().split(/\s+/)[0];
         let cSubject, cBody;
 
-        if (cVariant === 'ask') {
+        if (cVariant === 'desk') {
+            // Owner not reached: never thank them for a call they didn't take.
+            // One question (the hardest-clients one from the scripts), the logo
+            // angle, then the showroom (local) or a 10-minute phone call.
+            if (es) {
+                cSubject = cfName ? (cfName + ', intenté llamarle hoy') : 'Intenté llamarle hoy';
+                cBody = hi + '\n\n'
+                    + 'Hoy llamé a la clínica y su recepción me dijo que no estaba disponible, así que le escribo directo. Soy ' + senderFirst + ', de Blason Spa Equipment, aquí en Miami.\n\n'
+                    + 'Le dejo una sola pregunta: con el equipo que tienen hoy, ¿qué clientas se les complican más?\n\n'
+                    + 'Se lo pregunto porque muchas máquinas de marca salen de las mismas fábricas que las nuestras, y con la marca se paga dos veces: la máquina y el logo. Manuel, el dueño de Blason, importa directo, entrena a su equipo y le da servicio aquí en Miami.\n\n'
+                    + (local
+                        ? 'Si quiere verlas funcionando, el showroom está en ' + SHOWROOM + ', de lunes a sábado de 9 a 4. Le vuelvo a llamar pronto, o respóndame aquí con el mejor momento.\n'
+                        : 'Si le sirve, Manuel le llama diez minutos por teléfono y le dice de frente qué le conviene. Respóndame aquí con el mejor momento.\n');
+            } else {
+                cSubject = cfName ? (cfName + ', I tried you today') : 'Tried you today';
+                cBody = hi + '\n\n'
+                    + 'I called the clinic today and your front desk said you weren\'t available, so I\'m writing directly. I\'m ' + senderFirst + ' with Blason Spa Equipment here in Miami.\n\n'
+                    + 'Just one question: with the equipment you have today, which clients are the hardest to treat?\n\n'
+                    + 'I ask because a lot of brand-name machines come out of the same factories as ours, and with the brand you pay twice: once for the machine and once for the logo. Manuel, who owns Blason, imports direct, trains your team and services everything here in Miami.\n\n'
+                    + (local
+                        ? 'If you\'d like to see them running, the showroom is at ' + SHOWROOM + ', Monday to Saturday, 9 to 4. I\'ll call you again soon, or reply here with a better time.\n'
+                        : 'If it helps, Manuel can call you for ten minutes and tell you straight what makes sense. Reply here with a good time.\n');
+            }
+        } else if (cVariant === 'ask') {
             // THREE LINES. One question, and the question is the same one the
             // cold-call script opens with, so a reply lands the rep straight in
             // discovery. No address, no hours, no pitch: anything else here
@@ -123,15 +150,15 @@ module.exports = async function handler(req, res) {
             if (es) {
                 cSubject = cfName ? (cfName + ', una pregunta') : 'Una pregunta';
                 cBody = hi + '\n\n'
-                    + 'Una pregunta después de la llamada: ¿cuál es la próxima máquina que quiere meter en su spa?\n\n'
-                    + 'La que me diga, le digo de frente si Manuel la tiene o no.'
+                    + 'Una pregunta después de la llamada: con el equipo que tienen hoy, ¿qué clientas se les complican más?\n\n'
+                    + 'Me dice cuáles y le digo de frente si Manuel tiene algo que lo resuelva.'
                     + (local ? ' Y si la tiene, la puede ver funcionando en el showroom de Miami.' : '')
                     + '\n';
             } else {
                 cSubject = cfName ? (cfName + ', one question') : 'One question';
                 cBody = hi + '\n\n'
-                    + 'One question after our call: what\'s the next machine on your wishlist?\n\n'
-                    + 'Whatever you name, I\'ll tell you straight whether Manuel has it or not.'
+                    + 'One question after our call: with the equipment you have today, which clients are the hardest to treat?\n\n'
+                    + 'Tell me which and I\'ll tell you straight whether Manuel has something that fixes it.'
                     + (local ? ' And if he does, you can see it running at the Miami showroom.' : '')
                     + '\n';
             }
@@ -168,7 +195,6 @@ module.exports = async function handler(req, res) {
                 + 'Reply with two times that work this week and I\'ll set it up. And if you\'d rather put your hands on the machines, the showroom is in Miami and it\'s worth the trip.\n\n'
                 + 'Any questions, reply here.\n';
         }
-        const cSender = await kit.getSenderIdentity(gate.email);
         return res.status(200).json({
             to_email: lead.owner_email || lead.email || researchEmail(lead) || '',
             subject: cSubject,

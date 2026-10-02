@@ -1264,16 +1264,25 @@
         advance('Do Not Call', false);
     }
 
-    function openEmailPanel() {
+    // variant: optional template key. Client leads offer a dropdown so the rep
+    // can pick "front desk only" when the owner wasn't reached (Remy, 2026-10-02).
+    function openEmailPanel(variant) {
         var h = panelHost(); if (!h) return;
         S.panel = 'email';
         var r = S.lead || S.queue[S.idx];
         h.innerHTML = '<div class="dm-panel" id="dmEmailPanel"><h4>Follow-up email</h4>'
             + '<div class="dm-hint">Drafting…</div></div>';
-        cfg.fetchJson('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify({ id: r.id }) }).then(function (d) {
+        var req = { id: r.id }; if (variant) req.variant = variant;
+        cfg.fetchJson('/api/prospects/draft-email', { method: 'POST', body: JSON.stringify(req) }).then(function (d) {
             var p = el('dmEmailPanel'); if (!p || !S || S.panel !== 'email') return;
             S.emailVariant = d.variant || null;
+            var pick = (d.variants && d.variants.length > 1)
+                ? '<select id="dmEmVariant" class="dm-input" style="width:100%;margin-bottom:6px;" onchange="DIALER_MODE.emailVariant(this.value)">'
+                    + d.variants.map(function (v) { return '<option value="' + esc(v.key) + '"' + (v.key === d.variant ? ' selected' : '') + '>' + esc(v.label) + '</option>'; }).join('')
+                    + '</select>'
+                : '';
             p.innerHTML = '<h4>Follow-up email' + (d.agent ? ' · ' + esc(d.agent) : '') + '</h4>'
+                + pick
                 + '<input id="dmEmTo" class="dm-input" style="width:100%;margin-bottom:6px;" value="' + esc(d.to_email || r.owner_email || r.email || '') + '">'
                 + '<input id="dmEmSubj" class="dm-input" style="width:100%;margin-bottom:6px;" value="' + esc(d.subject || '') + '">'
                 + '<textarea id="dmEmBody" class="dm-input" style="width:100%;min-height:130px;resize:vertical;">' + esc(d.body || '') + '</textarea>'
@@ -1608,6 +1617,7 @@
         setCallback: setCallback, setCallbackCustom: setCallbackCustom,
         commitDnc: commitDnc, closePanel: closePanel,
         sendEmail: sendEmail, sendSms: sendSms,
+        emailVariant: function (v) { if (S && S.panel === 'email') openEmailPanel(v); },
         toggleAct: toggleAct, toggleTx: toggleTx, actAll: actAll,
         notesChanged: notesChanged, saveContact: saveContact,
         jumpTo: jumpTo, legendKey: legendKey,

@@ -318,10 +318,11 @@ const VARIANT_KEYS = ['A', 'B'];
 // A/B test in ab-results.js (same table, different offer, different audience).
 //   ctx = the full-context email that sells the next step outright
 //   ask = three lines ending in one question, engineered for a REPLY
-const CLIENT_VARIANT_KEYS = ['ctx', 'ask'];
+const CLIENT_VARIANT_KEYS = ['ctx', 'ask', 'desk'];
 const VARIANT_LABELS = {
     A: 'A · Direct', B: 'B · Value',
-    ctx: 'Context · sells the visit', ask: 'Question · baits a reply'
+    ctx: 'Spoke with them · showroom invite', ask: 'Spoke with them · one question',
+    desk: 'Front desk only · owner not reached'
 };
 
 function pickVariant(leadId) {
