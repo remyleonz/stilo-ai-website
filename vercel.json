@@ -64,6 +64,11 @@
   ],
   "redirects": [
     {
+      "source": "/join",
+      "destination": "/careers",
+      "permanent": true
+    },
+    {
       "source": "/dashboard",
       "destination": "/app",
       "permanent": true

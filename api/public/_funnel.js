@@ -29,6 +29,14 @@ const SITES = {
         agent: 'blason',            // vsl_events.agent for the dual-write
         lead_source: 'blason_vsl',
     },
+    // The hiring VSL page (/careers). Events only: applications go through
+    // api/public/apply.js into public.sdr_applications, never into a lead pool.
+    careers: {
+        client_id: null,
+        name: 'STILO hiring page',
+        agent: 'careers',
+        lead_source: 'careers_page',
+    },
 };
 
 // Everything the page emits. Anything else is noise or someone poking the
