@@ -45,6 +45,7 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 /* hero */
 .hero{padding-block:clamp(36px,6vw,72px) 0;display:grid;gap:28px 56px;align-items:center}
 @media(min-width:900px){.hero{grid-template-columns:1.1fr .9fr}}
+@media(max-width:899px){.hero{text-align:center;gap:22px}.hero h1{margin-inline:auto}.hero .facts div{grid-template-columns:1fr;justify-items:center;gap:4px;padding:16px 0}.hero .facts b{font-size:13px;letter-spacing:.14em;color:var(--navy)}.hero .facts span{max-width:30ch}}
 .hero h1{font-size:clamp(38px,5.6vw,66px);max-width:14ch}
 .hero h1 span{color:var(--navy)}
 .facts{display:grid;gap:0}
@@ -83,10 +84,10 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 .tile figcaption{padding:10px 12px 12px;border-top:1px solid var(--line)}
 .tile b{display:block;font-size:14px;font-weight:700;line-height:1.3}
 .tile small{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
-.tile.more{background:var(--navy);color:#fff;border-color:var(--navy);display:flex;flex-direction:column;justify-content:space-between;padding:18px;min-height:100%}
-.tile.more b{font-size:20px;line-height:1.15;color:#fff}
-.tile.more small{color:rgba(255,255,255,.8);font-size:14px;margin-top:10px}
-.tile.more .arrow{font-size:28px;line-height:1;align-self:flex-end}
+.tile.more{background:var(--navy);color:#fff;border-color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;min-height:100%;text-align:center}
+.tile.more .arrow{width:52px;height:52px;border-radius:50%;border:1.5px solid rgba(255,255,255,.6);display:grid;place-items:center;font-size:24px;line-height:1}
+.tile.more b{font-size:19px;line-height:1.2;color:#fff}
+.tile.more small{color:rgba(255,255,255,.75);font-size:13.5px;margin-top:0}
 .floor .after{margin-top:18px;font-size:15px;color:var(--muted)}
 
 /* social */
@@ -220,7 +221,6 @@ footer img{width:96px;height:52px;object-fit:contain}
   </div>
   <div class="under">
     <a class="btn" href="#quiz" id="ctaTop" data-i18n="cta">Find the right machine for your room</a>
-    <span class="micro" data-i18n="ctaMicro">Five quick questions, then pick a time with Manuel, the owner.</span>
   </div>
 
   <section class="floor">
@@ -243,7 +243,7 @@ footer img{width:96px;height:52px;object-fit:contain}
   </section>
 
   <section class="quiz narrow" id="quiz">
-    <div class="lead"><h2 data-i18n="qTtl">Which machine belongs in your room?</h2><p data-i18n="qSub">Five questions. Then you see what Manuel would show you first, and pick a time.</p></div>
+    <div class="lead"><h2 data-i18n="qTtl">Which machine belongs in your room?</h2><p data-i18n="qSub">Four questions. Then you see what Manuel would show you first, and pick a time.</p></div>
     <div class="card" id="quizCard"></div>
   </section>
 
@@ -321,14 +321,13 @@ var T = {
     fact3: 'Training for your team, parts and service from Miami, shipping anywhere in Florida.',
     ptitle: 'Why you pay double for a machine, and how to stop',
     cta: 'Find the right machine for your room', ctaShort: 'Find your machine',
-    ctaMicro: 'Five quick questions, then pick a time with Manuel, the owner.',
     floorTtl: 'What Manuel carries',
     floorLede: "Most of these are on the floor in Miami. Tap the one you're shopping for and the questions start there.",
-    moreTtl: 'And more', moreSub: 'LED, facial stations, beds, pressotherapy, microneedling. Take the two minutes and ask Manuel.',
+    moreTtl: 'And more', moreSub: 'Ask Manuel what fits',
     floorAfter: "In Florida, lasers, IPL and most energy devices have to run under a doctor, NP or PA. Facials and most body machines don't. Manuel tells you where your license lands.",
     socTtl: 'Watch the machines running on real clients',
     socP: 'Manuel posts from the showroom floor and from client visits. Have a look, then come back and pick your time.',
-    qTtl: 'Which machine belongs in your room?', qSub: 'Five questions. Then you see what Manuel would show you first, and pick a time.',
+    qTtl: 'Which machine belongs in your room?', qSub: 'Four questions. Then you see what Manuel would show you first, and pick a time.',
     p1e: "Who you'll talk to", p1p: 'Owner of Blason Spa Equipment, the importer at 3110 W 84th St, Miami. He imports the machines, sets them up, trains your team and picks up the phone when you call.',
     p2e: 'Who confirms your time', p2p: "Handles Blason's outreach and scheduling. After you pick a time, Remy texts you to confirm it.",
     faqTtl: 'Questions owners ask',
@@ -391,14 +390,13 @@ var T = {
     fact3: 'Entrenamiento para su equipo, repuestos y servicio desde Miami, envío a toda la Florida.',
     ptitle: 'Por qué paga el doble por una máquina, y cómo dejar de hacerlo',
     cta: 'Encuentre la máquina para su cabina', ctaShort: 'Encuentre su máquina',
-    ctaMicro: 'Cinco preguntas rápidas y elija una hora con Manuel, el dueño.',
     floorTtl: 'Lo que Manuel trae',
     floorLede: 'La mayoría están en el showroom de Miami. Toque la que anda buscando y las preguntas empiezan por ahí.',
-    moreTtl: 'Y más', moreSub: 'LED, estaciones faciales, camillas, presoterapia, microagujas. Tome los dos minutos y pregúntele a Manuel.',
+    moreTtl: 'Y más', moreSub: 'Pregúntele a Manuel',
     floorAfter: 'En Florida, los láseres, la IPL y la mayoría de los equipos de energía trabajan bajo un médico, enfermera practicante o PA. Las faciales y la mayoría de las de cuerpo, no. Manuel le dice dónde cae su licencia.',
     socTtl: 'Vea las máquinas funcionando con clientas reales',
     socP: 'Manuel publica desde el showroom y desde las visitas a clientes. Véalo, y después vuelva y elija su hora.',
-    qTtl: '¿Qué máquina va en su cabina?', qSub: 'Cinco preguntas. Después ve qué le mostraría Manuel primero, y elige la hora.',
+    qTtl: '¿Qué máquina va en su cabina?', qSub: 'Cuatro preguntas. Después ve qué le mostraría Manuel primero, y elige la hora.',
     p1e: 'Con quién va a hablar', p1p: 'Dueño de Blason Spa Equipment, el importador en 3110 W 84th St, Miami. Él importa las máquinas, las instala, entrena a su equipo y contesta el teléfono cuando usted llama.',
     p2e: 'Quién confirma su hora', p2p: 'Maneja los contactos y la agenda de Blason. Después de elegir una hora, Remy le escribe por texto para confirmarla.',
     faqTtl: 'Lo que todos preguntan',
@@ -470,7 +468,7 @@ function applyLang() {
     return '<button type="button" class="tile" data-machine="' + m[0] + '" data-interest="' + m[4] + '">'
       + '<figure><img src="/blason/machines/' + m[0] + '.jpg" alt="' + esc(m[1]) + '" loading="lazy" width="800" height="1000">'
       + '<figcaption><b>' + esc(m[1]) + '</b><small>' + esc(lang === 'es' ? m[3] : m[2]) + '</small></figcaption></figure></button>';
-  }).join('') + '<button type="button" class="tile more" data-machine="more" data-interest="notsure"><b>' + esc(t('moreTtl')) + '</b><small>' + esc(t('moreSub')) + '</small><span class="arrow">&rarr;</span></button>';
+  }).join('') + '<button type="button" class="tile more" data-machine="more" data-interest="notsure"><span class="arrow">&rarr;</span><b>' + esc(t('moreTtl')) + '</b><small>' + esc(t('moreSub')) + '</small></button>';
   document.querySelectorAll('.tile').forEach(function (a) {
     a.addEventListener('click', function () {
       track('cta_click', { answer: 'machine_' + a.getAttribute('data-machine') });
@@ -540,14 +538,14 @@ document.getElementById('poster').addEventListener('click', startVideo);
 if (VIDEO.poster) document.getElementById('poster').style.backgroundImage = 'url(' + VIDEO.poster + ')';
 
 /* -------------------------------- quiz ----------------------------------- */
-var STEPS = ['q1', 'q2', 'q3', 'q4', 'q5'];
-var KEYS = { q1: 'interest', q2: 'quoted', q3: 'medical', q4: 'motive', q5: 'path_pref' };
+var STEPS = ['q1', 'q3', 'q4', 'q5'];
+var KEYS = { q1: 'interest', q3: 'medical', q4: 'motive', q5: 'path_pref' };
 var state = { step: 0, answers: {}, started: false, contact: null, lead: null, tok: null, slots: [], from: 0, dayKey: null, slot: null, phase: 'quiz', booked: null };
 var card = document.getElementById('quizCard');
 
 function progressHtml(n) {
   var h = '<div class="progress">';
-  for (var i = 0; i < 7; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>';
+  for (var i = 0; i < 6; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>';
   return h + '</div>';
 }
 function scrollToCard() {
@@ -562,7 +560,7 @@ function renderQuiz() {
   var k = STEPS[state.step], key = KEYS[k];
   var opts = t(k + 'o'), chosen = state.answers[key];
   var h = progressHtml(state.step + 1);
-  h += '<span class="caps">' + t('stepOf').replace('{n}', state.step + 1).replace('{m}', 6) + '</span>';
+  h += '<span class="caps">' + t('stepOf').replace('{n}', state.step + 1).replace('{m}', 5) + '</span>';
   h += '<h2 class="q">' + esc(t(k)) + '</h2>';
   if (T[lang][k + 'h']) h += '<p class="qhelp">' + esc(t(k + 'h')) + '</p>';
   h += '<div class="opts ' + (opts.length > 3 ? 'two' : '') + '">';
@@ -606,7 +604,7 @@ function matchHtml() {
 function renderContact() {
   track('contact_view');
   var c = state.contact || {};
-  var h = progressHtml(6) + matchHtml();
+  var h = progressHtml(5) + matchHtml();
   h += '<h2 class="q" style="margin-top:22px">' + esc(t('cTtl')) + '</h2><p class="qhelp">' + esc(t('cHelp')) + '</p>';
   h += '<form id="cForm" novalidate><div class="fields">'
     + '<div class="field"><label for="fName">' + esc(t('fName')) + '</label><input id="fName" name="name" autocomplete="name" value="' + esc(c.name) + '" required></div>'
@@ -648,7 +646,7 @@ async function submitContact(e) {
 
 function renderResult() {
   var mode = state.answers.path_pref === 'showroom' ? 'showroom' : 'call';
-  var h = progressHtml(7);
+  var h = progressHtml(6);
   h += '<div class="cal"><h2 class="q">' + esc(mode === 'call' ? t('pickCall') : t('pickShow')) + '</h2><p class="qhelp">' + esc(mode === 'call' ? t('pickHelp') : t('pickHelpShow')) + '</p>';
   h += '<div id="calHost" style="margin-top:16px"><p class="micro">…</p></div></div>';
   card.innerHTML = h;

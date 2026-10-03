@@ -95,7 +95,7 @@ module.exports = async function handler(req, res) {
         video_done: count(has('video_complete')),
         cta_clicks: count(has('cta_click')),
         quiz_start: count(has('quiz_start')),
-        steps: [1, 2, 3, 4, 5].map(function (n) { return count(function (s) { return s.maxStep >= n; }); }),
+        steps: [1, 2, 3, 4].map(function (n) { return count(function (s) { return s.maxStep >= n; }); }),
         quiz_complete: count(has('quiz_complete')),
         contact_view: count(has('contact_view')),
         contacts: count(has('contact_submitted')),
