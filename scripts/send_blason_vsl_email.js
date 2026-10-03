@@ -50,7 +50,7 @@ const { signLead } = require('../api/public/_token');
 const args = process.argv.slice(2);
 function arg(n, d) { const i = args.indexOf('--' + n); return i >= 0 && args[i + 1] ? args[i + 1] : d; }
 const MODE = arg('mode', 'cold');          // cold | warm | followup
-const LANE = arg('lane', '1');             // cold only: 1 = medium confidence + MX clean, 3 = site-published
+const LANE = arg('lane', '1');             // cold only: 1 = medium confidence + MX clean, 2 = finder role inboxes (ramp slowly), 3 = site-published, 5 = rep-typed or imported address (any prefix)
 const LIMIT = parseInt(arg('limit', '50'), 10);
 const SEND = args.includes('--send');
 const SHOW = args.includes('--show');
@@ -162,10 +162,12 @@ async function main() {
 
     let q = sb.from('leads').select('id,name,owner_name,owner_name_verify_status,owner_email,email,email_verify_address,email_verify_status,email_confidence,'
         + 'primary_language,address,category,stage,last_called_outcome,bounced_at,unsubscribed_at,reply_received_at,'
-        + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,last_called_at')
+        + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,last_called_at,all_emails_json,email_search_status')
         .eq('client_id', CLIENT_ID).is('bounced_at', null).is('unsubscribed_at', null);
     if (MODE === 'followup') q = q.not('email_1_sent_at', 'is', null).is('reply_received_at', null).is('email_3_sent_at', null);
     else if (MODE === 'warm') q = q.is('email_1_sent_at', null).not('last_called_at', 'is', null);
+    else if (LANE === '5') q = q.is('email_1_sent_at', null).neq('email_verify_status', 'dead_domain');
+    else if (LANE === '2') q = q.is('email_1_sent_at', null).eq('email_verify_status', 'role_inbox');
     else q = q.is('email_1_sent_at', null).eq('email_verify_status', LANE === '3' ? 'site_published' : 'deliverable');
     if (MODE === 'cold' && LANE === '1') q = q.eq('email_confidence', 'medium');
     const { data: leads, error } = await q.limit(3000);
@@ -199,12 +201,29 @@ async function main() {
         (calls || []).forEach(function (c) { connectedIds.add(c.lead_id); });
     }
 
+    // Lane 5: a human emailed the lead from the drawer, or the address has no
+    // finder trace (typed by a rep or came with the import). Same rule as
+    // send_client_sequence.js lane 5.
+    let humanEmailedIds = null;
+    if (MODE === 'cold' && LANE === '5') {
+        humanEmailedIds = new Set();
+        const { data: hm } = await sb.from('lead_messages').select('lead_id').eq('channel', 'email').eq('direction', 'outbound')
+            .in('variant', ['ask', 'ctx', 'desk', 'manual_followup', 'manual']).limit(5000);
+        (hm || []).forEach(function (m) { humanEmailedIds.add(m.lead_id); });
+    }
+    const isRepAddress = function (l) {
+        if (humanEmailedIds && humanEmailedIds.has(l.id)) return true;
+        const addr = String(l.email_verify_address || l.owner_email || l.email || '').trim().toLowerCase();
+        if (!addr || l.email_search_status === 'found') return false;
+        return JSON.stringify(l.all_emails_json || '').toLowerCase().indexOf(addr) === -1;
+    };
     const skipWhy = {};
     const skip = function (w) { skipWhy[w] = (skipWhy[w] || 0) + 1; return false; };
     const seenAddr = new Set();
     const eligible = (leads || []).filter(function (l) {
         const to = String(l.email_verify_address || l.owner_email || l.email || '').trim().toLowerCase();
         if (!to) return skip('no address');
+        if (humanEmailedIds && !isRepAddress(l)) return skip('finder address, not lane 5');
         if (declined.has(l.last_called_outcome)) return skip('declined on a call');
         if (CLOSED.includes(l.stage)) return skip('closed or booked');
         if (killedIds.has(l.id)) return skip('dead or opted out by SMS');

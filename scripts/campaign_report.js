@@ -92,6 +92,14 @@ const pct = (a, b) => b ? (100 * a / b).toFixed(1) + '%' : 'n/a';
     p(`- Bounced (lifetime): ${ebounced} (${pct(ebounced, e1)}). Trailing 72h: ${rB}/${rSent} (${pct(rB, rSent)}) — breaker refuses at 8%.`);
     p(`- Replies last 7d: ${ereplies7}. Unsubscribed: ${eunsub}.`);
     p(`- Supply: lane 1 (medium+deliverable) ${lane1Left} left, lane 2 (role inboxes, MX-confirmed) ${lane2Left} left, step-2 follow-ups due ${step2Due}.`);
+    // Bounce by lane, trailing 14d. Lane 5 (rep-typed / imported addresses) and
+    // lane 2 (finder role inboxes, ramping at 10/day) are the two being tested
+    // from 2026-10-03; this line is how we learn which addresses land.
+    const byLane = await rows(`lead_messages?direction=eq.outbound&channel=eq.email&sent_at=gte.${day(14)}&variant=like.blason_lane*&select=variant,bounced_at,leads!inner(client_id)&leads.client_id=eq.${BLASON}&limit=2000`);
+    const laneAgg = {};
+    byLane.forEach(m => { const k = String(m.variant).replace(/_[A-Zx]$/, ''); const a = laneAgg[k] || (laneAgg[k] = { s: 0, b: 0 }); a.s++; if (m.bounced_at) a.b++; });
+    const laneLine = Object.keys(laneAgg).sort().map(k => `${k.replace('blason_', '')} ${laneAgg[k].b}/${laneAgg[k].s} (${pct(laneAgg[k].b, laneAgg[k].s)})`).join(', ');
+    p(`- Bounce by lane, last 14d: ${laneLine || 'no lane sends'}.`);
     p('');
 
     // ---------------- STILO cold email sequence ----------------
