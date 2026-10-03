@@ -45,7 +45,7 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 /* hero */
 .hero{padding-block:clamp(36px,6vw,72px) 0;display:grid;gap:28px 56px;align-items:center}
 @media(min-width:900px){.hero{grid-template-columns:1.1fr .9fr}}
-@media(max-width:899px){.hero{text-align:center;gap:22px}.hero h1{margin-inline:auto}.hero .facts div{grid-template-columns:1fr;justify-items:center;gap:4px;padding:16px 0}.hero .facts b{font-size:13px;letter-spacing:.14em;color:var(--navy)}.hero .facts span{max-width:30ch}}
+@media(max-width:899px){.hero{text-align:center;gap:22px}.hero h1{margin-inline:auto;order:1}.hero .videowrap{order:2}.hero .under{order:3}.hero .facts{order:4;margin-top:8px}.hero .facts div{grid-template-columns:1fr;justify-items:center;gap:4px;padding:16px 0}.hero .facts b{font-size:13px;letter-spacing:.14em;color:var(--navy)}.hero .facts span{max-width:30ch}}
 .hero h1{font-size:clamp(38px,5.6vw,66px);max-width:14ch}
 .hero h1 span{color:var(--navy)}
 .facts{display:grid;gap:0}
@@ -55,7 +55,7 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 .facts span{font-weight:700;font-size:clamp(18px,1.7vw,21px);line-height:1.35;color:var(--ink)}
 
 /* video */
-.videowrap{position:relative;width:100%;margin-top:clamp(32px,5vw,52px);aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#101830;box-shadow:0 30px 70px -40px rgba(20,26,46,.6)}
+.videowrap{position:relative;width:100%;grid-column:1/-1;margin-top:clamp(6px,2vw,20px);aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#101830;box-shadow:0 30px 70px -40px rgba(20,26,46,.6)}
 .videowrap iframe,.videowrap video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .poster{position:absolute;inset:0;width:100%;height:100%;border:0;background:radial-gradient(110% 80% at 15% 0%,#2E54B0 0%,#1B346F 40%,#0F1830 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;color:#fff;padding:24px;text-align:center}
 .poster[style*="background-image"]{background-size:cover;background-position:center}
@@ -64,7 +64,7 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 .poster .orb::after{content:"";width:0;height:0;border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent var(--navy);margin-left:6px}
 .poster .ptitle{font-size:clamp(20px,2.6vw,30px);font-weight:700;max-width:24ch;line-height:1.2;letter-spacing:-.01em}
 .poster .plen{font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.75;font-weight:700}
-.under{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:26px;text-align:center}
+.under{display:flex;flex-direction:column;align-items:center;gap:12px;grid-column:1/-1;margin-top:-6px;text-align:center}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--navy);color:#fff;border:1px solid var(--navy);border-radius:8px;padding:18px 36px;font-size:17px;font-weight:700;text-decoration:none;transition:background .2s;min-height:56px}
 .btn:hover{background:var(--navy-deep)}
 .btn:focus-visible,.opt:focus-visible,.time:focus-visible,.day:focus-visible,.tile:focus-visible{outline:2px solid var(--navy);outline-offset:3px}
@@ -210,8 +210,6 @@ footer img{width:96px;height:52px;object-fit:contain}
       <div><b>2</b><span data-i18n="fact2">The machines on the floor are on. You run one yourself before you decide anything.</span></div>
       <div><b>3</b><span data-i18n="fact3">Training for your team, parts and service from Miami, shipping anywhere in Florida.</span></div>
     </div>
-  </section>
-
   <div class="videowrap" id="videowrap">
     <button type="button" class="poster" id="poster" aria-label="Play the video">
       <span class="orb"></span>
@@ -222,6 +220,8 @@ footer img{width:96px;height:52px;object-fit:contain}
   <div class="under">
     <a class="btn" href="#quiz" id="ctaTop" data-i18n="cta">Find the right machine for your room</a>
   </div>
+  </section>
+
 
   <section class="floor">
     <h2 data-i18n="floorTtl">What Manuel carries</h2>
