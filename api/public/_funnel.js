@@ -198,7 +198,7 @@ const LABELS = {
     segment: { medspa: 'Med spa', clinic: 'Laser / derm / plastic surgery clinic', spa: 'Spa or esthetics studio', salon: 'Salon or beauty school', wellness: 'Wellness or weight loss' },
     timeline: { now: 'Ready now', d30: 'Next 30 days', d90: '1 to 3 months', looking: 'Just looking' },
 };
-const QUIZ_KEYS = ['interest', 'quoted', 'medical', 'motive', 'path_pref'];
+const QUIZ_KEYS = ['interest', 'medical', 'motive', 'path_pref', 'quoted'];  // quoted: asked 10/02 only, dropped the same day
 function label(group, key) { return (LABELS[group] && LABELS[group][key]) || key || ''; }
 
 module.exports = {

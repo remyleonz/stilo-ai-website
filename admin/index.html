@@ -3266,8 +3266,8 @@
                 document.getElementById('fnK_bookings').textContent = n.bookings;
                 document.getElementById('fnDays').textContent = 'last ' + n.days + ' days · ' + n.bots_excluded + ' scanner hits excluded';
                 var rows = [['Opened the page', n.sessions], ['Pressed play', n.plays], ['Watched half', n.video_50], ['Watched 75%+', n.video_75],
-                    ['Started the quiz', n.quiz_start], ['Q1 machine', n.steps[0]], ['Q2 already quoted', n.steps[1]], ['Q3 medical director', n.steps[2]],
-                    ['Q4 what is driving it', n.steps[3]], ['Q5 showroom or call', n.steps[4]], ['Saw the contact form', n.contact_view], ['Left contact', n.contacts],
+                    ['Started the quiz', n.quiz_start], ['Q1 machine', n.steps[0]], ['Q2 medical director', n.steps[1]],
+                    ['Q3 what is driving it', n.steps[2]], ['Q4 showroom or call', n.steps[3]], ['Saw the contact form', n.contact_view], ['Left contact', n.contacts],
                     ['Opened the calendar', n.calendar_open], ['Booked', n.bookings]];
                 var max = Math.max(1, n.sessions);
                 document.getElementById('fnSteps').innerHTML = rows.map(function (r, i) {
@@ -3280,7 +3280,7 @@
                         + '<strong style="text-align:right;">' + r[1] + '</strong>'
                         + '<span style="color:' + (drop != null && drop >= 50 ? '#ef4444' : 'var(--text-muted)') + ';font-size:0.75rem;">' + (drop != null && r[1] < prev ? '-' + drop + '%' : '') + '</span></div>';
                 }).join('');
-                var groups = [['interest', 'Looking for'], ['quoted', 'Already quoted?'], ['medical', 'Medical director'], ['motive', 'What is driving it'], ['path_pref', 'Showroom or call']];
+                var groups = [['interest', 'Looking for'], ['medical', 'Medical director'], ['motive', 'What is driving it'], ['path_pref', 'Showroom or call']];
                 document.getElementById('fnAnswers').innerHTML = groups.map(function (g) {
                     var list = (n.answers[g[0]] || []);
                     if (!list.length) return '';
