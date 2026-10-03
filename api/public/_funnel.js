@@ -29,13 +29,13 @@ const SITES = {
         agent: 'blason',            // vsl_events.agent for the dual-write
         lead_source: 'blason_vsl',
     },
-    // The hiring VSL page (/join). Events only: applications go through
+    // The hiring VSL page (/careers). Events only: applications go through
     // api/public/apply.js into public.sdr_applications, never into a lead pool.
-    join: {
+    careers: {
         client_id: null,
         name: 'STILO hiring page',
-        agent: 'join',
-        lead_source: 'join_page',
+        agent: 'careers',
+        lead_source: 'careers_page',
     },
 };
 

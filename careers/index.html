@@ -369,10 +369,10 @@ var VIDEO = { mp4: '', youtube: '', loom: '', poster: '', length: '' };
 /* Remy's Quo line. The "Text Remy now" button opens Messages with the name filled in. */
 var REMY_SMS = '+17868376639';
 
-var SITE = 'join';
+var SITE = 'careers';
 var Q = new URLSearchParams(location.search);
-var sid = safeGet(sessionStorage, 'jn_sid'); if (!sid) { sid = rnd(); safeSet(sessionStorage, 'jn_sid', sid); }
-var vid = safeGet(localStorage, 'jn_vid'); if (!vid) { vid = rnd(); safeSet(localStorage, 'jn_vid', vid); }
+var sid = safeGet(sessionStorage, 'cr_sid'); if (!sid) { sid = rnd(); safeSet(sessionStorage, 'cr_sid', sid); }
+var vid = safeGet(localStorage, 'cr_vid'); if (!vid) { vid = rnd(); safeSet(localStorage, 'cr_vid', vid); }
 function rnd() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 function safeGet(s, k) { try { return s.getItem(k); } catch (e) { return null; } }
 function safeSet(s, k, v) { try { s.setItem(k, v); } catch (e) {} }

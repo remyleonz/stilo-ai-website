@@ -1,11 +1,11 @@
 /**
  * POST /api/public/apply
  *
- * The application form on the hiring VSL page (/join). Writes one row to
+ * The application form on the hiring VSL page (/careers). Writes one row to
  * public.sdr_applications and emails Remy so the callback happens the same
  * hour. Nothing here touches the lead tables: a candidate is not a prospect.
  *
- * Body: { site:'join', session_id, visitor_id, name, phone, email?, instagram?,
+ * Body: { site:'careers', session_id, visitor_id, name, phone, email?, instagram?,
  *         location, hours, experience, why?, lang?, utm_source?, utm_medium?,
  *         utm_campaign?, referrer? }
  *
@@ -98,9 +98,9 @@ module.exports = async function handler(req, res) {
 
     try {
         await pub.from('funnel_events').insert({
-            site: 'join', event: 'contact_submitted', session_id: row.session_id, visitor_id: row.visitor_id,
+            site: 'careers', event: 'contact_submitted', session_id: row.session_id, visitor_id: row.visitor_id,
             lead_id: null, lead_claimed: false, meta: { application_id: id, duplicate: duplicate, location: location, hours: hours, experience: experience },
-            path: '/join', lang: lang, ua: ua, ip_hash: row.ip_hash,
+            path: '/careers', lang: lang, ua: ua, ip_hash: row.ip_hash,
             utm_source: row.source, utm_medium: row.utm_medium, utm_campaign: row.utm_campaign,
         });
     } catch (_) { /* analytics never breaks the form */ }
