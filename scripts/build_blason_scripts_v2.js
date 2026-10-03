@@ -226,7 +226,7 @@ function discovery(seg, es) {
 // rep reads on a live call fits on one screen. The long v3 doc stays as
 // training (Clients/Blason Spa Equipment/call-scripts/).
 // ---------------------------------------------------------------------------
-const REP_FIRST = { 'remyleon@stiloaipartners.com': 'Remy', 'aleb1027@gmail.com': 'Alejandro', 'davidcoira@stiloaipartners.com': 'David', 'ayesjorge911@gmail.com': 'Jorge' };
+const REP_FIRST = { 'remyleon@stiloaipartners.com': 'Remy', 'aleb1027@gmail.com': 'Alejandro', 'davidcoira@stiloaipartners.com': 'David', 'ayesjorge911@gmail.com': 'Jorge', 'georgegutierrez446@gmail.com': 'George', 'melanyealtuve12@gmail.com': 'Melanye', 'marcuslindsey8@gmail.com': 'Marcus' };
 
 // What Blason sells, grouped by what it does (live catalog, blasononline.com, 2026-10-01).
 // At the bottom of every script so a rep never has to guess. Prices are for the
