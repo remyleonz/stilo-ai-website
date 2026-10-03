@@ -60,6 +60,12 @@ else
   node "$SEQ" --lane 1 --limit 10 --send 2>&1 | tail -2
   # Lane 4: deliverable at any confidence, 10/day test pool, 8% breaker on.
   node "$SEQ" --lane 4 --limit 10 --send 2>&1 | tail -2
+  # 2026-10-03 (Remy): lane 5 = addresses a rep typed or emailed, or that came
+  # with the import; role prefix allowed, 0.7% lifetime bounce. 15/day.
+  node "$SEQ" --lane 5 --limit 15 --send 2>&1 | tail -2
+  # Lane 2 back ON at a crawl: finder-found role inboxes, 10/day, so the
+  # report can tell which bounce and which land. Breaker still 8%.
+  node "$SEQ" --lane 2 --limit 10 --send 2>&1 | tail -2
 fi
 echo "[$STAMP] === leg $LEG done ==="
 } >> "$LOG" 2>&1

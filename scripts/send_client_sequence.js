@@ -83,6 +83,12 @@ const LANE = arg('lane', '1');   // 1 = medium+deliverable (proven 3.4%), 2 = ro
                                  // 3 = site_published (address the business prints on its own site; the
                                  //     2026-09-13 contact-page crawl stamps these)
                                  // 4 = deliverable at ANY confidence (test pool, 10/day, breaker on)
+                                 // 5 = REP addresses (2026-10-03, Remy): an address a human typed into the
+                                 //     lead or emailed from the drawer, or one that came with the original
+                                 //     import and the finder never produced. Role prefix allowed: Remy said
+                                 //     "if I was the one to type in the info@, it goes out". Bounced 3 of 456
+                                 //     lifetime (0.7%), so it is the cleanest pool we have. Finder-found role
+                                 //     inboxes stay in lane 2, ramped slowly with bounce tracked per lane.
 // cold     = never-emailed leads picked by LANE (the original behaviour)
 // followup = the next due step (2 to 5) for leads already emailed, with no reply, no bounce, no unsubscribe
 // warm     = leads a rep actually reached on the phone (20s+ connected call) whose
@@ -91,7 +97,7 @@ const LANE = arg('lane', '1');   // 1 = medium+deliverable (proven 3.4%), 2 = ro
 //            after the most recent email of any kind, to leads who got email 1
 const MODE = arg('mode', 'cold');
 if (!['cold', 'followup', 'warm', 'value'].includes(MODE)) { console.error('bad --mode'); process.exit(1); }
-if (MODE === 'cold' && !['1', '2', '3', '4'].includes(LANE)) { console.error('bad --lane'); process.exit(1); }
+if (MODE === 'cold' && !['1', '2', '3', '4', '5'].includes(LANE)) { console.error('bad --lane'); process.exit(1); }
 const GAP_MS = parseInt(arg('gap', '4000'), 10);   // pace so a fresh subdomain does not spike
 const LOCAL_ZIP3 = ['330', '331', '332', '333'];
 
@@ -472,7 +478,8 @@ async function main() {
     const SELECT_COLS = 'id,name,owner_name,owner_email,email,email_verify_address,address,primary_language,'
         + 'email_verify_status,email_confidence,bounced_at,unsubscribed_at,email_1_sent_at,email_2_sent_at,'
         + 'reply_received_at,last_called_outcome,stage,do_not_call,next_step,pinned_at,category,'
-        + 'email_3_sent_at,email_4_sent_at,email_5_sent_at,value_step,value_last_sent_at,owner_name_verify_status';
+        + 'email_3_sent_at,email_4_sent_at,email_5_sent_at,value_step,value_last_sent_at,owner_name_verify_status,'
+        + 'all_emails_json,email_search_status';
     let q = sb.from('leads').select(SELECT_COLS)
         .eq('client_id', CLIENT_ID)
         .is('bounced_at', null)
@@ -500,6 +507,10 @@ async function main() {
         q = q.is('email_1_sent_at', null)
             .eq('email_verify_status', 'deliverable')
             .not('last_called_at', 'is', null);
+    } else if (LANE === '5') {
+        // Rep lane: never emailed, domain alive. Whether the address is a
+        // rep/import address (vs finder-found) is decided per lead below.
+        q = q.is('email_1_sent_at', null).neq('email_verify_status', 'dead_domain');
     } else {
         // Lane 4 is lane 1 without the confidence gate: 'deliverable' at any
         // confidence. Unproven, so it runs at 10/day under the 8% breaker.
@@ -619,10 +630,33 @@ async function main() {
             }
         }
     }
+    // Lane 5 origin test. "Rep address" = a human emailed this lead from the
+    // drawer (variants ask/ctx/desk/manual*), OR the address has no finder
+    // trace (email_search_status is not 'found' and it is not among the
+    // finder's candidates in all_emails_json). Everything the finder produced
+    // stays in lanes 1/2/4 with their own bounce history.
+    let humanEmailedIds = null;
+    if (MODE === 'cold' && LANE === '5') {
+        humanEmailedIds = new Set();
+        const { data: hm } = await sb.from('lead_messages').select('lead_id')
+            .eq('channel', 'email').eq('direction', 'outbound')
+            .in('variant', ['ask', 'ctx', 'desk', 'manual_followup', 'manual']).limit(5000);
+        (hm || []).forEach(function (m) { humanEmailedIds.add(m.lead_id); });
+    }
+    const isRepAddress = function (l) {
+        if (humanEmailedIds && humanEmailedIds.has(l.id)) return true;
+        const addr = String(l.email_verify_address || l.owner_email || l.email || '').trim().toLowerCase();
+        if (!addr) return false;
+        if (l.email_search_status === 'found') return false;
+        const cands = JSON.stringify(l.all_emails_json || '').toLowerCase();
+        return cands.indexOf(addr) === -1;
+    };
+
     const skipWhy = {};
     const skipped = function (why) { skipWhy[why] = (skipWhy[why] || 0) + 1; return false; };
 
     const consented = leads.filter(function (l) {
+        if (humanEmailedIds && !isRepAddress(l)) return skipped('finder address, not lane 5');
         if (MODE === 'value') {
             if (l.do_not_call) return skipped('do_not_call');
             if (declined.has(l.last_called_outcome)) return skipped('declined on a call');
@@ -704,6 +738,7 @@ async function main() {
         : (LANE === '2' ? 'role inbox on a live domain'
             : LANE === '3' ? 'address published on their own site'
             : LANE === '4' ? 'deliverable at any confidence (test pool)'
+            : LANE === '5' ? 'rep-typed or imported address, any prefix, domain alive'
             : 'medium confidence + MX clean') + ', never emailed';
     console.log('mode ' + MODE + (MODE === 'cold' ? ' lane ' + LANE : '') + ':   '
         + eligible.length + ' eligible (' + modeDesc + ')');
