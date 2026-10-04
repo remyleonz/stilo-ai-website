@@ -58,7 +58,13 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 .videowrap{position:relative;width:100%;grid-column:1/-1;margin-top:clamp(6px,2vw,20px);aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#101830;box-shadow:0 30px 70px -40px rgba(20,26,46,.6)}
 .videowrap iframe,.videowrap video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .poster{position:absolute;inset:0;width:100%;height:100%;border:0;background:radial-gradient(110% 80% at 15% 0%,#2E54B0 0%,#1B346F 40%,#0F1830 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;color:#fff;padding:24px;text-align:center}
-.poster[style*="background-image"]{background-size:cover;background-position:center}
+.poster[style*="background-image"]{background-size:cover;background-position:center;justify-content:flex-end;padding-bottom:22px;gap:6px}
+.poster[style*="background-image"]::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(10,16,36,.82) 0%,rgba(10,16,36,.35) 45%,rgba(10,16,36,.1) 100%)}
+.poster[style*="background-image"] .orb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);margin:0}
+.poster[style*="background-image"]:hover .orb{transform:translate(-50%,-50%) scale(1.05)}
+.poster[style*="background-image"] .ptitle,.poster[style*="background-image"] .plen{position:relative;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+.poster[style*="background-image"] .ptitle{font-size:clamp(17px,2.2vw,24px)}
+@media(max-width:640px){.poster[style*="background-image"]{padding-bottom:12px;gap:2px}.poster[style*="background-image"] .orb{width:60px;height:60px}.poster[style*="background-image"] .orb::after{border-width:9px 0 9px 16px;margin-left:4px}.poster[style*="background-image"] .ptitle{font-size:15px;max-width:30ch}.poster[style*="background-image"] .plen{font-size:10px}}
 .poster .orb{width:92px;height:92px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 14px 40px rgba(0,0,0,.35);transition:transform .25s}
 .poster:hover .orb{transform:scale(1.05)}
 .poster .orb::after{content:"";width:0;height:0;border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent var(--navy);margin-left:6px}
@@ -279,7 +285,7 @@ footer img{width:96px;height:52px;object-fit:contain}
    poster:  optional image URL for the click-to-play frame
    length:  shown under the play button, e.g. "4 min"
    ========================================================================= */
-var VIDEO = { mp4: '', youtube: '', loom: '', poster: '', length: { en: '', es: '' } };
+var VIDEO = { mp4: '', youtube: '', loom: 'ac5cd2efcfb74c409b7befff31a14e8e', poster: '/blason/poster.jpg', length: { en: '5 min', es: '5 min' } };
 
 /* Showroom grid. Live catalog at blasononline.com, 2026-10-02. Names only,
    never a price. HIFU 1495 and Bella Corpo 1468 are left out (sold out). */
