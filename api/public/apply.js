@@ -109,7 +109,7 @@ module.exports = async function handler(req, res) {
         try {
             const igLink = instagram ? '<a href="https://instagram.com/' + F.esc(instagram) + '">@' + F.esc(instagram) + '</a>' : 'no Instagram given';
             const flags = [];
-            if (location !== 'miami') flags.push('not in Miami');
+            if (location !== 'miami') flags.push('remote (' + LABEL.location[location] + ')');
             if (hours === 'lt10') flags.push('under 10 hours');
             if (experience === 'none') flags.push('no rejection-heavy job yet');
             await F.notify(
