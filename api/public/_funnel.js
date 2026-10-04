@@ -37,6 +37,14 @@ const SITES = {
         agent: 'careers',
         lead_source: 'careers_page',
     },
+    // Remy's link-in-bio page (/remyaisales). Replaces Linktree. Events only:
+    // page_view on load, cta_click with answer = which card or icon was tapped.
+    remyaisales: {
+        client_id: null,
+        name: 'Remy link page',
+        agent: 'remyaisales',
+        lead_source: 'remyaisales',
+    },
 };
 
 // Everything the page emits. Anything else is noise or someone poking the
