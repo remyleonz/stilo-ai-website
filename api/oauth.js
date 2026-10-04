@@ -252,7 +252,7 @@ function closeWindowHtml(res, message) {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.end('<!doctype html><html><body style="background:#0a0a0f;color:#e5e5e5;font-family:system-ui,sans-serif;padding:48px;text-align:center;">'
-    + '<h2 style="color:#2563EB;">STILO AI Partners</h2>'
+    + '<h2 style="color:#2563EB;">STILO AI PARTNERS</h2>'
     + '<p>' + escape(message) + '</p>'
     + '<p style="color:#999;font-size:14px;">This tab closes automatically.</p>'
     + '<script>setTimeout(function(){ try { window.close(); } catch(e) {} }, 1500);</script>'

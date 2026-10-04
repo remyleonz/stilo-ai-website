@@ -126,7 +126,7 @@ const COPY = {
                 '',
                 'See you then,',
                 v.rep,
-                'STILO AI Partners',
+                'STILO AI PARTNERS',
             ].join('\n');
         },
         es: function (v) {
@@ -144,7 +144,7 @@ const COPY = {
                 '',
                 'Nos vemos,',
                 v.rep,
-                'STILO AI Partners',
+                'STILO AI PARTNERS',
             ].join('\n');
         },
     },
@@ -174,7 +174,7 @@ const COPY = {
                 '',
                 'Talk soon,',
                 v.sender,
-                'STILO AI Partners',
+                'STILO AI PARTNERS',
             ].join('\n');
         },
         es: function (v) {
@@ -195,7 +195,7 @@ const COPY = {
                 '',
                 'Hablamos,',
                 v.sender,
-                'STILO AI Partners',
+                'STILO AI PARTNERS',
             ].join('\n');
         },
     },
@@ -268,7 +268,7 @@ const COPY = {
     reminderEmailBody: {
         en: function (v) {
             var co = v.company || 'STILO';
-            var sig = v.companyFull || (v.company ? v.company : 'STILO AI Partners');
+            var sig = v.companyFull || (v.company ? v.company : 'STILO AI PARTNERS');
             return [
                 'Hi ' + v.first + ',',
                 '',
@@ -285,7 +285,7 @@ const COPY = {
         },
         es: function (v) {
             var co = v.company || 'STILO';
-            var sig = v.companyFull || (v.company ? v.company : 'STILO AI Partners');
+            var sig = v.companyFull || (v.company ? v.company : 'STILO AI PARTNERS');
             return [
                 'Hola ' + v.first + ',',
                 '',
@@ -327,7 +327,7 @@ const COPY = {
                 '',
                 'Talk soon,',
                 v.sender,
-                'STILO AI Partners',
+                'STILO AI PARTNERS',
                 'stiloaipartners.com',
             ].join('\n');
         },
@@ -349,7 +349,7 @@ const COPY = {
                 '',
                 'Hablamos,',
                 v.sender,
-                'STILO AI Partners',
+                'STILO AI PARTNERS',
                 'stiloaipartners.com',
             ].join('\n');
         },
@@ -421,7 +421,7 @@ const COPY = {
                 '- Write Latin American / Miami business Spanish, not Castilian. No "vosotros", no "os".',
                 '- It must read as though it were written in Spanish, not translated out of English. '
                     + 'If a phrase only makes sense as a translation of an English idiom, replace it.',
-                '- Keep proper nouns as-is: the business name, STILO AI Partners, and any product names.',
+                '- Keep proper nouns as-is: the business name, STILO AI PARTNERS, and any product names.',
                 '- Accents and punctuation must be correct, including the opening signs on questions.',
             ].join('\n');
         },

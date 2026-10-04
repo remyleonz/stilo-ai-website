@@ -289,7 +289,7 @@ function templateBody(opts) {
     return [
         greet,
         '',
-        "This is " + sdrFirst + " from STILO AI Partners. I reached out to " + business + " earlier and wanted to put something in writing so you can look when you have a minute.",
+        "This is " + sdrFirst + " from STILO AI PARTNERS. I reached out to " + business + " earlier and wanted to put something in writing so you can look when you have a minute.",
         '',
         pb.pain,
         '',
@@ -353,7 +353,7 @@ function directBody(opts) {
     return [
         greet,
         '',
-        "This is " + sdrFirst + " from STILO AI Partners, following up on my call to " + business + " earlier.",
+        "This is " + sdrFirst + " from STILO AI PARTNERS, following up on my call to " + business + " earlier.",
         '',
         "Short version: " + (pb.painShort || pb.pain),
         '',
@@ -383,7 +383,7 @@ function ensureBookingLink(body) {
 // Plain-text footer the rep sees previewed in the composer. Identical content
 // to the HTML footer below.
 function footerText(sender) {
-    return [sender.name, 'STILO AI Partners', sender.phone, MARKETING_SITE].filter(Boolean).join('\n');
+    return [sender.name, 'STILO AI PARTNERS', sender.phone, MARKETING_SITE].filter(Boolean).join('\n');
 }
 
 // PLAIN, personal-style HTML built to land in Gmail's PRIMARY tab, not
@@ -407,7 +407,7 @@ function buildEmailHtml(opts) {
         }).join('');
     const sig = [
         escapeHtml(sender.name),
-        'STILO AI Partners',
+        'STILO AI PARTNERS',
         (sender.phone ? escapeHtml(sender.phone) : ''),
         '<a href="https://stiloaipartners.com">' + MARKETING_SITE + '</a>'
     ].filter(Boolean).join('<br>');

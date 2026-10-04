@@ -608,7 +608,7 @@ function generateStepBody(lead, campaign, step, sender, variant) {
         ? ('Who is sending: ' + sender.first_name + ', calling on behalf of '
             + client.business_name + ', a Miami company. You do NOT work for any other company '
             + 'as far as this person is concerned.')
-        : ('Who is sending: ' + sender.first_name + ' at STILO AI Partners, a small Miami team.');
+        : ('Who is sending: ' + sender.first_name + ' at STILO AI PARTNERS, a small Miami team.');
 
     const namingRules = client
         ? [

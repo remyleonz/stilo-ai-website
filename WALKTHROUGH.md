@@ -1,4 +1,4 @@
-# STILO AI Partners — Beginner Walkthrough
+# STILO AI PARTNERS — Beginner Walkthrough
 
 You don't need to be a coder. Do one section at a time. Total time: about 90 minutes. Keep this document open and check boxes as you go.
 
@@ -50,7 +50,7 @@ To copy the `service_role` key you may need to click "Reveal" first. Treat it li
 2. Click **Start now** (top right)
 3. Fill in: email, full name, country = United States, password
 4. It will ask for business details. You can use:
-   - Business name: **STILO AI Partners**
+   - Business name: **STILO AI PARTNERS**
    - Industry: **Software**
    - Website: **stiloaipartners.com**
 5. Finish signup. Verify your email.

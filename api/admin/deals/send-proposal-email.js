@@ -13,7 +13,7 @@ const { assertAdmin, readJsonBody, logEvent, methodNotAllowed } = require('./_sh
 
 async function sendViaResend({ to, subject, html, attachments, fromName }) {
     if (!process.env.RESEND_API_KEY) return { ok: false, reason: 'resend_not_configured' };
-    const from = (fromName || 'STILO AI Partners') + ' <hello@stiloaipartners.com>';
+    const from = (fromName || 'STILO AI PARTNERS') + ' <hello@stiloaipartners.com>';
     const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -46,7 +46,7 @@ function buildHtmlBody(deal) {
   ${deal.proposal_pdf_url ? `<p><strong>Full proposal:</strong> <a href="${deal.proposal_pdf_url}" style="color:#2563EB;">View PDF</a></p>` : ''}
   ${deal.stripe_checkout_session_id || deal.stripe_invoice_id ? `<p style="margin:24px 0;"><a href="${deal.proposal_pdf_url ? '' : ''}" style="display:inline-block;padding:12px 22px;background:#2563EB;color:white;border-radius:8px;text-decoration:none;font-weight:600;">Complete payment</a></p>` : ''}
   <p>Reply to this email if anything needs to change before payment. Once we receive payment, we begin implementation within 7 business days.</p>
-  <p>Thanks again,<br/>Remy<br/>STILO AI Partners</p>
+  <p>Thanks again,<br/>Remy<br/>STILO AI PARTNERS</p>
 </div>`.trim();
 }
 
@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
     const { data: deal, error } = await gate.sb.from('deals').select('*').eq('id', dealId).maybeSingle();
     if (error || !deal) return res.status(404).json({ error: 'deal_not_found' });
 
-    const subject = body.subject || `STILO AI Partners: Proposal for ${deal.business_name}`;
+    const subject = body.subject || `STILO AI PARTNERS: Proposal for ${deal.business_name}`;
     const html = body.body || buildHtmlBody(deal);
 
     // Inline the PDF as attachment if available
@@ -84,7 +84,7 @@ module.exports = async function handler(req, res) {
         subject,
         html,
         attachments,
-        fromName: 'STILO AI Partners'
+        fromName: 'STILO AI PARTNERS'
     });
 
     await logEvent(gate.sb, dealId, 'email', {

@@ -40,7 +40,7 @@ async function sendInternalNotification(opts) {
         .filter(function (e) { return e && /.+@.+\..+/.test(e); })
         .filter(function (e, i, a) { return a.indexOf(e) === i; });
     const toEmail = toList[0];
-    const fromName = process.env.STILO_SENDER_NAME || 'STILO AI Partners';
+    const fromName = process.env.STILO_SENDER_NAME || 'STILO AI PARTNERS';
     const fromEmail = process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com';
     const whenStr = new Intl.DateTimeFormat('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
@@ -291,7 +291,7 @@ module.exports = async function handler(req, res) {
         const eventBody = {
             summary: clientCo
                 ? clientCo.business_name + ' · ' + businessName
-                : 'STILO AI Partners discovery · ' + businessName,
+                : 'STILO AI PARTNERS discovery · ' + businessName,
             description: contactLines.join('\n'),
             start: { dateTime: startIso, timeZone: 'America/New_York' },
             end: { dateTime: endIso, timeZone: 'America/New_York' },

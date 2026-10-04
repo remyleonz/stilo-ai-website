@@ -268,7 +268,7 @@ function buildEmail(lead, slug, step) {
     if (footerArm === 'B' && step >= 2) {
         attributed = attributed.replace(/Remy Leon\nMiami\s*$/, [
             'Remy Leon',
-            'Co-founder, STILO AI Partners',
+            'Co-founder, STILO AI PARTNERS',
             '(786) 837-6639',
             'stiloaipartners.com',
         ].join('\n'));

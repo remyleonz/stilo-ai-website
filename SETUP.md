@@ -1,4 +1,4 @@
-# STILO AI Partners — Site Setup
+# STILO AI PARTNERS — Site Setup
 
 End-to-end setup for stiloaipartners.com: Stripe bundle checkout + Supabase client database + Vercel deployment. Follow the phases in order.
 

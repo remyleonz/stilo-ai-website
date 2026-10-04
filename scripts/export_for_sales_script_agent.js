@@ -10,7 +10,7 @@
  *
  * Default destination is the client deliverables folder so the file is
  * versioned alongside everything else we hand to the agent:
- *   Clients/STILO AI Partners/data/
+ *   Clients/STILO AI PARTNERS/data/
  *
  * The latest export is also copied to a stable filename (no timestamp) so
  * the agent can always read the most recent dump without scanning:
@@ -249,7 +249,7 @@ async function main() {
     const csv = buildCsv(calls, leadsById);
 
     const repoRoot = path.resolve(__dirname, '..', '..', '..');
-    const defaultOutDir = path.join(repoRoot, 'Clients', 'STILO AI Partners', 'data');
+    const defaultOutDir = path.join(repoRoot, 'Clients', 'STILO AI PARTNERS', 'data');
     const outDir = args.out ? path.resolve(args.out) : defaultOutDir;
     fs.mkdirSync(outDir, { recursive: true });
 

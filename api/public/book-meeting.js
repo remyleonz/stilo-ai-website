@@ -182,7 +182,7 @@ module.exports = async function handler(req, res) {
     }
 
     // --- Create the calendar event (David rides every meeting) ---
-    const summary = 'STILO AI Partners discovery · ' + (businessName || name);
+    const summary = 'STILO AI PARTNERS discovery · ' + (businessName || name);
     const description = [
         'Contact: ' + name + ' <' + email + '>',
         businessName ? 'Business: ' + businessName : '',
@@ -271,14 +271,14 @@ module.exports = async function handler(req, res) {
                 '',
                 'Talk soon,',
                 senderName,
-                'STILO AI Partners'
+                'STILO AI PARTNERS'
             ].filter(function (l) { return l !== null; }).join('\n')
         });
     } catch (_) { /* never block booking on email */ }
     try {
         const notify = process.env.STILO_NOTIFY_EMAIL || 'remyleon@stiloaipartners.com';
         await sendResend({
-            from: 'STILO AI Partners <' + fromEmail + '>', to: [notify],
+            from: 'STILO AI PARTNERS <' + fromEmail + '>', to: [notify],
             subject: 'New VSL booking: ' + (businessName || name) + ' (' + whenStr + ')',
             html: '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
                 + '<p><strong>New self-booking from a VSL page.</strong></p><ul style="padding-left:18px">'

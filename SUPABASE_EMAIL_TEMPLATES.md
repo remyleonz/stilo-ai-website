@@ -1,4 +1,4 @@
-# Supabase Email Templates — STILO AI Partners
+# Supabase Email Templates — STILO AI PARTNERS
 
 Go to: https://supabase.com/dashboard/project/zsrskphpvgautfgklgxf/auth/templates
 
@@ -22,7 +22,7 @@ Blue palette: Core #2563EB | Link #2563EB | Heading #0F172A | Body #475569 | Mut
 
 **Subject:**
 ```
-Your STILO AI Partners sign-in link
+Your STILO AI PARTNERS sign-in link
 ```
 
 **Body (Source mode):**
@@ -36,7 +36,7 @@ Your STILO AI Partners sign-in link
   <meta name="supported-color-schemes" content="light dark">
 </head>
 <body style="margin:0;padding:0;background-color:#EEF1F6;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#EEF1F6;">Your one-click sign-in link for STILO AI Partners. Works once, expires in an hour.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#EEF1F6;">Your one-click sign-in link for STILO AI PARTNERS. Works once, expires in an hour.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#EEF1F6" style="background-color:#EEF1F6;">
     <tr>
       <td align="center" style="padding:40px 24px;">
@@ -59,7 +59,7 @@ Your STILO AI Partners sign-in link
           </tr>
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #E2E8F0;">
-              <p style="margin:0;font-size:12px;line-height:1.7;color:#64748B;font-family:Arial,Helvetica,sans-serif;">Talk soon,<br><strong style="color:#0F172A;">Remy at STILO AI Partners</strong><br>Questions? Just reply to this email.</p>
+              <p style="margin:0;font-size:12px;line-height:1.7;color:#64748B;font-family:Arial,Helvetica,sans-serif;">Talk soon,<br><strong style="color:#0F172A;">Remy at STILO AI PARTNERS</strong><br>Questions? Just reply to this email.</p>
             </td>
           </tr>
         </table>
@@ -76,7 +76,7 @@ Your STILO AI Partners sign-in link
 
 **Subject:**
 ```
-Confirm your STILO AI Partners account
+Confirm your STILO AI PARTNERS account
 ```
 
 **Body (Source mode):**
@@ -90,7 +90,7 @@ Confirm your STILO AI Partners account
   <meta name="supported-color-schemes" content="light dark">
 </head>
 <body style="margin:0;padding:0;background-color:#EEF1F6;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#EEF1F6;">Confirm your STILO AI Partners account. This link expires in 24 hours.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#EEF1F6;">Confirm your STILO AI PARTNERS account. This link expires in 24 hours.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#EEF1F6" style="background-color:#EEF1F6;">
     <tr>
       <td align="center" style="padding:40px 24px;">
@@ -113,7 +113,7 @@ Confirm your STILO AI Partners account
           </tr>
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #E2E8F0;">
-              <p style="margin:0;font-size:12px;line-height:1.7;color:#64748B;font-family:Arial,Helvetica,sans-serif;">Talk soon,<br><strong style="color:#0F172A;">Remy at STILO AI Partners</strong><br>Questions? Just reply to this email.</p>
+              <p style="margin:0;font-size:12px;line-height:1.7;color:#64748B;font-family:Arial,Helvetica,sans-serif;">Talk soon,<br><strong style="color:#0F172A;">Remy at STILO AI PARTNERS</strong><br>Questions? Just reply to this email.</p>
             </td>
           </tr>
         </table>
@@ -136,7 +136,7 @@ Host:           smtp.resend.com
 Port:           465
 Username:       resend
 Password:       [Resend API key]
-Sender name:    Remy at STILO AI Partners
+Sender name:    Remy at STILO AI PARTNERS
 Sender email:   remy@stiloaipartners.com
 ```
 

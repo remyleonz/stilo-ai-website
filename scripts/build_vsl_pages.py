@@ -40,7 +40,7 @@ NICHES = [
         slug="commercial-cleaning", name="Commercial Cleaning",
         loom="2558bfb9c4fc419db9bbcb0e44d933c0", thumb="5318064cdbcd3431",
         h1="More buildings under contract,<br>booked onto your calendar for you.",
-        title="Commercial Cleaning: More Buildings on Contract - STILO AI Partners",
+        title="Commercial Cleaning: More Buildings on Contract - STILO AI PARTNERS",
         desc="We find every building in your area that fits, work them across email, phone and text, "
              "and put the people who sign the janitorial contract on your calendar. Watch the walkthrough.",
         buyer="the people who sign the janitorial contract",
@@ -52,7 +52,7 @@ NICHES = [
         slug="commercial-roofing", name="Commercial Roofing",
         loom="f3cc25a09e9c41c5b259feab0a409b28", thumb="1ac9f32398727c10",
         h1="Commercial re-roofs on your calendar,<br>booked before it turns into a bid war.",
-        title="Commercial Roofing: Get in Before the Bid - STILO AI Partners",
+        title="Commercial Roofing: Get in Before the Bid - STILO AI PARTNERS",
         desc="We find the building owners whose roofs are at end of life, work them across email, phone "
              "and text, and put them on your calendar before it turns into a three-way bid.",
         buyer="building owners and property managers",
@@ -64,7 +64,7 @@ NICHES = [
         slug="staffing", name="Staffing",
         loom="501bdda7a0304e3b8534223489c34392", thumb="83a960ae7a2510c8",
         h1="New client accounts on your calendar,<br>booked while your team keeps recruiting.",
-        title="Staffing: More Client Accounts on the Calendar - STILO AI Partners",
+        title="Staffing: More Client Accounts on the Calendar - STILO AI PARTNERS",
         desc="We find the employers who are actively hiring the roles you fill, work them across email, "
              "phone and text, and put the hiring authority on your calendar.",
         buyer="hiring managers and HR directors",
@@ -76,7 +76,7 @@ NICHES = [
         slug="freight", name="Freight",
         loom="55a25c927eec46f7a91e756f18eae0e7", thumb="70a401efcc32f10e",
         h1="Direct shipper accounts on your calendar,<br>booked off the load boards for good.",
-        title="Freight: Direct Shipper Accounts - STILO AI Partners",
+        title="Freight: Direct Shipper Accounts - STILO AI PARTNERS",
         desc="We find the shippers running your lanes, work them across email, phone and text, and put "
              "the person who picks carriers on your calendar.",
         buyer="logistics and supply chain managers",
@@ -88,7 +88,7 @@ NICHES = [
         slug="industrial-supplies", name="Industrial Supplies & Equipment",
         loom="e55a0424e276441cbaf973fa2817ac75", thumb="b3fb48c17d54dc82",
         h1="In the room before the spec is written,<br>on meetings booked for you.",
-        title="Industrial Supplies & Equipment: In Before the Spec - STILO AI Partners",
+        title="Industrial Supplies & Equipment: In Before the Spec - STILO AI PARTNERS",
         desc="We find the plants running your equipment class, work them across email, phone and text, "
              "and get you in the conversation before the spec is written.",
         buyer="plant, operations and procurement leads",
@@ -186,7 +186,7 @@ def build_confirmation(tpl):
     """Full-screen face video. No Loom, no poster: a plain <video> so it can be
     served from Supabase Storage and scrubbed."""
     s = tpl
-    title = "Before we talk - STILO AI Partners"
+    title = "Before we talk - STILO AI PARTNERS"
     desc = ("A short video before our call: who I am, what STILO does, how we charge, and exactly "
             "what will happen on the call.")
     s = re.sub(r"<title>.*?</title>", "<title>%s</title>" % title, s, count=1, flags=re.S)
@@ -317,10 +317,10 @@ def rewrite_footer(s):
     # at 34px tall it is ~136px wide and fits a 375px viewport with room to spare.
     old_logo = '<a href="/" class="flogo">STILO AI PARTNERS</a>'
     new_logo = (
-        '<a href="/" class="flogo" aria-label="STILO AI Partners, home">\n'
+        '<a href="/" class="flogo" aria-label="STILO AI PARTNERS, home">\n'
         '          <picture class="flogo-img">\n'
         '            <source srcset="/assets/StiloLogoOfficial.webp" type="image/webp">\n'
-        '            <img src="/assets/StiloLogoOfficial.png" alt="STILO AI Partners" loading="lazy" decoding="async">\n'
+        '            <img src="/assets/StiloLogoOfficial.png" alt="STILO AI PARTNERS" loading="lazy" decoding="async">\n'
         '          </picture>\n'
         '        </a>')
     if old_logo not in s:

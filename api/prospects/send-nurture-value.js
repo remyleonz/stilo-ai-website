@@ -31,7 +31,7 @@ async function sendEmail(to, subject, bodyText, senderName) {
     const r = await sendTransactional({
         to: to,
         subject: subject || 'Before our call',
-        text: bodyText + '\n\n' + (senderName || process.env.STILO_SENDER_NAME || 'Remy Leon') + '\nSTILO AI Partners',
+        text: bodyText + '\n\n' + (senderName || process.env.STILO_SENDER_NAME || 'Remy Leon') + '\nSTILO AI PARTNERS',
         replyTo: replyTo,
     });
     return { status: r.status, id: r.id, via: r.via, error: r.err || null, skipped: r.skip };

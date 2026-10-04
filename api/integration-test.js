@@ -81,7 +81,7 @@ async function probeWebhook(payload) {
       headers: headers,
       body: JSON.stringify({
         ping: true,
-        from: 'STILO AI Partners',
+        from: 'STILO AI PARTNERS',
         sent_at: new Date().toISOString(),
         note: 'This is a connection test. Safe to ignore in your logs.',
       }),

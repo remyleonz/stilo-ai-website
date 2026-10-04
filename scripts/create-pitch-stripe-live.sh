@@ -12,7 +12,7 @@
 # fail if the env vars already exist.
 #
 # Prereq: export STRIPE_LIVE_KEY=sk_live_... (the live secret key for the
-# Stilo AI Partners Stripe account).
+# STILO AI PARTNERS Stripe account).
 #
 # Usage:
 #   STRIPE_LIVE_KEY=sk_live_xxx bash sites/stilo-ai/scripts/create-pitch-stripe-live.sh

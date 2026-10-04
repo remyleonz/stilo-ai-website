@@ -303,7 +303,7 @@ async function summarizePass(sb, dry, cap) {
 
 async function geminiSummarize(title, transcript) {
     const prompt = [
-        'You are the sales operations analyst at STILO AI Partners, a Miami agency that sells AI agents (AI receptionist, outbound lead reply, lead generation, client reactivation) to local businesses.',
+        'You are the sales operations analyst at STILO AI PARTNERS, a Miami agency that sells AI agents (AI receptionist, outbound lead reply, lead generation, client reactivation) to local businesses.',
         'Below is the transcript of a sales meeting' + (title ? ' (' + title + ')' : '') + '. Summarize it for the CRM so anyone can pick up the deal cold.',
         '',
         'Return JSON with exactly two string fields:',

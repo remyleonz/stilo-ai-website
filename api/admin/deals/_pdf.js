@@ -157,7 +157,7 @@ async function buildProposalPdf(deal, paymentLink) {
         'Implementation begins within 7 business days of payment.',
         'Monthly retainer covers ongoing optimization, monitoring, and support.',
         'Setup fee is non-refundable once implementation work begins.',
-        'STILO AI Partners retains all code, configurations, and AI agent logic.',
+        'STILO AI PARTNERS retains all code, configurations, and AI agent logic.',
         'You retain full ownership of your data, customer records, and outputs.'
     ];
     for (const t of terms) {
@@ -207,7 +207,7 @@ async function buildProposalPdf(deal, paymentLink) {
         start: { x: 56, y: 56 }, end: { x: width - 56, y: 56 },
         thickness: 0.5, color: LIGHT
     });
-    page.drawText('STILO AI Partners  ·  stiloaipartners.com  ·  Miami, FL', {
+    page.drawText('STILO AI PARTNERS  ·  stiloaipartners.com  ·  Miami, FL', {
         x: 56, y: 40, size: 9, font: helv, color: GREY
     });
     page.drawText('Page 1 of 1', {

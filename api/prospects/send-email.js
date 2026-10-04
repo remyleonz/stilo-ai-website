@@ -8,7 +8,7 @@
  * prospecting.lead_messages so it shows up as a logged email.
  *
  * From is the verified STILO domain sender (Resend can't send as a personal
- * Gmail), shown as "<Rep Name> · STILO AI Partners". Reply-to is set to the
+ * Gmail), shown as "<Rep Name> · STILO AI PARTNERS". Reply-to is set to the
  * rep so replies reach them directly.
  */
 const { assertAdminOrSdr, methodNotAllowed, readJsonBody, safeNumberId } = require('./_shared');
@@ -102,7 +102,7 @@ module.exports = async function handler(req, res) {
     const body = await readJsonBody(req);
     const id = safeNumberId(body.id);
     const to = (body.to || '').trim();
-    const subject = (body.subject || '').trim() || 'Following up from STILO AI Partners';
+    const subject = (body.subject || '').trim() || 'Following up from STILO AI PARTNERS';
     const message = (body.body || '').trim();
     // A/B arm the rep actually sent (set by draft-email). Only A or B are valid.
     // Whitelist both test families: STILO's A/B and the client-campaign arms.
@@ -240,7 +240,7 @@ module.exports = async function handler(req, res) {
         : (sender.fromEmail || process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com');
     // Quote the display name (RFC 5322) — it carries a middot, and the rep's
     // name could contain characters that would otherwise need escaping.
-    const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + (clientName || 'STILO AI Partners') + '"';
+    const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + (clientName || 'STILO AI PARTNERS') + '"';
 
     // ── Idempotency claim, BEFORE Resend ───────────────────────────────────
     // This route had no duplicate guard at all and sends before it logs, so a
