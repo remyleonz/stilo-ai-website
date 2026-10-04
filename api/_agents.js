@@ -1,5 +1,5 @@
 /**
- * Single source of truth for all 8 STILO AI Partners agents.
+ * Single source of truth for all 8 STILO AI PARTNERS agents.
  *
  * Shared between:
  *   - api/create-checkout-session.js (to build Stripe line items)
@@ -332,7 +332,7 @@ var AGENTS = {
           help: 'Examples: "Individual results may vary.", "Paid for by [Firm].", state-specific recording notice. Read verbatim by every agent.' },
         { key: 'tcpa_consent_acknowledgment', label: 'I confirm my lead intake forms and customer database have collected proper TCPA consent for automated calls, SMS, and email', type: 'boolean', required: true,
           help: 'Required by FCC 2026 rules for the Outbound Lead Reply and Lost Customer Reactivation agents. Read more at stiloaipartners.com/legal/tcpa-template' },
-        { key: 'owner_consent', label: 'I authorize STILO AI Partners agents to communicate with my customers and prospects on my behalf, in accordance with the inputs in this profile', type: 'boolean', required: true },
+        { key: 'owner_consent', label: 'I authorize STILO AI PARTNERS agents to communicate with my customers and prospects on my behalf, in accordance with the inputs in this profile', type: 'boolean', required: true },
       ]},
 
       // Step 8: Systems already in place ───────────────────────────────

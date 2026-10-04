@@ -60,7 +60,7 @@
                 + '<p style="color:#cfcabf;margin:0 0 20px;font-size:15px">Here are your details. Tap confirm so we know you are good to go.</p>'
                 + '<div style="text-align:left;background:#151519;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px 18px;margin-bottom:20px">'
                 + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8b877e">When</div><div style="font-size:16px;font-weight:600;margin-bottom:12px">' + esc(when) + '</div>'
-                + (d.business ? '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8b877e">With</div><div style="font-size:15px;margin-bottom:12px">STILO AI Partners &middot; ' + esc(d.business) + '</div>' : '')
+                + (d.business ? '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8b877e">With</div><div style="font-size:15px;margin-bottom:12px">STILO AI PARTNERS &middot; ' + esc(d.business) + '</div>' : '')
                 + (meet ? '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8b877e">Video link</div><div style="font-size:14px;word-break:break-all"><a href="' + esc(meet) + '" target="_blank" rel="noopener" style="color:#5A7BE8">' + esc(meet) + '</a></div>' : '')
                 + '</div>'
                 + (d.confirmed

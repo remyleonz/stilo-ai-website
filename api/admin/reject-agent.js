@@ -56,14 +56,14 @@ async function sendRejectionEmail(toEmail, agentType, reason) {
     + '</blockquote>'
     + '<p>Open your dashboard at <a href="https://stiloaipartners.com/app/">stiloaipartners.com/app</a>, click Continue Setup on ' + agentType.toUpperCase() + ', address those items, and submit again. Usually takes 5 minutes.</p>'
     + '<p>Reach out if anything is unclear.</p>'
-    + '<p>STILO AI Partners</p>';
+    + '<p>STILO AI PARTNERS</p>';
 
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'STILO AI Partners <hello@stiloaipartners.com>',
+        from: 'STILO AI PARTNERS <hello@stiloaipartners.com>',
         to: toEmail,
         subject: subject,
         html: html,

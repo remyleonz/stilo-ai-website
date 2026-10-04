@@ -147,7 +147,7 @@ async function main() {
             data: { object: {
                 id: callId, direction: 'outgoing', from: t.line, to: t.to,
                 dialogue: [
-                    { userId: t.userId || 'rep', identifier: t.line, content: 'Hi, this is a STILO AI Partners rep calling for the owner.' },
+                    { userId: t.userId || 'rep', identifier: t.line, content: 'Hi, this is a STILO AI PARTNERS rep calling for the owner.' },
                     { userId: null, identifier: t.to, content: 'Speaking — what is this about?' },
                     { userId: t.userId || 'rep', identifier: t.line, content: 'We help local businesses add AI. Could I book 15 minutes with you?' },
                 ],

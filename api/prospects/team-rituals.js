@@ -125,7 +125,7 @@ async function jobInvite(dry) {
             method: 'POST',
             headers: { Authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                from: 'STILO AI Partners <' + (process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com') + '>',
+                from: 'STILO AI PARTNERS <' + (process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com') + '>',
                 to: [r.email],
                 subject: 'Call session tomorrow · 9am-5pm',
                 html: html

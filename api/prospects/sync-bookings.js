@@ -175,7 +175,7 @@ module.exports = async function handler(req, res) {
             || null;
 
         // Our booking events are titled either "STILO AI PARTNERS MEETING (Full
-        // Name)" or "STILO AI Partners discovery · BUSINESS NAME". When a
+        // Name)" or "STILO AI PARTNERS discovery · BUSINESS NAME". When a
         // prospect books with a personal email we don't have on file (e.g. a
         // gmail instead of their business address), the email match below fails
         // and many leads have a null owner_name, so we'd lose the attribution.

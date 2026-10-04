@@ -165,7 +165,7 @@ function warmEmailA(lead, slug, link, repName) {
         'Booking link is on that page if you want it. If the timing is wrong, ignore this.',
         '',
         'Remy Leon',
-        'STILO AI Partners',
+        'STILO AI PARTNERS',
     ].join('\n');
     const business = cleanBusiness(lead.name);
     return {
@@ -186,7 +186,7 @@ function warmEmailB(lead, slug, link, repName) {
         'Genuinely just curious what the number is. A one-line reply is plenty.',
         '',
         'Remy Leon',
-        'STILO AI Partners',
+        'STILO AI PARTNERS',
         '',
         'P.S. If you would rather just watch it than type: ' + link,
     ].join('\n');

@@ -126,7 +126,7 @@ async function main() {
                 console.log('EMAIL BLOCKED by a check above. Nothing sent.\n');
             } else {
                 const fromEmail = (clientName && process.env.BLASON_SENDER_EMAIL) || sender.fromEmail;
-                const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + (clientName || 'STILO AI Partners') + '"';
+                const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + (clientName || 'STILO AI PARTNERS') + '"';
                 const dedupeKey = crypto.createHash('sha1')
                     .update([lead.id, 'email', to, SUBJECT, Math.floor(Date.now() / 300000)].join('|')).digest('hex');
                 const claim = await sb.from('lead_messages').insert({

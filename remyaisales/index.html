@@ -37,17 +37,17 @@ a:focus-visible{outline:2px solid rgba(179,0,27,.7);outline-offset:4px}
 .col{position:relative;width:100%;max-width:var(--col);min-height:100vh;background:var(--bg);display:flex;flex-direction:column;padding-bottom:calc(32px + env(safe-area-inset-bottom))}
 @media(min-width:520px){.col{box-shadow:0 0 160px -30px rgba(138,3,3,.28)}}
 
-/* hero photo: top 40% of the phone, a long fade that starts near the middle
-   of the photo so the picture and the page read as one piece */
+/* hero photo: top 40% of the phone. The fade starts low (68%) so it never
+   covers the face; the name sits just under the photo, not on it */
 .hero{position:relative;height:40vh;height:40svh;min-height:300px;max-height:460px;overflow:hidden;background:#000}
 .hero img{width:100%;height:100%;object-fit:cover;object-position:50% 15%}
 .hero::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:
-    radial-gradient(80% 50% at 50% 104%,rgba(138,3,3,.22) 0%,rgba(138,3,3,0) 70%),
-    linear-gradient(to bottom,rgba(11,11,13,0) 45%,rgba(11,11,13,.35) 68%,rgba(11,11,13,.85) 88%,var(--bg) 100%)}
+    radial-gradient(80% 40% at 50% 106%,rgba(138,3,3,.18) 0%,rgba(138,3,3,0) 70%),
+    linear-gradient(to bottom,rgba(11,11,13,0) 68%,rgba(11,11,13,.3) 84%,rgba(11,11,13,.8) 95%,var(--bg) 100%)}
 
 /* identity */
-.id{text-align:center;padding:0 var(--gutter);margin-top:-30px;position:relative}
+.id{text-align:center;padding:0 var(--gutter);margin-top:-6px;position:relative}
 .id h1{font-family:var(--display);font-optical-sizing:none;font-weight:700;font-size:38px;line-height:1.05;letter-spacing:.01em;color:#fff;text-shadow:0 2px 28px rgba(0,0,0,.7)}
 .id .bio{margin-top:12px;font-size:16px;letter-spacing:.05em;color:var(--fg-2)}
 .id .tag{margin-top:6px;font-family:var(--display);font-style:italic;font-weight:400;font-size:18px;letter-spacing:.01em;color:var(--fg-3)}
@@ -85,17 +85,15 @@ footer{margin-top:auto;padding:40px var(--gutter) 0;text-align:center;font-size:
   <div class="id">
     <h1 id="name"></h1>
     <p class="bio" id="bio"></p>
-    <p class="tag" id="tagline"></p>
   </div>
   <nav class="icons" id="icons" aria-label="Social"></nav>
   <nav class="links" id="links" aria-label="Links"></nav>
-  <footer>STILO AI Partners &middot; Miami</footer>
 </main>
 
 <script>
 /* =========================================================================
    EDIT HERE. Everything on the page renders from this block.
-     name / bio / tagline  the three lines under the photo
+     name / bio             the two lines under the photo
      photo                 path under /assets. Portrait, face in the top
                            third. remy-profile.jpg is the 1200px web copy
                            of remy-profile.jpeg.
@@ -108,7 +106,6 @@ footer{margin-top:auto;padding:40px var(--gutter) 0;text-align:center;font-size:
 var PROFILE = {
   name: 'Remy Leon',
   bio: 'Running a sales floor in Miami at 20',
-  tagline: 'We call. They buy. You get paid.',
   photo: '/assets/remy-profile.jpg',
   instagram: 'https://www.instagram.com/remyaisales/',
   tiktok: 'https://www.tiktok.com/@remyaisales',
@@ -152,7 +149,6 @@ document.title = PROFILE.name;
 document.getElementById('photo').src = PROFILE.photo;
 document.getElementById('name').textContent = PROFILE.name;
 document.getElementById('bio').textContent = PROFILE.bio;
-document.getElementById('tagline').textContent = PROFILE.tagline;
 
 var mailto = 'mailto:' + PROFILE.email;
 
@@ -167,12 +163,9 @@ document.getElementById('icons').innerHTML = icons.map(function (i) {
 
 var cards = [
   { key: 'careers', primary: true, label: "We're hiring callers in Miami", sub: 'Apply in 60 seconds', href: 'https://stiloaipartners.com/careers' + UTM },
-  { key: 'agency', label: 'Need more customers? Work with my agency', sub: 'STILO AI Partners', href: 'https://stiloaipartners.com/' + UTM },
-  { key: 'tiktok', label: 'TikTok', href: PROFILE.tiktok },
-  { key: 'instagram', label: 'Instagram', href: PROFILE.instagram }
+  { key: 'agency', label: 'Need more customers? Work with my agency', sub: 'STILO AI PARTNERS', href: 'https://stiloaipartners.com/' + UTM },
 ];
 if (PROFILE.discord) cards.push({ key: 'discord', label: 'Free sales Discord', sub: 'Come hang out', href: PROFILE.discord });
-cards.push({ key: 'email', label: 'Email me', sub: PROFILE.email, href: mailto });
 
 document.getElementById('links').innerHTML = cards.map(function (c) {
   var sub = c.sub ? '<div class="s">' + esc(c.sub) + '</div>' : '';
