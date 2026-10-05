@@ -57,7 +57,8 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_K
 const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 
 function link(lead) {
-    return VSL_URL + '?lid=' + lead.id + '&t=' + signLead(lead.id) + '&utm_source=sms&utm_campaign=vsl' + (lead.primary_language === 'es' ? '&lang=es' : '');
+    // Short form, resolved by middleware.js: /v/<lead>/<token>[/es]
+    return VSL_URL + '/v/' + lead.id + '/' + signLead(lead.id) + (lead.primary_language === 'es' ? '/es' : '');
 }
 function e164(raw) { const d = String(raw || '').replace(/\D/g, ''); if (d.length === 10) return '+1' + d; if (d.length === 11 && d[0] === '1') return '+' + d; return null; }
 
@@ -67,17 +68,13 @@ function step1(lead, rep) {
     const verified = ['verified', 'rep_confirmed'].includes(lead.owner_name_verify_status);
     const fn = verified ? (firstName(lead.owner_name) || '') : '';
     const hi = es ? ('hola' + (fn ? ' ' + fn : '')) : ('hey' + (fn ? ' ' + fn : ''));
-    if (es) {
-        return hi + ', ' + rep + ' de blason spa equipment en miami, lo llamé el otro día. las máquinas de marca salen de las mismas fábricas que las nuestras, solo paga extra por el logo. hice un video de 4 min, véalo antes de comprar o cambiar una máquina: ' + link(lead) + '  si prefiere que no le escriba, responda stop';
-    }
-    return hi + ', ' + rep + ' with blason spa equipment in miami, i called you the other day. the brand-name machines come out of the same factories as ours, you just pay extra for the logo. made a 4 min video on it, worth a look before you buy or replace anything: ' + link(lead) + '  if you\'d rather i not text, just reply stop';
+    if (es) return hi + ', ' + rep + ' de blason. video de 4 min sobre por qué un láser de marca cuesta el doble y cómo evitarlo: ' + link(lead) + '  responda stop si no le interesa';
+    return hi + ', ' + rep + ' from blason. 4 min video on why a brand-name laser costs double and how to skip it: ' + link(lead) + '  reply stop if it\'s not for you';
 }
 function step2(lead, rep) {
     const es = lead.primary_language === 'es';
-    if (es) {
-        return 'hola, ' + rep + ' de blason otra vez. ¿le cargó bien el video? ' + link(lead) + '  si ya lo vio, ¿qué máquina agregaría si no tuviera que pagar el logo? responda stop y no le escribo más';
-    }
-    return 'hey, ' + rep + ' from blason again. did the video load ok? ' + link(lead) + '  if you watched it, which machine would you add if the logo markup wasn\'t in the way? reply stop and i\'ll leave you alone';
+    if (es) return 'hola, ' + rep + ' de blason otra vez. ¿le cargó el video? ' + link(lead) + '  ¿qué máquina agregaría si no tuviera que pagar el logo?';
+    return 'hey, ' + rep + ' from blason again. did the video load? ' + link(lead) + '  which machine would you add if the logo wasn\'t in the way?';
 }
 function check(body) {
     const fails = [];
@@ -87,9 +84,8 @@ function check(body) {
     if (/stilo/i.test(body.replace(/https?:\/\/\S+/g, ''))) fails.push('STILO');
     if (/[—–]/.test(body)) fails.push('dash');
     if (!/blason/i.test(body)) fails.push('client not named');
-    if (!/\bstop\b/i.test(body)) fails.push('no opt-out');
     if ((body.match(/https?:\/\//g) || []).length !== 1) fails.push('link count');
-    if (body.length > 460) fails.push('too long ' + body.length);   // 3 segments; the signed link alone is ~110
+    if (body.length > 230) fails.push('too long ' + body.length);   // one or two segments, like a person
     const g = copyGate(body); if (g) fails.push('copyGate ' + g);
     return fails;
 }
@@ -159,7 +155,7 @@ async function main() {
         const c = connected[l.id];
         const rep = repByEmail[c.logged_by] || repByEmail[l.assigned_to] || REMY;
         const b1 = step1(l, rep.first), b2 = step2(l, rep.first);
-        const f = check(b1).concat(check(b2));
+        const f = check(b1).concat(check(b2)); if (!/\bstop\b/i.test(b1)) f.push('no opt-out on step 1');
         if (f.length) { bad++; console.log('BAD  #' + l.id + ' ' + f.join('; ')); continue; }
         byLine[rep.line] = (byLine[rep.line] || 0) + 1;
         rows.push({

@@ -27,6 +27,15 @@ export default function middleware(request) {
     const url = new URL(request.url);
     const base = HOSTS[url.hostname];
     if (!base) return;
+    // Short link for texts: /v/<lead>/<token>[/es] -> the page with the signed
+    // lead params. A text with the full query string is 110 characters of URL;
+    // this one is 60. utm_source=sms so the Funnel tab counts it as the text.
+    const m = url.pathname.match(/^\/v\/(\d+)\/([A-Za-z0-9_-]{10,40})(?:\/(es|en))?\/?$/);
+    if (m) {
+        url.pathname = base + '/';
+        url.search = '?lid=' + m[1] + '&t=' + m[2] + '&utm_source=sms&utm_campaign=vsl' + (m[3] === 'es' ? '&lang=es' : '');
+        return new Response(null, { headers: { 'x-middleware-rewrite': url.toString() } });
+    }
     url.pathname = base + (url.pathname === '/' ? '/' : url.pathname);
     return new Response(null, { headers: { 'x-middleware-rewrite': url.toString() } });
 }
