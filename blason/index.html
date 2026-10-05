@@ -740,8 +740,17 @@ window.addEventListener('scroll', function () {
   sticky.classList.toggle('show', show);
 }, { passive: true });
 
+// Follow-up links carry ?book=call|showroom: a signed lead who already left
+// their details lands straight on the calendar, no quiz again.
+(function () {
+  var b = Q.get('book');
+  if ((b === 'call' || b === 'showroom') && LID && TOK) {
+    state.lead = parseInt(LID, 10); state.tok = TOK; state.answers.path_pref = b; state.phase = 'result';
+  }
+})();
 applyLang();
 track('page_view');
+if (state.phase === 'result') setTimeout(function () { document.getElementById('quiz').scrollIntoView({ behavior: 'smooth' }); }, 400);
 </script>
 </body>
 </html>

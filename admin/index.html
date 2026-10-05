@@ -1748,6 +1748,10 @@
                         <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Left contact</div><div class="stilo-hero-value" id="fnK_contacts">—</div></div>
                         <div class="stilo-hero-card"><div class="stilo-hero-eyebrow">Booked</div><div class="stilo-hero-value" id="fnK_bookings">—</div></div>
                     </div>
+                    <section class="stilo-section" style="margin-bottom:16px;">
+                        <div class="stilo-section-header"><h3 class="stilo-section-title">BY CHANNEL: EMAIL VS TEXT</h3></div>
+                        <div style="overflow-x:auto;"><table class="stilo-table"><thead><tr><th>Link came from</th><th style="text-align:right;">Visits</th><th style="text-align:right;">Pressed play</th><th style="text-align:right;">Finished quiz</th><th style="text-align:right;">Left contact</th><th style="text-align:right;">Booked</th></tr></thead><tbody id="fnSourceBody"><tr><td colspan="6" class="stilo-empty">Loading…</td></tr></tbody></table></div>
+                    </section>
                     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
                         <section class="stilo-section" style="flex:1 1 320px;">
                             <div class="stilo-section-header"><h3 class="stilo-section-title">STEP BY STEP</h3><span class="stilo-section-count" id="fnDays"></span>
@@ -2566,6 +2570,7 @@
     <script src="/assets/nurture-stepper.js?v=20261002"></script>
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
+    <script src="/assets/vsl-activity.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js?v=20261002h"></script>
@@ -3265,6 +3270,11 @@
                 document.getElementById('fnK_contacts').textContent = n.contacts;
                 document.getElementById('fnK_bookings').textContent = n.bookings;
                 document.getElementById('fnDays').textContent = 'last ' + n.days + ' days · ' + n.bots_excluded + ' scanner hits excluded';
+                var srcNames = { email: 'Email campaign', sms: 'Text campaign', followup: 'Follow-up text/email', direct: 'Direct / no link', test: 'Test' };
+                var srcKeys = Object.keys(n.by_source || {}).sort(function (a, b) { return n.by_source[b].sessions - n.by_source[a].sessions; });
+                document.getElementById('fnSourceBody').innerHTML = srcKeys.length ? srcKeys.map(function (k) { var r = n.by_source[k];
+                    return '<tr><td><strong>' + crmEsc(srcNames[k] || k) + '</strong></td><td style="text-align:right;">' + r.sessions + '</td><td style="text-align:right;">' + r.plays + '</td><td style="text-align:right;">' + r.quiz_complete + '</td><td style="text-align:right;">' + r.contacts + '</td><td style="text-align:right;">' + r.bookings + '</td></tr>';
+                }).join('') : '<tr><td colspan="6" class="stilo-empty">No human visits yet.</td></tr>';
                 var rows = [['Opened the page', n.sessions], ['Pressed play', n.plays], ['Watched half', n.video_50], ['Watched 75%+', n.video_75],
                     ['Started the quiz', n.quiz_start], ['Q1 machine', n.steps[0]], ['Q2 medical director', n.steps[1]],
                     ['Q3 what is driving it', n.steps[2]], ['Q4 showroom or call', n.steps[3]], ['Saw the contact form', n.contact_view], ['Left contact', n.contacts],
@@ -3302,7 +3312,7 @@
                         + '<td><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:' + st[1] + '22;color:' + st[1] + ';">' + st[0] + extra + '</span>' + (w.lang === 'es' ? ' <span style="font-size:0.7rem;color:var(--text-muted);">ES</span>' : '') + '</td>'
                         + '<td><strong>' + crmEsc(who || '') + '</strong>' + (person ? '<div style="font-size:0.78rem;color:var(--text-muted);">' + crmEsc(person) + '</div>' : '') + '</td>'
                         + '<td>' + (cell ? '<a href="tel:' + crmEsc(cell) + '" onclick="event.stopPropagation()" style="color:var(--blue,#2563EB);">' + crmEsc(cell) + '</a>' : '<span style="color:var(--text-muted);">none</span>') + '</td>'
-                        + '<td style="font-size:0.8rem;color:var(--text-secondary);">' + crmEsc((w.answers_labels || []).join(' · ')) + '</td>'
+                        + '<td style="font-size:0.8rem;color:var(--text-secondary);">' + (w.utm_source ? '<span style="display:inline-block;margin-right:6px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,0.08);font-size:0.7rem;">' + crmEsc(srcNames[w.utm_source] || w.utm_source) + '</span>' : '') + crmEsc((w.answers_labels || []).join(' · ')) + '</td>'
                         + '<td style="white-space:nowrap;font-size:0.8rem;">' + new Date(w.last_seen).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</td>'
                         + '<td style="font-size:0.78rem;color:var(--text-muted);">' + crmEsc(status) + '</td></tr>';
                 }).join('');
@@ -7042,6 +7052,7 @@
             try {
                 var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(prospectId));
                 content.innerHTML = renderProspectDrawer(data, prospectState.tab === 'emailable' ? 'emailable' : 'callable');
+                if (window.VSL_ACTIVITY) VSL_ACTIVITY.render(data.lead || data, content);
             } catch (_) { /* swallow — next event will retry */ }
         }
 
@@ -10160,6 +10171,7 @@
             try {
                 var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(leadId));
                 content.innerHTML = renderProspectDrawer(data, mode);
+                if (window.VSL_ACTIVITY) VSL_ACTIVITY.render(data.lead || data, content);
                 // Trigger the outcome handler once the drawer is in the DOM so
                 // the slot picker renders immediately for the default outcome
                 // (booked_meeting). Without this it only appears after the user

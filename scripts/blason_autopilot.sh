@@ -19,30 +19,11 @@ for i in $(seq 1 36); do curl -s -o /dev/null --max-time 5 https://stiloaipartne
 {
 echo "[$STAMP] === autopilot leg: $LEG ==="
 if [ "$LEG" = "sms" ]; then
-  curl -s -X POST "https://stiloaipartners.com/api/prospects/outbound-enqueue" \
-    -H "Authorization: Bearer $CRON" -H "Content-Type: application/json" \
-    -d '{"campaign_id":4,"audience":"warm"}' | head -c 300; echo ""
-  node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/blason_copy_templates.js"
-  # STILO's own warm SMS campaign (2): follow-up texts, steps 2 to 5 (2026-09-29).
-  node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/stilo_sms_nudges.js" 2>&1 | tail -1
-  # Every lead a named Quo contact so no callback shows as unknown (2026-09-25).
-  node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/sync_quo_contacts.js" --scope missing 2>&1 | tail -2
-  # Validation gate: wipe unsent bodies carrying banned patterns (retired question,
-  # Hialeah, any price talk). A bodyless target just waits; a bad body would SEND.
-  node -e '
-  const fs=require("fs");
-  const env=fs.readFileSync(process.env.ENVF,"utf8");
-  const get=k=>(env.match(new RegExp("^"+k+"=\"?([^\"\n]+)","m"))||[])[1];
-  const U=get("SUPABASE_URL"),K=get("SUPABASE_SERVICE_KEY");
-  const H={apikey:K,Authorization:"Bearer "+K,"Accept-Profile":"prospecting","Content-Profile":"prospecting","Content-Type":"application/json"};
-  const banned=/hialeah|price|precio|\$|cost of|financing|cannot do|can.t do|no pueden hacer|asking for that/i;
-  (async()=>{
-    const r=await fetch(U+"/rest/v1/outbound_targets?campaign_id=eq.4&step1_sent_at=is.null&step1_body=not.is.null&select=id,step1_body",{headers:H});
-    const rows=await r.json(); let wiped=0;
-    for(const t of rows){ if(banned.test(t.step1_body||"")){
-      await fetch(U+"/rest/v1/outbound_targets?id=eq."+t.id,{method:"PATCH",headers:H,body:JSON.stringify({step1_body:null,body_generated_at:null})}); wiped++; } }
-    console.log("validation gate: "+rows.length+" unsent bodies checked, "+wiped+" wiped");
-  })().catch(e=>console.log("gate ERR "+e.message));'
+  # 2026-10-05 (Remy): the VIDEO campaign (outbound campaign 5) is the SMS arm.
+  # Campaign 4 is paused. Bodies are prefilled by the script (David's angle +
+  # the signed link), so no generate step and no validation gate are needed;
+  # outbound-tick sends 100/day inside the 9am to 7pm ET window.
+  node "/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/enqueue_blason_vsl_sms.js" --limit 100 --write 2>&1 | tail -4
 else
   # Daily email program, 50 total: step-2 follow-ups first, then lane 1
   # (medium+deliverable), then lane 2 (MX-confirmed role inboxes) fills the
@@ -52,20 +33,17 @@ else
   # 2026-09-29: lane 2 (role inboxes) OFF. It bounced 19 of 60 in 14 days
   # (~30%) and kept tripping the 8% breaker, which also froze lane 1. Its
   # slots go to follow-ups (steps 2 to 5), which bounce 3 to 7%.
-  node "$SEQ" --mode followup --limit 40 --send 2>&1 | tail -2
-  # 2026-10-01: value series (10 teaching emails, every 3 days after the last
-  # email of any kind). Runs AFTER followup so a lead that just got a step
-  # today is skipped by the 3-day / same-day gate.
-  node "$SEQ" --mode value --limit 40 --send 2>&1 | tail -2
-  node "$SEQ" --lane 1 --limit 10 --send 2>&1 | tail -2
-  # Lane 4: deliverable at any confidence, 10/day test pool, 8% breaker on.
-  node "$SEQ" --lane 4 --limit 10 --send 2>&1 | tail -2
-  # 2026-10-03 (Remy): lane 5 = addresses a rep typed or emailed, or that came
-  # with the import; role prefix allowed, 0.7% lifetime bounce. 15/day.
-  node "$SEQ" --lane 5 --limit 15 --send 2>&1 | tail -2
-  # Lane 2 back ON at a crawl: finder-found role inboxes, 10/day, so the
-  # report can tell which bounce and which land. Breaker still 8%.
-  node "$SEQ" --lane 2 --limit 10 --send 2>&1 | tail -2
+  # 2026-10-05 (Remy): the VIDEO is the email program. 100/day:
+  #   70 re-engage = already emailed and delivered by the old sequence, no
+  #      reply, never got the video (email_N stamps untouched)
+  #   30 new = never emailed, lane auto (rep-typed first, then verified
+  #      personal, then at most 10 finder role inboxes)
+  # plus the video follow-ups (steps 2 and 3, 3 and 4 days later). The old
+  # sequence's followup/value legs are OFF while the video runs.
+  VSL="/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/send_blason_vsl_email.js"
+  node "$VSL" --mode followup --limit 40 --send 2>&1 | tail -2
+  node "$VSL" --mode re --limit 70 --send 2>&1 | tail -2
+  node "$VSL" --mode cold --lane auto --limit 30 --send 2>&1 | tail -2
 fi
 echo "[$STAMP] === leg $LEG done ==="
 } >> "$LOG" 2>&1

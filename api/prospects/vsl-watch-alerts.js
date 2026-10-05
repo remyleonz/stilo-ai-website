@@ -57,6 +57,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Page-level beacons only. See "WHAT COUNTS AS WATCHING" above.
 const WATCH_EVENTS = ['view', 'play'];
+const BLASON_CLIENT_ID = '2efae6bf-69d8-4c4d-ac25-6a693db50f8b';
 
 // A click this soon after our own send is a link scanner. 60s is deliberately
 // generous: a scanner fires in under a second, a human who is genuinely eager
@@ -227,7 +228,42 @@ const NICHE_SCRIPT = {
     },
 };
 
+function blasonScriptFor(opts) {
+    const F = require('../public/_funnel');
+    const who = firstName(opts.ownerName);
+    const hi = who ? who : 'there';
+    const a = (opts.quiz && opts.quiz.answers) || {};
+    const want = a.interest ? F.label('interest', a.interest) : null;
+    const md = a.medical ? F.label('medical', a.medical) : null;
+    const motive = a.motive ? F.label('motive', a.motive) : null;
+    const laserish = ['laser_hair', 'resurfacing', 'tattoo'].indexOf(a.interest) !== -1;
+    const probe = want && a.interest !== 'notsure'
+        ? '"You mentioned ' + want.toLowerCase() + '. What are you running for that today, and how is it doing?"'
+        : '"Which machine in your room is the one you would replace first, and what do you refer out today?"';
+    const bridge = laserish && a.medical === 'no'
+        ? '"That one runs under a doctor, NP or PA in Florida. Manuel will show you what your license can run now, and what adding a provider opens up."'
+        : '"Manuel imports those direct. Same factory, no logo on the invoice. He puts it next to whatever you were quoted, line by line."';
+    return {
+        open: '"' + hi + ', it\'s Remy with Blason, the laser importer in Miami. Caught you at a bad time?"',
+        openNote: 'Never mention the video, the page, or the quiz. The timing is the reason, never the reason you give.' + (opts.es ? ' Spanish lead: open in Spanish.' : ''),
+        reason: '"Reason I\'m calling, I sent you something earlier and I\'d rather just ask you one thing than make you read it."',
+        probe: probe,
+        probeNote: (md ? 'Quiz said: ' + md + '. ' : '') + (motive ? 'Driving it: ' + motive + '. ' : '') + 'Shut up after the question.',
+        pitch: bridge,
+        price: '"It depends on the machine and on what you run it with. That\'s Manuel\'s conversation, and he does it in ten minutes. Which treatment are your clients asking for most?"',
+        priceNote: 'NEVER a number, a range, or a ballpark. Not FDA, not certified.',
+        close: '"Ten minutes on the phone with Manuel, or twenty at the showroom in Miami with the machine on. Tuesday or Thursday, morning or afternoon?"',
+        objections: [
+            ['"How much is it?"', '"It depends on the machine and what you run it with. Manuel gives you the real number for your room in ten minutes. Which treatment are clients asking for most?"'],
+            ['"Send me info"', '"I will. A catalog won\'t tell you which one fits your room, though. Let\'s put the ten minutes down and I send the info with it."'],
+            ['"We\'re covered"', '"Good. Then one question: what do you refer out today? That\'s usually the next machine."'],
+            ['"I already have a rep"', '"Keep them. This is a second quote with no logo on it, and Manuel is the one who answers the phone after the sale."'],
+        ],
+    };
+}
+
 function scriptFor(opts) {
+    if (opts.client === 'blason') return blasonScriptFor(opts);
     const key = String(opts.agent || '').toLowerCase();
     const n = NICHE_SCRIPT[key] || {
         them: 'companies in your area that fit what you sell',
@@ -328,6 +364,8 @@ async function sendWatchAlert(opts) {
         '<table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 20px">',
         '<tr><td style="padding:5px 0;color:#6B7280;width:120px">Business</td><td style="padding:5px 0;font-weight:600">' + esc(opts.business) + '</td></tr>',
         '<tr><td style="padding:5px 0;color:#6B7280">Contact</td><td style="padding:5px 0">' + esc(opts.ownerName || 'unknown') + '</td></tr>',
+        (opts.quiz ? '<tr><td style="padding:5px 0;color:#6B7280">Video</td><td style="padding:5px 0">' + (opts.quiz.pct ? 'watched ' + opts.quiz.pct + '%' : 'opened') + (opts.quiz.contact ? ', left contact details' : '') + '</td></tr>' : ''),
+        (opts.quiz && Object.keys(opts.quiz.answers).length ? '<tr><td style="padding:5px 0;color:#6B7280">Quiz</td><td style="padding:5px 0">' + esc(Object.keys(opts.quiz.answers).map(function (k) { return require('../public/_funnel').label(k, opts.quiz.answers[k]); }).join(' · ')) + '</td></tr>' : ''),
         '<tr><td style="padding:5px 0;color:#6B7280">Industry</td><td style="padding:5px 0">' + esc(opts.niche || '') + '</td></tr>',
         '<tr><td style="padding:5px 0;color:#6B7280">What happened</td><td style="padding:5px 0">' + esc(opts.event === 'play' ? 'Pressed play on the video' : 'Loaded the VSL page') + (opts.path ? ' (' + esc(opts.path) + ')' : '') + '</td></tr>',
         '<tr><td style="padding:5px 0;color:#6B7280">When</td><td style="padding:5px 0">' + esc(opts.whenET) + ' (' + esc(opts.ago) + ')</td></tr>',
@@ -399,7 +437,7 @@ async function sendWatchAlert(opts) {
             from: fromName + ' <' + fromEmail + '>',
             to: to,
             reply_to: owner,
-            subject: 'Watched the video: ' + opts.business + ', call now',
+            subject: (opts.client === 'blason' ? 'Blason video: ' : 'Watched the video: ') + opts.business + (opts.event === 'play' ? ' is watching' : ' opened it') + (opts.quiz && opts.quiz.pct ? ' (' + opts.quiz.pct + '%)' : '') + ', call now',
             html: html,
             text: text,
         }),
@@ -482,7 +520,7 @@ module.exports = async function handler(req, res) {
     }
 
     const { data: watched, error: wErr } = await sb.from('leads')
-        .select('id,name,owner_name,niche,category,phone,owner_phone_e164,owner_email,assigned_to,stage,meeting_scheduled_at,vsl_watch_alerted_at')
+        .select('id,name,owner_name,niche,category,phone,owner_phone_e164,owner_phone,owner_email,assigned_to,stage,meeting_scheduled_at,vsl_watch_alerted_at,client_id,primary_language')
         .in('id', ids);
     if (wErr) return res.status(500).json({ error: 'lead_query_failed', detail: wErr.message });
 
@@ -637,12 +675,31 @@ module.exports = async function handler(req, res) {
             return new Date(e.created_at) > new Date(acc) ? e.created_at : acc;
         }, best.created_at);
 
+        // Blason (client) lead: the alert is a Blason call, not a STILO one. Pull
+        // whatever the quiz already told us so the script opens on THEIR machine.
+        let quiz = null;
+        if (lead.client_id === BLASON_CLIENT_ID) {
+            try {
+                const { data: qs } = await pub.from('funnel_events').select('event,answer,meta,step,created_at')
+                    .eq('lead_id', lead.id).in('event', ['quiz_step', 'video_progress', 'video_complete', 'contact_submitted']).order('created_at', { ascending: true }).limit(60);
+                quiz = { answers: {}, pct: 0, contact: false };
+                (qs || []).forEach(function (e) {
+                    if (e.event === 'quiz_step' && e.meta && e.meta.q && e.answer) quiz.answers[e.meta.q] = e.answer;
+                    if (e.event === 'video_progress' && e.step) quiz.pct = Math.max(quiz.pct, e.step);
+                    if (e.event === 'video_complete') quiz.pct = 100;
+                    if (e.event === 'contact_submitted') quiz.contact = true;
+                });
+            } catch (_) { quiz = null; }
+        }
         const payload = {
             leadId: lead.id,
+            client: lead.client_id === BLASON_CLIENT_ID ? 'blason' : null,
+            quiz: quiz,
+            es: lead.primary_language === 'es',
             business: lead.name || ('lead ' + lead.id),
             ownerName: lead.owner_name,
             niche: lead.niche || lead.category,
-            phone: lead.owner_phone_e164 || lead.phone,
+            phone: lead.owner_phone_e164 || lead.owner_phone || lead.phone,
             assignedTo: lead.assigned_to,
             event: best.event,
             path: best.path,
