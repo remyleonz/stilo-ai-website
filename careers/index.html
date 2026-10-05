@@ -44,7 +44,7 @@ h1,h2,h3{font-family:var(--display);font-optical-sizing:none;font-weight:700;lin
 
 /* hero */
 .hero{padding-block:clamp(36px,6vw,72px) 0;text-align:center}
-.hero h1{font-size:clamp(40px,7.2vw,78px);max-width:13ch;margin-inline:auto}
+.hero h1{font-size:clamp(38px,6.6vw,72px);max-width:14ch;margin-inline:auto;margin-bottom:6px}
 .hero h1 em{font-style:italic;font-weight:600;color:var(--live)}
 .hero .sub{font-size:clamp(18px,2.2vw,22px);color:var(--fg-2);max-width:46ch;margin:18px auto 0}
 
@@ -52,7 +52,13 @@ h1,h2,h3{font-family:var(--display);font-optical-sizing:none;font-weight:700;lin
 .videowrap{position:relative;width:100%;margin-top:clamp(22px,3vw,34px);aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#0b1024;border:1px solid var(--line-hi);box-shadow:0 40px 90px -50px rgba(59,98,214,.55)}
 .videowrap iframe,.videowrap video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .poster{position:absolute;inset:0;width:100%;height:100%;border:0;background:radial-gradient(110% 80% at 15% 0%,#1E3F9E 0%,#0F2360 42%,#07070A 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#fff;padding:24px;text-align:center}
-.poster[style*="background-image"]{background-size:cover;background-position:center}
+.poster[style*="background-image"]{background-size:cover;background-position:center;justify-content:flex-end;padding-bottom:22px;gap:6px}
+.poster[style*="background-image"]::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(7,7,10,.86) 0%,rgba(7,7,10,.35) 45%,rgba(7,7,10,.08) 100%)}
+.poster[style*="background-image"] .orb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);margin:0}
+.poster[style*="background-image"]:hover .orb{transform:translate(-50%,-50%) scale(1.05)}
+.poster[style*="background-image"] .ptitle,.poster[style*="background-image"] .plen{position:relative;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+.poster[style*="background-image"] .ptitle{font-size:clamp(17px,2.2vw,24px)}
+@media(max-width:640px){.poster[style*="background-image"]{padding-bottom:12px;gap:2px}.poster[style*="background-image"] .orb{width:60px;height:60px}.poster[style*="background-image"] .orb::after{border-width:9px 0 9px 16px;margin-left:4px}.poster[style*="background-image"] .ptitle{font-size:15px;max-width:30ch}.poster[style*="background-image"] .plen{font-size:10px}}
 .poster .orb{width:92px;height:92px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 14px 40px rgba(0,0,0,.45);transition:transform .25s}
 .poster:hover .orb{transform:scale(1.05)}
 .poster .orb::after{content:"";width:0;height:0;border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent var(--navy);margin-left:6px}
@@ -182,13 +188,11 @@ body.has-sticky{padding-bottom:84px}
 
 <header class="wrap top">
   <a class="brand" href="https://stiloaipartners.com" aria-label="STILO AI PARTNERS"><img src="/assets/StiloLogoOfficial.webp" alt="STILO AI PARTNERS" height="44"></a>
-  <span class="pill"><i></i>Hiring sales reps, remote</span>
 </header>
 
 <main class="wrap">
   <section class="hero">
-    <h1>You call. They buy. <em>You get paid.</em></h1>
-    <p class="sub">We're a sales agency based in Miami. Companies that are good at the work and bad at getting clients hire us to fix that. We need sales reps who pick up the phone, from wherever you are. Watch this first.</p>
+    <h1>Real clients. Real deals. Paid on every one.</h1>
 
     <div class="videowrap" id="videowrap">
       <button class="poster" id="poster" type="button" aria-label="Play the video">
@@ -254,27 +258,6 @@ body.has-sticky{padding-bottom:84px}
           <li>You go quiet when something is hard instead of saying so.</li>
           <li>You want "flexible hours." Remote works here because the block is fixed: same hours, same days, every week.</li>
         </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="s">
-    <h2>How we hire</h2>
-    <p class="lede">Nothing on your resume matters here. One thing predicts whether you're good at this: will you make the calls on a day you don't feel like it. So that's what we test.</p>
-    <div class="steps">
-      <div><b>1</b><div><h3>A 15-minute call with Remy</h3><p>He tells you exactly what the job is, including the parts that are bad, and asks you direct questions. If it's not a fit, he tells you on that call.</p></div></div>
-      <div><b>2</b><div><h3>A live role-play, no prep</h3><p>He's a business owner. You're calling cold. He hangs up on you once. We're watching one thing: do you push past the first no.</p></div></div>
-      <div><b>3</b><div><h3>A paid trial day</h3><p>Three hours, 50 dials, $75 flat, on our dialer with Remy on the line. In person if you're in Miami, remote if you're not. Most people don't get through this, and that's the point. Get through it and you start the next morning.</p></div></div>
-    </div>
-  </section>
-
-  <section class="s">
-    <h2>Who you'd be working with</h2>
-    <div class="who">
-      <div class="ph"><img src="/assets/remyfoundersection.png" alt="Remy Leon"><span>Remy Leon, founder</span></div>
-      <div>
-        <p>I'm 20. I started STILO a year ago out of Miami, built the dialer, the lead lists and the scripts myself, and I still make my own calls every week on the same lists you'd be working. I'm not managing from a distance. I dial the same list, and you hear my calls too.</p>
-        <p>What you get out of this, even if you leave in six months, is the ability to hold a conversation with a stranger who didn't want to talk to you and turn it into a yes. Almost nobody our age has that. It pays for the rest of your life.</p>
       </div>
     </div>
   </section>
@@ -355,7 +338,7 @@ body.has-sticky{padding-bottom:84px}
    poster:  optional image URL for the click-to-play frame (a still of Remy on the floor)
    length:  shown under the play button, e.g. "4 min"
    ========================================================================= */
-var VIDEO = { mp4: '', youtube: '', loom: '', poster: '', length: '' };
+var VIDEO = { mp4: '', youtube: '', loom: 'bceb9d44fcff4fbeb00491dd636fe1d5', poster: '/careers/poster.jpg', length: '6 min' };
 
 /* Remy's Quo line. The "Text Remy now" button opens Messages with the name filled in. */
 var REMY_SMS = '+17868376639';
