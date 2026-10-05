@@ -44,7 +44,10 @@ h1,h2,h3{font-family:var(--display);font-optical-sizing:none;font-weight:700;lin
 
 /* hero */
 .hero{padding-block:clamp(36px,6vw,72px) 0;text-align:center}
-.hero h1{font-size:clamp(1.7rem,5.4vw,2.65rem);text-transform:uppercase;letter-spacing:.012em;line-height:1.07;max-width:16ch;margin-inline:auto;margin-bottom:10px}
+.hero h1{font-size:clamp(1.55rem,6.4vw,2.65rem);text-transform:uppercase;letter-spacing:.012em;line-height:1.07;margin-inline:auto;margin-bottom:10px;text-wrap:balance}
+.hero h1 .brk{display:none}
+@media(max-width:600px){.hero h1 .brk{display:inline}.hero h1{text-wrap:initial}}
+@media(min-width:960px){.hero h1{white-space:nowrap}}
 .hero h1 em{font-style:italic;font-weight:600;color:var(--live)}
 .hero .sub{font-size:clamp(18px,2.2vw,22px);color:var(--fg-2);max-width:46ch;margin:18px auto 0}
 
@@ -192,7 +195,7 @@ body.has-sticky{padding-bottom:84px}
 
 <main class="wrap">
   <section class="hero">
-    <h1>Why you should be selling with us.</h1>
+    <h1>Why you should <br class="brk">be selling with us.</h1>
 
     <div class="videowrap" id="videowrap">
       <button class="poster" id="poster" type="button" aria-label="Play the video">
