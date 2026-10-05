@@ -120,7 +120,7 @@ module.exports = async function handler(req, res) {
                 + '<ul style="padding-left:18px">'
                 + '<li>Where: <strong>' + F.esc(LABEL.location[location]) + '</strong></li>'
                 + '<li>Hours: <strong>' + F.esc(LABEL.hours[hours]) + '</strong></li>'
-                + '<li>Been told no for a living: <strong>' + F.esc(LABEL.experience[experience]) + '</strong></li>'
+                + '<li>Background: <strong>' + F.esc(LABEL.experience[experience]) + '</strong></li>'
                 + (why ? '<li>Why money now: <em>' + F.esc(why) + '</em></li>' : '')
                 + '</ul>'
                 + (flags.length ? '<p style="color:#A3312F">Flags: ' + F.esc(flags.join(', ')) + '</p>' : '<p style="color:#1b7f3b">No flags. Call now.</p>')
