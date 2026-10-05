@@ -13,6 +13,7 @@
     <script src="/assets/nurture-stepper.js?v=20261002"></script>
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
+    <script src="/assets/vsl-activity.js"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js?v=20261002f"></script>
@@ -2348,6 +2349,7 @@
                     });
                 }
                 body.innerHTML = buildLeadDrawerHtml(r);
+                if (window.VSL_ACTIVITY) VSL_ACTIVITY.render(r, body);
                 loadColdCallScript(r);
                 // Messages live in prospecting.lead_messages, not on the lead row,
                 // so the nurture panel fills in after the drawer paints. Failing

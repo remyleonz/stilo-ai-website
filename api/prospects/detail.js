@@ -122,6 +122,29 @@ async function fetchNurtureDetail(leadId) {
             .order('created_at', { ascending: true })
             .limit(500);
         out.vsl = data || [];
+        // Blason video page funnel (public.funnel_events / funnel_submissions):
+        // every view, play, watch mark, quiz answer and submission for this
+        // lead, summarised for the drawer's "Video page" block.
+        const { data: fe } = await pub.from('funnel_events')
+            .select('event,step,answer,meta,utm_source,ua,created_at,session_id')
+            .eq('lead_id', leadId).order('created_at', { ascending: true }).limit(400);
+        if (fe && fe.length) {
+            const F = require('../public/_funnel');
+            const f = { views: 0, plays: 0, pct: 0, first_view: null, last_seen: null, sources: {}, answers: {}, quiz_complete: false, contact: false, booked: false, bots: 0 };
+            fe.forEach(function (e) {
+                if (F.botReason(e.ua)) { f.bots++; return; }
+                f.last_seen = e.created_at;
+                if (e.event === 'page_view') { f.views++; if (!f.first_view) f.first_view = e.created_at; const src = e.utm_source || 'direct'; f.sources[src] = (f.sources[src] || 0) + 1; }
+                if (e.event === 'video_play') f.plays++;
+                if (e.event === 'video_progress' && e.step) f.pct = Math.max(f.pct, e.step);
+                if (e.event === 'video_complete') f.pct = 100;
+                if (e.event === 'quiz_step' && e.meta && e.meta.q && e.answer) f.answers[e.meta.q] = { key: e.answer, label: F.label(e.meta.q, e.answer) };
+                if (e.event === 'quiz_complete') f.quiz_complete = true;
+                if (e.event === 'contact_submitted') f.contact = true;
+                if (e.event === 'booking_confirmed') f.booked = true;
+            });
+            if (f.views || f.plays || Object.keys(f.answers).length) out.funnel = f;
+        }
     } catch (_) { /* engagement pills just won't light up */ }
     return out;
 }
@@ -173,6 +196,7 @@ module.exports = async function handler(req, res) {
     lead.nurture_last_email_at = emailStats.last_sent_at;
     lead.nurture_messages = nurture.messages;
     lead.nurture_vsl = nurture.vsl;
+    lead.funnel = nurture.funnel || null;
     // Client-account leads: attach the client's name + showroom address so
     // the drawer can render the booking picker and the booked-meeting card in
     // showroom mode (no Meet link, address instead). displayAddress applies

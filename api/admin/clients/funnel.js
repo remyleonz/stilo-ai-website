@@ -103,6 +103,21 @@ module.exports = async function handler(req, res) {
         bookings: count(has('booking_confirmed')),
         bots_excluded: all.length - human.length,
         by_lang: human.reduce(function (o, s) { const l = s.lang || 'en'; o[l] = (o[l] || 0) + 1; return o; }, {}),
+        // Email vs SMS vs follow-up vs direct: the link carries utm_source, so
+        // the same page tells the two campaigns apart.
+        by_source: (function () {
+            const o = {};
+            human.forEach(function (s) {
+                const k = s.utm_source || 'direct';
+                const r = o[k] || (o[k] = { sessions: 0, plays: 0, quiz_complete: 0, contacts: 0, bookings: 0 });
+                r.sessions++;
+                if (s.events.indexOf('video_play') !== -1) r.plays++;
+                if (s.events.indexOf('quiz_complete') !== -1) r.quiz_complete++;
+                if (s.events.indexOf('contact_submitted') !== -1) r.contacts++;
+                if (s.events.indexOf('booking_confirmed') !== -1) r.bookings++;
+            });
+            return o;
+        })(),
         answers: F.QUIZ_KEYS.reduce(function (o, q) {
             const dist = {};
             human.forEach(function (s) { const v = s.answers[q]; if (v) dist[v] = (dist[v] || 0) + 1; });

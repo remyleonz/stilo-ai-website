@@ -49,8 +49,13 @@ const { signLead } = require('../api/public/_token');
 
 const args = process.argv.slice(2);
 function arg(n, d) { const i = args.indexOf('--' + n); return i >= 0 && args[i + 1] ? args[i + 1] : d; }
-const MODE = arg('mode', 'cold');          // cold | warm | followup
-const LANE = arg('lane', '1');             // cold only: 1 = medium confidence + MX clean, 2 = finder role inboxes (ramp slowly), 3 = site-published, 5 = rep-typed or imported address (any prefix)
+const MODE = arg('mode', 'cold');          // cold | warm | followup | re
+//   re = RE-ENGAGE (2026-10-05, Remy's 70/day): leads the old sequence already
+//        emailed and delivered (no bounce, no reply, no unsubscribe) who have not
+//        had the video yet. Their email_N stamps stay untouched; the VSL step is
+//        tracked off lead_messages.variant ('blason_vsl_1_*' ...).
+//   lane 'auto' (cold) = fill from lane 5 (rep-typed), then 4, then 1, then 2.
+const LANE = arg('lane', 'auto');          // cold only: 1 = medium confidence + MX clean, 2 = finder role inboxes (ramp slowly), 3 = site-published, 5 = rep-typed or imported address (any prefix)
 const LIMIT = parseInt(arg('limit', '50'), 10);
 const SEND = args.includes('--send');
 const SHOW = args.includes('--show');
@@ -79,7 +84,7 @@ function firstName(lead) {
     return verified ? (kit.firstName(lead.owner_name) || null) : null;
 }
 function linkFor(lead) {
-    return VSL_URL + '?lid=' + lead.id + '&t=' + signLead(lead.id) + (lead.primary_language === 'es' ? '&lang=es' : '');
+    return VSL_URL + '?lid=' + lead.id + '&t=' + signLead(lead.id) + '&utm_source=email&utm_campaign=vsl' + (lead.primary_language === 'es' ? '&lang=es' : '');
 }
 
 /* ------------------------------- the copy -------------------------------- */
@@ -93,23 +98,23 @@ function step1(lead, sender) {
     const warm = MODE === 'warm';
     if (es) {
         const hi = fn ? 'Hola ' + fn + ',' : 'Hola,';
-        const intro = warm ? 'Un gusto hablar con su oficina el otro día.' : 'Soy ' + sender + ', de Blason Spa Equipment aquí en Miami. Importamos máquinas de estética directo de fábrica.';
+        const intro = warm ? 'Un gusto hablar con su oficina el otro día.' : (MODE === 're' ? 'Soy ' + sender + ', de Blason Spa Equipment aquí en Miami, le escribí hace unas semanas. Grabamos algo corto que explica mejor lo que hacemos.' : 'Soy ' + sender + ', de Blason Spa Equipment aquí en Miami. Importamos máquinas de estética directo de fábrica.');
         const body = [hi, '', intro, '',
             'Algo que casi ningún vendedor le va a decir: las máquinas de marca y las nuestras salen de las mismas fábricas. Cuando la máquina trae un logo grande, usted paga dos veces: una por la máquina y otra por el nombre. Si se salta ese recargo, el mismo presupuesto le alcanza para la máquina que realmente quiere, en vez de conformarse con una más barata.', '',
             'Antes de comprar o cambiar cualquier equipo, vea este video corto. Muestra exactamente cómo funciona y qué significa para su cabina:', link, '',
             local ? 'Las máquinas están encendidas en nuestro showroom de Miami, así que puede probarlas antes de decidir nada.' : 'Enviamos a toda la Florida y Manuel, el dueño, le explica todo en diez minutos por teléfono.', '',
             'Y si prefiere que no le escriba, respóndame "no gracias" y no le escribo más.'].join('\n');
-        const subject = arm === 'A' ? (warm ? 'después de nuestra llamada' : 'pagar dos veces por la misma máquina') : (warm ? 'lo que le mencioné en la llamada' : 'antes de comprar su próxima máquina');
+        const subject = arm === 'A' ? (warm ? 'después de nuestra llamada' : 'pagar dos veces por la misma máquina') : (warm ? 'lo que le mencioné en la llamada' : (MODE === 're' ? 'el error de 80 mil en su cabina' : 'antes de comprar su próxima máquina'));
         return { subject, body, arm };
     }
     const hi = fn ? 'Hi ' + fn + ',' : 'Hi,';
-    const intro = warm ? 'It was nice speaking with your office the other day.' : "I'm " + sender + ' with Blason Spa Equipment here in Miami. We import aesthetic machines direct from the factory.';
+    const intro = warm ? 'It was nice speaking with your office the other day.' : (MODE === 're' ? "I'm " + sender + ' with Blason Spa Equipment here in Miami, I emailed you a few weeks back. We recorded something short that explains what we do better than I did.' : "I'm " + sender + ' with Blason Spa Equipment here in Miami. We import aesthetic machines direct from the factory.');
     const body = [hi, '', intro, '',
         "Something most sales reps won't tell you: the brand-name machines and ours come out of the same factories. When a machine carries a big logo you pay twice, once for the machine and once for the name. Skip that markup and the same budget buys the machine you actually wanted instead of the one you settled for.", '',
         'Before you buy or replace anything, watch this short video. It shows exactly how that works and what it means for your room:', link, '',
         local ? 'The machines are set up and running at our Miami showroom, so you can try one before deciding anything.' : 'We ship anywhere in Florida and Manuel, the owner, walks you through it in ten minutes on the phone.', '',
         "And if you'd rather I not email, just reply no thanks and I'll leave you alone."].join('\n');
-    const subject = arm === 'A' ? (warm ? 'after our call' : 'paying twice for the same machine') : (warm ? 'what I mentioned on the call' : 'before you buy your next machine');
+    const subject = arm === 'A' ? (warm ? 'after our call' : 'paying twice for the same machine') : (warm ? 'what I mentioned on the call' : (MODE === 're' ? 'the 80,000 mistake in your treatment room' : 'before you buy your next machine'));
     return { subject, body, arm };
 }
 // Steps 2 and 3: a bump and a one-question close, each with the link again.
@@ -131,7 +136,7 @@ function followup(lead, step) {
 /** Correctness checks that must hold for every body. */
 function preSendCheck(subject, body) {
     const t = subject + '\n' + body, fails = [];
-    if (/stilo/i.test(t)) fails.push('mentions STILO');
+    if (/stilo/i.test(t.replace(/https?:\/\/\S+/g, ''))) fails.push('mentions STILO');   // the link host contains 'stilo'
     if (/\$|\bprice\b|\bprecio\b|\bcost\b|\bcosto\b|starting at|desde \$/i.test(t)) fails.push('mentions price');
     if (/[—–]/.test(t)) fails.push('em or en dash');
     if (/hialeah/i.test(t)) fails.push('Hialeah');
@@ -162,24 +167,39 @@ async function main() {
 
     let q = sb.from('leads').select('id,name,owner_name,owner_name_verify_status,owner_email,email,email_verify_address,email_verify_status,email_confidence,'
         + 'primary_language,address,category,stage,last_called_outcome,bounced_at,unsubscribed_at,reply_received_at,'
-        + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,last_called_at,all_emails_json,email_search_status')
+        + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,last_called_at,all_emails_json,email_search_status,pinned_at,next_step,do_not_call')
         .eq('client_id', CLIENT_ID).is('bounced_at', null).is('unsubscribed_at', null);
-    if (MODE === 'followup') q = q.not('email_1_sent_at', 'is', null).is('reply_received_at', null).is('email_3_sent_at', null);
+    if (MODE === 'followup') q = q.is('reply_received_at', null);
+    else if (MODE === 're') q = q.not('email_1_sent_at', 'is', null).is('reply_received_at', null);
     else if (MODE === 'warm') q = q.is('email_1_sent_at', null).not('last_called_at', 'is', null);
+    else if (LANE === 'auto') q = q.is('email_1_sent_at', null).neq('email_verify_status', 'dead_domain');
     else if (LANE === '5') q = q.is('email_1_sent_at', null).neq('email_verify_status', 'dead_domain');
     else if (LANE === '2') q = q.is('email_1_sent_at', null).eq('email_verify_status', 'role_inbox');
     else q = q.is('email_1_sent_at', null).eq('email_verify_status', LANE === '3' ? 'site_published' : 'deliverable');
     if (MODE === 'cold' && LANE === '1') q = q.eq('email_confidence', 'medium');
+    if (MODE === 're') q = q.is('unsubscribed_at', null).is('bounced_at', null);
     const { data: leads, error } = await q.limit(3000);
     if (error) { console.error(error); process.exit(1); }
 
-    // Followup: only VSL-sequence leads (their step-1 message carries our variant).
-    let vslIds = null;
-    if (MODE === 'followup') {
-        vslIds = new Set();
-        const { data: msgs } = await sb.from('lead_messages').select('lead_id').like('variant', 'blason_vsl_1_%').limit(5000);
-        (msgs || []).forEach(function (m) { vslIds.add(m.lead_id); });
+    // VSL step state lives in lead_messages.variant ('blason_vsl_<n>_<arm>'), not
+    // in email_N_sent_at: re-engaged leads already used those stamps on the old
+    // sequence. vslState[lead] = { step: highest sent, last: sent_at of it }.
+    const vslState = {};
+    {
+        const { data: msgs } = await sb.from('lead_messages').select('lead_id,variant,sent_at').like('variant', 'blason_vsl_%').limit(10000);
+        (msgs || []).forEach(function (m) {
+            const n = parseInt(String(m.variant).split('_')[2], 10) || 1;
+            const cur = vslState[m.lead_id] || { step: 0, last: null };
+            if (n > cur.step) { cur.step = n; cur.last = m.sent_at; }
+            vslState[m.lead_id] = cur;
+        });
     }
+    const vslIds = new Set(Object.keys(vslState).map(Number));
+    const vslNextStep = function (lead) {
+        const st = vslState[lead.id]; if (!st || st.step >= MAX_STEP) return null;
+        const n = st.step + 1;
+        return ((Date.now() - new Date(st.last).getTime()) / 86400000 >= STEP_GAP_DAYS[n]) ? n : null;
+    };
 
     // Bounced domains, declines in any channel, closed stages, SMS queue.
     const bounceDomains = new Set();
@@ -205,7 +225,7 @@ async function main() {
     // finder trace (typed by a rep or came with the import). Same rule as
     // send_client_sequence.js lane 5.
     let humanEmailedIds = null;
-    if (MODE === 'cold' && LANE === '5') {
+    if (MODE === 'cold' && (LANE === '5' || LANE === 'auto')) {
         humanEmailedIds = new Set();
         const { data: hm } = await sb.from('lead_messages').select('lead_id').eq('channel', 'email').eq('direction', 'outbound')
             .in('variant', ['ask', 'ctx', 'desk', 'manual_followup', 'manual']).limit(5000);
@@ -217,13 +237,24 @@ async function main() {
         if (!addr || l.email_search_status === 'found') return false;
         return JSON.stringify(l.all_emails_json || '').toLowerCase().indexOf(addr) === -1;
     };
+    // lane 'auto' (cold): the order Remy set on 10/03. Rep-typed or imported
+    // addresses first (0.7% bounce), then verified personal (lane 4/1), then
+    // the finder's role inboxes (lane 2) only to fill, capped per run below.
+    const autoLane = function (l) {
+        if (isRepAddress(l)) return '5';
+        if (l.email_verify_status === 'deliverable') return l.email_confidence === 'medium' ? '1' : '4';
+        if (l.email_verify_status === 'role_inbox') return '2';
+        return null;
+    };
+    const LANE2_MAX_PER_RUN = 10;
     const skipWhy = {};
     const skip = function (w) { skipWhy[w] = (skipWhy[w] || 0) + 1; return false; };
     const seenAddr = new Set();
     const eligible = (leads || []).filter(function (l) {
         const to = String(l.email_verify_address || l.owner_email || l.email || '').trim().toLowerCase();
         if (!to) return skip('no address');
-        if (humanEmailedIds && !isRepAddress(l)) return skip('finder address, not lane 5');
+        if (humanEmailedIds && LANE === '5' && !isRepAddress(l)) return skip('finder address, not lane 5');
+        if (l.do_not_call) return skip('do_not_call');
         if (declined.has(l.last_called_outcome)) return skip('declined on a call');
         if (CLOSED.includes(l.stage)) return skip('closed or booked');
         if (killedIds.has(l.id)) return skip('dead or opted out by SMS');
@@ -231,7 +262,10 @@ async function main() {
         if (bounceDomains.has(to.split('@')[1])) return skip('bounced domain');
         if (seenAddr.has(to)) return skip('duplicate address in batch');
         if (MODE === 'warm' && !connectedIds.has(l.id)) return skip('no connected call');
-        if (MODE === 'followup') { if (!vslIds.has(l.id)) return skip('not on the VSL sequence'); l.__step = nextStepFor(l); if (!l.__step) return skip('next step not due'); }
+        if (MODE === 'followup') { if (!vslIds.has(l.id)) return skip('not on the VSL sequence'); l.__step = vslNextStep(l); if (!l.__step) return skip('next step not due'); }
+        if ((MODE === 'cold' || MODE === 're' || MODE === 'warm') && vslIds.has(l.id)) return skip('already got the video email');
+        if (l.pinned_at || String(l.next_step || '').trim()) return skip('human-owned (pinned or next step)');
+        if (MODE === 'cold' && LANE === 'auto') { l.__lane = autoLane(l); if (!l.__lane) return skip('no lane (unverified or finder role inbox beyond ramp)'); }
         seenAddr.add(to); l.__to = to; return true;
     });
     if (MODE === 'cold') {
@@ -241,9 +275,13 @@ async function main() {
             const seg = /medical spa|med spa|dermatolog|plastic surg|cosmetic surg|laser|medical clinic/i.test(String(l.category || '')) ? 0 : /beauty salon|hair salon|nail|barber|massage/i.test(String(l.category || '')) ? 3 : 1;
             return south + seg;
         };
-        eligible.sort(function (a, b) { return (rank(a) - rank(b)) || (a.id - b.id); });
+        const laneRank = { '5': 0, '1': 1, '4': 2, '2': 3 };
+        eligible.sort(function (a, b) { return ((laneRank[a.__lane] || 0) - (laneRank[b.__lane] || 0)) || (rank(a) - rank(b)) || (a.id - b.id); });
     }
-    const batch = eligible.slice(0, LIMIT);
+    let lane2Taken = 0;
+    const batch = (MODE === 'cold' && LANE === 'auto')
+        ? eligible.filter(function (l) { if (l.__lane === '2') { if (lane2Taken >= LANE2_MAX_PER_RUN) return false; lane2Taken++; } return true; }).slice(0, LIMIT)
+        : eligible.slice(0, LIMIT);
 
     console.log('Blason VSL email · mode ' + MODE + (MODE === 'cold' ? ' lane ' + LANE : '') + ' · link host ' + VSL_HOST);
     console.log('pool ' + (leads || []).length + ' · eligible ' + eligible.length + ' · this run ' + batch.length + ' · ' + (SEND ? 'SENDING' : 'DRY RUN'));
@@ -269,7 +307,7 @@ async function main() {
         if (fails.length) { console.log('SKIP  ' + tag + '  copy: ' + fails.join('; ')); stats.skipped++; continue; }
 
         if (!SEND) {
-            console.log('DRY   ' + tag + '  -> ' + to + '  step ' + stepNo + ' ' + c.arm + ' | ' + c.subject);
+            console.log('DRY   ' + tag + '  -> ' + to + '  step ' + stepNo + ' ' + c.arm + (lead.__lane ? ' lane' + lead.__lane : '') + ' | ' + c.subject);
             if (SHOW) console.log(c.body.replace(/^/gm, '        ') + '\n');
             stats.sent++; continue;
         }
@@ -277,7 +315,7 @@ async function main() {
         const claim = await sb.from('lead_messages').insert({
             lead_id: lead.id, direction: 'outbound', channel: 'email', subject: c.subject, sent_at: new Date().toISOString(),
             sent_by: process.env.STILO_SENDER_EMAIL || null, to_address: to, provider: 'resend', status: 'sending',
-            dedupe_key: dedupeKey, variant: 'blason_vsl_' + stepNo + '_' + c.arm,
+            dedupe_key: dedupeKey, variant: 'blason_vsl_' + stepNo + '_' + c.arm + (MODE === 'cold' ? '_lane' + (lead.__lane || LANE) : MODE === 're' ? '_re' : ''),
         }).select('id').single();
         if (claim.error) { if (String(claim.error.code) === '23505') { console.log('DUP   ' + tag); stats.dup++; } else { console.log('FAIL  ' + tag + ' claim: ' + claim.error.message); stats.failed++; } continue; }
 
@@ -296,8 +334,12 @@ async function main() {
             const j = await r.json().catch(function () { return {}; });
             if (!r.ok) { await sb.from('lead_messages').delete().eq('id', claim.data.id); console.log('FAIL  ' + tag + '  resend: ' + (j.message || 'http_' + r.status)); stats.failed++; continue; }
             await sb.from('lead_messages').update({ body: plain, body_preview: plain.slice(0, 280), from_address: fromEmail, provider_message_id: j.id || null, status: 'sent' }).eq('id', claim.data.id);
-            const stamp = {}; stamp['email_' + stepNo + '_sent_at'] = new Date().toISOString(); stamp['email_' + stepNo + '_status'] = 'sent';
-            await sb.from('leads').update(stamp).eq('id', lead.id);
+            // Cold/warm step 1 claims email_1_sent_at so the OLD sequence never
+            // also picks the lead up. Re-engage and VSL follow-ups leave the
+            // email_N stamps alone (vslState is the source of truth for those).
+            if (stepNo === 1 && MODE !== 're') {
+                await sb.from('leads').update({ email_1_sent_at: new Date().toISOString(), email_1_status: 'sent' }).eq('id', lead.id);
+            }
             console.log('SENT  ' + tag + '  -> ' + to + '  step ' + stepNo);
             stats.sent++;
         } catch (e) {
