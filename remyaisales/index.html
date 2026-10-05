@@ -21,7 +21,9 @@
    shadow and a faint inner light. Blood red is the only accent and it lives
    on the primary card alone. */
 :root{
-  --page:#050505;--bg:#0B0B0D;--surface:#121214;--surface-hi:#17171a;
+  --page:#000000;--bg:#000000;--surface:rgba(233,224,200,.055);--surface-hi:rgba(233,224,200,.085);
+  /* accent tones pulled from the profile photo (cream, taupe, warm brown) for the page ombre */
+  --warm:#e9e0c8;--warm-2:#9f9383;--warm-3:#302719;
   --fg:#F4F1EA;--fg-2:#cfcabf;--fg-3:#8f8b82;
   --red:#8A0303;--red-hi:#B3001B;
   --display:'Bodoni Moda',Georgia,serif;--body:'Barlow Semi Condensed',system-ui,sans-serif;
@@ -34,27 +36,30 @@ img{display:block;max-width:100%}
 a{color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
 a:focus-visible{outline:2px solid rgba(179,0,27,.7);outline-offset:4px}
 
-.col{position:relative;width:100%;max-width:var(--col);min-height:100vh;background:var(--bg);display:flex;flex-direction:column;padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+.col{position:relative;width:100%;max-width:var(--col);min-height:100vh;background:var(--bg);display:flex;flex-direction:column;padding-bottom:calc(40px + env(safe-area-inset-bottom));isolation:isolate}
+/* the ombre: black under the photo, a soft wash of the photo's own warm tones through the middle, black again at the bottom */
+.col::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(120% 55% at 50% 58%,rgba(159,147,131,.16) 0%,rgba(48,39,25,.14) 45%,rgba(0,0,0,0) 100%),
+  linear-gradient(180deg,#000 0%,#000 40%,#0c0a07 62%,#000 100%)}
 @media(min-width:520px){.col{box-shadow:0 0 160px -30px rgba(138,3,3,.28)}}
 
 /* hero photo: top 40% of the phone. The fade starts low (68%) so it never
    covers the face; the name sits just under the photo, not on it */
-.hero{position:relative;height:40vh;height:40svh;min-height:300px;max-height:460px;overflow:hidden;background:#000}
-.hero img{width:100%;height:100%;object-fit:cover;object-position:50% 15%}
+.hero{position:relative;height:56vh;height:56svh;min-height:420px;max-height:680px;overflow:hidden;background:#000}
+.hero img{width:100%;height:100%;object-fit:cover;object-position:50% 18%}
 .hero::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:
-    radial-gradient(80% 40% at 50% 106%,rgba(138,3,3,.18) 0%,rgba(138,3,3,0) 70%),
-    linear-gradient(to bottom,rgba(11,11,13,0) 68%,rgba(11,11,13,.3) 84%,rgba(11,11,13,.8) 95%,var(--bg) 100%)}
+    linear-gradient(to bottom,rgba(0,0,0,0) 48%,rgba(0,0,0,.18) 62%,rgba(0,0,0,.5) 76%,rgba(0,0,0,.84) 88%,#000 97%,#000 100%)}
 
 /* identity */
-.id{text-align:center;padding:0 var(--gutter);margin-top:-6px;position:relative}
-.id h1{font-family:var(--display);font-optical-sizing:none;font-weight:700;font-size:38px;line-height:1.05;letter-spacing:.01em;color:#fff;text-shadow:0 2px 28px rgba(0,0,0,.7)}
-.id .bio{margin-top:12px;font-size:16px;letter-spacing:.05em;color:var(--fg-2)}
+.id{text-align:center;padding:0 var(--gutter);margin-top:-14px;position:relative}
+.id h1{font-family:var(--display);font-optical-sizing:none;font-weight:700;font-size:44px;line-height:1.05;letter-spacing:.015em;color:#fff;text-shadow:0 2px 28px rgba(0,0,0,.7)}
+.id .bio{margin-top:14px;font-size:15px;letter-spacing:.09em;color:rgba(233,224,200,.78)}
 .id .tag{margin-top:6px;font-family:var(--display);font-style:italic;font-weight:400;font-size:18px;letter-spacing:.01em;color:var(--fg-3)}
 
 /* round icons: soft filled discs, no ring */
-.icons{display:flex;justify-content:center;gap:16px;margin-top:30px;padding:0 var(--gutter)}
-.icons a{position:relative;width:50px;height:50px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 24px -16px rgba(0,0,0,.9);transition:color .25s,background .25s,transform .25s}
+.icons{display:flex;justify-content:center;gap:18px;margin-top:36px;padding:0 var(--gutter)}
+.icons a{position:relative;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(233,224,200,.07);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 24px -16px rgba(0,0,0,.9);transition:color .25s,background .25s,transform .25s}
 .icons a svg{width:22px;height:22px;display:block}
 .icons a::after{content:"";position:absolute;left:50%;bottom:-11px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--red-hi);opacity:0;box-shadow:0 0 10px 2px rgba(179,0,27,.6);transition:opacity .25s}
 .icons a:hover{color:var(--red-hi);background:rgba(255,255,255,.07);transform:translateY(-1px)}
@@ -62,8 +67,8 @@ a:focus-visible{outline:2px solid rgba(179,0,27,.7);outline-offset:4px}
 .icons a:active::after{opacity:1}
 
 /* link cards: soft rounded blocks, no border, centered text */
-.links{display:grid;gap:14px;margin-top:32px;padding:0 var(--gutter)}
-.card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:68px;padding:16px 22px;border-radius:26px;background:var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 14px 34px -22px rgba(0,0,0,.9);transition:transform .25s,box-shadow .25s,background .25s}
+.links{display:grid;gap:14px;margin-top:40px;padding:0 var(--gutter)}
+.card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:72px;padding:18px 22px;border-radius:28px;background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 14px 34px -22px rgba(0,0,0,.9);transition:transform .25s,box-shadow .25s,background .25s}
 .card .l{font-size:17px;font-weight:500;color:var(--fg);line-height:1.3;text-wrap:balance}
 .card .s{font-size:14px;color:var(--fg-3);margin-top:3px;line-height:1.35}
 .card:hover{background:var(--surface-hi);transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 18px 40px -22px rgba(0,0,0,.9),0 22px 60px -30px rgba(179,0,27,.35)}
@@ -105,7 +110,7 @@ footer{margin-top:auto;padding:40px var(--gutter) 0;text-align:center;font-size:
    ========================================================================= */
 var PROFILE = {
   name: 'Remy Leon',
-  bio: 'Running a sales floor in Miami at 20',
+  bio: 'Running a sales agency in Miami at 20',
   photo: '/assets/remy-profile.jpg',
   instagram: 'https://www.instagram.com/remyaisales/',
   tiktok: 'https://www.tiktok.com/@remyaisales',
