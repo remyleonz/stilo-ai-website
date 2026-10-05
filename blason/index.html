@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>The same machine, without paying for the logo · Blason Spa Equipment</title>
+<title>The $80,000 mistake in your treatment room · Blason Spa Equipment</title>
 <meta name="description" content="Blason Spa Equipment, Miami. Aesthetic machines imported direct from the factory. Watch the video, find the machine for your room, and pick a time with Manuel.">
 <meta name="robots" content="noindex, nofollow">
-<meta property="og:title" content="The same machine, without paying for the logo">
+<meta property="og:title" content="The $80,000 mistake in your treatment room">
 <meta property="og:description" content="Blason Spa Equipment, Miami showroom. Watch the video and pick a time with Manuel.">
 <meta property="og:image" content="/blason/machines/galaxy.jpg">
 <link rel="icon" href="/blason/logo.png">
@@ -212,16 +212,16 @@ footer img{width:96px;height:52px;object-fit:contain}
 
 <main class="wrap">
   <section class="hero">
-    <h1 data-i18n="h1">The same machine. <span>Without paying for the logo.</span></h1>
+    <h1 data-i18n="h1">The <span>$80,000 mistake</span> in your treatment room.</h1>
     <div class="facts" aria-label="Three facts">
-      <div><b>1</b><span data-i18n="fact1">Imported direct from the factory to Miami. No middleman between the factory and you.</span></div>
-      <div><b>2</b><span data-i18n="fact2">The machines on the floor are on. You run one yourself before you decide anything.</span></div>
-      <div><b>3</b><span data-i18n="fact3">Training for your team, parts and service from Miami, shipping anywhere in Florida.</span></div>
+      <div><b>1</b><span data-i18n="fact1">All aesthetic machines come from the same factories. Ours included.</span></div>
+      <div><b>2</b><span data-i18n="fact2">When a machine has a brand name, you pay twice: once for the machine, and once for the logo.</span></div>
+      <div><b>3</b><span data-i18n="fact3">Skip that markup and you can afford the best machine instead of settling for something cheaper.</span></div>
     </div>
   <div class="videowrap" id="videowrap">
     <button type="button" class="poster" id="poster" aria-label="Play the video">
       <span class="orb"></span>
-      <span class="ptitle" data-i18n="ptitle">Why you pay double for a machine, and how to stop</span>
+      <span class="ptitle" data-i18n="ptitle">Before you buy or replace a machine, watch this</span>
       <span class="plen" id="plen"></span>
     </button>
   </div>
@@ -230,12 +230,9 @@ footer img{width:96px;height:52px;object-fit:contain}
   </div>
   </section>
 
-
-  <section class="floor">
-    <h2 data-i18n="floorTtl">What Manuel carries</h2>
-    <p class="lede" data-i18n="floorLede">Most of these are on the floor in Miami. Tap the one you're shopping for and the questions start there.</p>
-    <div class="grid" id="grid"></div>
-    <p class="after" data-i18n="floorAfter">In Florida, lasers, IPL and most energy devices have to run under a doctor, NP or PA. Facials and most body machines don't. Manuel tells you where your license lands.</p>
+  <section class="quiz narrow" id="quiz">
+    <div class="lead"><h2 data-i18n="qTtl">Which machine belongs in your room?</h2><p data-i18n="qSub">Five questions. Then you see what Manuel would show you first, and pick a time.</p></div>
+    <div class="card" id="quizCard"></div>
   </section>
 
   <section class="social">
@@ -250,14 +247,11 @@ footer img{width:96px;height:52px;object-fit:contain}
     </div>
   </section>
 
-  <section class="quiz narrow" id="quiz">
-    <div class="lead"><h2 data-i18n="qTtl">Which machine belongs in your room?</h2><p data-i18n="qSub">Four questions. Then you see what Manuel would show you first, and pick a time.</p></div>
-    <div class="card" id="quizCard"></div>
-  </section>
-
-  <section class="people narrow">
-    <div class="person"><span class="caps" data-i18n="p1e">Who you'll talk to</span><h3>Manuel Junco</h3><p data-i18n="p1p">Owner of Blason Spa Equipment, the importer at 3110 W 84th St, Miami. He imports the machines, sets them up, trains your team and picks up the phone when you call.</p></div>
-    <div class="person"><span class="caps" data-i18n="p2e">Who confirms your time</span><h3>Remy Leon</h3><p data-i18n="p2p">Handles Blason's outreach and scheduling. After you pick a time, Remy texts you to confirm it.</p></div>
+  <section class="floor">
+    <h2 data-i18n="floorTtl">What Manuel carries</h2>
+    <p class="lede" data-i18n="floorLede">Most of these are on the floor in Miami. Tap the one you're shopping for and the questions start there.</p>
+    <div class="grid" id="grid"></div>
+    <p class="after" data-i18n="floorAfter">In Florida, lasers, IPL and most energy devices have to run under a doctor, NP or PA. Facials and most body machines don't. Manuel tells you where your license lands.</p>
   </section>
 
   <section class="faq narrow">
@@ -323,19 +317,19 @@ function track(event, extra) {
 /* ---------------------------- copy, EN + ES ------------------------------ */
 var T = {
   en: {
-    h1: 'The same machine. <span>Without paying for the logo.</span>',
-    fact1: 'Imported direct from the factory to Miami. No middleman between the factory and you.',
-    fact2: 'The machines on the floor are on. You run one yourself before you decide anything.',
-    fact3: 'Training for your team, parts and service from Miami, shipping anywhere in Florida.',
-    ptitle: 'Why you pay double for a machine, and how to stop',
+    h1: 'The <span>$80,000 mistake</span> in your treatment room.',
+    fact1: 'All aesthetic machines come from the same factories. Ours included.',
+    fact2: 'When a machine has a brand name, you pay twice: once for the machine, and once for the logo.',
+    fact3: 'Skip that markup and you can afford the best machine instead of settling for something cheaper.',
+    ptitle: 'Before you buy or replace a machine, watch this',
     cta: 'Find the right machine for your room', ctaShort: 'Find your machine',
     floorTtl: 'What Manuel carries',
-    floorLede: "Most of these are on the floor in Miami. Tap the one you're shopping for and the questions start there.",
+    floorLede: "Most of these are on the floor in Miami. Tap the one you're shopping for and the questions above start there.",
     moreTtl: 'And more', moreSub: 'Ask Manuel what fits',
     floorAfter: "In Florida, lasers, IPL and most energy devices have to run under a doctor, NP or PA. Facials and most body machines don't. Manuel tells you where your license lands.",
     socTtl: 'Watch the machines running on real clients',
-    socP: 'Manuel posts from the showroom floor and from client visits. Have a look, then come back and pick your time.',
-    qTtl: 'Which machine belongs in your room?', qSub: 'Four questions. Then you see what Manuel would show you first, and pick a time.',
+    socP: 'Manuel posts from the showroom floor and from client visits. Have a look, then pick your time above.',
+    qTtl: 'Which machine belongs in your room?', qSub: 'Five questions. Then you see what Manuel would show you first, and pick a time.',
     p1e: "Who you'll talk to", p1p: 'Owner of Blason Spa Equipment, the importer at 3110 W 84th St, Miami. He imports the machines, sets them up, trains your team and picks up the phone when you call.',
     p2e: 'Who confirms your time', p2p: "Handles Blason's outreach and scheduling. After you pick a time, Remy texts you to confirm it.",
     faqTtl: 'Questions owners ask',
@@ -392,19 +386,19 @@ var T = {
     tz: 'Eastern time'
   },
   es: {
-    h1: 'La misma máquina. <span>Sin pagar por el logo.</span>',
-    fact1: 'Importadas directo de la fábrica a Miami. Nadie en el medio entre la fábrica y usted.',
-    fact2: 'Las máquinas del showroom están encendidas. Las prueba usted antes de decidir nada.',
-    fact3: 'Entrenamiento para su equipo, repuestos y servicio desde Miami, envío a toda la Florida.',
-    ptitle: 'Por qué paga el doble por una máquina, y cómo dejar de hacerlo',
+    h1: 'El error de <span>$80,000</span> en su cabina.',
+    fact1: 'Todas las máquinas estéticas salen de las mismas fábricas. Las nuestras también.',
+    fact2: 'Cuando la máquina tiene marca, paga dos veces: una por la máquina y otra por el logo.',
+    fact3: 'Sin ese sobreprecio, puede comprar la mejor máquina en vez de conformarse con una más barata.',
+    ptitle: 'Antes de comprar o cambiar una máquina, vea esto',
     cta: 'Encuentre la máquina para su cabina', ctaShort: 'Encuentre su máquina',
     floorTtl: 'Lo que Manuel trae',
-    floorLede: 'La mayoría están en el showroom de Miami. Toque la que anda buscando y las preguntas empiezan por ahí.',
+    floorLede: 'La mayoría están en el showroom de Miami. Toque la que anda buscando y las preguntas de arriba empiezan por ahí.',
     moreTtl: 'Y más', moreSub: 'Pregúntele a Manuel',
     floorAfter: 'En Florida, los láseres, la IPL y la mayoría de los equipos de energía trabajan bajo un médico, enfermera practicante o PA. Las faciales y la mayoría de las de cuerpo, no. Manuel le dice dónde cae su licencia.',
     socTtl: 'Vea las máquinas funcionando con clientas reales',
-    socP: 'Manuel publica desde el showroom y desde las visitas a clientes. Véalo, y después vuelva y elija su hora.',
-    qTtl: '¿Qué máquina va en su cabina?', qSub: 'Cuatro preguntas. Después ve qué le mostraría Manuel primero, y elige la hora.',
+    socP: 'Manuel publica desde el showroom y desde las visitas a clientes. Véalo, y después elija su hora arriba.',
+    qTtl: '¿Qué máquina va en su cabina?', qSub: 'Cinco preguntas. Después ve qué le mostraría Manuel primero, y elige la hora.',
     p1e: 'Con quién va a hablar', p1p: 'Dueño de Blason Spa Equipment, el importador en 3110 W 84th St, Miami. Él importa las máquinas, las instala, entrena a su equipo y contesta el teléfono cuando usted llama.',
     p2e: 'Quién confirma su hora', p2p: 'Maneja los contactos y la agenda de Blason. Después de elegir una hora, Remy le escribe por texto para confirmarla.',
     faqTtl: 'Lo que todos preguntan',
