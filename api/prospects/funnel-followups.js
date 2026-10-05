@@ -42,6 +42,11 @@ function pageUrl(leadId, lang, extra) {
     const base = String(process.env.BLASON_VSL_URL || 'https://blasononline.stiloaipartners.com').replace(/\/$/, '');
     return base + '?lid=' + leadId + '&t=' + signLead(leadId) + '&utm_source=followup&utm_campaign=vsl' + (lang === 'es' ? '&lang=es' : '') + (extra || '');
 }
+// Texts get the short form (middleware.js /v/<lead>/<token>[/es]); emails keep the full one.
+function shortUrl(leadId, lang) {
+    const base = String(process.env.BLASON_VSL_URL || 'https://blasononline.stiloaipartners.com').replace(/\/$/, '');
+    return base + '/v/' + leadId + '/' + signLead(leadId) + (lang === 'es' ? '/es' : '');
+}
 function first(lead) { return ['verified', 'rep_confirmed'].includes(lead.owner_name_verify_status) ? (require('./_names').firstName(lead.owner_name) || '') : ''; }
 
 /* ------------------------------- copy ---------------------------------- */
@@ -49,7 +54,7 @@ function viewCopy(lead, es) {
     const fn = first(lead), url = pageUrl(lead.id, es ? 'es' : 'en');
     if (es) {
         return {
-            sms: 'hola' + (fn ? ' ' + fn : '') + ', remy de blason. por si el video no le cargó bien, aquí está otra vez: ' + url + '  y si tiene una máquina en mente, dígame cuál y le consigo diez minutos con manuel, el dueño. responda stop y no le escribo más',
+            sms: 'hola' + (fn ? ' ' + fn : '') + ', remy de blason. ¿le cargó el video? ' + shortUrl(lead.id, 'es') + '  si tiene una máquina en mente, dígame cuál',
             subject: 'el video, por si no cargó',
             body: ['Hola' + (fn ? ' ' + fn : '') + ',', '', 'Soy Remy, de Blason Spa Equipment en Miami. Por si el video no le cargó bien, aquí está otra vez:', url, '',
                 'Son cuatro minutos: por qué las máquinas de marca y las nuestras salen de las mismas fábricas, y qué significa eso para su cabina. Si tiene una máquina en mente, dígame cuál y le consigo diez minutos por teléfono con Manuel, el dueño. Si está en Miami, mejor pase por el showroom y la ve encendida.', '',
@@ -57,7 +62,7 @@ function viewCopy(lead, es) {
         };
     }
     return {
-        sms: 'hey' + (fn ? ' ' + fn : '') + ', remy with blason. in case the video didn\'t load right, here it is again: ' + url + '  and if there\'s a machine on your mind, tell me which and i\'ll get you ten minutes with manuel, the owner. reply stop and i\'ll leave you alone',
+        sms: 'hey' + (fn ? ' ' + fn : '') + ', remy with blason. did the video load ok? ' + shortUrl(lead.id, 'en') + '  if there\'s a machine on your mind, tell me which one',
         subject: 'the video, in case it did not load',
         body: ['Hi' + (fn ? ' ' + fn : '') + ',', '', "I'm Remy with Blason Spa Equipment in Miami. In case the video didn't load right, here it is again:", url, '',
             "It's four minutes: why the brand-name machines and ours come out of the same factories, and what that means for your room. If there's a machine on your mind, tell me which one and I'll get you ten minutes on the phone with Manuel, the owner. If you're in Miami, come see it running at the showroom instead.", '',
@@ -71,7 +76,7 @@ function quizCopy(sub, lead, es) {
     const want = F.label('interest', sub.interest);
     if (es) {
         return {
-            sms: 'hola' + (fn ? ' ' + fn : '') + ', remy de blason. recibí sus respuestas' + (want && sub.interest !== 'notsure' ? ' (' + want.toLowerCase() + ')' : '') + '. ' + (mode === 'showroom' ? 'elija la hora para el showroom aquí' : 'elija la hora para los diez minutos con manuel aquí') + ': ' + url + '  o respóndame con un día y hora y yo lo agendo',
+            sms: 'hola' + (fn ? ' ' + fn : '') + ', remy de blason. recibí sus respuestas, solo falta la hora' + (mode === 'showroom' ? ' para el showroom' : ' con manuel') + '. ¿qué día le queda bien?',
             subject: 'sus respuestas, y la hora con Manuel',
             body: ['Hola' + (fn ? ' ' + fn : '') + ',', '', 'Recibí sus respuestas del video' + (want && sub.interest !== 'notsure' ? ': ' + want.toLowerCase() : '') + '. Solo falta la hora.', '',
                 (mode === 'showroom' ? 'Elija la hora para pasar por el showroom en Miami y ver la máquina encendida:' : 'Elija la hora para los diez minutos por teléfono con Manuel, el dueño:'), url, '',
@@ -79,7 +84,7 @@ function quizCopy(sub, lead, es) {
         };
     }
     return {
-        sms: 'hey' + (fn ? ' ' + fn : '') + ', remy with blason. got your answers' + (want && sub.interest !== 'notsure' ? ' (' + want.toLowerCase() + ')' : '') + '. ' + (mode === 'showroom' ? 'grab a time for the showroom here' : 'grab a time for the ten minutes with manuel here') + ': ' + url + '  or just reply with a day and time and i\'ll set it',
+        sms: 'hey' + (fn ? ' ' + fn : '') + ', remy with blason. got your answers, only thing missing is the time' + (mode === 'showroom' ? ' for the showroom' : ' with manuel') + '. what day works?',
         subject: 'your answers, and the time with Manuel',
         body: ['Hi' + (fn ? ' ' + fn : '') + ',', '', 'Got your answers from the video page' + (want && sub.interest !== 'notsure' ? ': ' + want.toLowerCase() : '') + '. The only thing missing is the time.', '',
             (mode === 'showroom' ? 'Pick a time to come by the Miami showroom and see the machine running:' : 'Pick a time for the ten minutes on the phone with Manuel, the owner:'), url, '',
