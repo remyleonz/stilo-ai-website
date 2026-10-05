@@ -69,7 +69,7 @@ function step1(lead, rep) {
     const fn = verified ? (firstName(lead.owner_name) || '') : '';
     const hi = es ? ('hola' + (fn ? ' ' + fn : '')) : ('hey' + (fn ? ' ' + fn : ''));
     if (es) return hi + ', ' + rep + ' de blason. video de 4 min sobre por qué un láser de marca cuesta el doble y cómo evitarlo: ' + link(lead) + '  responda stop si no le interesa';
-    return hi + ', ' + rep + ' from blason. 4 min video on why a brand-name laser costs double and how to skip it: ' + link(lead) + '  reply stop if it\'s not for you';
+    return hi + ', ' + rep + ' from blason. 4 min video on why you pay double for a brand-name laser and how to skip it: ' + link(lead) + '  reply stop if it\'s not for you';
 }
 function step2(lead, rep) {
     const es = lead.primary_language === 'es';
