@@ -47,6 +47,8 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 @media(min-width:900px){.hero{grid-template-columns:1.1fr .9fr}}
 @media(max-width:899px){.hero{text-align:center;gap:22px}.hero h1{margin-inline:auto;order:1}.hero .videowrap{order:2}.hero .under{order:3}.hero .facts{order:4;margin-top:8px}.hero .facts div{grid-template-columns:1fr;justify-items:center;gap:4px;padding:16px 0}.hero .facts b{font-size:13px;letter-spacing:.14em;color:var(--navy)}.hero .facts span{max-width:30ch}}
 .hero h1{font-size:clamp(38px,5.6vw,66px);max-width:14ch}
+.hero h1 .brk{display:none}
+@media(max-width:899px){.hero h1{font-size:clamp(25px,7.3vw,40px);max-width:none;letter-spacing:-.025em;line-height:1.1}.hero h1 .brk{display:inline}}
 .hero h1 span{color:var(--navy)}
 .facts{display:grid;gap:0}
 .facts div{padding:18px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
@@ -212,7 +214,7 @@ footer img{width:96px;height:52px;object-fit:contain}
 
 <main class="wrap">
   <section class="hero">
-    <h1 data-i18n="h1">The <span>$80,000 mistake</span> in your treatment room.</h1>
+    <h1 data-i18n="h1">The <span>$80,000 mistake</span><br class="brk"> in your treatment room.</h1>
     <div class="facts" aria-label="Three facts">
       <div><b>1</b><span data-i18n="fact1">All aesthetic machines come from the same factories. Ours included.</span></div>
       <div><b>2</b><span data-i18n="fact2">When a machine has a brand name, you pay twice: once for the machine, and once for the logo.</span></div>
@@ -317,7 +319,7 @@ function track(event, extra) {
 /* ---------------------------- copy, EN + ES ------------------------------ */
 var T = {
   en: {
-    h1: 'The <span>$80,000 mistake</span> in your treatment room.',
+    h1: 'The <span>$80,000 mistake</span><br class="brk"> in your treatment room.',
     fact1: 'All aesthetic machines come from the same factories. Ours included.',
     fact2: 'When a machine has a brand name, you pay twice: once for the machine, and once for the logo.',
     fact3: 'Skip that markup and you can afford the best machine instead of settling for something cheaper.',
@@ -386,7 +388,7 @@ var T = {
     tz: 'Eastern time'
   },
   es: {
-    h1: 'El error de <span>$80,000</span> en su cabina.',
+    h1: 'El error de <span>$80,000</span><br class="brk"> en su cabina.',
     fact1: 'Todas las máquinas estéticas salen de las mismas fábricas. Las nuestras también.',
     fact2: 'Cuando la máquina tiene marca, paga dos veces: una por la máquina y otra por el logo.',
     fact3: 'Sin ese sobreprecio, puede comprar la mejor máquina en vez de conformarse con una más barata.',
