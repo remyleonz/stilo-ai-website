@@ -106,6 +106,7 @@ h2.q{font-size:clamp(24px,3vw,32px);margin-top:8px}
 .field input{width:100%;padding:14px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:17px;color:var(--ink);background:#fff}
 .field input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(38,71,157,.12)}
 .err{color:#A3312F;font-size:14px;margin-top:10px;display:none}
+.field input.bad{border-color:#A3312F;box-shadow:0 0 0 3px rgba(163,49,47,.12)}
 
 /* result + calendar */
 .match{background:var(--navy-tint);border-radius:10px;padding:18px 20px;margin-top:6px}
@@ -113,18 +114,35 @@ h2.q{font-size:clamp(24px,3vw,32px);margin-top:8px}
 .match p{color:var(--ink-2);font-size:16.5px;margin-top:8px;max-width:62ch}
 .match .note{margin-top:10px;font-size:15px;color:var(--navy-deep);font-weight:700}
 .cal{margin-top:22px}
-.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
-.day{flex:none;min-width:88px;padding:10px 8px;border:1.5px solid var(--line);border-radius:10px;background:#fff;text-align:center;font-size:12px;line-height:1.3;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.day span{display:block;font-size:19px;font-weight:700;color:var(--ink);letter-spacing:0;text-transform:none;margin-top:2px}
-.day.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{flex:1 0 auto;min-width:72px;padding:12px 10px;border:1.5px solid var(--line);border-radius:12px;background:#fff;text-align:center;font-size:12px;line-height:1.2;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);transition:border-color .15s,background .15s}
+.day span{display:block;font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.01em;text-transform:none;margin-top:4px}
+.day:hover{border-color:var(--navy)}
+.day.on{border-color:var(--navy);background:var(--navy);color:rgba(255,255,255,.8)}
 .day.on span{color:#fff}
-.times{display:grid;grid-template-columns:repeat(auto-fill,minmax(94px,1fr));gap:8px;margin-top:12px}
-.time{padding:11px 6px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font-size:15px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.tgroup{margin-top:18px}
+.tgroup .glbl{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.times{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+@media(max-width:420px){.times{grid-template-columns:repeat(3,1fr)}}
+.time{padding:13px 4px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:15px;font-weight:500;white-space:nowrap;color:var(--ink);font-variant-numeric:tabular-nums;transition:border-color .15s,background .15s}
 .time:hover{border-color:var(--navy)}
-.time.on{border-color:var(--navy);background:var(--navy);color:#fff}
-.calmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;font-size:14px;color:var(--muted)}
-.calmeta button{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;color:var(--ink-2)}
-.calmeta button[disabled]{opacity:.4}
+.time.on{border-color:var(--navy);background:var(--navy);color:#fff;font-weight:700}
+.calmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:18px;font-size:14px;color:var(--muted)}
+.calmeta button{background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:9px 16px;font-size:14px;font-weight:700;color:var(--navy)}
+.calmeta button:hover,.calmeta button.on{border-color:var(--navy)}
+.mini{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:14px;max-width:340px;background:#fff}
+.mini .mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.mini .mhead b{font-size:15px}
+.mini .mhead button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:18px;line-height:1;color:var(--ink)}
+.mini .mhead button[disabled]{opacity:.3;cursor:default}
+.mini .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.mini .wd{font-size:11px;font-weight:700;color:var(--muted);padding:4px 0}
+.mini .md{aspect-ratio:1;border:0;border-radius:50%;background:transparent;font-size:14px;font-weight:500;color:var(--ink)}
+.mini .md:hover:not([disabled]){background:var(--navy-tint)}
+.mini .md[disabled]{color:#C3C8D4;cursor:default}
+.mini .md.today{box-shadow:inset 0 0 0 1.5px var(--navy)}
+.mini .md.on{background:var(--navy);color:#fff;font-weight:700}
 .done{text-align:center;padding:10px 0}
 .done .check{width:60px;height:60px;border-radius:50%;background:var(--navy-tint);color:var(--navy);display:grid;place-items:center;margin:0 auto 16px;font-size:26px;font-weight:700}
 .done h3{font-size:32px}
@@ -277,7 +295,7 @@ var T = {
     cHelp: 'Remy from Blason texts you to confirm the time.',
     fName: 'Your name', fBiz: 'Business name', fPhone: 'Cell phone', fEmail: 'Email',
     cBtn: 'Pick a time with Manuel',
-    errName: 'Your name, please.', errPhone: 'A 10-digit cell number, please.', errEmail: "That email doesn't look right.", errNet: "Something went wrong on our end. Call or text (786) 837-6639 and we'll set it up by hand.",
+    errName: 'Your name, please.', errBiz: 'Your business name, please.', errPhone: 'A 10-digit cell number, please.', errEmailMissing: 'Your email, please.', errEmail: "That email doesn't look right.", errAll: 'Fill in every field, please.', errNet: "Something went wrong on our end. Call or text (786) 837-6639 and we'll set it up by hand.",
     mTtl: 'What Manuel would show you first',
     match: {
       laser_hair: ['The diode laser line.', "Four wavelengths including 1064 for darker skin, cooled tips, built to run all day. He'll ask which skin types you see most and what you're running today."],
@@ -292,9 +310,9 @@ var T = {
     mdPlanning: "You said you're adding a provider. Manuel will show you the laser now, so the room is ready the day they sign.",
     mdNote: 'In Florida that one runs under a doctor, NP or PA. Manuel will show you what your license can run today and what adding a provider opens up.',
     pickCall: 'Pick a time for your call with Manuel', pickShow: 'Pick a time to visit the showroom',
-    pickHelp: 'Monday to Friday, 9am to 4pm Eastern. Manuel calls the number you gave.',
+    pickHelp: 'Monday to Friday, 9am to 6pm Eastern. Manuel calls the number you gave.',
     pickHelpShow: 'Monday to Friday, 9am to 4pm Eastern. 3110 W 84th St, Unit 4, Miami, FL 33018.',
-    earlier: 'Earlier', later: 'Later days', noSlots: 'No open times in this range.',
+    another: 'Another day?', morning: 'Morning', afternoon: 'Afternoon', noSlots: 'No open times that week. Pick another day.',
     confirm: 'Book {when}', confirmEmpty: 'Pick a time', booking: 'Booking',
     dTtl: "You're set", dCall: 'Manuel calls you at {phone}.', dShow: 'See you at 3110 W 84th St, Unit 4, Miami, FL 33018.',
     dHelp: 'Remy from Blason will text you shortly to confirm. If the time stops working, just reply to that text.',
@@ -334,7 +352,7 @@ var T = {
     cHelp: 'Remy, de Blason, le escribe por texto para confirmar la hora.',
     fName: 'Su nombre', fBiz: 'Nombre del negocio', fPhone: 'Celular', fEmail: 'Correo',
     cBtn: 'Elegir una hora con Manuel',
-    errName: 'Su nombre, por favor.', errPhone: 'Un celular de 10 dígitos, por favor.', errEmail: 'Ese correo no se ve bien.', errNet: 'Algo falló de nuestro lado. Llame o escriba al (786) 837-6639 y lo agendamos a mano.',
+    errName: 'Su nombre, por favor.', errBiz: 'El nombre de su negocio, por favor.', errPhone: 'Un celular de 10 dígitos, por favor.', errEmailMissing: 'Su correo, por favor.', errEmail: 'Ese correo no se ve bien.', errAll: 'Llene todos los campos, por favor.', errNet: 'Algo falló de nuestro lado. Llame o escriba al (786) 837-6639 y lo agendamos a mano.',
     mTtl: 'Lo que Manuel le mostraría primero',
     match: {
       laser_hair: ['La línea de láser de diodo.', 'Cuatro longitudes de onda, con la 1064 para piel oscura, punta fría, hecha para trabajar todo el día. Le va a preguntar qué tipos de piel atiende más y qué usa hoy.'],
@@ -349,9 +367,9 @@ var T = {
     mdPlanning: 'Dijo que va a agregar un proveedor. Manuel le muestra el láser desde ahora, para que la cabina esté lista el día que firme.',
     mdNote: 'En Florida esa trabaja bajo un médico, enfermera practicante o PA. Manuel le muestra qué puede usar su licencia hoy y qué se abre al agregar un proveedor.',
     pickCall: 'Elija la hora de su llamada con Manuel', pickShow: 'Elija la hora para visitar el showroom',
-    pickHelp: 'Lunes a viernes, 9am a 4pm hora del este. Manuel llama al número que nos dio.',
+    pickHelp: 'Lunes a viernes, 9am a 6pm hora del este. Manuel llama al número que nos dio.',
     pickHelpShow: 'Lunes a viernes, 9am a 4pm hora del este. 3110 W 84th St, Unit 4, Miami, FL 33018.',
-    earlier: 'Antes', later: 'Más días', noSlots: 'No hay horas libres en este rango.',
+    another: '¿Otro día?', morning: 'Mañana', afternoon: 'Tarde', noSlots: 'No hay horas libres esa semana. Elija otro día.',
     confirm: 'Agendar {when}', confirmEmpty: 'Elija una hora', booking: 'Agendando',
     dTtl: 'Listo', dCall: 'Manuel llama al {phone}.', dShow: 'Nos vemos en 3110 W 84th St, Unit 4, Miami, FL 33018.',
     dHelp: 'Remy, de Blason, le escribe en un momento por texto para confirmar. Si la hora deja de servir, responda a ese texto.',
@@ -428,7 +446,7 @@ if (VIDEO.poster) document.getElementById('poster').style.backgroundImage = 'url
 var NEEDS_MD = ['laser_hair', 'resurfacing', 'tattoo', 'notsure'];
 function steps() { return NEEDS_MD.indexOf(state.answers.interest) !== -1 || !state.answers.interest ? ['q1', 'q3', 'q4', 'q5'] : ['q1', 'q4', 'q5']; }
 var KEYS = { q1: 'interest', q3: 'medical', q4: 'motive', q5: 'path_pref' };
-var state = { step: 0, answers: {}, started: false, contact: null, lead: null, tok: null, slots: [], from: 0, dayKey: null, slot: null, phase: 'quiz', booked: null };
+var state = { step: 0, answers: {}, started: false, contact: null, lead: null, tok: null, leadPromise: null, slots: [], from: 0, dayKey: null, slot: null, phase: 'quiz', booked: null, picker: false, calMonth: null };
 var card = document.getElementById('quizCard');
 
 function progressHtml(n) {
@@ -491,47 +509,65 @@ function matchHtml() {
   return '<div class="match"><span class="caps">' + esc(t('mTtl')) + '</span><h3>' + esc(m[0]) + '</h3><p>' + esc(m[1]) + '</p>' + (note ? '<div class="note">' + esc(note) + '</div>' : '') + '</div>';
 }
 
+function fieldHtml(id, name, label, val, type, mode, ac) {
+  return '<div class="field"><label for="' + id + '">' + esc(label) + '</label><input id="' + id + '" name="' + name + '" type="' + (type || 'text') + '"' + (mode ? ' inputmode="' + mode + '"' : '') + ' autocomplete="' + ac + '" value="' + esc(val) + '" required></div>';
+}
 function renderContact() {
   track('contact_view');
   var c = state.contact || {};
   var h = progressHtml(5) + matchHtml();
   h += '<h2 class="q" style="margin-top:22px">' + esc(t('cTtl')) + '</h2><p class="qhelp">' + esc(t('cHelp')) + '</p>';
   h += '<form id="cForm" novalidate><div class="fields">'
-    + '<div class="field"><label for="fName">' + esc(t('fName')) + '</label><input id="fName" name="name" autocomplete="name" value="' + esc(c.name) + '" required></div>'
-    + '<div class="field"><label for="fBiz">' + esc(t('fBiz')) + '</label><input id="fBiz" name="business" autocomplete="organization" value="' + esc(c.business) + '"></div>'
-    + '<div class="field"><label for="fPhone">' + esc(t('fPhone')) + '</label><input id="fPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(c.phone) + '" required></div>'
-    + '<div class="field"><label for="fEmail">' + esc(t('fEmail')) + '</label><input id="fEmail" name="email" type="email" inputmode="email" autocomplete="email" value="' + esc(c.email) + '"></div>'
+    + fieldHtml('fName', 'name', t('fName'), c.name, 'text', null, 'name')
+    + fieldHtml('fBiz', 'business', t('fBiz'), c.business, 'text', null, 'organization')
+    + fieldHtml('fPhone', 'phone', t('fPhone'), c.phone, 'tel', 'tel', 'tel')
+    + fieldHtml('fEmail', 'email', t('fEmail'), c.email, 'email', 'email', 'email')
     + '</div><div class="err" id="cErr"></div>'
     + '<div class="qnav"><button type="button" class="back" id="qBack">&larr; ' + esc(t('back')) + '</button><button type="submit" class="btn" id="cBtn">' + esc(t('cBtn')) + '</button></div></form>';
   card.innerHTML = h;
   document.getElementById('qBack').addEventListener('click', function () { state.phase = 'quiz'; state.step = steps().length - 1; renderQuiz(); });
   document.getElementById('cForm').addEventListener('submit', submitContact);
+  card.querySelectorAll('.field input').forEach(function (i) { i.addEventListener('input', function () { i.classList.remove('bad'); }); });
 }
 
-async function submitContact(e) {
-  e.preventDefault();
-  var name = document.getElementById('fName').value.trim(), business = document.getElementById('fBiz').value.trim();
-  var phone = document.getElementById('fPhone').value.trim(), email = document.getElementById('fEmail').value.trim();
-  var err = document.getElementById('cErr'), btn = document.getElementById('cBtn');
-  var digits = phone.replace(/\D/g, '');
-  function fail(m) { err.textContent = m; err.style.display = 'block'; }
-  if (!name) return fail(t('errName'));
-  if (!(digits.length === 10 || (digits.length === 11 && digits[0] === '1'))) return fail(t('errPhone'));
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail(t('errEmail'));
-  err.style.display = 'none'; btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
-  state.contact = { name: name, business: business, phone: phone, email: email };
-  try {
-    var r = await fetch('/api/public/funnel-lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+// Save the lead in the background. The calendar shows at once; book() waits on
+// this promise, so the slot is always stamped on the right lead.
+function saveLead() {
+  var c = state.contact;
+  state.leadPromise = fetch('/api/public/funnel-lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       site: SITE, session_id: sid, visitor_id: vid, lid: LID, t: TOK, lang: lang, path: location.pathname,
-      name: name, business: business, phone: phone, email: email, answers: state.answers }) });
-    var j = await r.json().catch(function () { return {}; });
-    if (!r.ok) throw new Error(j.error || 'http_' + r.status);
-    state.lead = j.lead_id; state.tok = j.t;
-    state.phase = 'result'; state.from = 0; state.slot = null; state.dayKey = null;
-    renderQuiz(); scrollToCard();
-  } catch (ex) {
-    btn.disabled = false; btn.textContent = t('cBtn'); fail(t('errNet'));
+      name: c.name, business: c.business, phone: c.phone, email: c.email, answers: state.answers }) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'http_' + r.status); return j; }); })
+    .then(function (j) { state.lead = j.lead_id; state.tok = j.t; return j; })
+    .catch(function () { return null; });
+  return state.leadPromise;
+}
+
+function submitContact(e) {
+  e.preventDefault();
+  var ids = { name: 'fName', business: 'fBiz', phone: 'fPhone', email: 'fEmail' };
+  var v = {}, k;
+  for (k in ids) { var el = document.getElementById(ids[k]); el.classList.remove('bad'); v[k] = el.value.trim(); }
+  var err = document.getElementById('cErr');
+  var digits = v.phone.replace(/\D/g, '');
+  var bad = [], msg = null;
+  for (k in ids) if (!v[k]) bad.push(k);
+  if (bad.length > 1) msg = t('errAll');
+  else if (bad.length === 1) msg = t({ name: 'errName', business: 'errBiz', phone: 'errPhone', email: 'errEmailMissing' }[bad[0]]);
+  else if (!(digits.length === 10 || (digits.length === 11 && digits[0] === '1'))) { bad.push('phone'); msg = t('errPhone'); }
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.email)) { bad.push('email'); msg = t('errEmail'); }
+  if (msg) {
+    bad.forEach(function (x) { document.getElementById(ids[x]).classList.add('bad'); });
+    err.textContent = msg; err.style.display = 'block';
+    document.getElementById(ids[bad[0]]).focus();
+    return;
   }
+  err.style.display = 'none';
+  state.contact = v;
+  state.lead = null; state.tok = null;
+  saveLead();
+  state.phase = 'result'; state.from = 0; state.slot = null; state.dayKey = null; state.picker = false; state.calMonth = null;
+  renderQuiz(); scrollToCard();
 }
 
 function renderResult() {
@@ -550,41 +586,91 @@ function fmtDay(iso) {
            md: new Intl.DateTimeFormat(loc, { month: 'short', day: 'numeric', timeZone: 'America/New_York' }).format(d) };
 }
 function fmtTime(iso) { return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(iso)); }
+function etHour(iso) { return parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/New_York' }).format(new Date(iso)), 10); }
 function dayKeyOf(iso) { return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/New_York' }).format(new Date(iso)); }
 function fmtWhen(iso) {
   return new Intl.DateTimeFormat(lang === 'es' ? 'es-US' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(iso));
 }
+// Day keys are yyyy-mm-dd in Eastern time; arithmetic on them runs in UTC so DST never shifts a day.
+function keyToUtc(k) { var p = k.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); }
+function utcToKey(ms) { return new Date(ms).toISOString().slice(0, 10); }
+function daysBetween(k1, k2) { return Math.round((keyToUtc(k2) - keyToUtc(k1)) / 86400000); }
+var MAX_AHEAD_DAYS = 58;
 
 async function loadSlots(mode) {
   try {
-    var r = await fetch('/api/public/blason-slots?mode=' + mode + '&days=7&from=' + state.from);
+    var r = await fetch('/api/public/blason-slots?mode=' + mode + '&days=6&from=' + state.from);
     var j = await r.json();
     state.slots = j.slots || [];
   } catch (e) { state.slots = []; }
   renderCal(mode);
 }
+
+function miniCalHtml() {
+  var today = dayKeyOf(new Date().toISOString());
+  var maxKey = utcToKey(keyToUtc(today) + MAX_AHEAD_DAYS * 86400000);
+  if (!state.calMonth) { var sk = state.dayKey || today; state.calMonth = { y: +sk.slice(0, 4), m: +sk.slice(5, 7) }; }
+  var y = state.calMonth.y, m = state.calMonth.m;
+  var firstDow = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  var dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  var loc = lang === 'es' ? 'es-US' : 'en-US';
+  var title = new Intl.DateTimeFormat(loc, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, 1)));
+  var canPrev = (y * 12 + m) > (+today.slice(0, 4) * 12 + +today.slice(5, 7));
+  var canNext = (y * 12 + m) < (+maxKey.slice(0, 4) * 12 + +maxKey.slice(5, 7));
+  var h = '<div class="mini" id="mini"><div class="mhead"><button type="button" id="mPrev" aria-label="Previous month" ' + (canPrev ? '' : 'disabled') + '>&lsaquo;</button><b>' + esc(title.charAt(0).toUpperCase() + title.slice(1)) + '</b><button type="button" id="mNext" aria-label="Next month" ' + (canNext ? '' : 'disabled') + '>&rsaquo;</button></div><div class="mgrid">';
+  (lang === 'es' ? ['D', 'L', 'M', 'M', 'J', 'V', 'S'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).forEach(function (w) { h += '<span class="wd">' + w + '</span>'; });
+  for (var i = 0; i < firstDow; i++) h += '<span></span>';
+  for (var d = 1; d <= dim; d++) {
+    var k = y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    var dow = (firstDow + d - 1) % 7;
+    var off = dow === 0 || dow === 6 || k < today || k > maxKey;
+    h += '<button type="button" class="md ' + (k === state.dayKey ? 'on ' : '') + (k === today ? 'today' : '') + '" data-k="' + k + '" ' + (off ? 'disabled' : '') + '>' + d + '</button>';
+  }
+  return h + '</div></div>';
+}
+
 function renderCal(mode) {
   var host = document.getElementById('calHost');
   var byDay = {}, order = [];
   state.slots.forEach(function (s) { var k = dayKeyOf(s.start); if (!byDay[k]) { byDay[k] = []; order.push(k); } byDay[k].push(s); });
-  if (!state.dayKey || !byDay[state.dayKey]) state.dayKey = order[0] || null;
+  if (!state.dayKey || !byDay[state.dayKey]) state.dayKey = order[0] || state.dayKey;
   var h = '';
   if (!order.length) h += '<p class="micro">' + esc(t('noSlots')) + '</p>';
   else {
     h += '<div class="days">';
     order.forEach(function (k) { var f = fmtDay(byDay[k][0].start); h += '<button type="button" class="day ' + (k === state.dayKey ? 'on' : '') + '" data-k="' + k + '">' + esc(f.wd) + '<span>' + esc(f.md) + '</span></button>'; });
-    h += '</div><div class="times">';
-    (byDay[state.dayKey] || []).forEach(function (s) { h += '<button type="button" class="time ' + (state.slot === s.start ? 'on' : '') + '" data-s="' + s.start + '">' + fmtTime(s.start) + '</button>'; });
     h += '</div>';
+    var am = [], pm = [];
+    (byDay[state.dayKey] || []).forEach(function (s) { (etHour(s.start) < 12 ? am : pm).push(s); });
+    function group(label, list) {
+      if (!list.length) return '';
+      var g = '<div class="tgroup"><div class="glbl">' + esc(label) + '</div><div class="times">';
+      list.forEach(function (s) { g += '<button type="button" class="time ' + (state.slot === s.start ? 'on' : '') + '" data-s="' + s.start + '">' + fmtTime(s.start) + '</button>'; });
+      return g + '</div></div>';
+    }
+    h += group(t('morning'), am) + group(t('afternoon'), pm);
   }
-  h += '<div class="calmeta"><button type="button" id="calPrev" ' + (state.from === 0 ? 'disabled' : '') + '>' + esc(t('earlier')) + '</button><span>' + esc(t('tz')) + '</span><button type="button" id="calNext">' + esc(t('later')) + '</button></div>';
+  h += '<div class="calmeta"><span>' + esc(t('tz')) + '</span><button type="button" id="calAnother" class="' + (state.picker ? 'on' : '') + '">' + esc(t('another')) + '</button></div>';
+  if (state.picker) h += miniCalHtml();
   h += '<div class="err" id="bErr"></div>';
   h += '<div class="qnav" style="justify-content:flex-end"><button type="button" class="btn" id="bBtn" ' + (state.slot ? '' : 'disabled') + '>' + esc(state.slot ? t('confirm').replace('{when}', fmtWhen(state.slot)) : t('confirmEmpty')) + '</button></div>';
   host.innerHTML = h;
   host.querySelectorAll('.day').forEach(function (b) { b.addEventListener('click', function () { state.dayKey = b.getAttribute('data-k'); state.slot = null; renderCal(mode); }); });
   host.querySelectorAll('.time').forEach(function (b) { b.addEventListener('click', function () { state.slot = b.getAttribute('data-s'); renderCal(mode); }); });
-  document.getElementById('calPrev').addEventListener('click', function () { state.from = Math.max(0, state.from - 7); state.dayKey = null; state.slot = null; loadSlots(mode); });
-  document.getElementById('calNext').addEventListener('click', function () { state.from += 7; state.dayKey = null; state.slot = null; loadSlots(mode); });
+  document.getElementById('calAnother').addEventListener('click', function () { state.picker = !state.picker; state.calMonth = null; renderCal(mode); });
+  var mp = document.getElementById('mPrev'), mn = document.getElementById('mNext');
+  if (mp) mp.addEventListener('click', function () { var c = state.calMonth; c.m--; if (c.m < 1) { c.m = 12; c.y--; } renderCal(mode); });
+  if (mn) mn.addEventListener('click', function () { var c = state.calMonth; c.m++; if (c.m > 12) { c.m = 1; c.y++; } renderCal(mode); });
+  host.querySelectorAll('.md:not([disabled])').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-k');
+      state.from = daysBetween(dayKeyOf(new Date().toISOString()), k);
+      state.dayKey = k; state.slot = null; state.picker = false; state.calMonth = null;
+      track('cta_click', { answer: 'calendar_day', meta: { day: k } });
+      host.querySelector('#mini').innerHTML = '<p class="micro">…</p>';
+      loadSlots(mode);
+    });
+  });
   document.getElementById('bBtn').addEventListener('click', function () { book(mode); });
 }
 
@@ -593,6 +679,9 @@ async function book(mode) {
   if (!state.slot) return;
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span> ' + esc(t('booking'));
   try {
+    // The lead save started when they left the form; wait for it here, retry once if it failed.
+    if (!state.lead && state.contact) { if (!(await state.leadPromise)) await saveLead(); }
+    if (!state.lead && !LID) throw new Error('no_lead');
     var r = await fetch('/api/public/blason-book', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       site: SITE, mode: mode, start_iso: state.slot, session_id: sid, visitor_id: vid, lang: lang, path: location.pathname,
       lid: state.lead != null ? state.lead : LID, t: state.tok || TOK,
