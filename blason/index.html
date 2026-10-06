@@ -43,21 +43,15 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 .lang button.on{background:var(--navy);color:#fff}
 
 /* hero */
-.hero{padding-block:clamp(36px,6vw,72px) 0;display:grid;gap:28px 56px;align-items:center}
-@media(min-width:900px){.hero{grid-template-columns:1.1fr .9fr}}
-@media(max-width:899px){.hero{text-align:center;gap:22px}.hero h1{margin-inline:auto;order:1}.hero .videowrap{order:2}.hero .under{order:3}.hero .facts{order:4;margin-top:8px}.hero .facts div{grid-template-columns:1fr;justify-items:center;gap:4px;padding:16px 0}.hero .facts b{font-size:13px;letter-spacing:.14em;color:var(--navy)}.hero .facts span{max-width:30ch}}
-.hero h1{font-size:clamp(38px,5.6vw,66px);max-width:14ch}
+.hero{padding-block:clamp(36px,6vw,72px) 0;display:grid;gap:22px;text-align:center;justify-items:center}
+.hero h1{font-size:clamp(26px,4.3vw,50px);letter-spacing:-.025em;line-height:1.1;color:var(--ink)}
 .hero h1 .brk{display:none}
-@media(max-width:899px){.hero h1{font-size:clamp(25px,7.3vw,40px);max-width:none;letter-spacing:-.025em;line-height:1.1}.hero h1 .brk{display:inline}}
-.hero h1 span{color:var(--navy)}
-.facts{display:grid;gap:0}
-.facts div{padding:18px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
-.facts div:last-child{border-bottom:1px solid var(--line)}
-.facts b{font-weight:700;font-size:20px;color:var(--navy);line-height:1.35;font-variant-numeric:tabular-nums}
-.facts span{font-weight:700;font-size:clamp(18px,1.7vw,21px);line-height:1.35;color:var(--ink)}
+@media(min-width:900px){.hero h1{white-space:nowrap}}
+@media(max-width:899px){.hero h1{font-size:clamp(25px,7.3vw,40px)}.hero h1 .brk{display:inline}}
+.hero .tag{font-size:clamp(17px,1.8vw,21px);line-height:1.45;color:var(--ink-2);max-width:56ch;margin-top:-6px;text-wrap:balance}
 
 /* video */
-.videowrap{position:relative;width:100%;grid-column:1/-1;margin-top:clamp(6px,2vw,20px);aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#101830;box-shadow:0 30px 70px -40px rgba(20,26,46,.6)}
+.videowrap{position:relative;width:100%;margin-top:clamp(2px,1vw,10px);aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#101830;box-shadow:0 30px 70px -40px rgba(20,26,46,.6)}
 .videowrap iframe,.videowrap video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .poster{position:absolute;inset:0;width:100%;height:100%;border:0;background:radial-gradient(110% 80% at 15% 0%,#2E54B0 0%,#1B346F 40%,#0F1830 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;color:#fff;padding:24px;text-align:center}
 .poster[style*="background-image"]{background-size:cover;background-position:center;justify-content:flex-end;padding-bottom:22px;gap:6px}
@@ -72,41 +66,12 @@ h1,h2,h3{font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance
 .poster .orb::after{content:"";width:0;height:0;border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent var(--navy);margin-left:6px}
 .poster .ptitle{font-size:clamp(20px,2.6vw,30px);font-weight:700;max-width:24ch;line-height:1.2;letter-spacing:-.01em}
 .poster .plen{font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.75;font-weight:700}
-.under{display:flex;flex-direction:column;align-items:center;gap:12px;grid-column:1/-1;margin-top:-6px;text-align:center}
+.under{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:-6px;text-align:center}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--navy);color:#fff;border:1px solid var(--navy);border-radius:8px;padding:18px 36px;font-size:17px;font-weight:700;text-decoration:none;transition:background .2s;min-height:56px}
 .btn:hover{background:var(--navy-deep)}
 .btn:focus-visible,.opt:focus-visible,.time:focus-visible,.day:focus-visible,.tile:focus-visible{outline:2px solid var(--navy);outline-offset:3px}
 .btn[disabled]{opacity:.5;cursor:default}
 .micro{font-size:15px;color:var(--muted)}
-
-/* showroom grid */
-.floor{margin-top:clamp(56px,8vw,96px)}
-.floor h2{font-size:clamp(30px,4vw,44px)}
-.floor .lede{font-size:clamp(17px,1.6vw,20px);color:var(--ink-2);max-width:60ch;margin-top:12px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:28px}
-@media(min-width:640px){.grid{grid-template-columns:repeat(3,1fr)}}
-@media(min-width:900px){.grid{grid-template-columns:repeat(5,1fr)}}
-.tile{display:block;width:100%;text-align:left;font:inherit;text-decoration:none;color:var(--ink);background:var(--bg-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;padding:0;transition:border-color .2s,transform .2s}
-.tile:hover{border-color:var(--navy);transform:translateY(-2px)}
-.tile img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;background:#fff;display:block}
-.tile figcaption{padding:10px 12px 12px;border-top:1px solid var(--line)}
-.tile b{display:block;font-size:14px;font-weight:700;line-height:1.3}
-.tile small{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
-.tile.more{background:var(--navy);color:#fff;border-color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;min-height:100%;text-align:center}
-.tile.more .arrow{width:52px;height:52px;border-radius:50%;border:1.5px solid rgba(255,255,255,.6);display:grid;place-items:center;font-size:24px;line-height:1}
-.tile.more b{font-size:19px;line-height:1.2;color:#fff}
-.tile.more small{color:rgba(255,255,255,.75);font-size:13.5px;margin-top:0}
-.floor .after{margin-top:18px;font-size:15px;color:var(--muted)}
-
-/* social */
-.social{margin-top:clamp(44px,6vw,72px);display:grid;gap:16px;padding:clamp(22px,3vw,34px);background:var(--navy);color:#fff;border-radius:12px}
-@media(min-width:760px){.social{grid-template-columns:1fr auto;align-items:center}}
-.social h2{font-size:clamp(24px,3vw,32px);color:#fff}
-.social p{color:rgba(255,255,255,.82);margin-top:8px;font-size:17px;max-width:52ch}
-.social .links{display:flex;flex-wrap:wrap;gap:10px}
-.social .links a{display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid rgba(255,255,255,.35);border-radius:8px;color:#fff;text-decoration:none;font-weight:700;font-size:15px;background:rgba(255,255,255,.06)}
-.social .links a:hover{background:rgba(255,255,255,.14)}
-.social svg{width:18px;height:18px;fill:currentColor}
 
 /* consultation card */
 .quiz{margin-top:clamp(56px,8vw,96px)}
@@ -164,13 +129,6 @@ h2.q{font-size:clamp(24px,3vw,32px);margin-top:8px}
 .done p{color:var(--ink-2);margin-top:10px}
 .done .when{font-size:22px;font-weight:700;color:var(--navy-deep);margin-top:12px}
 
-/* people */
-.people{margin-top:clamp(48px,7vw,80px);display:grid;gap:16px}
-@media(min-width:760px){.people{grid-template-columns:1fr 1fr}}
-.person{border:1px solid var(--line);border-radius:12px;padding:22px 24px}
-.person h3{font-size:22px;margin-top:6px}
-.person p{color:var(--ink-2);font-size:16.5px;margin-top:8px}
-
 /* faq */
 .faq{margin-top:clamp(56px,8vw,96px)}
 .faq h2{font-size:clamp(30px,4vw,44px)}
@@ -214,12 +172,8 @@ footer img{width:96px;height:52px;object-fit:contain}
 
 <main class="wrap">
   <section class="hero">
-    <h1 data-i18n="h1">The <span>$80,000 mistake</span><br class="brk"> in your treatment room.</h1>
-    <div class="facts" aria-label="Three facts">
-      <div><b>1</b><span data-i18n="fact1">All aesthetic machines come from the same factories. Ours included.</span></div>
-      <div><b>2</b><span data-i18n="fact2">When a machine has a brand name, you pay twice: once for the machine, and once for the logo.</span></div>
-      <div><b>3</b><span data-i18n="fact3">Skip that markup and you can afford the best machine instead of settling for something cheaper.</span></div>
-    </div>
+    <h1 data-i18n="h1">The $80,000 mistake<br class="brk"> in your treatment room.</h1>
+    <p class="tag" data-i18n="tag">Brand names charge you twice: once for the machine, once for the logo. Skip the logo and buy the better machine.</p>
   <div class="videowrap" id="videowrap">
     <button type="button" class="poster" id="poster" aria-label="Play the video">
       <span class="orb"></span>
@@ -237,24 +191,6 @@ footer img{width:96px;height:52px;object-fit:contain}
     <div class="card" id="quizCard"></div>
   </section>
 
-  <section class="social">
-    <div>
-      <h2 data-i18n="socTtl">Watch the machines running on real clients</h2>
-      <p data-i18n="socP">Manuel posts from the showroom floor and from client visits. Have a look, then come back and pick your time.</p>
-    </div>
-    <div class="links">
-      <a href="https://www.instagram.com/blasononline/" rel="noopener" target="_blank" data-track="instagram"><svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2M12 0C8.7 0 8.3 0 7.1.1 5.8.1 4.9.3 4.1.6c-.8.3-1.5.7-2.2 1.4C1.3 2.7.9 3.4.6 4.1.3 4.9.1 5.8.1 7.1 0 8.3 0 8.7 0 12s0 3.7.1 4.9c.1 1.3.3 2.2.6 2.9.3.8.7 1.5 1.4 2.2.7.7 1.4 1.1 2.1 1.4.8.3 1.6.5 2.9.6 1.2.1 1.6.1 4.9.1s3.7 0 4.9-.1c1.3-.1 2.2-.3 2.9-.6.8-.3 1.5-.7 2.2-1.4.7-.7 1.1-1.4 1.4-2.2.3-.8.5-1.6.6-2.9.1-1.2.1-1.6.1-4.9s0-3.7-.1-4.9c-.1-1.3-.3-2.2-.6-2.9-.3-.8-.7-1.5-1.4-2.2C21.3 1.3 20.6.9 19.9.6 19.1.3 18.2.1 16.9.1 15.7 0 15.3 0 12 0zm0 5.8a6.2 6.2 0 1 0 0 12.4 6.2 6.2 0 0 0 0-12.4zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.4-11.8a1.4 1.4 0 1 0 0 2.9 1.4 1.4 0 0 0 0-2.9z"/></svg>@blasononline</a>
-      <a href="https://www.youtube.com/user/blasononline" rel="noopener" target="_blank" data-track="youtube"><svg viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>YouTube</a>
-      <a href="https://www.facebook.com/BlasonSpaEquip/" rel="noopener" target="_blank" data-track="facebook"><svg viewBox="0 0 24 24"><path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.3l-.5 3.5h-2.8v8.4A12 12 0 0 0 24 12z"/></svg>Facebook</a>
-    </div>
-  </section>
-
-  <section class="floor">
-    <h2 data-i18n="floorTtl">What Manuel carries</h2>
-    <p class="lede" data-i18n="floorLede">Most of these are on the floor in Miami. Tap the one you're shopping for and the questions start there.</p>
-    <div class="grid" id="grid"></div>
-    <p class="after" data-i18n="floorAfter">In Florida, lasers, IPL and most energy devices have to run under a doctor, NP or PA. Facials and most body machines don't. Manuel tells you where your license lands.</p>
-  </section>
 
   <section class="faq narrow">
     <h2 data-i18n="faqTtl">Questions owners ask</h2>
@@ -283,19 +219,6 @@ footer img{width:96px;height:52px;object-fit:contain}
    ========================================================================= */
 var VIDEO = { mp4: 'https://zsrskphpvgautfgklgxf.supabase.co/storage/v1/object/public/public-video/blason-vsl.mp4', youtube: '', loom: '', poster: '/blason/poster.jpg', length: { en: '4 min', es: '4 min' } };
 
-/* Showroom grid. Live catalog at blasononline.com, 2026-10-02. Names only,
-   never a price. HIFU 1495 and Bella Corpo 1468 are left out (sold out). */
-var MACHINES = [
-  ['galaxy',   'Scala Ice Galaxy',          'Diode laser, 4 wavelengths',     'Láser diodo, 4 longitudes',        'laser_hair'],
-  ['fashion',  'Scala Ice Fashion + YAG',   'Hair removal, pigment, tattoo',  'Depilación, manchas, tatuajes',    'laser_hair'],
-  ['planet',   'Scala Ice Planet',          'High-volume hair removal',       'Depilación de alto volumen',       'laser_hair'],
-  ['co2',      'CO2 Fractional',            'Scars, wrinkles, texture',       'Cicatrices, arrugas, textura',     'resurfacing'],
-  ['pico',     'PicoLaser',                 'Tattoo and pigment removal',     'Tatuajes y manchas',               'tattoo'],
-  ['hidra',    'Hidra Acqua Skin',          'Hydrodermabrasion facials',      'Hidrodermoabrasión',               'facials'],
-  ['cold',     'Cold Therapy',              'Fat freezing + RF + cavitation', 'Criolipólisis + RF + cavitación',  'body'],
-  ['destroy',  'Cavitation Destroy + RF',   'Body contouring',                'Moldeo corporal',                  'body'],
-  ['bella',    'Bella Corpo Roller & Vacuum', 'Cellulite, drainage',          'Celulitis, drenaje',               'body'],
-];
 
 /* ------------------------------------------------------------------------ */
 var SITE = 'blason';
@@ -319,29 +242,17 @@ function track(event, extra) {
 /* ---------------------------- copy, EN + ES ------------------------------ */
 var T = {
   en: {
-    h1: 'The <span>$80,000 mistake</span><br class="brk"> in your treatment room.',
-    fact1: 'All aesthetic machines come from the same factories. Ours included.',
-    fact2: 'When a machine has a brand name, you pay twice: once for the machine, and once for the logo.',
-    fact3: 'Skip that markup and you can afford the best machine instead of settling for something cheaper.',
+    h1: 'The $80,000 mistake<br class="brk"> in your treatment room.',
+    tag: 'Brand names charge you twice: once for the machine, once for the logo. Skip the logo and buy the better machine.',
     ptitle: 'Before you buy or replace a machine, watch this',
     cta: 'Find the right machine for your room', ctaShort: 'Find your machine',
-    floorTtl: 'What Manuel carries',
-    floorLede: "Most of these are on the floor in Miami. Tap the one you're shopping for and the questions above start there.",
-    moreTtl: 'And more', moreSub: 'Ask Manuel what fits',
-    floorAfter: "In Florida, lasers, IPL and most energy devices have to run under a doctor, NP or PA. Facials and most body machines don't. Manuel tells you where your license lands.",
-    socTtl: 'Watch the machines running on real clients',
-    socP: 'Manuel posts from the showroom floor and from client visits. Have a look, then pick your time above.',
-    qTtl: 'Which machine belongs in your room?', qSub: 'Five questions. Then you see what Manuel would show you first, and pick a time.',
-    p1e: "Who you'll talk to", p1p: 'Owner of Blason Spa Equipment, the importer at 3110 W 84th St, Miami. He imports the machines, sets them up, trains your team and picks up the phone when you call.',
-    p2e: 'Who confirms your time', p2p: "Handles Blason's outreach and scheduling. After you pick a time, Remy texts you to confirm it.",
+    qTtl: 'See what the same money buys without the logo', qSub: 'Four quick questions. You see which machine Manuel would show you first, then pick a time to talk to him.',
     faqTtl: 'Questions owners ask',
     faq: [
       ['Is it really the same machine as the brand names?', "Yes. The machines come out of the same factories the brand names use, ours included. What the brand adds is the logo, the trade-show booth and the regional rep, and you pay for all three. Ask for the spec sheet of the machine you were quoted and Manuel will put ours next to it, line by line."],
       ['How do I know it will hold up?', "Every unit is unboxed, set up and tested in Miami before it goes to you. You can run the exact machine at the showroom before you buy. And if Manuel doesn't think a machine fits your room or your license, he'll say so. He would rather lose the sale than put the wrong machine in a room with his name on the invoice."],
       ['What happens when it breaks?', "You call Manuel. Parts are stocked in Miami, and the person who sold you the machine is the person who fixes it. Ask anyone who has waited six weeks for a brand-name tech what that's worth."],
       ['What about the warranty?', "Every machine carries one, handled from Miami. The length depends on the machine, and Manuel puts it in writing before you buy, so you know exactly what's covered."],
-      ['Do I have to buy tips and consumables from you?', 'Tips, handles and consumables for the machines on the floor are stocked in Miami, so you never wait on a container. Manuel goes over the per-tip numbers on the call.'],
-      ['Who can run a laser in Florida?', "Lasers, IPL and most energy devices have to run under a doctor, nurse practitioner or PA on your team. Estheticians can run the facial and most of the body machines without one. Manuel walks you through what your license covers today and what adding a provider opens up."],
       ['What happens on the call, or at the showroom?', "Manuel asks what you run today, what clients ask for, and who's on your team. Then he tells you which machine fits, which one doesn't, and the real number for your room. Ten minutes on the phone, or about twenty at the showroom with the machines on. If the honest answer is not yet, he'll tell you that too."],
       ['Can I pay over time?', 'Yes. Most owners finance it. Manuel goes over the options on the call with your room\'s numbers in front of him.'],
       ['Is it in stock, and how fast can I have it?', 'Manuel sells from stock in Miami. Local delivery and setup are usually the same week. The rest of Florida ships. Ask him for the date on the machine you want.'],
@@ -349,23 +260,23 @@ var T = {
       ['Why did I get this email, and how did you get my information?', "You run a licensed spa, clinic or salon in Florida and your business listing is public. Remy reaches out to owners one at a time on behalf of Blason. If you'd rather not hear from us again, reply \"no thanks\" to the email and that's the end of it."]
     ],
     stepOf: 'Question {n} of {m}', back: 'Back',
-    q1: 'What are you looking to add or replace?',
-    q1o: [['laser_hair', 'Laser hair removal', 'Diode, all skin types'], ['resurfacing', 'Skin: resurfacing, scars, tightening', 'CO2, RF microneedling'], ['body', 'Body: contouring, fat, cellulite', 'Cavitation, fat freezing, roller'], ['facials', 'Facials: hydro, LED, multifunction', 'The ones clients come back for every month'], ['tattoo', 'Tattoo or pigment removal', 'Nd:YAG, pico, carbon peel'], ['notsure', "Not sure yet, show me what fits", '']],
+    q1: 'What do you want to add to your room?',
+    q1o: [['laser_hair', 'Laser hair removal', 'Diode, every skin type'], ['resurfacing', 'Skin: resurfacing, scars, tightening', 'CO2, RF microneedling'], ['body', 'Body: contouring, fat, cellulite', 'Cavitation, fat freezing, roller'], ['facials', 'Facials: hydro, LED, multifunction', 'The ones clients rebook every month'], ['tattoo', 'Tattoo or pigment removal', 'Nd:YAG, pico, carbon peel'], ['notsure', 'Not sure yet. Show me what fits.', '']],
     q2: 'Have you already been quoted on one?',
     q2o: [['brand', 'Yes, by a brand name', 'Bring the quote. Manuel puts his machine next to it.'], ['importer', 'Yes, by another importer', ''], ['replacing', "No, I'm replacing a machine I already own", ''], ['none', 'Not yet, just starting to look', '']],
     q3: 'Is there a doctor, nurse practitioner or PA on your team?',
-    q3h: 'In Florida this decides which machines you can run. No wrong answer, it just changes what Manuel shows you.',
+    q3h: 'In Florida this decides which machines your room can run. There is no wrong answer. It only changes what Manuel shows you first.',
     q3o: [['yes', 'Yes', 'A medical director or provider on staff'], ['no', 'No', 'Esthetician or cosmetology license'], ['planning', 'Not yet, planning to add one', '']],
-    q4: "What's driving it?",
-    q4o: [['expansion', 'A new room or a second location', ''], ['demand', 'Clients keep asking for a treatment I refer out', ''], ['aging', 'My current machine is old or down', ''], ['shopping', "I have a quote I don't love", '']],
-    q5: 'How would you rather talk to Manuel?',
-    q5o: [['showroom', 'Visit the Miami showroom', 'See the machines running. About 20 minutes.'], ['call', 'A 10-minute phone call', 'Manuel calls your cell. Ask him anything.']],
+    q4: 'Why now?',
+    q4o: [['expansion', 'A new room or a second location', ''], ['demand', 'Clients keep asking for a treatment I refer out', ''], ['aging', 'My machine is old or down', ''], ['shopping', 'I have a brand-name quote and the number stings', '']],
+    q5: 'How do you want to talk to Manuel?',
+    q5o: [['showroom', 'Visit the Miami showroom', 'Every machine is on. About 20 minutes.'], ['call', 'A 10-minute phone call', 'Manuel calls your cell and tells you straight what fits.']],
     cTtl: 'Where should Manuel reach you?',
     cHelp: 'Remy from Blason texts you to confirm the time.',
     fName: 'Your name', fBiz: 'Business name', fPhone: 'Cell phone', fEmail: 'Email',
     cBtn: 'Pick a time with Manuel',
     errName: 'Your name, please.', errPhone: 'A 10-digit cell number, please.', errEmail: "That email doesn't look right.", errNet: "Something went wrong on our end. Call or text (786) 837-6639 and we'll set it up by hand.",
-    mTtl: 'Manuel would probably show you this first',
+    mTtl: 'What Manuel would show you first',
     match: {
       laser_hair: ['The diode laser line.', "Four wavelengths including 1064 for darker skin, cooled tips, built to run all day. He'll ask which skin types you see most and what you're running today."],
       resurfacing: ['Resurfacing and tightening.', "Fractional CO2 for scars, deep lines and texture, and RF microneedling for tightening and acne scars. He'll ask what you refer out today."],
@@ -388,29 +299,17 @@ var T = {
     tz: 'Eastern time'
   },
   es: {
-    h1: 'El error de <span>$80,000</span><br class="brk"> en su cabina.',
-    fact1: 'Todas las máquinas estéticas salen de las mismas fábricas. Las nuestras también.',
-    fact2: 'Cuando la máquina tiene marca, paga dos veces: una por la máquina y otra por el logo.',
-    fact3: 'Sin ese sobreprecio, puede comprar la mejor máquina en vez de conformarse con una más barata.',
+    h1: 'El error de $80,000<br class="brk"> en su cabina.',
+    tag: 'Las marcas le cobran dos veces: una por la máquina y otra por el logo. Quítele el logo y compre la mejor máquina.',
     ptitle: 'Antes de comprar o cambiar una máquina, vea esto',
     cta: 'Encuentre la máquina para su cabina', ctaShort: 'Encuentre su máquina',
-    floorTtl: 'Lo que Manuel trae',
-    floorLede: 'La mayoría están en el showroom de Miami. Toque la que anda buscando y las preguntas de arriba empiezan por ahí.',
-    moreTtl: 'Y más', moreSub: 'Pregúntele a Manuel',
-    floorAfter: 'En Florida, los láseres, la IPL y la mayoría de los equipos de energía trabajan bajo un médico, enfermera practicante o PA. Las faciales y la mayoría de las de cuerpo, no. Manuel le dice dónde cae su licencia.',
-    socTtl: 'Vea las máquinas funcionando con clientas reales',
-    socP: 'Manuel publica desde el showroom y desde las visitas a clientes. Véalo, y después elija su hora arriba.',
-    qTtl: '¿Qué máquina va en su cabina?', qSub: 'Cinco preguntas. Después ve qué le mostraría Manuel primero, y elige la hora.',
-    p1e: 'Con quién va a hablar', p1p: 'Dueño de Blason Spa Equipment, el importador en 3110 W 84th St, Miami. Él importa las máquinas, las instala, entrena a su equipo y contesta el teléfono cuando usted llama.',
-    p2e: 'Quién confirma su hora', p2p: 'Maneja los contactos y la agenda de Blason. Después de elegir una hora, Remy le escribe por texto para confirmarla.',
+    qTtl: 'Vea lo que compra el mismo dinero sin el logo', qSub: 'Cuatro preguntas rápidas. Ve qué máquina le mostraría Manuel primero, y después elige la hora para hablar con él.',
     faqTtl: 'Lo que todos preguntan',
     faq: [
       ['¿De verdad es la misma máquina que las de marca?', 'Sí. Las máquinas salen de las mismas fábricas que usan las marcas, las nuestras también. Lo que la marca agrega es la etiqueta, el stand de la feria y el representante regional, y usted paga por las tres cosas. Pida la ficha técnica de la máquina que le cotizaron y Manuel pone la suya al lado, línea por línea.'],
       ['¿Cómo sé que va a aguantar?', 'Cada equipo se desempaca, se instala y se prueba en Miami antes de llegar a usted. Puede usar la misma máquina en el showroom antes de comprar. Y si Manuel no cree que una máquina le sirve a su cabina o a su licencia, se lo dice. Prefiere perder la venta antes que poner la máquina equivocada en una cabina con su nombre en la factura.'],
       ['¿Qué pasa cuando se daña?', 'Llama a Manuel. Los repuestos están en Miami, y la persona que le vendió la máquina es la misma que la arregla. Pregúntele a cualquiera que haya esperado seis semanas por un técnico de marca lo que eso vale.'],
       ['¿Y la garantía?', 'Todas las máquinas la tienen, y se atiende desde Miami. El tiempo depende de la máquina, y Manuel se la da por escrito antes de comprar, para que sepa exactamente qué cubre.'],
-      ['¿Tengo que comprarles las puntas y los consumibles?', 'Las puntas, los mangos y los consumibles de las máquinas del showroom están en Miami, así que nunca espera por un contenedor. Manuel le explica el costo por punta en la llamada.'],
-      ['¿Quién puede usar un láser en Florida?', 'Los láseres, la IPL y la mayoría de los equipos de energía trabajan bajo un médico, enfermera practicante o PA de su equipo. Las esteticistas pueden usar las máquinas faciales y la mayoría de las de cuerpo sin uno. Manuel le explica qué cubre su licencia hoy y qué se abre al agregar un proveedor.'],
       ['¿Qué pasa en la llamada, o en el showroom?', 'Manuel le pregunta qué usa hoy, qué piden las clientas y quién está en su equipo. Después le dice qué máquina le sirve, cuál no, y el número real para su cabina. Diez minutos por teléfono, o unos veinte en el showroom con las máquinas encendidas. Si la respuesta honesta es todavía no, también se lo dice.'],
       ['¿Puedo pagar a plazos?', 'Sí. La mayoría de los dueños la financia. Manuel le explica las opciones en la llamada con los números de su cabina en la mano.'],
       ['¿Está en stock, y qué tan rápido la tengo?', 'Manuel vende de su inventario en Miami. La entrega e instalación local normalmente es la misma semana. Al resto de la Florida se envía. Pídale la fecha de la máquina que quiere.'],
@@ -418,23 +317,23 @@ var T = {
       ['¿Por qué recibí este correo y cómo consiguieron mi información?', 'Usted tiene un spa, clínica o salón con licencia en Florida y los datos de su negocio son públicos. Remy contacta a los dueños uno por uno de parte de Blason. Si prefiere que no le escribamos más, responda "no gracias" al correo y ahí termina.']
     ],
     stepOf: 'Pregunta {n} de {m}', back: 'Atrás',
-    q1: '¿Qué busca agregar o reemplazar?',
-    q1o: [['laser_hair', 'Depilación láser', 'Diodo, todo tipo de piel'], ['resurfacing', 'Piel: resurfacing, cicatrices, tensado', 'CO2, microagujas con RF'], ['body', 'Cuerpo: moldeo, grasa, celulitis', 'Cavitación, criolipólisis, rodillo'], ['facials', 'Faciales: hidra, LED, multifunción', 'Los que las clientas repiten cada mes'], ['tattoo', 'Quitar tatuajes o manchas', 'Nd:YAG, pico, carbon peel'], ['notsure', 'No sé todavía, muéstreme qué me sirve', '']],
+    q1: '¿Qué quiere agregar a su cabina?',
+    q1o: [['laser_hair', 'Depilación láser', 'Diodo, todo tipo de piel'], ['resurfacing', 'Piel: resurfacing, cicatrices, tensado', 'CO2, microagujas con RF'], ['body', 'Cuerpo: moldeo, grasa, celulitis', 'Cavitación, criolipólisis, rodillo'], ['facials', 'Faciales: hidra, LED, multifunción', 'Los que las clientas repiten cada mes'], ['tattoo', 'Quitar tatuajes o manchas', 'Nd:YAG, pico, carbon peel'], ['notsure', 'No sé todavía. Muéstreme qué me sirve.', '']],
     q2: '¿Ya le cotizaron alguna?',
     q2o: [['brand', 'Sí, una marca', 'Traiga la cotización. Manuel pone su máquina al lado.'], ['importer', 'Sí, otro importador', ''], ['replacing', 'No, voy a reemplazar una que ya tengo', ''], ['none', 'Todavía no, apenas estoy mirando', '']],
     q3: '¿Hay un médico, enfermera practicante o PA en su equipo?',
-    q3h: 'En Florida esto decide qué máquinas puede usar. No hay respuesta mala, solo cambia lo que Manuel le muestra.',
+    q3h: 'En Florida esto decide qué máquinas puede usar su cabina. No hay respuesta mala. Solo cambia lo que Manuel le muestra primero.',
     q3o: [['yes', 'Sí', 'Director médico o proveedor en el equipo'], ['no', 'No', 'Licencia de esteticista o cosmetología'], ['planning', 'Todavía no, pienso agregar uno', '']],
-    q4: '¿Qué lo está moviendo?',
-    q4o: [['expansion', 'Una cabina nueva o un segundo local', ''], ['demand', 'Las clientas piden un tratamiento que refiero afuera', ''], ['aging', 'Mi máquina actual está vieja o dañada', ''], ['shopping', 'Tengo una cotización que no me convence', '']],
-    q5: '¿Cómo prefiere hablar con Manuel?',
-    q5o: [['showroom', 'Visitar el showroom en Miami', 'Ver las máquinas funcionando. Unos 20 minutos.'], ['call', 'Una llamada de 10 minutos', 'Manuel llama a su celular. Pregúntele lo que quiera.']],
+    q4: '¿Por qué ahora?',
+    q4o: [['expansion', 'Una cabina nueva o un segundo local', ''], ['demand', 'Las clientas piden un tratamiento que refiero afuera', ''], ['aging', 'Mi máquina está vieja o dañada', ''], ['shopping', 'Tengo una cotización de marca y el número duele', '']],
+    q5: '¿Cómo quiere hablar con Manuel?',
+    q5o: [['showroom', 'Visitar el showroom en Miami', 'Todas las máquinas encendidas. Unos 20 minutos.'], ['call', 'Una llamada de 10 minutos', 'Manuel llama a su celular y le dice de frente qué le sirve.']],
     cTtl: '¿A qué número le confirmamos?',
     cHelp: 'Remy, de Blason, le escribe por texto para confirmar la hora.',
     fName: 'Su nombre', fBiz: 'Nombre del negocio', fPhone: 'Celular', fEmail: 'Correo',
     cBtn: 'Elegir una hora con Manuel',
     errName: 'Su nombre, por favor.', errPhone: 'Un celular de 10 dígitos, por favor.', errEmail: 'Ese correo no se ve bien.', errNet: 'Algo falló de nuestro lado. Llame o escriba al (786) 837-6639 y lo agendamos a mano.',
-    mTtl: 'Manuel probablemente le mostraría esto primero',
+    mTtl: 'Lo que Manuel le mostraría primero',
     match: {
       laser_hair: ['La línea de láser de diodo.', 'Cuatro longitudes de onda, con la 1064 para piel oscura, punta fría, hecha para trabajar todo el día. Le va a preguntar qué tipos de piel atiende más y qué usa hoy.'],
       resurfacing: ['Resurfacing y tensado.', 'CO2 fraccionado para cicatrices, arrugas profundas y textura, y microagujas con RF para tensar y cicatrices de acné. Le va a preguntar qué refiere afuera hoy.'],
@@ -468,24 +367,6 @@ function applyLang() {
   document.getElementById('faqList').innerHTML = t('faq').map(function (q) {
     return '<details><summary>' + esc(q[0]) + '</summary><p>' + esc(q[1]) + '</p></details>';
   }).join('');
-  document.getElementById('grid').innerHTML = MACHINES.map(function (m) {
-    return '<button type="button" class="tile" data-machine="' + m[0] + '" data-interest="' + m[4] + '">'
-      + '<figure><img src="/blason/machines/' + m[0] + '.jpg" alt="' + esc(m[1]) + '" loading="lazy" width="800" height="1000">'
-      + '<figcaption><b>' + esc(m[1]) + '</b><small>' + esc(lang === 'es' ? m[3] : m[2]) + '</small></figcaption></figure></button>';
-  }).join('') + '<button type="button" class="tile more" data-machine="more" data-interest="notsure"><span class="arrow">&rarr;</span><b>' + esc(t('moreTtl')) + '</b><small>' + esc(t('moreSub')) + '</small></button>';
-  document.querySelectorAll('.tile').forEach(function (a) {
-    a.addEventListener('click', function () {
-      track('cta_click', { answer: 'machine_' + a.getAttribute('data-machine') });
-      // Pre-answer question 1 with this machine's line and open the quiz there.
-      if (state.phase === 'quiz') {
-        if (!state.started) { state.started = true; track('quiz_start'); }
-        state.answers.interest = a.getAttribute('data-interest');
-        track('quiz_step', { step: 1, answer: state.answers.interest, meta: { q: 'interest', via: 'tile' } });
-        state.step = 1; renderQuiz();
-      }
-      document.getElementById('quiz').scrollIntoView({ behavior: 'smooth' });
-    });
-  });
   safeSet(localStorage, 'bf_lang', lang);
   renderQuiz();
 }
@@ -495,7 +376,6 @@ document.querySelectorAll('.lang button').forEach(function (b) {
     lang = to; track('lang_switch', { answer: to }); applyLang();
   });
 });
-document.querySelectorAll('.social a[data-track]').forEach(function (a) { a.addEventListener('click', function () { track('cta_click', { answer: 'social_' + a.getAttribute('data-track') }); }); });
 
 /* ------------------------------- video ----------------------------------- */
 var played = false, marks = {};
@@ -564,7 +444,7 @@ function renderQuiz() {
   var k = STEPS[state.step], key = KEYS[k];
   var opts = t(k + 'o'), chosen = state.answers[key];
   var h = progressHtml(state.step + 1);
-  h += '<span class="caps">' + t('stepOf').replace('{n}', state.step + 1).replace('{m}', 5) + '</span>';
+  h += '<span class="caps">' + t('stepOf').replace('{n}', state.step + 1).replace('{m}', 4) + '</span>';
   h += '<h2 class="q">' + esc(t(k)) + '</h2>';
   if (T[lang][k + 'h']) h += '<p class="qhelp">' + esc(t(k + 'h')) + '</p>';
   h += '<div class="opts ' + (opts.length > 3 ? 'two' : '') + '">';
