@@ -92,6 +92,8 @@ h2.q{font-size:clamp(24px,3vw,32px);margin-top:8px}
 .opt b{display:block;font-weight:700}
 .opt small{display:block;color:var(--muted);font-size:14px;margin-top:2px}
 .opt .dot{flex:none;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);margin-top:4px}
+.opt img{flex:none;width:84px;height:84px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid var(--line);margin:-4px 0 -4px -4px}
+.opt.pic{align-items:center;padding:12px 16px 12px 12px}
 .opt.on .dot{border-color:var(--navy);background:var(--navy);box-shadow:inset 0 0 0 3px #fff}
 .qnav{display:flex;align-items:center;justify-content:space-between;margin-top:22px;gap:12px}
 .back{background:none;border:0;color:var(--muted);font-weight:500;font-size:15px;padding:8px 2px}
@@ -246,22 +248,22 @@ var T = {
     tag: 'Brand names charge you twice: once for the machine, once for the logo. Skip the logo and buy the better machine.',
     ptitle: 'Before you buy or replace a machine, watch this',
     cta: 'Find the right machine for your room', ctaShort: 'Find your machine',
-    qTtl: 'See what the same money buys without the logo', qSub: 'Four quick questions. You see which machine Manuel would show you first, then pick a time to talk to him.',
+    qTtl: 'See what the same money buys without the logo', qSub: 'A few quick questions. You see which machine Manuel would show you first, then pick a time to talk to him.',
     faqTtl: 'Questions owners ask',
     faq: [
       ['Is it really the same machine as the brand names?', "Yes. The machines come out of the same factories the brand names use, ours included. What the brand adds is the logo, the trade-show booth and the regional rep, and you pay for all three. Ask for the spec sheet of the machine you were quoted and Manuel will put ours next to it, line by line."],
       ['How do I know it will hold up?', "Every unit is unboxed, set up and tested in Miami before it goes to you. You can run the exact machine at the showroom before you buy. And if Manuel doesn't think a machine fits your room or your license, he'll say so. He would rather lose the sale than put the wrong machine in a room with his name on the invoice."],
       ['What happens when it breaks?', "You call Manuel. Parts are stocked in Miami, and the person who sold you the machine is the person who fixes it. Ask anyone who has waited six weeks for a brand-name tech what that's worth."],
       ['What about the warranty?', "Every machine carries one, handled from Miami. The length depends on the machine, and Manuel puts it in writing before you buy, so you know exactly what's covered."],
-      ['What happens on the call, or at the showroom?', "Manuel asks what you run today, what clients ask for, and who's on your team. Then he tells you which machine fits, which one doesn't, and the real number for your room. Ten minutes on the phone, or about twenty at the showroom with the machines on. If the honest answer is not yet, he'll tell you that too."],
+      ['What happens on the call, or at the showroom?', "Manuel asks what you run today, what clients ask for, and who's on your team. Then he tells you which machine fits, which one doesn't, and the real number for your room. A phone call, or about twenty minutes at the showroom with the machines on. If the honest answer is not yet, he'll tell you that too."],
       ['Can I pay over time?', 'Yes. Most owners finance it. Manuel goes over the options on the call with your room\'s numbers in front of him.'],
       ['Is it in stock, and how fast can I have it?', 'Manuel sells from stock in Miami. Local delivery and setup are usually the same week. The rest of Florida ships. Ask him for the date on the machine you want.'],
-      ["I'm not in Miami. Does this still work?", "Yes. We ship anywhere in Florida and train remotely. Pick the 10-minute phone call: Manuel asks what you run today and tells you straight which machine makes sense, or doesn't. If you can come in, the showroom is open Monday to Friday, 9am to 4pm, by appointment."],
+      ["I'm not in Miami. Does this still work?", "Yes. We ship anywhere in Florida and train remotely. Pick the phone call: Manuel asks what you run today and tells you straight which machine makes sense, or doesn't. If you can come in, the showroom is open Monday to Friday, 9am to 4pm, by appointment."],
       ['Why did I get this email, and how did you get my information?', "You run a licensed spa, clinic or salon in Florida and your business listing is public. Remy reaches out to owners one at a time on behalf of Blason. If you'd rather not hear from us again, reply \"no thanks\" to the email and that's the end of it."]
     ],
     stepOf: 'Question {n} of {m}', back: 'Back',
     q1: 'What do you want to add to your room?',
-    q1o: [['laser_hair', 'Laser hair removal', 'Diode, every skin type'], ['resurfacing', 'Skin: resurfacing, scars, tightening', 'CO2, RF microneedling'], ['body', 'Body: contouring, fat, cellulite', 'Cavitation, fat freezing, roller'], ['facials', 'Facials: hydro, LED, multifunction', 'The ones clients rebook every month'], ['tattoo', 'Tattoo or pigment removal', 'Nd:YAG, pico, carbon peel'], ['notsure', 'Not sure yet. Show me what fits.', '']],
+    q1o: [['laser_hair', 'Laser hair removal', 'Diode, every skin type', 'galaxy'], ['resurfacing', 'Skin: resurfacing, scars, tightening', 'CO2, RF microneedling', 'co2'], ['body', 'Body: contouring, fat, cellulite', 'Cavitation, fat freezing, roller', 'cold'], ['facials', 'Facials: hydro, LED, multifunction', 'The ones clients rebook every month', 'hidra'], ['tattoo', 'Tattoo or pigment removal', 'Nd:YAG, pico, carbon peel', 'pico'], ['notsure', 'Not sure yet. Show me what fits.', '']],
     q2: 'Have you already been quoted on one?',
     q2o: [['brand', 'Yes, by a brand name', 'Bring the quote. Manuel puts his machine next to it.'], ['importer', 'Yes, by another importer', ''], ['replacing', "No, I'm replacing a machine I already own", ''], ['none', 'Not yet, just starting to look', '']],
     q3: 'Is there a doctor, nurse practitioner or PA on your team?',
@@ -270,7 +272,7 @@ var T = {
     q4: 'Why now?',
     q4o: [['expansion', 'A new room or a second location', ''], ['demand', 'Clients keep asking for a treatment I refer out', ''], ['aging', 'My machine is old or down', ''], ['shopping', 'I have a brand-name quote and the number stings', '']],
     q5: 'How do you want to talk to Manuel?',
-    q5o: [['showroom', 'Visit the Miami showroom', 'Every machine is on. About 20 minutes.'], ['call', 'A 10-minute phone call', 'Manuel calls your cell and tells you straight what fits.']],
+    q5o: [['showroom', 'Visit the Miami showroom', 'Every machine is on. About 20 minutes.'], ['call', 'A phone call', 'Manuel calls your cell and tells you straight what fits.']],
     cTtl: 'Where should Manuel reach you?',
     cHelp: 'Remy from Blason texts you to confirm the time.',
     fName: 'Your name', fBiz: 'Business name', fPhone: 'Cell phone', fEmail: 'Email',
@@ -289,7 +291,7 @@ var T = {
     mdSteer: "And since you have a provider on staff, Manuel will put the diode laser line next to it. It's the highest-ticket treatment a room can run.",
     mdPlanning: "You said you're adding a provider. Manuel will show you the laser now, so the room is ready the day they sign.",
     mdNote: 'In Florida that one runs under a doctor, NP or PA. Manuel will show you what your license can run today and what adding a provider opens up.',
-    pickCall: 'Pick a time for your 10-minute call', pickShow: 'Pick a time to visit the showroom',
+    pickCall: 'Pick a time for your call with Manuel', pickShow: 'Pick a time to visit the showroom',
     pickHelp: 'Monday to Friday, 9am to 4pm Eastern. Manuel calls the number you gave.',
     pickHelpShow: 'Monday to Friday, 9am to 4pm Eastern. 3110 W 84th St, Unit 4, Miami, FL 33018.',
     earlier: 'Earlier', later: 'Later days', noSlots: 'No open times in this range.',
@@ -303,22 +305,22 @@ var T = {
     tag: 'Las marcas le cobran dos veces: una por la máquina y otra por el logo. Quítele el logo y compre la mejor máquina.',
     ptitle: 'Antes de comprar o cambiar una máquina, vea esto',
     cta: 'Encuentre la máquina para su cabina', ctaShort: 'Encuentre su máquina',
-    qTtl: 'Vea lo que compra el mismo dinero sin el logo', qSub: 'Cuatro preguntas rápidas. Ve qué máquina le mostraría Manuel primero, y después elige la hora para hablar con él.',
+    qTtl: 'Vea lo que compra el mismo dinero sin el logo', qSub: 'Unas preguntas rápidas. Ve qué máquina le mostraría Manuel primero, y después elige la hora para hablar con él.',
     faqTtl: 'Lo que todos preguntan',
     faq: [
       ['¿De verdad es la misma máquina que las de marca?', 'Sí. Las máquinas salen de las mismas fábricas que usan las marcas, las nuestras también. Lo que la marca agrega es la etiqueta, el stand de la feria y el representante regional, y usted paga por las tres cosas. Pida la ficha técnica de la máquina que le cotizaron y Manuel pone la suya al lado, línea por línea.'],
       ['¿Cómo sé que va a aguantar?', 'Cada equipo se desempaca, se instala y se prueba en Miami antes de llegar a usted. Puede usar la misma máquina en el showroom antes de comprar. Y si Manuel no cree que una máquina le sirve a su cabina o a su licencia, se lo dice. Prefiere perder la venta antes que poner la máquina equivocada en una cabina con su nombre en la factura.'],
       ['¿Qué pasa cuando se daña?', 'Llama a Manuel. Los repuestos están en Miami, y la persona que le vendió la máquina es la misma que la arregla. Pregúntele a cualquiera que haya esperado seis semanas por un técnico de marca lo que eso vale.'],
       ['¿Y la garantía?', 'Todas las máquinas la tienen, y se atiende desde Miami. El tiempo depende de la máquina, y Manuel se la da por escrito antes de comprar, para que sepa exactamente qué cubre.'],
-      ['¿Qué pasa en la llamada, o en el showroom?', 'Manuel le pregunta qué usa hoy, qué piden las clientas y quién está en su equipo. Después le dice qué máquina le sirve, cuál no, y el número real para su cabina. Diez minutos por teléfono, o unos veinte en el showroom con las máquinas encendidas. Si la respuesta honesta es todavía no, también se lo dice.'],
+      ['¿Qué pasa en la llamada, o en el showroom?', 'Manuel le pregunta qué usa hoy, qué piden las clientas y quién está en su equipo. Después le dice qué máquina le sirve, cuál no, y el número real para su cabina. Una llamada, o unos veinte minutos en el showroom con las máquinas encendidas. Si la respuesta honesta es todavía no, también se lo dice.'],
       ['¿Puedo pagar a plazos?', 'Sí. La mayoría de los dueños la financia. Manuel le explica las opciones en la llamada con los números de su cabina en la mano.'],
       ['¿Está en stock, y qué tan rápido la tengo?', 'Manuel vende de su inventario en Miami. La entrega e instalación local normalmente es la misma semana. Al resto de la Florida se envía. Pídale la fecha de la máquina que quiere.'],
-      ['No estoy en Miami. ¿Igual funciona?', 'Sí. Enviamos a toda la Florida y entrenamos a distancia. Elija la llamada de 10 minutos: Manuel le pregunta qué usa hoy y le dice de frente qué máquina le conviene, o no. Si puede venir, el showroom abre de lunes a viernes de 9am a 4pm, con cita.'],
+      ['No estoy en Miami. ¿Igual funciona?', 'Sí. Enviamos a toda la Florida y entrenamos a distancia. Elija la llamada: Manuel le pregunta qué usa hoy y le dice de frente qué máquina le conviene, o no. Si puede venir, el showroom abre de lunes a viernes de 9am a 4pm, con cita.'],
       ['¿Por qué recibí este correo y cómo consiguieron mi información?', 'Usted tiene un spa, clínica o salón con licencia en Florida y los datos de su negocio son públicos. Remy contacta a los dueños uno por uno de parte de Blason. Si prefiere que no le escribamos más, responda "no gracias" al correo y ahí termina.']
     ],
     stepOf: 'Pregunta {n} de {m}', back: 'Atrás',
     q1: '¿Qué quiere agregar a su cabina?',
-    q1o: [['laser_hair', 'Depilación láser', 'Diodo, todo tipo de piel'], ['resurfacing', 'Piel: resurfacing, cicatrices, tensado', 'CO2, microagujas con RF'], ['body', 'Cuerpo: moldeo, grasa, celulitis', 'Cavitación, criolipólisis, rodillo'], ['facials', 'Faciales: hidra, LED, multifunción', 'Los que las clientas repiten cada mes'], ['tattoo', 'Quitar tatuajes o manchas', 'Nd:YAG, pico, carbon peel'], ['notsure', 'No sé todavía. Muéstreme qué me sirve.', '']],
+    q1o: [['laser_hair', 'Depilación láser', 'Diodo, todo tipo de piel', 'galaxy'], ['resurfacing', 'Piel: resurfacing, cicatrices, tensado', 'CO2, microagujas con RF', 'co2'], ['body', 'Cuerpo: moldeo, grasa, celulitis', 'Cavitación, criolipólisis, rodillo', 'cold'], ['facials', 'Faciales: hidra, LED, multifunción', 'Los que las clientas repiten cada mes', 'hidra'], ['tattoo', 'Quitar tatuajes o manchas', 'Nd:YAG, pico, carbon peel', 'pico'], ['notsure', 'No sé todavía. Muéstreme qué me sirve.', '']],
     q2: '¿Ya le cotizaron alguna?',
     q2o: [['brand', 'Sí, una marca', 'Traiga la cotización. Manuel pone su máquina al lado.'], ['importer', 'Sí, otro importador', ''], ['replacing', 'No, voy a reemplazar una que ya tengo', ''], ['none', 'Todavía no, apenas estoy mirando', '']],
     q3: '¿Hay un médico, enfermera practicante o PA en su equipo?',
@@ -327,7 +329,7 @@ var T = {
     q4: '¿Por qué ahora?',
     q4o: [['expansion', 'Una cabina nueva o un segundo local', ''], ['demand', 'Las clientas piden un tratamiento que refiero afuera', ''], ['aging', 'Mi máquina está vieja o dañada', ''], ['shopping', 'Tengo una cotización de marca y el número duele', '']],
     q5: '¿Cómo quiere hablar con Manuel?',
-    q5o: [['showroom', 'Visitar el showroom en Miami', 'Todas las máquinas encendidas. Unos 20 minutos.'], ['call', 'Una llamada de 10 minutos', 'Manuel llama a su celular y le dice de frente qué le sirve.']],
+    q5o: [['showroom', 'Visitar el showroom en Miami', 'Todas las máquinas encendidas. Unos 20 minutos.'], ['call', 'Una llamada', 'Manuel llama a su celular y le dice de frente qué le sirve.']],
     cTtl: '¿A qué número le confirmamos?',
     cHelp: 'Remy, de Blason, le escribe por texto para confirmar la hora.',
     fName: 'Su nombre', fBiz: 'Nombre del negocio', fPhone: 'Celular', fEmail: 'Correo',
@@ -346,7 +348,7 @@ var T = {
     mdSteer: 'Y como tiene un proveedor en el equipo, Manuel le pone la línea de láser de diodo al lado. Es el tratamiento de mayor ticket que una cabina puede hacer.',
     mdPlanning: 'Dijo que va a agregar un proveedor. Manuel le muestra el láser desde ahora, para que la cabina esté lista el día que firme.',
     mdNote: 'En Florida esa trabaja bajo un médico, enfermera practicante o PA. Manuel le muestra qué puede usar su licencia hoy y qué se abre al agregar un proveedor.',
-    pickCall: 'Elija la hora de su llamada de 10 minutos', pickShow: 'Elija la hora para visitar el showroom',
+    pickCall: 'Elija la hora de su llamada con Manuel', pickShow: 'Elija la hora para visitar el showroom',
     pickHelp: 'Lunes a viernes, 9am a 4pm hora del este. Manuel llama al número que nos dio.',
     pickHelpShow: 'Lunes a viernes, 9am a 4pm hora del este. 3110 W 84th St, Unit 4, Miami, FL 33018.',
     earlier: 'Antes', later: 'Más días', noSlots: 'No hay horas libres en este rango.',
@@ -422,7 +424,9 @@ document.getElementById('poster').addEventListener('click', startVideo);
 if (VIDEO.poster) document.getElementById('poster').style.backgroundImage = 'url(' + VIDEO.poster + ')';
 
 /* -------------------------------- quiz ----------------------------------- */
-var STEPS = ['q1', 'q3', 'q4', 'q5'];
+// The medical-director question (q3) only shows when the Q1 answer runs under a provider in Florida.
+var NEEDS_MD = ['laser_hair', 'resurfacing', 'tattoo', 'notsure'];
+function steps() { return NEEDS_MD.indexOf(state.answers.interest) !== -1 || !state.answers.interest ? ['q1', 'q3', 'q4', 'q5'] : ['q1', 'q4', 'q5']; }
 var KEYS = { q1: 'interest', q3: 'medical', q4: 'motive', q5: 'path_pref' };
 var state = { step: 0, answers: {}, started: false, contact: null, lead: null, tok: null, slots: [], from: 0, dayKey: null, slot: null, phase: 'quiz', booked: null };
 var card = document.getElementById('quizCard');
@@ -441,15 +445,16 @@ function renderQuiz() {
   if (state.phase === 'contact') return renderContact();
   if (state.phase === 'result') return renderResult();
   if (state.phase === 'done') return renderDone();
-  var k = STEPS[state.step], key = KEYS[k];
+  var STEPS = steps(), k = STEPS[state.step], key = KEYS[k];
   var opts = t(k + 'o'), chosen = state.answers[key];
   var h = progressHtml(state.step + 1);
-  h += '<span class="caps">' + t('stepOf').replace('{n}', state.step + 1).replace('{m}', 4) + '</span>';
+  h += '<span class="caps">' + t('stepOf').replace('{n}', state.step + 1).replace('{m}', STEPS.length) + '</span>';
   h += '<h2 class="q">' + esc(t(k)) + '</h2>';
   if (T[lang][k + 'h']) h += '<p class="qhelp">' + esc(t(k + 'h')) + '</p>';
   h += '<div class="opts ' + (opts.length > 3 ? 'two' : '') + '">';
   opts.forEach(function (o) {
-    h += '<button type="button" class="opt ' + (chosen === o[0] ? 'on' : '') + '" data-v="' + o[0] + '"><span class="dot"></span><span><b>' + esc(o[1]) + '</b>' + (o[2] ? '<small>' + esc(o[2]) + '</small>' : '') + '</span></button>';
+    var lead = o[3] ? '<img src="/blason/machines/' + o[3] + '.jpg" alt="" width="84" height="84" loading="lazy">' : '<span class="dot"></span>';
+    h += '<button type="button" class="opt ' + (o[3] ? 'pic ' : '') + (chosen === o[0] ? 'on' : '') + '" data-v="' + o[0] + '"><span class="dot"' + (o[3] ? ' style="display:none"' : '') + '></span>' + (o[3] ? lead : '') + '<span><b>' + esc(o[1]) + '</b>' + (o[2] ? '<small>' + esc(o[2]) + '</small>' : '') + '</span></button>';
   });
   h += '</div>';
   h += '<div class="qnav">' + (state.step > 0 ? '<button type="button" class="back" id="qBack">&larr; ' + esc(t('back')) + '</button>' : '<span></span>') + '</div>';
@@ -459,10 +464,11 @@ function renderQuiz() {
       var v = b.getAttribute('data-v');
       if (!state.started) { state.started = true; track('quiz_start'); }
       state.answers[key] = v;
+      if (key === 'interest' && NEEDS_MD.indexOf(v) === -1) delete state.answers.medical;
       track('quiz_step', { step: state.step + 1, answer: v, meta: { q: key } });
       card.querySelectorAll('.opt').forEach(function (x) { x.classList.toggle('on', x === b); });
       setTimeout(function () {
-        if (state.step < STEPS.length - 1) { state.step++; renderQuiz(); }
+        if (state.step < steps().length - 1) { state.step++; renderQuiz(); }
         else { state.phase = 'contact'; track('quiz_complete', { meta: { answers: state.answers } }); renderQuiz(); }
         scrollToCard();
       }, 180);
@@ -498,7 +504,7 @@ function renderContact() {
     + '</div><div class="err" id="cErr"></div>'
     + '<div class="qnav"><button type="button" class="back" id="qBack">&larr; ' + esc(t('back')) + '</button><button type="submit" class="btn" id="cBtn">' + esc(t('cBtn')) + '</button></div></form>';
   card.innerHTML = h;
-  document.getElementById('qBack').addEventListener('click', function () { state.phase = 'quiz'; state.step = STEPS.length - 1; renderQuiz(); });
+  document.getElementById('qBack').addEventListener('click', function () { state.phase = 'quiz'; state.step = steps().length - 1; renderQuiz(); });
   document.getElementById('cForm').addEventListener('submit', submitContact);
 }
 
