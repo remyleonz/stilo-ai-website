@@ -100,9 +100,12 @@ module.exports = async function handler(req, res) {
         // keeps its arm (and the test stays honest); the composer can force one.
         // 'desk' = the rep only reached the front desk (owner in a meeting or
         // out), so the email can't say "thanks for taking the call" (Remy, 2026-10-02).
-        const cVariant = (body.variant === 'ctx' || body.variant === 'ask' || body.variant === 'desk')
+        // Default since 2026-10-06 is 'video': the 80,000 mistake angle with the
+        // signed link to the Blason video page. The old ctx/ask arms stay as
+        // dropdown options.
+        const cVariant = (body.variant === 'ctx' || body.variant === 'ask' || body.variant === 'desk' || body.variant === 'video')
             ? body.variant
-            : (parseInt(id, 10) % 2 === 0 ? 'ctx' : 'ask');
+            : 'video';
         // Spanish has no natural equivalent of "Hi there", so a nameless lead
         // gets a bare "Hola," rather than the "Hola ," (stray space + comma)
         // the naive concat produced.
@@ -114,7 +117,34 @@ module.exports = async function handler(req, res) {
         const senderFirst = String((cSender && cSender.name) || 'Remy').trim().split(/\s+/)[0];
         let cSubject, cBody;
 
-        if (cVariant === 'desk') {
+        if (cVariant === 'video') {
+            // Same angle as the page and the campaign emails. One link, signed to
+            // this lead so the view, the quiz and a booking land on their record
+            // and the watch alert fires with their name. utm_content=dialer tells
+            // the Funnel tab it came from a rep's post-call email.
+            const { signLead } = require('../public/_token');
+            const vslBase = String(process.env.BLASON_VSL_URL || 'https://blasononline.stiloaipartners.com').replace(/\/$/, '');
+            const vslLink = vslBase + '?lid=' + id + '&t=' + signLead(id) + '&utm_source=email&utm_campaign=vsl&utm_content=dialer' + (es ? '&lang=es' : '');
+            if (es) {
+                cSubject = (cfName ? cfName + ', ' : '') + 'el error de 80 mil en su cabina';
+                cBody = hi + '\n\n'
+                    + 'Gracias por atender la llamada. Algo que no alcancé a explicarle bien por teléfono:\n\n'
+                    + 'Las máquinas de marca y las nuestras salen de las mismas fábricas. Cuando la máquina trae un logo grande, usted paga dos veces: una por la máquina y otra por el nombre. Si se salta ese recargo, el mismo presupuesto le alcanza para la máquina que realmente quiere.\n\n'
+                    + 'Son cuatro minutos y muestra exactamente cómo funciona: ' + vslLink + '\n\n'
+                    + (local
+                        ? 'Las máquinas están encendidas en nuestro showroom de Miami, así que puede probarlas antes de decidir nada. Al final del video elige la hora.\n'
+                        : 'Manuel, el dueño, le explica todo en diez minutos por teléfono. Al final del video elige la hora.\n');
+            } else {
+                cSubject = (cfName ? cfName + ', ' : '') + 'the 80,000 mistake in your treatment room';
+                cBody = hi + '\n\n'
+                    + 'Thanks for taking the call. One thing I didn\'t get to properly on the phone:\n\n'
+                    + 'The brand-name machines and ours come out of the same factories. When a machine carries a big logo you pay twice, once for the machine and once for the name. Skip that markup and the same budget buys the machine you actually wanted.\n\n'
+                    + 'Four minutes, and it shows exactly how that works: ' + vslLink + '\n\n'
+                    + (local
+                        ? 'The machines are running at our Miami showroom, so you can try one before deciding anything. Pick a time at the end of the video.\n'
+                        : 'Manuel, the owner, walks you through it in ten minutes on the phone. Pick a time at the end of the video.\n');
+            }
+        } else if (cVariant === 'desk') {
             // Owner not reached: never thank them for a call they didn't take.
             // One question (the hardest-clients one from the scripts), the logo
             // angle, then the showroom (local) or a 10-minute phone call.

@@ -318,9 +318,13 @@ const VARIANT_KEYS = ['A', 'B'];
 // A/B test in ab-results.js (same table, different offer, different audience).
 //   ctx = the full-context email that sells the next step outright
 //   ask = three lines ending in one question, engineered for a REPLY
-const CLIENT_VARIANT_KEYS = ['ctx', 'ask', 'desk'];
+//   video = the main one since 2026-10-06: the 80,000 mistake angle + the
+//           signed link to the Blason video page (counts as step 1 of the
+//           video sequence, so the ten-step follow-ups continue from it)
+const CLIENT_VARIANT_KEYS = ['video', 'ask', 'ctx', 'desk'];
 const VARIANT_LABELS = {
     A: 'A · Direct', B: 'B · Value',
+    video: 'Spoke with them · the 80,000 mistake + video (default)',
     ctx: 'Spoke with them · showroom invite', ask: 'Spoke with them · one question',
     desk: 'Front desk only · owner not reached'
 };

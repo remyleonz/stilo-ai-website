@@ -266,7 +266,9 @@ module.exports = async function handler(req, res) {
         to_address: to,
         provider: 'resend',
         status: 'sending',
-        variant: variant,
+        // 'video' is logged as step 1 of the Blason video sequence so the
+        // ten-step follow-ups (send_blason_vsl_email.js) continue from it.
+        variant: variant === 'video' ? 'blason_vsl_1_dialer' : variant,
         dedupe_key: dedupeKey
     }).select('id').single();
     if (claim.error) {
