@@ -1521,6 +1521,7 @@
                  Dashboard Page
                  ============================================================ -->
             <div class="page-content" id="page-dashboard">
+                <div class="hotLeadsStrip"></div>
 
                 <!-- Hero stat strip -->
                 <div class="stilo-hero-grid">
@@ -1912,6 +1913,7 @@
                  Backed by /api/prospects/* proxy → David's prospecting backend
                  ============================================================ -->
             <div class="page-content" id="page-prospecting" style="display:none;">
+                <div class="hotLeadsStrip"></div>
                 <div class="stilo-page-header-row">
                     <span class="stilo-page-meta">Daily call list · cold email queue · archive</span>
                 </div>
@@ -2571,6 +2573,7 @@
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/vsl-activity.js"></script>
+    <script src="/assets/hot-leads.js?v=20261006a"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js?v=20261002h"></script>
@@ -7053,6 +7056,7 @@
                 var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(prospectId));
                 content.innerHTML = renderProspectDrawer(data, prospectState.tab === 'emailable' ? 'emailable' : 'callable');
                 if (window.VSL_ACTIVITY) VSL_ACTIVITY.render(data.lead || data, content);
+                if (window.HOT_LEADS) HOT_LEADS.banner(data.lead || data, content);
             } catch (_) { /* swallow — next event will retry */ }
         }
 
@@ -10172,6 +10176,7 @@
                 var data = await prospectFetchJSON('/api/prospects/detail?id=' + encodeURIComponent(leadId));
                 content.innerHTML = renderProspectDrawer(data, mode);
                 if (window.VSL_ACTIVITY) VSL_ACTIVITY.render(data.lead || data, content);
+                if (window.HOT_LEADS) HOT_LEADS.banner(data.lead || data, content);
                 // Trigger the outcome handler once the drawer is in the DOM so
                 // the slot picker renders immediately for the default outcome
                 // (booked_meeting). Without this it only appears after the user

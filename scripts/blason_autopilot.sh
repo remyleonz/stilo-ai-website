@@ -38,10 +38,11 @@ else
   #      reply, never got the video (email_N stamps untouched)
   #   30 new = never emailed, lane auto (rep-typed first, then verified
   #      personal, then at most 10 finder role inboxes)
-  # plus the video follow-ups (steps 2 and 3, 3 and 4 days later). The old
+  # plus the video follow-ups (ten touches over nine weeks, confirmed addresses,
+  # main domain; new addresses go out from the test domain). The old
   # sequence's followup/value legs are OFF while the video runs.
   VSL="/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/send_blason_vsl_email.js"
-  node "$VSL" --mode followup --limit 40 --send 2>&1 | tail -2
+  node "$VSL" --mode followup --limit 100 --send 2>&1 | tail -2
   node "$VSL" --mode re --limit 70 --send 2>&1 | tail -2
   node "$VSL" --mode cold --lane auto --limit 30 --send 2>&1 | tail -2
 fi

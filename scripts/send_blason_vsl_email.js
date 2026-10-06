@@ -63,8 +63,11 @@ const GAP_MS = 2500;
 const CLIENT_ID = '2efae6bf-69d8-4c4d-ac25-6a693db50f8b';
 const VSL_URL = String(process.env.BLASON_VSL_URL || '').replace(/\/$/, '');
 const LOCAL_ZIP3 = ['330', '331', '332', '333'];
-const STEP_GAP_DAYS = { 2: 3, 3: 4 };
-const MAX_STEP = 3;
+// Ten touches over about nine weeks. A delivered address is never "done" after
+// one video email (Remy, 2026-10-06): the sequence keeps going until they book,
+// reply, or opt out. Gaps widen as it goes.
+const STEP_GAP_DAYS = { 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 7, 8: 8, 9: 9, 10: 10 };
+const MAX_STEP = 10;
 
 if (!VSL_URL || !/^https:\/\//.test(VSL_URL)) { console.error('BLASON_VSL_URL is not set. Set it to the live landing page URL first.'); process.exit(1); }
 const VSL_HOST = new URL(VSL_URL).host;
@@ -128,6 +131,32 @@ function followup(lead, step) {
     }
     const askEs = local ? 'Venga 20 minutos al showroom de Manuel en Miami y pruebe las máquinas encendidas.' : 'Diez minutos por teléfono con Manuel y sabe si le conviene o no.';
     const askEn = local ? "Come by Manuel's Miami showroom for 20 minutes and try the machines running." : 'Ten minutes on the phone with Manuel and you know whether it makes sense or not.';
+    const stopEn = "If you'd rather I stop, just reply no thanks.", stopEs = 'Si prefiere que no le escriba más, respóndame "no gracias".';
+    if (step === 4) return es
+        ? { arm: 'step4', subject: 'la cotización que ya tiene', body: [hi, '', 'Una pregunta rápida. Si algún vendedor ya le cotizó una máquina, mándeme la ficha técnica o el modelo. Manuel pone la nuestra al lado, línea por línea: misma longitud de onda, misma potencia, mismas piezas de mano. Así ve exactamente qué le está agregando el logo.', '', 'Sin compromiso. Si la nuestra no da la talla, se lo digo y compra la de ellos.', '', 'El video, por si quedó enterrado: ' + link, '', stopEs].join('\n') }
+        : { arm: 'step4', subject: 'the quote you already have', body: [hi, '', 'Quick one. If a rep already quoted you a machine, send me the spec sheet or the model name. Manuel puts ours next to it line by line, same wavelength, same power, same handpieces, and you see exactly what the logo is adding.', '', "No pressure either way. If ours doesn't match up, I'll tell you to buy theirs.", '', 'The video, in case it got buried: ' + link, '', stopEn].join('\n') };
+    if (step === 5) return es
+        ? { arm: 'step5', subject: 'cuál agregaría primero', body: [hi, '', 'Si el logo no estuviera en el medio, ¿qué máquina agregaría primero a su cabina? Diodo para depilación, CO2 para resurfacing, pico para tatuajes y manchas, una máquina de hidrofacial, o una de cuerpo.', '', 'Dígame cuál y le mando un clip de dos minutos de esa máquina trabajando en nuestro showroom de Miami.', '', link, '', stopEs].join('\n') }
+        : { arm: 'step5', subject: 'which one would you add first', body: [hi, '', "If the logo wasn't in the way, which machine would you add to your room first? Diode for hair removal, CO2 for resurfacing, pico for tattoos and pigment, a hydra facial machine, or a body machine.", '', "Tell me the one and I'll send you a two-minute clip of it running in our Miami showroom.", '', link, '', stopEn].join('\n') };
+    if (step === 6) return es
+        ? { arm: 'step6', subject: 'cuando se dañe', body: [hi, '', 'La pregunta que nadie hace antes de comprar: ¿quién contesta el teléfono cuando la máquina se cae un martes con la agenda llena?', '', 'Con nosotros contesta Manuel, el dueño, aquí en Miami. No un sistema de tickets ni un representante regional a tres estados de distancia. Eso pesa más que el logo en el costado.', '', 'El video otra vez, por si quiere el cuadro completo: ' + link, '', stopEs].join('\n') }
+        : { arm: 'step6', subject: 'when it breaks', body: [hi, '', 'The question nobody asks before buying: who picks up the phone when the machine goes down on a Tuesday with clients booked?', '', "With us it's Manuel, the owner, here in Miami. Not a ticket system, not a regional rep three states away. That matters more than the logo on the side.", '', "Here's the video again if you want the full picture: " + link, '', stopEn].join('\n') };
+    if (step === 7) return es
+        ? { arm: 'step7', subject: 'los clientes que no puede atender', body: [hi, '', 'En toda cabina hay clientes con los que la máquina actual sufre. Piel oscura en depilación, vello fino y claro, manchas tercas, cicatrices profundas.', '', '¿Cuáles son los más difíciles de tratar con lo que tiene hoy? Dígame y Manuel le dice de frente si otra máquina lo resuelve o no.', '', 'El video: ' + link, '', stopEs].join('\n') }
+        : { arm: 'step7', subject: 'the clients you turn away', body: [hi, '', 'Every room has a few clients the current machine struggles with. Darker skin on hair removal, fine light hair, stubborn pigment, deep scars.', '', 'Which ones are hardest to treat with what you have today? Tell me and Manuel will tell you straight whether a different machine fixes it or not.', '', 'The video: ' + link, '', stopEn].join('\n') };
+    if (step === 8) return es
+        ? { arm: 'step8', subject: 'una segunda cabina', body: [hi, '', 'La mayoría de los dueños con los que hablamos no están reemplazando nada. Están agregando: una segunda cabina, un servicio nuevo que los clientes piden, una máquina para dejar de referir gente afuera.', '', '¿Hay algo así en su lista para este año? Si es así, el presupuesto rinde mucho más sin el recargo de la marca, y el video explica por qué: ' + link, '', stopEs].join('\n') }
+        : { arm: 'step8', subject: 'a second room', body: [hi, '', "Most of the owners we talk to aren't replacing anything. They're adding: a second room, a new service the clients keep asking for, a machine that lets them stop referring people out.", '', 'Is anything like that on your list for this year? If so, the budget goes a lot further without the brand markup, and the video explains why: ' + link, '', stopEn].join('\n') };
+    if (step === 9) return es
+        ? (local
+            ? { arm: 'step9', subject: 'venga a verlas encendidas', body: [hi, '', 'La forma más simple de resolverlo: venga al showroom en Miami y ponga las manos en las máquinas. Están encendidas, Manuel le muestra las que le interesen y se va con una respuesta clara. Son unos treinta minutos.', '', 'Elija la hora al final del video: ' + link, '', stopEs].join('\n') }
+            : { arm: 'step9', subject: 'diez minutos con el dueño', body: [hi, '', 'Manuel, el dueño, le dedica diez minutos por teléfono: qué tiene hoy, qué quiere agregar y qué le conviene, sin rodeos y sin recargo de marca. Enviamos a toda la Florida.', '', 'Elija la hora al final del video: ' + link, '', stopEs].join('\n') })
+        : (local
+            ? { arm: 'step9', subject: 'come see them running', body: [hi, '', "Simplest way to settle it: come to the showroom in Miami and put your hands on the machines. They're on and running, Manuel walks you through whichever ones you care about, and you leave with a straight answer. About thirty minutes.", '', 'Pick a time at the end of the video: ' + link, '', stopEn].join('\n') }
+            : { arm: 'step9', subject: 'ten minutes with the owner', body: [hi, '', "Manuel, the owner, will give you ten minutes on the phone: what you run today, what you want to add, and what actually makes sense, no runaround and no brand markup. We ship anywhere in Florida.", '', 'Pick a time at the end of the video: ' + link, '', stopEn].join('\n') });
+    if (step >= 10) return es
+        ? { arm: 'step10', subject: 'el último de mi parte', body: [hi, '', 'Este es el último correo de mi parte. Le mandé el video y varias preguntas y no he sabido de usted, lo que casi siempre significa que no es el momento o que la máquina que tiene va bien. Las dos son buenas razones.', '', 'Si algo cambia, una máquina empieza a fallar o aparece un servicio nuevo, el video queda aquí: ' + link + ', y Manuel está en Miami.', '', 'No hace falta responder. Si prefiere que no le escriba nunca más, respóndame "no gracias".'].join('\n') }
+        : { arm: 'step10', subject: 'last one from me', body: [hi, '', "This is the last one from me. I've sent you the video and a few questions and haven't heard back, which usually means the timing is wrong or the machine you have is doing fine. Both are good reasons.", '', 'If anything changes, a machine starts acting up or a new service comes up, the video is here: ' + link + ', and Manuel is in Miami.', '', "No need to reply. If you'd rather I never write again, just reply no thanks."].join('\n') };
     return es
         ? { arm: 'step3', subject: 'una pregunta', body: [hi, '', '¿Viene algo nuevo para ustedes este año? Un servicio nuevo, otra cabina, o una máquina que ya está cansada. Si me dice cuál, Manuel, el dueño, le dice qué le conviene sin recargo de marca.', '', 'El video por si no lo vio: ' + link, '', askEs + ' Elija la hora al final del video.', '', 'Y si no es el momento, respóndame "no gracias" y aquí termina.'].join('\n') }
         : { arm: 'step3', subject: 'one question', body: [hi, '', "Anything new coming up for you this year? A new service, another room, or a machine that is getting tired. Tell me which and Manuel, the owner, tells you what makes sense without the brand markup.", '', 'The video in case you missed it: ' + link, '', askEn + ' Pick the time at the end of the video.', '', "And if it's not the moment, just reply no thanks and that's the end of it."].join('\n') };
@@ -289,9 +318,28 @@ async function main() {
     console.log('');
 
     const sender = await kit.getSenderIdentity(process.env.STILO_SENDER_EMAIL);
-    const fromEmail = process.env.BLASON_SENDER_EMAIL || sender.fromEmail;
+    // Two sending domains (Remy, 2026-10-06): never-emailed addresses go out
+    // from the TEST domain (BLASON_TEST_SENDER_EMAIL) so their bounces land on
+    // that domain's reputation; confirmed-delivered addresses (followup, re)
+    // keep the main Blason sender. One bad list no longer drags the good one.
+    const fromEmail = (MODE === 'cold' && process.env.BLASON_TEST_SENDER_EMAIL) ? process.env.BLASON_TEST_SENDER_EMAIL : (process.env.BLASON_SENDER_EMAIL || sender.fromEmail);
     const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + clientName + '"';
     const senderFirst = (sender.name || 'Remy').split(/\s+/)[0];
+    console.log('from ' + fromEmail);
+
+    // Bounce breaker per sending domain, trailing 72h. The old sequence refused
+    // at 8%; this sender had none and pushed the main domain to 11.4% on 10/06.
+    // Remy's call for the video week: let it run unless it gets brutal, 25%.
+    if (SEND && MODE !== 'followup') {
+        const since = new Date(Date.now() - 72 * 3600 * 1000).toISOString();
+        const dom = fromEmail.split('@')[1];
+        const { data: recent } = await sb.from('lead_messages').select('bounced_at').eq('channel', 'email').eq('direction', 'outbound')
+            .ilike('from_address', '%@' + dom).gte('sent_at', since).limit(5000);
+        const n = (recent || []).length, b = (recent || []).filter(function (r) { return r.bounced_at; }).length, rate = n ? b / n : 0;
+        const ceiling = Number(process.env.BLASON_BOUNCE_BREAKER || 0.25);
+        console.log('breaker: ' + b + '/' + n + ' bounced in the last 72h from ' + dom + ' (' + (rate * 100).toFixed(1) + '%), refuses at ' + Math.round(ceiling * 100) + '%');
+        if (n >= 20 && rate >= ceiling) { console.error('REFUSING to send from ' + dom + ': trailing bounce rate is at or above ' + Math.round(ceiling * 100) + '%. Verify the list before feeding this domain more of it.'); process.exit(2); }
+    }
     const stats = { sent: 0, skipped: 0, failed: 0, dup: 0 };
 
     for (const lead of batch) {

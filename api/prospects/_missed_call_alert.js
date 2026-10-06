@@ -1,3 +1,5 @@
+const { alertTo, callLink } = require('./_alert_to');
+const { markHot } = require('./_hot');
 /**
  * api/prospects/_missed_call_alert.js
  *
@@ -404,17 +406,14 @@ async function alertMissedInbound(sb, opts) {
     // History is only meaningful once we know which lead this is. An unmatched
     // inbound number still gets the alert, just without the thread.
     const history = opts.leadId ? await fetchHistory(sb, opts.leadId, opts.callId, 8) : [];
+    if (opts.leadId) await markHot(opts.leadId, opts.outcome === 'voicemail' ? 'called and left a voicemail' : 'called you and missed', sb);
 
     const owner = process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com';
     const alertInbox = process.env.HEALTH_ALERT_TO || 'remyleon11@gmail.com';
-    const to = Array.from(new Set(
-        [opts.repEmail || (lead && lead.assigned_to), owner, alertInbox]
-            .map(function (e) { return String(e || '').toLowerCase().trim(); })
-            .filter(function (e) { return e && /.+@.+\..+/.test(e); })
-    ));
+    const to = alertTo(opts.repEmail || (lead && lead.assigned_to), alertInbox);
 
     const business = (lead && lead.name) || 'Unknown number';
-    const telLink = 'tel:' + String(opts.phone || '').replace(/[^\d+]/g, '');
+    const telLink = callLink(opts.phone) || ('tel:' + String(opts.phone || '').replace(/[^\d+]/g, ''));
     const adminUrl = lead
         ? 'https://stiloaipartners.com/admin/?lead=' + lead.id
         : 'https://stiloaipartners.com/admin/';

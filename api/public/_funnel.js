@@ -176,7 +176,7 @@ async function findLead(pros, site, body) {
 async function notify(subject, html, text) {
     if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
     const work = process.env.STILO_NOTIFY_EMAIL || process.env.STILO_REPLY_TO || 'remyleon@stiloaipartners.com';
-    const to = Array.from(new Set([work, 'remyleon11@gmail.com']));
+    const to = require('../prospects/_alert_to').alertTo(work);
     const from = (process.env.STILO_SENDER_NAME || 'STILO AI PARTNERS') + ' <' + (process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com') + '>';
     try {
         const r = await fetch('https://api.resend.com/emails', {

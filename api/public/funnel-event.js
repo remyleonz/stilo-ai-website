@@ -20,6 +20,8 @@
  * screen away from booking; a same-hour call beats waiting for the form.
  */
 const F = require('./_funnel');
+const { markHot } = require('../prospects/_hot');
+const { callLink } = require('../prospects/_alert_to');
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -69,6 +71,17 @@ module.exports = async function handler(req, res) {
             });
         }
 
+        // "Call now" queue: a real person did something on the page.
+        if (leadId != null && !F.botReason(ua)) {
+            let hot = null;
+            if (event === 'video_play') hot = 'pressed play on the video';
+            else if (event === 'video_progress' && (row.step || 0) >= 50) hot = 'watched ' + row.step + '% of the video';
+            else if (event === 'video_complete') hot = 'watched the whole video';
+            else if (event === 'quiz_complete') hot = 'finished the quiz on the video page';
+            else if (event === 'contact_submitted') hot = 'left contact details on the video page';
+            if (hot) await markHot(leadId, hot + (row.utm_source ? ', from ' + ({ email: 'our email', sms: 'our text', instagram: 'the Instagram DM', followup: 'the follow-up' }[row.utm_source] || row.utm_source) : ''));
+        }
+
         // Known lead finished the quiz but has not submitted contact yet.
         if (event === 'quiz_complete' && leadId != null && !F.botReason(ua)) {
             try {
@@ -84,7 +97,7 @@ module.exports = async function handler(req, res) {
                     '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
                     + '<p><strong>' + F.esc((lead && lead.name) || 'Lead #' + leadId) + '</strong> finished the machine quiz on the Blason page but has not left contact details yet.</p>'
                     + '<ul style="padding-left:18px">' + lines + '</ul>'
-                    + '<p>' + (lead && lead.owner_name ? F.esc(lead.owner_name) + ' · ' : '') + (phone ? '<a href="tel:' + F.esc(phone) + '">' + F.esc(phone) + '</a>' : 'no phone on file') + (lead && lead.owner_email ? ' · ' + F.esc(lead.owner_email) : '') + '</p>'
+                    + '<p>' + (lead && lead.owner_name ? F.esc(lead.owner_name) + ' · ' : '') + (phone ? '<a href="' + callLink(phone) + '">' + F.esc(phone) + '</a>' : 'no phone on file') + (lead && lead.owner_email ? ' · ' + F.esc(lead.owner_email) : '') + '</p>'
                     + '<p style="color:#555">Do not mention the quiz or the video on the call. Open with the machine they picked as a question about their room.</p>'
                     + '<p><a href="https://admin.stiloaipartners.com/#prospecting?lead=' + leadId + '">Open lead #' + leadId + '</a></p></div>'
                 );
