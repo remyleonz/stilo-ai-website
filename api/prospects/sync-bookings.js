@@ -71,7 +71,7 @@ async function notifyNewBooking(b) {
         headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
             from: '"STILO Bookings" <' + from + '>',
-            to: [to],
+            to: require('./_alert_to').alertTo(to),
             subject: 'New meeting booked: ' + (b.business || 'lead') + ' · ' + whenStr,
             html: html
         })
@@ -100,7 +100,7 @@ async function notifyUnmatched(list) {
     await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: '"STILO Bookings" <' + from + '>', to: [to], subject: 'Action needed: ' + list.length + ' booking' + (list.length > 1 ? 's' : '') + ' to attach', html: html })
+        body: JSON.stringify({ from: '"STILO Bookings" <' + from + '>', to: require('./_alert_to').alertTo(to), subject: 'Action needed: ' + list.length + ' booking' + (list.length > 1 ? 's' : '') + ' to attach', html: html })
     });
 }
 

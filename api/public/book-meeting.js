@@ -278,7 +278,7 @@ module.exports = async function handler(req, res) {
     try {
         const notify = process.env.STILO_NOTIFY_EMAIL || 'remyleon@stiloaipartners.com';
         await sendResend({
-            from: 'STILO AI PARTNERS <' + fromEmail + '>', to: [notify],
+            from: 'STILO AI PARTNERS <' + fromEmail + '>', to: require('../prospects/_alert_to').alertTo(notify),
             subject: 'New VSL booking: ' + (businessName || name) + ' (' + whenStr + ')',
             html: '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
                 + '<p><strong>New self-booking from a VSL page.</strong></p><ul style="padding-left:18px">'

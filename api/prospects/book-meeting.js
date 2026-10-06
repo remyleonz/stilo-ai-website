@@ -34,8 +34,7 @@ function escapeHtml(s) {
 async function sendInternalNotification(opts) {
     if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
     // Send the booking heads-up to Remy, David, AND the SDR who booked it.
-    var recips = [process.env.STILO_NOTIFY_EMAIL || 'remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
-    if (opts.sdrEmail) recips.push(opts.sdrEmail);
+    var recips = require('./_alert_to').alertTo(process.env.STILO_NOTIFY_EMAIL, opts.sdrEmail);
     var toList = recips.map(function (e) { return String(e || '').toLowerCase().trim(); })
         .filter(function (e) { return e && /.+@.+\..+/.test(e); })
         .filter(function (e, i, a) { return a.indexOf(e) === i; });

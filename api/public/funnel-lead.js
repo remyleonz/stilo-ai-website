@@ -25,6 +25,8 @@
  * step that follows is attributed to this exact lead without re-matching.
  */
 const F = require('./_funnel');
+const { markHot } = require('../prospects/_hot');
+const { callLink } = require('../prospects/_alert_to');
 
 const RL_PER_IP_PER_HOUR = 6;
 const _rl = { ipHits: new Map() };
@@ -164,6 +166,8 @@ module.exports = async function handler(req, res) {
         });
     } catch (e) { console.warn('[funnel-lead] submission log failed:', e && e.message); }
 
+    await markHot(leadId, 'left their number on the video page' + (answers.path_pref ? ', wants ' + (answers.path_pref === 'showroom' ? 'the showroom' : 'a call') : ''));
+
     // --- alert Remy ----------------------------------------------------------
     try {
         const lines = F.QUIZ_KEYS
@@ -173,7 +177,7 @@ module.exports = async function handler(req, res) {
             'Blason VSL lead: ' + (business || name) + (answers.path_pref ? ' wants ' + (answers.path_pref === 'showroom' ? 'the showroom' : 'a call') : ''),
             '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
             + '<p><strong>' + F.esc(name) + '</strong>' + (business ? ' at <strong>' + F.esc(business) + '</strong>' : '') + ' left their details on the Blason page' + (lang === 'es' ? ' (Spanish)' : '') + '.</p>'
-            + '<p style="font-size:18px"><a href="tel:' + F.esc(e164) + '">' + F.esc(phoneFmt) + '</a>' + (email ? '<br><a href="mailto:' + F.esc(email) + '">' + F.esc(email) + '</a>' : '') + '</p>'
+            + '<p style="font-size:18px"><a href="' + callLink(e164) + '">Call in Quo · ' + F.esc(phoneFmt) + '</a>' + (email ? '<br><a href="mailto:' + F.esc(email) + '">' + F.esc(email) + '</a>' : '') + '</p>'
             + '<ul style="padding-left:18px">' + lines + '</ul>'
             + '<p>Lead #' + leadId + ' (' + (created ? 'new' : 'matched by ' + F.esc(how)) + '). They are now choosing a time; if nothing books in 10 minutes, call anyway.</p>'
             + '<p style="color:#555">Open with their answer, not the page: "You mentioned you are looking at ' + F.esc((F.label('interest', answers.interest) || 'a machine').toLowerCase()) + '. What are you running in that room today?"</p>'

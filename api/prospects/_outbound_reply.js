@@ -186,6 +186,9 @@ function esc(s) {
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+const { alertTo, callLink } = require('./_alert_to');
+const { markHot } = require('./_hot');
+
 async function sendAlert(opts) {
     if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
     const fromName = process.env.STILO_SENDER_NAME || 'STILO Outbound';
@@ -197,13 +200,9 @@ async function sendAlert(opts) {
     // SLA is worthless if the alert goes somewhere unread, so send to both.
     const alertInbox = process.env.HEALTH_ALERT_TO || 'remyleon11@gmail.com';
 
-    const to = Array.from(new Set(
-        [opts.repEmail, owner, alertInbox]
-            .map(function (e) { return String(e || '').toLowerCase().trim(); })
-            .filter(function (e) { return e && /.+@.+\..+/.test(e); })
-    ));
+    const to = alertTo(opts.repEmail, alertInbox);
     const adminUrl = 'https://stiloaipartners.com/admin/?lead=' + opts.leadId;
-    const telLink = 'tel:' + String(opts.phone || '').replace(/[^\d+]/g, '');
+    const telLink = callLink(opts.phone) || ('tel:' + String(opts.phone || '').replace(/[^\d+]/g, ''));
 
     const html = [
         '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111">',
@@ -371,6 +370,7 @@ async function handleInboundSms(fromPhone, toPhone, text) {
         patch.callback_due_at = due.toISOString();
     }
     await sb.from('outbound_targets').update(patch).eq('id', t.id);
+    await markHot(t.lead_id, 'texted back: "' + String(text || '').replace(/\s+/g, ' ').slice(0, 120) + '"', sb);
 
     // ALERT ON EVERY REPLY, not once per target.
     //

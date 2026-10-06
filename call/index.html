@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calling in Quo</title><meta name="robots" content="noindex">
+<style>body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b0f;color:#ecedf2;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}
+.n{font-size:28px;font-weight:700;margin:0 0 8px}.s{color:#9a9ab0;font-size:14px;margin:0 0 22px}a.b{display:inline-block;background:#2563EB;color:#fff;text-decoration:none;font-weight:700;padding:14px 24px;border-radius:8px;font-size:16px;margin:4px}a.g{background:#1f2937}</style></head>
+<body><div>
+<p class="n" id="num">Opening Quo</p><p class="s" id="msg">If the app did not open, use a button below.</p>
+<a class="b" id="app" href="#">Open in the Quo app</a>
+<a class="b g" id="web" href="#" target="_blank" rel="noopener">Quo web dialer</a>
+</div>
+<script>
+(function(){
+  var to=new URLSearchParams(location.search).get('to')||'';
+  var e164=to.replace(/[^\d+]/g,''); if(e164&&e164[0]!=='+') e164=(e164.length===10?'+1':'+')+e164;
+  if(!e164){document.getElementById('num').textContent='No number';document.getElementById('msg').textContent='This link had no phone number on it.';return;}
+  var enc=encodeURIComponent(e164);
+  document.getElementById('num').textContent=e164.replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3');
+  var app='quo://call?to='+enc, web='https://my.openphone.com/calls/new?to='+enc;
+  document.getElementById('app').href=app; document.getElementById('web').href=web;
+  // Try the app first. If nothing takes focus in 1.6s, the web dialer.
+  var left=false; function gone(){left=true;}
+  document.addEventListener('visibilitychange',function(){if(document.hidden)gone();}); window.addEventListener('blur',gone);
+  location.href=app;
+  setTimeout(function(){ if(!left&&!document.hidden){ document.getElementById('msg').textContent='The Quo app did not answer, opening the web dialer.'; location.href=web; } },1600);
+})();
+</script></body></html>

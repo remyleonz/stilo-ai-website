@@ -306,6 +306,32 @@ function scriptFor(opts) {
     };
 }
 
+const { alertTo, callLink } = require('./_alert_to');
+const { markHot } = require('./_hot');
+
+/** "iPhone", "Android phone", "Mac", "Windows PC": what the lead is holding. */
+function deviceFromUa(ua) {
+    const u = String(ua || '');
+    if (/iPhone/.test(u)) return 'iPhone';
+    if (/iPad/.test(u)) return 'iPad';
+    if (/Android/.test(u)) return /Mobile/.test(u) ? 'Android phone' : 'Android tablet';
+    if (/Macintosh/.test(u)) return 'Mac';
+    if (/Windows/.test(u)) return 'Windows PC';
+    return u ? 'unknown device' : '';
+}
+/** Which of our touches put them on the page: the latest page_view's utm_source. */
+async function sourceFor(pub, leadId) {
+    try {
+        const { data } = await pub.from('funnel_events').select('utm_source,utm_campaign,referrer,created_at')
+            .eq('lead_id', leadId).eq('event', 'page_view').order('created_at', { ascending: false }).limit(1);
+        const e = data && data[0]; if (!e) return '';
+        const map = { email: 'our email', sms: 'our text', followup: 'the 10-minute follow-up', instagram: 'the Instagram DM', ig: 'the Instagram DM' };
+        if (e.utm_source) return map[e.utm_source] || e.utm_source;
+        if (e.referrer) { try { return 'a link on ' + new URL(e.referrer).host; } catch (_) { return e.referrer.slice(0, 60); } }
+        return 'typed the address or an untagged link';
+    } catch (_) { return ''; }
+}
+
 async function sendWatchAlert(opts) {
     if (!process.env.RESEND_API_KEY) return { skipped: 'resend_not_configured' };
 
@@ -326,11 +352,7 @@ async function sendWatchAlert(opts) {
     // every alert used to arrive twice on the same phone, and duplicate alerts
     // train you to ignore alerts. Set() also covers the case where the lead is
     // assigned to the owner, so that never doubles either.
-    const to = Array.from(new Set(
-        [owner, opts.assignedTo]
-            .map(function (e) { return String(e || '').toLowerCase().trim(); })
-            .filter(function (e) { return e && /.+@.+\..+/.test(e); })
-    ));
+    const to = alertTo(opts.assignedTo);
 
     const who = firstName(opts.ownerName);
     const verb = opts.event === 'play' ? 'just played the video' : 'just opened the video page';
@@ -347,7 +369,7 @@ async function sendWatchAlert(opts) {
 
     const adminUrl = 'https://stiloaipartners.com/admin/?lead=' + opts.leadId;
     const digits = String(opts.phone || '').replace(/[^\d+]/g, '');
-    const telLink = 'tel:' + digits;
+    const telLink = callLink(opts.phone) || ('tel:' + digits);
 
     const html = [
         '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111;background:#fff">',
@@ -357,13 +379,16 @@ async function sendWatchAlert(opts) {
         '<div style="background:#2563EB;border-radius:6px;padding:16px 18px;margin:0 0 20px;text-align:center">',
         '<p style="margin:0 0 10px;font-size:17px;font-weight:700;color:#fff;line-height:1.3">Call them now, while it is on their screen.</p>',
         opts.phone
-            ? '<a href="' + telLink + '" style="display:inline-block;background:#fff;color:#2563EB;padding:12px 22px;border-radius:4px;text-decoration:none;font-weight:700;font-size:18px">' + esc(opts.phone) + '</a>'
+            ? '<a href="' + telLink + '" style="display:inline-block;background:#fff;color:#2563EB;padding:12px 22px;border-radius:4px;text-decoration:none;font-weight:700;font-size:18px">Call in Quo · ' + esc(opts.phone) + '</a>'
             : '<p style="margin:0;font-size:14px;color:#DBEAFE">No phone on file, open the lead.</p>',
         '</div>',
 
         '<table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 20px">',
         '<tr><td style="padding:5px 0;color:#6B7280;width:120px">Business</td><td style="padding:5px 0;font-weight:600">' + esc(opts.business) + '</td></tr>',
         '<tr><td style="padding:5px 0;color:#6B7280">Contact</td><td style="padding:5px 0">' + esc(opts.ownerName || 'unknown') + '</td></tr>',
+        (opts.where ? '<tr><td style="padding:5px 0;color:#6B7280">Location</td><td style="padding:5px 0">' + esc(opts.where) + '</td></tr>' : ''),
+        (opts.device ? '<tr><td style="padding:5px 0;color:#6B7280">Device</td><td style="padding:5px 0">' + esc(opts.device) + '</td></tr>' : ''),
+        (opts.source ? '<tr><td style="padding:5px 0;color:#6B7280">Came from</td><td style="padding:5px 0">' + esc(opts.source) + '</td></tr>' : ''),
         (opts.quiz ? '<tr><td style="padding:5px 0;color:#6B7280">Video</td><td style="padding:5px 0">' + (opts.quiz.pct ? 'watched ' + opts.quiz.pct + '%' : 'opened') + (opts.quiz.contact ? ', left contact details' : '') + '</td></tr>' : ''),
         (opts.quiz && Object.keys(opts.quiz.answers).length ? '<tr><td style="padding:5px 0;color:#6B7280">Quiz</td><td style="padding:5px 0">' + esc(Object.keys(opts.quiz.answers).map(function (k) { return require('../public/_funnel').label(k, opts.quiz.answers[k]); }).join(' · ')) + '</td></tr>' : ''),
         '<tr><td style="padding:5px 0;color:#6B7280">Industry</td><td style="padding:5px 0">' + esc(opts.niche || '') + '</td></tr>',
@@ -404,6 +429,9 @@ async function sendWatchAlert(opts) {
         '',
         'Business: ' + opts.business,
         'Contact: ' + (opts.ownerName || 'unknown'),
+        'Location: ' + (opts.where || 'unknown'),
+        'Device: ' + (opts.device || 'unknown'),
+        'Came from: ' + (opts.source || 'unknown'),
         'Industry: ' + (opts.niche || ''),
         'What happened: ' + (opts.event === 'play' ? 'Pressed play on the video' : 'Loaded the VSL page') + (opts.path ? ' (' + opts.path + ')' : ''),
         'When: ' + opts.whenET + ' (' + opts.ago + ')',
@@ -520,7 +548,7 @@ module.exports = async function handler(req, res) {
     }
 
     const { data: watched, error: wErr } = await sb.from('leads')
-        .select('id,name,owner_name,niche,category,phone,owner_phone_e164,owner_phone,owner_email,assigned_to,stage,meeting_scheduled_at,vsl_watch_alerted_at,client_id,primary_language')
+        .select('id,name,owner_name,niche,category,phone,owner_phone_e164,owner_phone,owner_email,assigned_to,stage,meeting_scheduled_at,vsl_watch_alerted_at,client_id,primary_language,address')
         .in('id', ids);
     if (wErr) return res.status(500).json({ error: 'lead_query_failed', detail: wErr.message });
 
@@ -691,8 +719,12 @@ module.exports = async function handler(req, res) {
                 });
             } catch (_) { quiz = null; }
         }
+        const source = await sourceFor(pub, lead.id);
         const payload = {
             leadId: lead.id,
+            where: lead.address || '',
+            device: deviceFromUa(best.ua),
+            source: source,
             client: lead.client_id === BLASON_CLIENT_ID ? 'blason' : null,
             quiz: quiz,
             es: lead.primary_language === 'es',
@@ -729,6 +761,7 @@ module.exports = async function handler(req, res) {
         let alert = { skipped: 'not_attempted' };
         try {
             alert = await sendWatchAlert(payload);
+            if (alert && !alert.error && !alert.skipped) await markHot(lead.id, (best.event === 'play' ? 'pressed play on the video' : 'opened the video page') + (source ? ', from ' + source : ''), sb);
         } catch (e) {
             console.error('[vsl-watch] send threw lead=' + lead.id + ': ' + (e && e.message));
             alert = { error: (e && e.message) || 'threw' };

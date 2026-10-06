@@ -27,6 +27,7 @@
  * exact; name/phone are the fallback if someone books with a stale token.
  */
 const F = require('./_funnel');
+const { callLink } = require('../prospects/_alert_to');
 const { getCalendarRefreshToken, accessTokenFromRefresh } = require('../prospects/_google_calendar');
 const { MODES } = require('./blason-slots');
 
@@ -180,7 +181,7 @@ module.exports = async function handler(req, res) {
             'Blason booking: ' + business + ' · ' + (mode === 'call' ? '10-min call' : 'showroom') + ' · ' + whenEt,
             '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:22px;color:#111;font-size:15px;line-height:1.55">'
             + '<p><strong>' + F.esc(business) + '</strong> booked ' + (mode === 'call' ? 'a 10-minute call with Manuel' : 'a showroom visit') + ' for <strong>' + F.esc(whenEt) + ' ET</strong>' + (lang === 'es' ? ' (Spanish)' : '') + '.</p>'
-            + '<p style="font-size:18px">' + (ownerName ? F.esc(ownerName) + '<br>' : '') + (ownerPhone ? '<a href="tel:' + F.esc(ownerPhone) + '">' + F.esc(ownerPhone) + '</a>' : 'no phone') + (ownerEmail ? '<br>' + F.esc(ownerEmail) : '') + '</p>'
+            + '<p style="font-size:18px">' + (ownerName ? F.esc(ownerName) + '<br>' : '') + (ownerPhone ? '<a href="' + callLink(ownerPhone) + '">Call in Quo · ' + F.esc(ownerPhone) + '</a>' : 'no phone') + (ownerEmail ? '<br>' + F.esc(ownerEmail) : '') + '</p>'
             + (notes ? '<p>Their note: ' + F.esc(notes) + '</p>' : '')
             + '<p><strong>Step 1:</strong> call ' + F.esc(first || 'them') + ' now and confirm. <strong>Step 2:</strong> once confirmed, send Manuel this on WhatsApp:</p>'
             + '<p style="background:#f4f4f4;padding:12px;border-radius:8px">' + F.esc(manuelLine) + '</p>'

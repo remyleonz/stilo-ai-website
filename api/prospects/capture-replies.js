@@ -371,6 +371,7 @@ module.exports = async function handler(req, res) {
                 reply_snippet: snippet
             }).eq('id', outbound.lead_id);
         } catch (e) { console.error('[capture-replies] lead update threw', outbound.lead_id, e && e.message); }
+        try { await require('./_hot').markHot(outbound.lead_id, 'replied to the email: "' + String(snippet || '').replace(/\s+/g, ' ').slice(0, 120) + '"'); } catch (_) {}
 
         // Address-level exit. One person can own several lead rows (a franchise
         // group, one owner with three LLCs). When they reply once, every lead

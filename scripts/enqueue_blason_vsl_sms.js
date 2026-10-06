@@ -91,8 +91,8 @@ function check(body) {
 }
 
 async function main() {
-    const { data: campaign } = await sb.from('outbound_campaigns').select('*').eq('id', CAMPAIGN_ID).maybeSingle();
-    if (!campaign) { console.error('campaign ' + CAMPAIGN_ID + ' not found'); process.exit(1); }
+    const { data: campaign, error: campaignErr } = await sb.from('outbound_campaigns').select('*').eq('id', CAMPAIGN_ID).maybeSingle();
+    if (!campaign) { console.error('campaign ' + CAMPAIGN_ID + ' not found' + (campaignErr ? ' (db error: ' + campaignErr.message + ')' : '')); process.exit(1); }
     console.log('campaign ' + campaign.id + ' "' + campaign.name + '" status ' + campaign.status + ' caps ' + campaign.daily_cap + '/day ' + campaign.per_line_daily_cap + '/line · link host ' + new URL(VSL_URL).host);
 
     // reps with lines (for "one voice per prospect": the line that last dialed them)
