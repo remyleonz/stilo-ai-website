@@ -42,9 +42,21 @@ else
   # main domain; new addresses go out from the test domain). The old
   # sequence's followup/value legs are OFF while the video runs.
   VSL="/Users/remyleon/Desktop/AI Agency/sites/stilo-ai/scripts/send_blason_vsl_email.js"
-  node "$VSL" --mode followup --limit 100 --send 2>&1 | tail -2
-  node "$VSL" --mode re --limit 70 --send 2>&1 | tail -2
-  node "$VSL" --mode cold --lane auto --limit 30 --send 2>&1 | tail -2
+  # Top up to TARGET a day (Remy, 2026-10-06: "ideally 100 emails a day for
+  # Blason"). Follow-ups first (they are due, confirmed addresses, main domain),
+  # then re-engage, then new addresses from the test domain fill the rest.
+  # Never fewer than MIN_COLD new addresses, so the test lane keeps proving
+  # supply even on a heavy follow-up day.
+  TARGET=100; MIN_COLD=30
+  sent_of() { grep -o '"sent":[0-9]*' | tail -1 | cut -d: -f2; }
+  OUT=$(node "$VSL" --mode followup --limit $TARGET --send 2>&1); echo "$OUT" | tail -2
+  F=$(echo "$OUT" | sent_of); F=${F:-0}
+  REM=$((TARGET - F)); [ "$REM" -lt "$MIN_COLD" ] && REM=$MIN_COLD
+  OUT=$(node "$VSL" --mode re --limit $REM --send 2>&1); echo "$OUT" | tail -2
+  R=$(echo "$OUT" | sent_of); R=${R:-0}
+  REM=$((REM - R)); [ "$REM" -lt "$MIN_COLD" ] && REM=$MIN_COLD
+  node "$VSL" --mode cold --lane auto --limit $REM --send 2>&1 | tail -2
+  echo "email leg: followup $F, re $R, cold up to $REM (target $TARGET)"
 fi
 echo "[$STAMP] === leg $LEG done ==="
 } >> "$LOG" 2>&1
