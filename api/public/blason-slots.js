@@ -1,9 +1,10 @@
 /**
  * GET /api/public/blason-slots?mode=call|showroom&days=7&from=0
  *
- * Open times for the Blason VSL page: Monday to Friday, 9:00 to 4:00 pm Eastern
- * (Remy's spec, 2026-10-02). 'call' = the 10-minute phone call with Manuel on
- * 15-minute marks; 'showroom' = a visit, 30-minute marks. Same-day is allowed
+ * Open times for the Blason VSL page, Monday to Friday Eastern. 'call' = a phone
+ * call with Manuel, 9:00 am to 6:00 pm on 15-minute marks (Remy, 2026-10-06: he
+ * can answer the phone later than the showroom is open); 'showroom' = a visit,
+ * 9:00 am to 4:00 pm on 30-minute marks. Same-day is allowed
  * with two hours' notice because Remy phones every booking to confirm anyway.
  *
  * Busy = Remy's primary Google Calendar (free/busy, no titles) plus every meeting
@@ -20,7 +21,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const TZ = 'America/New_York';
 const MODES = {
-    call: { startHour: 9, endHour: 16, stepMin: 15, durationMin: 15, leadMs: 2 * 3600000 },
+    call: { startHour: 9, endHour: 18, stepMin: 15, durationMin: 15, leadMs: 2 * 3600000 },
     showroom: { startHour: 9, endHour: 16, stepMin: 30, durationMin: 30, leadMs: 3 * 3600000 },
 };
 
@@ -73,7 +74,8 @@ module.exports = async function handler(req, res) {
     const q = req.query || {};
     const mode = MODES[q.mode] ? q.mode : 'call';
     const days = Math.min(Math.max(parseInt(q.days || '7', 10) || 7, 1), 14);
-    const from = Math.min(Math.max(parseInt(q.from || '0', 10) || 0, 0), 42);
+    // The page's day picker reaches 58 days out (blason-book refuses past 60).
+    const from = Math.min(Math.max(parseInt(q.from || '0', 10) || 0, 0), 58);
     const candidates = generateSlots(mode, days, from);
     if (!candidates.length) return res.status(200).json({ configured: true, mode: mode, slots: [] });
 
