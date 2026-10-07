@@ -8,9 +8,10 @@
 
    The laptop dialer's SPACE writes a dialer_handoff row; this
    view polls it every 2.5s (paused while the tab is hidden) and
-   renders one oversized Call-in-Quo button. quo:// opens the Quo
-   app pre-dialed; openphone:// and the web dialer are the quiet
-   fallbacks. Deliberately NO tel: — a call from the phone's own
+   renders one oversized Call-in-Quo button. openphone://dial?number=
+   (Quo's documented scheme) opens the app with the number in the
+   dialer, Enter places the call; quo:// and the web dialer are the
+   quiet fallbacks (2026-10-07: quo:// opened the app EMPTY for Ale). Deliberately NO tel: — a call from the phone's own
    number never reaches the webhook, so it would vanish from the
    lead's record.
 
@@ -121,9 +122,9 @@
             + '<h2 class="dc-biz">' + esc(row.business || 'Lead #' + row.lead_id) + '</h2>'
             + '<div class="dc-num">' + esc(row.e164) + '</div>'
             + '<div class="dc-age" id="dcAge">' + fmtAge(row.updated_at) + '</div>'
-            + '<a class="dc-callbtn" href="quo://call?to=' + enc + '">' + PHONE_SVG + 'Call in Quo</a>'
+            + '<a class="dc-callbtn" href="openphone://dial?number=' + enc + '&action=call">' + PHONE_SVG + 'Call in Quo</a>'
             + '<div class="dc-alts">'
-            + '<a class="dc-alt" href="openphone://call?to=' + enc + '">OpenPhone link</a><span class="dc-dot">·</span>'
+            + '<a class="dc-alt" href="quo://call?to=' + enc + '">quo:// link</a><span class="dc-dot">·</span>'
             + '<a class="dc-alt" href="https://my.openphone.com/calls/new?to=' + enc + '" target="_blank">Web dialer</a><span class="dc-dot">·</span>'
             + '<button class="dc-alt" onclick="DIAL_COMPANION.copy()">Copy number</button>'
             + '</div>'

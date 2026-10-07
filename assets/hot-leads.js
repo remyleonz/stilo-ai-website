@@ -21,7 +21,7 @@
   function callInQuo(phone) {
     var n = e164(phone); if (!n) return;
     if (global.DIALER_MODE && DIALER_MODE.openQuo && DIALER_MODE.openQuo(n)) return;
-    global.location.href = 'quo://call?to=' + encodeURIComponent(n);
+    global.location.href = 'openphone://dial?number=' + encodeURIComponent(n) + '&action=call';
     setTimeout(function () { if (!document.hidden) global.open('https://my.openphone.com/calls/new?to=' + encodeURIComponent(n), '_blank'); }, 1600);
   }
   var CSS = '.hl{margin:0 0 18px;padding:12px 14px;border:1px solid rgba(239,68,68,.45);border-left:3px solid #ef4444;border-radius:10px;background:rgba(239,68,68,.07);font-family:inherit}'

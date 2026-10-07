@@ -15,7 +15,7 @@
   if(!e164){document.getElementById('num').textContent='No number';document.getElementById('msg').textContent='This link had no phone number on it.';return;}
   var enc=encodeURIComponent(e164);
   document.getElementById('num').textContent=e164.replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3');
-  var app='quo://call?to='+enc, web='https://my.openphone.com/calls/new?to='+enc;
+  var app='openphone://dial?number='+enc+'&action=call', web='https://my.openphone.com/calls/new?to='+enc;
   document.getElementById('app').href=app; document.getElementById('web').href=web;
   // Try the app first. If nothing takes focus in 1.6s, the web dialer.
   var left=false; function gone(){left=true;}

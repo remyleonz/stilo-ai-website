@@ -14,12 +14,12 @@
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/vsl-activity.js"></script>
-    <script src="/assets/hot-leads.js?v=20261006a"></script>
+    <script src="/assets/hot-leads.js?v=20261007b"></script>
     <script src="/assets/vsl-watchers.js?v=20261007a"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
-    <script src="/assets/dialer-mode.js?v=20261007a"></script>
-    <script src="/assets/client-pipeline.js"></script>
+    <script src="/assets/dialer-mode.js?v=20261007b"></script>
+    <script src="/assets/client-pipeline.js?v=20261007b"></script>
     <script src="/assets/dial-companion.js"></script>
     <style>
         :root {
@@ -3354,7 +3354,7 @@
             if (!e164) { outcomeMsg('No phone number on this lead.', 'var(--red)'); return; }
             if (window.DIALER_MODE && DIALER_MODE.openQuo && DIALER_MODE.openQuo(e164)) return;
             const enc = encodeURIComponent(e164);
-            const deep = 'quo://call?to=' + enc;
+            const deep = 'openphone://dial?number=' + enc + '&action=call';
             const web = 'https://my.openphone.com/calls/new?to=' + enc;
             let appOpened = false;
             const onHide = function () { if (document.hidden) appOpened = true; };
