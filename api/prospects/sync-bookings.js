@@ -159,15 +159,29 @@ module.exports = async function handler(req, res) {
     const booked = [];
     const unmatched = [];
 
+    // Our own people are never "bookers". 2026-10-07: the recurring team call
+    // got the three SDRs' gmails as guests, singleEvents expanded it into 550
+    // instances, and every one became an "Action needed" email to Remy and
+    // David. Team addresses come from sdr_users so a new rep is covered.
+    let teamEmails = new Set();
+    try {
+        const { data: team } = await publicClient().from('sdr_users').select('email');
+        (team || []).forEach(function (t) { if (t.email) teamEmails.add(String(t.email).toLowerCase().trim()); });
+    } catch (_) { /* fall back to the domain filter below */ }
+    const teamMeet = String(process.env.TEAM_CALL_BLOCK_MEET_LINK || '').trim();
+
     for (const e of events) {
         const start = (e.start && (e.start.dateTime || e.start.date)) || null;
         if (!start || e.status === 'cancelled') continue;
+        // The team call room is not a prospect booking, in any of its instances.
+        if (/team cold-call session/i.test(e.summary || '')) continue;
+        if (teamMeet && e.hangoutLink && e.hangoutLink === teamMeet) continue;
         // External attendees = the booker(s). Drop our own org + Remy's gmail.
         // Keep the display name so we can fall back to name matching when the
         // email they booked with isn't the one we have on the lead.
         const guests = (e.attendees || [])
             .map(function (a) { return { email: (a.email || '').toLowerCase().trim(), name: (a.displayName || '').trim() }; })
-            .filter(function (g) { return g.email && !/@stiloaipartners\.com$/.test(g.email) && g.email !== 'remyleon11@gmail.com'; });
+            .filter(function (g) { return g.email && !/@stiloaipartners\.com$/.test(g.email) && g.email !== 'remyleon11@gmail.com' && !teamEmails.has(g.email); });
         if (!guests.length) continue;
 
         const meetLink = e.hangoutLink
