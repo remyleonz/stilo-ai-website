@@ -3,11 +3,13 @@
  *
  * The three recurring team touches Remy was doing by hand (2026-08-24):
  *
- *   invite   Mon + Wed + Thu evening - email the whole active roster the invite for
- *            tomorrow's cold-call session (Tue/Thu/Fri 9am-5pm ET, hosted by
- *            Remy & David) with the standing Meet link.
- *   morning  Tue + Thu + Fri 9am ET - SMS each SDR from their own Quo line to
- *            their personal phone: join the session, dial today.
+ *   invite   Sun to Thu evening - email the whole active roster the invite for
+ *            tomorrow's cold-call room (Mon-Fri 9am-5pm ET since 2026-10-07,
+ *            open all day) with the standing Meet link. Tue/Thu/Fri hosted by
+ *            Remy and David; Mon/Wed hosted by David (Remy is in class).
+ *            ?when=today sends the same email for TODAY's session.
+ *   morning  Mon-Fri 9am ET - SMS each SDR from their own Quo line to their
+ *            personal phone: join the room, dial today.
  *   evening  Mon-Fri 6pm ET — per SDR: if they dialled today, SMS asking them
  *            to drop their stats in the STILO groupchat; if they made zero
  *            dials, SMS a nudge to call tomorrow with their week so far.
@@ -106,19 +108,29 @@ async function repActivity(emails) {
     return out;
 }
 
-async function jobInvite(dry) {
+// Who is hosting the room that day. Remy is in class Monday and Wednesday
+// (2026-10-07); the room stays open and David hosts, so the team can dial.
+function hostsFor(weekday) {
+    return (weekday === 'Monday' || weekday === 'Wednesday')
+        ? 'Hosted by David. Remy is in class and joins when he can.'
+        : 'Hosted by Remy and David.';
+}
+
+async function jobInvite(dry, whenToday) {
     const roster = await activeRoster();
     const meet = process.env.TEAM_CALL_BLOCK_MEET_LINK || '';
-    const tomorrow = new Date(Date.now() + 24 * 3600 * 1000);
-    const day = etWeekday(tomorrow);
+    const target = whenToday ? new Date() : new Date(Date.now() + 24 * 3600 * 1000);
+    const day = etWeekday(target);
+    const when = whenToday ? 'today' : 'tomorrow';
     const results = [];
     for (const r of roster) {
         const html = ''
             + '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1a1a1a;line-height:1.6;max-width:520px;">'
             + '<p>Hey ' + firstName(r) + ',</p>'
-            + '<p>Team cold-call session tomorrow (<strong>' + day + '</strong>), <strong>9am to 5pm ET</strong>. Hosted by Remy and David.</p>'
+            + '<p>Team cold-call room ' + when + ' (<strong>' + day + '</strong>), <strong>9am to 5pm ET</strong>. ' + hostsFor(day) + '</p>'
+            + '<p>The room is open all day, Monday to Friday now. Join whenever you are dialing, even if nobody else is on yet.</p>'
             + (meet ? '<p>Join here: <a href="' + meet + '">' + meet + '</a></p>' : '')
-            + '<p>Have your list and your script open before 9. See you on the call.</p>'
+            + '<p>Have your list and your script open before 9, and dial from your Quo line so every call lands on the lead.</p>'
             + '<p>STILO</p></div>';
         if (dry) { results.push({ to: r.email, dry: true }); continue; }
         const resp = await fetch('https://api.resend.com/emails', {
@@ -127,13 +139,13 @@ async function jobInvite(dry) {
             body: JSON.stringify({
                 from: 'STILO AI PARTNERS <' + (process.env.STILO_SENDER_EMAIL || 'remyleon@stiloaipartners.com') + '>',
                 to: [r.email],
-                subject: 'Call session tomorrow · 9am-5pm',
+                subject: 'Call room ' + when + ' · ' + day + ' 9am-5pm',
                 html: html
             })
         });
         results.push({ to: r.email, status: resp.status });
     }
-    return { day: day, sent: results };
+    return { day: day, when: when, sent: results };
 }
 
 async function jobMorning(dry) {
@@ -145,7 +157,7 @@ async function jobMorning(dry) {
         if (!to) { results.push({ rep: r.email, skip: 'no_personal_number' }); continue; }
         const line = normalizePhone(r.openphone_number);
         if (!line) { results.push({ rep: r.email, skip: 'no_quo_line' }); continue; }
-        const text = 'Call block today 10-2. Hop on the Meet and let\u2019s get you some meetings booked. See you at 10.';
+        const text = 'Call room is open today 9 to 5. Hop on the Meet whenever you\u2019re dialing and let\u2019s get you some meetings booked.';
         if (dry) { results.push({ rep: r.email, from: line, to: to, dry: true, text: text }); continue; }
         results.push(Object.assign({ rep: r.email }, await sendTeamSms(line, to, text)));
     }
@@ -189,7 +201,7 @@ module.exports = async function handler(req, res) {
     const dry = !!(req.query && (req.query.dry === '1' || req.query.dry === 'true'));
     try {
         let out;
-        if (job === 'invite') out = await jobInvite(dry);
+        if (job === 'invite') out = await jobInvite(dry, !!(req.query && req.query.when === 'today'));
         else if (job === 'morning') out = await jobMorning(dry);
         else if (job === 'evening') out = await jobEvening(dry);
         else return res.status(400).json({ error: 'unknown_job', valid: ['invite', 'morning', 'evening'] });
