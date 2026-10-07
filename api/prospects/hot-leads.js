@@ -56,7 +56,10 @@ module.exports = async function handler(req, res) {
         .select('id,name,owner_name,phone,owner_phone,owner_phone_e164,address,primary_language,assigned_to,client_id,hot_at,hot_reason,stage,next_step')
         .not('hot_at', 'is', null).is('hot_cleared_at', null).gte('hot_at', floor)
         .order('hot_at', { ascending: false }).limit(80);
-    if (!gate.isAdmin) q = q.eq('assigned_to', gate.email);
+    // SDRs see their own leads PLUS the whole Blason pool: the client list is
+    // a shared calling list (Remy, 2026-10-07: Ale calls every video watcher
+    // today). STILO leads stay scoped to the rep who owns them.
+    if (!gate.isAdmin) q = q.or('assigned_to.eq.' + gate.email + ',client_id.eq.' + BLASON);
     const { data: rows, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
     if (!rows || !rows.length) return res.status(200).json({ ok: true, rows: [] });
