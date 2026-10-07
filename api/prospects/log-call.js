@@ -102,6 +102,9 @@ module.exports = async function handler(req, res) {
                     outcome: body.outcome,
                     logged_by: loggedBy
                 };
+                // "Did you reach a decision maker?" Yes/No from the drawer or the
+                // dialer's D key. null = the rep was not asked / did not answer.
+                if (typeof body.decision_maker === 'boolean') update.decision_maker = body.decision_maker;
                 if (body.notes && body.notes.trim()) {
                     update.notes = body.notes;
                 }
@@ -116,7 +119,8 @@ module.exports = async function handler(req, res) {
                     called_at: calledAtIso,
                     outcome: body.outcome,
                     notes: body.notes || '',
-                    logged_by: loggedBy
+                    logged_by: loggedBy,
+                    decision_maker: typeof body.decision_maker === 'boolean' ? body.decision_maker : null
                 });
                 callInsert = error ? { error: error.message } : { ok: true, merged: false };
             }

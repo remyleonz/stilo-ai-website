@@ -382,7 +382,8 @@
             pausedFor: null,        // 'booking' | 'menu' | null
             bookingPrior: null,
             startedAt: Date.now(),
-            stats: { dials: 0, connects: 0, talk: 0, booked: 0, callbacks: 0, logged: 0 },
+            stats: { dials: 0, connects: 0, talk: 0, booked: 0, callbacks: 0, logged: 0, dms: 0 },
+            dm: null,          // 'did you reach a decision maker?' for the current lead (D key)
             lastLoggedLabel: '',
             emailVariant: null,
             panel: null,            // 'callback' | 'dnc' | 'email' | 'sms' | null
@@ -407,6 +408,7 @@
             + '<div class="dm-stat"><b id="dmStTalk">0:00</b><span>Talk</span></div>'
             + '<div class="dm-stat"><b id="dmStCb">0</b><span>Callbacks</span></div>'
             + '<div class="dm-stat"><b id="dmStBooked">0</b><span>Booked</span></div>'
+            + '<div class="dm-stat"><b id="dmStDm">0</b><span>DMs</span></div>'
             + '<div class="dm-stat"><b id="dmStPace">0</b><span>Dials/hr</span></div>'
             + '</div>'
             + '<div class="dm-hud-right">'
@@ -436,6 +438,7 @@
         setText('dmStTalk', fmtDur(S.stats.talk));
         setText('dmStCb', S.stats.callbacks);
         setText('dmStBooked', S.stats.booked);
+        setText('dmStDm', S.stats.dms);
         setText('dmStPace', S.stats.dials ? Math.round(S.stats.dials / hrs) : 0);
         if (S.phase === 'dialing') {
             var t = el('dmLiveTimer');
@@ -786,6 +789,7 @@
             + k('4', 'Not interested', 'DIALER_MODE.disposition(4)', !canDisp)
             + k('5', 'Wrong number', 'DIALER_MODE.disposition(5)', !canDisp)
             + k('6', 'DNC', 'DIALER_MODE.disposition(6)', !canDisp)
+            + k('D', 'Decision maker' + (S.dm === true ? ': yes' : S.dm === false ? ': no' : '?'), 'DIALER_MODE.legendKey(\'d\')', S.phase === 'done')
             + k('E', 'Email', 'DIALER_MODE.legendKey(\'e\')', false)
             + k('T', 'Text', 'DIALER_MODE.legendKey(\'t\')', !smsAllowed())
             + k('SPACE', 'Call / Next', 'DIALER_MODE.legendKey(\'space\')', !(S.phase === 'ready' || S.phase === 'advance'))
@@ -796,6 +800,7 @@
     function legendKey(k) {
         if (!S) return;
         if (k === 'e' && !S.panel) openEmailPanel();
+        else if (k === 'd') toggleDm();
         else if (k === 't' && !S.panel) openSmsPanel();
         else if (k === 'space') { if (S.phase === 'ready') dial(); else if (S.phase === 'advance') nextNow(); }
         else if (k === 'n' && S.phase !== 'advance') advance('Skipped', true);
@@ -904,6 +909,7 @@
         if (S.idx >= S.queue.length) { S.phase = 'done'; renderSummary(); return; }
         S.phase = 'ready';
         S.lead = S.queue[S.idx];
+        S.dm = null; S.dmCounted = false;
         renderLead();
         var manual = S.manualNav; S.manualNav = false;
         if (autoDial() && S.stats.dials > 0 && !manual) {
@@ -1140,9 +1146,20 @@
         if (k === 6) { openDncPanel(); return; }
     }
 
+    // D key: did this call reach a decision maker? Cycles yes -> no -> unset.
+    // Remy (2026-10-07) wants a daily count of decision makers actually
+    // reached, logged by the rep, not inferred from call length.
+    function toggleDm() {
+        if (!S || S.phase === 'done') return;
+        S.dm = S.dm === null ? true : (S.dm === true ? false : null);
+        if (S.dm === true && !S.dmCounted) { S.stats.dms++; S.dmCounted = true; }
+        if (S.dm !== true && S.dmCounted) { S.stats.dms = Math.max(0, S.stats.dms - 1); S.dmCounted = false; }
+        renderFoot();
+    }
     function logCall(leadId, outcome, extra) {
         S.stats.logged++;
         var body = Object.assign({ id: leadId, lead_id: leadId, outcome: outcome, notes: '' }, extra || {});
+        if (S.dm === true || S.dm === false) body.decision_maker = S.dm;
         return cfg.fetchJson('/api/prospects/log-call', { method: 'POST', body: JSON.stringify(body) })
             .catch(function (e) { console.warn('[dialer] log-call failed', e); });
     }
@@ -1547,6 +1564,7 @@
             return;
         }
         if (k === 'e') { ev.stopPropagation(); ev.preventDefault(); if (!S.panel) openEmailPanel(); return; }
+        if (k === 'd') { ev.stopPropagation(); ev.preventDefault(); toggleDm(); return; }
         if (k === 't') { ev.stopPropagation(); ev.preventDefault(); if (!S.panel) openSmsPanel(); return; }
     }
 
