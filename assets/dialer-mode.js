@@ -985,7 +985,7 @@
         var onBlur = function () { appOpened = true; };
         document.addEventListener('visibilitychange', onHide);
         window.addEventListener('blur', onBlur);
-        window.location.href = 'quo://call?to=' + enc;
+        window.location.href = 'openphone://dial?number=' + enc + '&action=call';
         setTimeout(function () {
             document.removeEventListener('visibilitychange', onHide);
             window.removeEventListener('blur', onBlur);
