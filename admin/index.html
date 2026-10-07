@@ -10786,7 +10786,7 @@
                     + '</div>';
             } else if (phone) {
                 var encPhone = encodeURIComponent(phone);
-                var appUrl = 'openphone://dial?number=' + enc + '&action=call'odeURIComponent('+' + (String(phone).replace(/\D/g, '').length === 10 ? '1' : '') + String(phone).replace(/\D/g, ''));
+                var appUrl = 'openphone://dial?number=' + encodeURIComponent('+' + (String(phone).replace(/\D/g, '').length === 10 ? '1' : '') + String(phone).replace(/\D/g, '')) + '&action=call';
                 phoneCardHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg,rgba(37,99,235,0.10),rgba(37,99,235,0.02));border:1px solid rgba(37,99,235,0.35);border-radius:12px;padding:16px 18px;margin-bottom:12px;">'
                     + '<div style="min-width:0;">'
                       + '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:2px;">Direct line' + strictPill + '</div>'
