@@ -30,7 +30,7 @@
     + '.pt-btn{border:0;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;background:#2563EB}.pt-btn.g{background:rgba(255,255,255,.1);color:var(--text-primary,#ecedf2)}.pt-btn.q{background:#ef4444}'
     + '.pt-tier{display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:rgba(255,255,255,.06)}.pt-tier button{border:0;background:transparent;color:var(--text-secondary,#9a9ab0);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px;cursor:pointer;font-family:inherit}.pt-tier button.on.hot{background:rgba(239,68,68,.25);color:#f87171}.pt-tier button.on.warm{background:rgba(251,191,36,.22);color:#fbbf24}.pt-tier button.on.cold{background:rgba(96,165,250,.2);color:#60a5fa}'
     + '.pt-empty{font-size:12px;color:var(--text-secondary,#9a9ab0);padding:10px 12px;border:1px dashed rgba(255,255,255,.1);border-radius:10px}'
-    + '.pt-cold .pt-row{cursor:pointer}';
+    + '.pt-cold .pt-row{cursor:pointer}.pt-who .lt-clock{margin-top:6px;padding:5px 10px;font-size:12px}';
   function ensureCss() { if (document.getElementById('pipelineTabCss')) return; var st = document.createElement('style'); st.id = 'pipelineTabCss'; st.textContent = CSS; document.head.appendChild(st); }
   function tierSwitch(id, cur) {
     return '<span class="pt-tier" data-id="' + id + '">' + ['hot', 'warm', 'cold'].map(function (t) { return '<button data-tier="' + t + '" class="' + t + (cur === t ? ' on' : '') + '">' + t + '</button>'; }).join('') + '</span>';
@@ -44,7 +44,9 @@
       + '<span class="pt-who"><b>' + esc(r.business || 'lead ' + r.id) + '</b>' + (r.owner ? ' · ' + esc(r.owner) : '') + (r.city ? ' · ' + esc(r.city) : '')
       + (r.call_now ? '<span class="pt-pill now">call now</span>' : '') + (r.lang === 'es' ? '<span class="pt-pill es">ES</span>' : '') + (r.instagram ? '<span class="pt-pill es">IG</span>' : '')
       + '<span class="pt-why">' + esc(why || 'warm') + (r.phone ? ' · ' + esc(r.phone) : ' · no phone on file') + (r.next_step ? ' · next: ' + esc(r.next_step.slice(0, 80)) : '') + '</span>'
-      + '<span class="pt-dial">' + dial + (r.assigned_to ? ' · ' + esc(rep(r.assigned_to)) + "'s lead" : '') + '</span></span>'
+      + '<span class="pt-dial">' + dial + (r.assigned_to ? ' · ' + esc(rep(r.assigned_to)) + "'s lead" : '') + '</span>'
+      + (global.LEAD_TIER && (r.alert_at || r.hot_at) ? LEAD_TIER.timerHtml({ alert_at: r.alert_at, hot_at: r.hot_at, cleared: !r.call_now && !(lc && r.hot_at && lc.at > r.hot_at), escalated_at: r.escalated_at, firstCallAfter: (lc && r.hot_at && lc.at > r.hot_at) ? { by: lc.by, at: lc.at, outcome: lc.outcome } : null }) : '')
+      + '</span>'
       + tierSwitch(r.id, r.tier)
       + (r.phone ? '<button class="pt-btn q" data-act="call">Call in Quo</button>' : '')
       + '<button class="pt-btn" data-act="open">Open + script</button>'
