@@ -19,7 +19,7 @@
   function setCollapsed(v) { try { localStorage.setItem('vslw_collapsed', v ? '1' : '0'); } catch (e) {} render(); }
   var CSS = '.vw{margin:0 0 18px;padding:12px 14px;border:1px solid rgba(139,92,246,.45);border-left:3px solid #8b5cf6;border-radius:10px;background:rgba(139,92,246,.06)}'
     + '.vw-h{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}.vw-t{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#a78bfa}.vw-s{font-size:11px;color:var(--text-secondary,#9a9ab0)}'
-    + '.vw table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}.vw th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted,#8a8aa0);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08)}.vw td{padding:8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top;color:var(--text-primary,#ecedf2)}'
+    + '.vw table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}.vw tbody tr{cursor:pointer}.vw tbody tr:hover td{background:rgba(255,255,255,.03)}.vw th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted,#8a8aa0);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08)}.vw td{padding:8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top;color:var(--text-primary,#ecedf2)}'
     + '.vw-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700}.vw-hot{background:rgba(239,68,68,.18);color:#f87171}.vw-ok{background:rgba(34,197,94,.15);color:#4ade80}.vw-mid{background:rgba(139,92,246,.18);color:#c4b5fd}.vw-grey{background:rgba(255,255,255,.08);color:var(--text-secondary,#9a9ab0)}'
     + '.vw-btn{border:0;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;background:#2563EB;margin-right:4px}.vw-btn.q{background:#ef4444}';
   function ensureCss() { if (document.getElementById('vslWatchersCss')) return; var st = document.createElement('style'); st.id = 'vslWatchersCss'; st.textContent = CSS; document.head.appendChild(st); }
@@ -51,10 +51,11 @@
           }).join('') + '</tbody></table>' : (open ? '<div class="vw-s" style="margin-top:8px">Nobody has opened the video page yet.</div>' : ''))
         + '</div>';
       h.onclick = function (ev) {
-        var b = ev.target.closest('button[data-act]'); if (!b) return;
-        var id = parseInt(b.closest('tr').getAttribute('data-id'), 10);
+        var b = ev.target.closest('button[data-act]');
+        var tr = ev.target.closest('tr[data-id]'); if (!tr) return;
+        var id = parseInt(tr.getAttribute('data-id'), 10);
         var r = rows.filter(function (x) { return x.id === id; })[0]; if (!r) return;
-        if (b.getAttribute('data-act') === 'call') { if (global.HOT_LEADS) HOT_LEADS.callInQuo(r.phone); }
+        if (b && b.getAttribute('data-act') === 'call') { if (global.HOT_LEADS) HOT_LEADS.callInQuo(r.phone); }
         else { var o = opener(); if (o) o(id); }
       };
     });

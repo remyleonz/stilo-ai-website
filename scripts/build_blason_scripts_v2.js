@@ -226,6 +226,9 @@ function discovery(seg, es) {
 // rep reads on a live call fits on one screen. The long v3 doc stays as
 // training (Clients/Blason Spa Equipment/call-scripts/).
 // ---------------------------------------------------------------------------
+// Each rep's Quo line, as said out loud on the voicemail. George was caught
+// reading Remy's number on a call (2026-10-08) because it was hard-coded.
+const REP_PHONE = { 'remyleon@stiloaipartners.com': '786-837-6639', 'aleb1027@gmail.com': '786-755-7104', 'georgegutierrez446@gmail.com': '305-614-7430', 'ayesjorge911@gmail.com': '786-981-9302', 'davidcoira@stiloaipartners.com': '754-707-5311' };
 const REP_FIRST = { 'remyleon@stiloaipartners.com': 'Remy', 'aleb1027@gmail.com': 'Alejandro', 'davidcoira@stiloaipartners.com': 'David', 'ayesjorge911@gmail.com': 'Jorge', 'georgegutierrez446@gmail.com': 'George', 'melanyealtuve12@gmail.com': 'Melanye', 'marcuslindsey8@gmail.com': 'Marcus' };
 
 // What Blason sells, grouped by what it does (live catalog, blasononline.com, 2026-10-01).
@@ -325,6 +328,7 @@ function build(rawLead, hist, es) {
     const who = askName(lead);
     const L = es ? 1 : 0;
     const rep = REP_FIRST[String(lead.assigned_to || '').toLowerCase()] || 'Remy';
+    const repPhone = REP_PHONE[String(lead.assigned_to || '').toLowerCase()] || REP_PHONE['remyleon@stiloaipartners.com'];
     const out = [];
     const p = function (s) { out.push(s == null ? '' : s); };
     const S = function (esLine, enLine) { p('> "' + (es ? esLine : enLine) + '"'); };
@@ -433,8 +437,8 @@ function build(rawLead, hist, es) {
     p('');
     p(es ? '**Buzón de voz (solo el primero):**' : '**Voicemail (first one only):**');
     const biz = /hialeah/i.test(lead.name) ? (es ? 'su clínica' : 'your clinic') : lead.name;
-    S('Hola' + hi + ', le habla ' + rep + ' de Blasón, B-L-A-S-O-N, en Miami. Le llamo por ' + (nonLaser ? 'un tratamiento nuevo' : 'la depilación láser') + ' en ' + biz + '. 786-837-6639. Otra vez, 786-837-6639.',
-      'Hi' + hi + ', it\'s ' + rep + ' with Blason, B-L-A-S-O-N, in Miami. I\'m calling about ' + (nonLaser ? 'a new treatment' : 'laser hair removal') + ' at ' + biz + '. 786-837-6639. Again, 786-837-6639.');
+    S('Hola' + hi + ', le habla ' + rep + ' de Blasón, B-L-A-S-O-N, en Miami. Le llamo por ' + (nonLaser ? 'un tratamiento nuevo' : 'la depilación láser') + ' en ' + biz + '. ' + repPhone + '. Otra vez, ' + repPhone + '.',
+      'Hi' + hi + ', it\'s ' + rep + ' with Blason, B-L-A-S-O-N, in Miami. I\'m calling about ' + (nonLaser ? 'a new treatment' : 'laser hair removal') + ' at ' + biz + '. ' + repPhone + '. Again, ' + repPhone + '.');
     p('');
     p('---');
     for (const line of machineGuide(es)) p(line);

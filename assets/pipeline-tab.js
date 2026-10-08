@@ -23,7 +23,7 @@
   function rep(email) { var e = String(email || '').toLowerCase(); if (!e) return ''; if (e.indexOf('remyleon') === 0) return 'Remy'; if (e.indexOf('davidcoira') === 0) return 'David'; if (e.indexOf('aleb') === 0) return 'Ale'; if (e.indexOf('georgegutierrez') === 0) return 'George'; if (e.indexOf('ayesjorge') === 0) return 'Jorge'; return e.split('@')[0]; }
   var CSS = '.pt-g{margin:0 0 22px}.pt-h{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}.pt-h .n{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.08);color:var(--text-secondary,#9a9ab0)}'
     + '.pt-hot .pt-h{color:#f87171}.pt-warm .pt-h{color:#fbbf24}.pt-cold .pt-h{color:#60a5fa}'
-    + '.pt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,.02);flex-wrap:wrap}.pt-row.now{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.06)}'
+    + '.pt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,.02);flex-wrap:wrap;cursor:pointer}.pt-row:hover{background:rgba(255,255,255,.04)}.pt-row.now{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.06)}'
     + '.pt-ago{min-width:72px;font-size:11px;font-weight:700;color:var(--text-secondary,#9a9ab0)}.pt-row.now .pt-ago{color:#f87171}'
     + '.pt-who{flex:1;min-width:220px;font-size:13px;color:var(--text-primary,#ecedf2)}.pt-who b{font-weight:700}.pt-why{display:block;font-size:12px;color:var(--text-secondary,#9a9ab0);margin-top:2px}.pt-dial{display:block;font-size:11px;color:var(--text-tertiary,#7a7a90);margin-top:2px}'
     + '.pt-pill{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-left:6px;background:rgba(37,99,235,.15);color:#60a5fa}.pt-pill.now{background:rgba(239,68,68,.18);color:#f87171}.pt-pill.es{background:rgba(255,255,255,.08);color:var(--text-secondary,#9a9ab0)}'
@@ -65,13 +65,14 @@
     h.onclick = function (ev) {
       var tb = ev.target.closest('.pt-tier button');
       if (tb) { setTier(parseInt(tb.closest('.pt-tier').getAttribute('data-id'), 10), tb.getAttribute('data-tier')); return; }
-      var b = ev.target.closest('[data-act]'); if (!b) return;
-      var act = b.getAttribute('data-act');
+      var b = ev.target.closest('[data-act]');
+      var act = b ? b.getAttribute('data-act') : null;
       if (act === 'cold') { if (state.onColdClick) state.onColdClick(); return; }
-      var rowEl = b.closest('.pt-row'); var id = parseInt(rowEl.getAttribute('data-id'), 10);
+      var rowEl = ev.target.closest('.pt-row'); if (!rowEl || !rowEl.getAttribute('data-id')) return;
+      var id = parseInt(rowEl.getAttribute('data-id'), 10);
       var r = (d.hot.concat(d.warm)).filter(function (x) { return x.id === id; })[0]; if (!r) return;
       if (act === 'call') { if (global.HOT_LEADS) HOT_LEADS.callInQuo(r.phone); }
-      else if (act === 'open') { if (state.openLead) state.openLead(id); }
+      else { if (state.openLead) state.openLead(id); }   // the row itself, or Open + script
     };
   }
   async function refresh() {
@@ -91,5 +92,16 @@
     if (state.timer) clearInterval(state.timer);
     state.timer = setInterval(function () { if (!document.hidden && document.getElementById(state.host) && document.getElementById(state.host).offsetParent) refresh(); }, 60000);
   }
-  global.PIPELINE_TAB = { mount: mount, refresh: refresh, setTier: setTier, rows: function () { return state.data ? state.data.hot.concat(state.data.warm) : []; } };
+  // Red badge on the Leads nav item: uncalled warm/hot signals. Polls on its own
+  // so the badge is right even when the Pipeline tab is not open.
+  async function badge(fetchJson, query) {
+    try {
+      var d = await fetchJson('/api/prospects/pipeline' + (query || ''));
+      var n = (d && d.counts && d.counts.call_now) || 0;
+      document.querySelectorAll('[data-leads-badge]').forEach(function (el) { el.textContent = String(n); el.style.display = n ? 'inline-flex' : 'none'; });
+      return n;
+    } catch (e) { return null; }
+  }
+  function startBadge(fetchJson, query) { badge(fetchJson, query); setInterval(function () { if (!document.hidden) badge(fetchJson, query); }, 60000); }
+  global.PIPELINE_TAB = { mount: mount, refresh: refresh, setTier: setTier, badge: badge, startBadge: startBadge, rows: function () { return state.data ? state.data.hot.concat(state.data.warm) : []; } };
 })(window);

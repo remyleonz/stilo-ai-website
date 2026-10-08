@@ -14,14 +14,14 @@
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/vsl-activity.js"></script>
-    <script src="/assets/hot-leads.js?v=20261007b"></script>
-    <script src="/assets/vsl-watchers.js?v=20261007a"></script>
+    <script src="/assets/hot-leads.js?v=20261008e"></script>
+    <script src="/assets/vsl-watchers.js?v=20261008e"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js?v=20261007b"></script>
     <script src="/assets/client-pipeline.js?v=20261007b"></script>
     <script src="/assets/dial-companion.js"></script>
-    <script src="/assets/pipeline-tab.js?v=20261008c"></script>
+    <script src="/assets/pipeline-tab.js?v=20261008e"></script>
     <script src="/assets/lead-tier.js?v=20261008d"></script>
     <script src="/assets/ig-dm.js?v=20261008b"></script>
     <script src="/assets/add-lead.js?v=20261008"></script>
@@ -642,6 +642,7 @@
             <button class="nav-item" data-page="leads" onclick="switchPage('leads')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Leads
+                <span class="nav-badge" data-leads-badge style="display:none;background:#ef4444;">0</span>
             </button>
             <button class="nav-item" data-page="instagram" onclick="switchPage('instagram')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
@@ -1221,6 +1222,7 @@
 
             CURRENT.session = session;
             await loadProfile();
+            if (window.PIPELINE_TAB) { var _bw = function () { if (!scopeReady()) return setTimeout(_bw, 500); PIPELINE_TAB.startBadge(fetchJSON); }; _bw(); }
             // /sdr/#lead=<id>: the warm-lead group text lands on the lead itself.
             var leadHash = (window.location.hash || '').match(/^#lead=(\d+)/);
             if (leadHash) { switchPage('leads'); setTimeout(function () { openLeadDrawer(parseInt(leadHash[1], 10)); }, 600); }
