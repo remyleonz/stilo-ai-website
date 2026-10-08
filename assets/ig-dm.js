@@ -15,7 +15,10 @@
  */
 (function (global) {
   'use strict';
-  var S = { host: null, fetchJson: null, openLead: null, admin: false, tab: 'queued', data: null, open: null, rep: '' };
+  function create() {
+  var S = { host: null, fetchJson: null, openLead: null, admin: false, tab: 'queued', data: null, open: null, rep: '', channel: 'instagram' };
+  function isFb() { return S.channel === 'facebook'; }
+  function openLabel() { return isFb() ? 'Open page ↗' : 'Open profile ↗'; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function ago(iso) { if (!iso) return ''; var m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); if (m < 1) return 'just now'; if (m < 60) return m + ' min ago'; var h = Math.round(m / 60); if (h < 36) return h + 'h ago'; return Math.round(h / 24) + 'd ago'; }
   function rep(email) { var e = String(email || '').toLowerCase(); if (!e || e === 'unassigned') return 'unassigned'; if (e.indexOf('remyleon') === 0) return 'Remy'; if (e.indexOf('davidcoira') === 0) return 'David'; if (e.indexOf('aleb') === 0) return 'Ale'; if (e.indexOf('georgegutierrez') === 0) return 'George'; if (e.indexOf('ayesjorge') === 0) return 'Jorge'; return e.split('@')[0]; }
@@ -74,6 +77,10 @@
   function detail(r) {
     var q = seq(r);
     var html = '<div class="ig-det">';
+    html += '<div class="lbl" style="display:flex;align-items:center;gap:10px">' + (r.lang === 'es' ? 'Idioma de este lead' : 'Language for this lead')
+      + '<span class="pt-tier" style="display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:rgba(255,255,255,.06)">'
+      + '<button class="ig-btn g" style="padding:3px 10px;font-size:11px;' + (r.lang !== 'es' ? 'background:#2563EB;color:#fff' : '') + '" data-lang="en">English</button>'
+      + '<button class="ig-btn g" style="padding:3px 10px;font-size:11px;' + (r.lang === 'es' ? 'background:#2563EB;color:#fff' : '') + '" data-lang="es">Español</button></span></div>';
     html += say(r.lang === 'es' ? 'Mensaje 1 (sin link)' : 'Message 1 (no link in the first DM)', r.message_1, 'm1');
     html += say(r.lang === 'es' ? 'Mensaje 2, cuando contesten (lleva el video)' : 'Message 2, when they answer anything (carries the video)', q.m2, 'm2');
     html += say(r.lang === 'es' ? 'Mensaje 3, después del video o 24h de silencio' : 'Message 3, after the video or 24h of silence', q.m3, 'm3');
@@ -97,7 +104,7 @@
     var st = r.status === 'queued' ? '' : '<span class="ig-pill ' + (r.status === 'replied' || r.status === 'booked' ? 'ok' : '') + '">' + esc(r.status === 'sent' ? 'step ' + (r.step || 1) + ' sent ' + ago(r.last_step_at || r.sent_at) : r.status.replace(/_/g, ' ') + (r.replied_at ? ' ' + ago(r.replied_at) : '')) + '</span>';
     var next = r.status === 'queued' ? r.message_1 : (r.status === 'sent' ? ((r.step || 1) < 2 ? seq(r).m2 : seq(r).m3) : (r.status === 'replied' ? seq(r).m2 : ''));
     var btns = '';
-    if (r.status === 'queued') btns = '<button class="ig-btn g" data-copy="m1">Copy message</button><a class="ig-btn" href="' + esc(r.instagram_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open profile ↗</a><button class="ig-btn ok" data-act="sent">Sent</button>';
+    if (r.status === 'queued') btns = '<button class="ig-btn g" data-copy="m1">Copy message</button><a class="ig-btn" href="' + esc(r.instagram_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + openLabel() + '</a><button class="ig-btn ok" data-act="sent">Sent</button>';
     else if (r.status === 'sent') btns = '<button class="ig-btn g" data-copy="next">Copy next</button><a class="ig-btn" href="' + esc(r.instagram_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open ↗</a>' + ((r.step || 1) < 3 ? '<button class="ig-btn ok" data-act="step">Next sent</button>' : '') + '<button class="ig-btn w" data-act="toggle">Replied…</button>';
     else if (r.status === 'replied') btns = '<button class="ig-btn g" data-copy="m2">Copy video msg</button><a class="ig-btn" href="' + esc(r.instagram_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open ↗</a><button class="ig-btn ok" data-act="toggle">Log…</button>';
     else btns = '<a class="ig-btn g" href="' + esc(r.instagram_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open ↗</a>';
@@ -133,7 +140,8 @@
   function rowById(id) { return (S.data.rows || []).filter(function (x) { return x.id === id; })[0]; }
   async function onClick(ev) {
     var tb = ev.target.closest('.ig-tabs button'); if (tb) { S.tab = tb.getAttribute('data-tab'); S.open = null; refresh(); return; }
-    var ab = ev.target.closest('[data-assign]'); if (ab) { await act({ action: 'assign', assigned_to: ab.getAttribute('data-assign'), n: 50 }); refresh(); return; }
+    var ab = ev.target.closest('[data-assign]'); if (ab) { await act({ action: 'assign', assigned_to: ab.getAttribute('data-assign'), n: 50, channel: S.channel }); refresh(); return; }
+    var lb = ev.target.closest('[data-lang]'); if (lb) { ev.stopPropagation(); var lrow = ev.target.closest('.ig-row'); var lid = parseInt(lrow.getAttribute('data-id'), 10); lb.disabled = true; await act({ id: lid, action: 'lang', lang: lb.getAttribute('data-lang') }); S.open = lid; refresh(); return; }
     var rowEl = ev.target.closest('.ig-row'); if (!rowEl) return;
     var id = parseInt(rowEl.getAttribute('data-id'), 10); var r = rowById(id); if (!r) return;
     var cp = ev.target.closest('[data-copy]');
@@ -166,9 +174,13 @@
   }
   async function refresh() {
     if (!S.fetchJson || !document.getElementById(S.host)) return;
-    try { S.data = await S.fetchJson('/api/prospects/ig-dm?status=' + S.tab + '&limit=200' + (S.rep ? '&assigned_to=' + encodeURIComponent(S.rep) : '')); render(); }
+    try { S.data = await S.fetchJson('/api/prospects/ig-dm?status=' + S.tab + '&channel=' + S.channel + '&limit=200' + (S.rep ? '&assigned_to=' + encodeURIComponent(S.rep) : '')); render(); }
     catch (e) { var h = document.getElementById(S.host); if (h) h.innerHTML = '<div class="ig-empty">Could not load: ' + esc(e.message || e) + '</div>'; }
   }
-  function mount(o) { S.host = o.host; S.fetchJson = o.fetchJson; S.openLead = o.openLead || null; S.admin = !!o.admin; S.rep = o.rep || ''; render(); refresh(); }
-  global.IG_DM = { mount: mount, refresh: refresh, setRep: function (e) { S.rep = e || ''; refresh(); } };
+  function mount(o) { S.host = o.host; S.fetchJson = o.fetchJson; S.openLead = o.openLead || null; S.admin = !!o.admin; S.rep = o.rep || ''; S.channel = o.channel === 'facebook' ? 'facebook' : 'instagram'; S.tab = 'queued'; S.open = null; S.data = null; render(); refresh(); }
+    return { mount: mount, refresh: refresh, setRep: function (e) { S.rep = e || ''; refresh(); }, state: S };
+  }
+  global.IG_DM = create();
+  // A second, independent table on the same page (admin Outbound: Instagram + Facebook).
+  global.IG_DM.instance = function (o) { var i = create(); i.mount(o); return i; };
 })(window);

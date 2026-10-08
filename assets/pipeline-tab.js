@@ -17,7 +17,7 @@
  */
 (function (global) {
   'use strict';
-  var state = { host: null, fetchJson: null, openLead: null, onColdClick: null, data: null, timer: null };
+  var state = { host: null, fetchJson: null, openLead: null, onColdClick: null, data: null, timer: null, query: '' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function ago(iso) { if (!iso) return ''; var m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); if (m < 1) return 'just now'; if (m < 60) return m + ' min ago'; var h = Math.round(m / 60); if (h < 36) return h + 'h ago'; return Math.round(h / 24) + 'd ago'; }
   function rep(email) { var e = String(email || '').toLowerCase(); if (!e) return ''; if (e.indexOf('remyleon') === 0) return 'Remy'; if (e.indexOf('davidcoira') === 0) return 'David'; if (e.indexOf('aleb') === 0) return 'Ale'; if (e.indexOf('georgegutierrez') === 0) return 'George'; if (e.indexOf('ayesjorge') === 0) return 'Jorge'; return e.split('@')[0]; }
@@ -74,7 +74,7 @@
   }
   async function refresh() {
     if (!state.fetchJson || !document.getElementById(state.host)) return;
-    try { state.data = await state.fetchJson('/api/prospects/pipeline'); render(); }
+    try { state.data = await state.fetchJson('/api/prospects/pipeline' + (state.query || '')); render(); }
     catch (e) { var h = document.getElementById(state.host); if (h && !state.data) h.innerHTML = '<div class="pt-empty">Could not load the pipeline: ' + esc(e.message || e) + '</div>'; }
   }
   async function setTier(id, tier) {
@@ -84,7 +84,7 @@
     refresh();
   }
   function mount(o) {
-    state.host = o.host; state.fetchJson = o.fetchJson; state.openLead = o.openLead; state.onColdClick = o.onColdClick;
+    state.host = o.host; state.fetchJson = o.fetchJson; state.openLead = o.openLead; state.onColdClick = o.onColdClick; state.query = o.query || '';
     render(); refresh();
     if (state.timer) clearInterval(state.timer);
     state.timer = setInterval(function () { if (!document.hidden && document.getElementById(state.host) && document.getElementById(state.host).offsetParent) refresh(); }, 60000);

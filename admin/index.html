@@ -2087,6 +2087,7 @@
                     <select id="prospectAccountFilter" onchange="onProspectFilterChange()" title="Which pipeline: STILO's own or a client account's lead pool" style="padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;color:inherit;font-size:13px;min-width:170px;">
                         <option value="">STILO pipeline</option>
                     </select>
+                    <button onclick="openAddLead()" title="Create a lead by hand and open its panel" style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;">+ Add lead</button>
                     <button id="dialerStartBtn" onclick="startDialerMode()" title="Full-screen dialing session: Space to call, number keys to log, auto-advance" style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;">▶ Start Dialer</button>
                 </div>
 
@@ -2183,6 +2184,14 @@
                     <button onclick="IG_DM.refresh()" style="padding:7px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.8rem;cursor:pointer;">Refresh</button>
                 </div>
                 <div id="igDmAdminHost"></div>
+
+                <div style="margin:28px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div class="section-title" style="margin:0;">Facebook DMs</div>
+                        <div style="font-size:0.76rem;color:var(--text-muted);margin-top:4px;">Pages pulled off the leads' own websites. Same rows, same logging, sent from each rep's own Facebook account.</div>
+                    </div>
+                </div>
+                <div id="fbDmAdminHost"></div>
             </div>
 
             <!-- Conversation drawer. Opens from any card in any stage band and
@@ -2598,7 +2607,8 @@
     <script src="/assets/dial-companion.js"></script>
     <script src="/assets/pipeline-tab.js?v=20261008"></script>
     <script src="/assets/lead-tier.js?v=20261008"></script>
-    <script src="/assets/ig-dm.js?v=20261008"></script>
+    <script src="/assets/ig-dm.js?v=20261008b"></script>
+    <script src="/assets/add-lead.js?v=20261008"></script>
     <script>
         /* ===========================================================
            Supabase Auth
@@ -7981,8 +7991,17 @@
                 + rows.map(function (r) { return cpRow(r, kind); }).join('')
                 + '</div>';
         }
+        async function openAddLead() {
+            var pools = [];
+            var sel = document.getElementById('prospectAccountFilter');
+            if (sel) Array.prototype.forEach.call(sel.options, function (o) { if (o.value) pools.push({ id: o.value, name: o.textContent }); });
+            var reps = [];
+            try { var r = await prospectFetchJSON('/api/sdr/roster'); reps = (r.sdrs || r.roster || r || []).map(function (x) { return { email: x.email, name: x.display_name }; }); } catch (e) {}
+            ADD_LEAD.open({ admin: true, pools: pools, reps: reps, onCreated: function () { if (typeof loadProspectTable === 'function') try { loadProspectTable(); } catch (e) {} } });
+        }
         function loadClientPipeline() {
-            if (window.PIPELINE_TAB) PIPELINE_TAB.mount({ host: 'adminPipelineTiers', fetchJson: prospectFetchJSON, openLead: function (id) { openProspectDrawer(id); }, onColdClick: function () { switchProspectTab('callable'); } });
+            var _acct = document.getElementById('prospectAccountFilter');
+            if (window.PIPELINE_TAB) PIPELINE_TAB.mount({ host: 'adminPipelineTiers', fetchJson: prospectFetchJSON, query: (_acct && _acct.value) ? '?client_id=' + encodeURIComponent(_acct.value) : '?pool=stilo', openLead: function (id) { openProspectDrawer(id); }, onColdClick: function () { switchProspectTab('callable'); } });
             if (!window.CLIENT_PIPELINE) return;
             CLIENT_PIPELINE.mount({
                 host: 'adminClientPipelineHost',
@@ -8196,7 +8215,12 @@
         }
 
         async function obInitPage() {
-            if (window.IG_DM) IG_DM.mount({ host: 'igDmAdminHost', fetchJson: prospectFetchJSON, admin: true, openLead: function (id) { openProspectDrawer(id); } });
+            if (window.IG_DM) {
+                // Two independent mounts: the asset keeps one state object, so the
+                // Facebook table gets its own instance (IG_DM.instance) below.
+                IG_DM.mount({ host: 'igDmAdminHost', fetchJson: prospectFetchJSON, admin: true, channel: 'instagram', openLead: function (id) { openProspectDrawer(id); } });
+                if (IG_DM.instance) IG_DM.instance({ host: 'fbDmAdminHost', fetchJson: prospectFetchJSON, admin: true, channel: 'facebook', openLead: function (id) { openProspectDrawer(id); } });
+            }
             var sel = document.getElementById('obCampaignSelect');
             try {
                 var d = await prospectFetchJSON('/api/prospects/outbound-campaign', { method: 'GET' });
