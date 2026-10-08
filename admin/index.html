@@ -1437,8 +1437,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/>
                     </svg>
                     Leads
+                    <span class="nav-badge" data-leads-badge style="display:none;background:#ef4444;margin-left:6px;">0</span>
                 </button>
-                <button class="nav-item" data-page="agents" onclick="switchPage('agents')">
+                <button class="nav-item" data-page="agents" onclick="switchPage('agents')" style="display:none;">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
                     </svg>
@@ -1451,6 +1452,14 @@
                     </svg>
                     Outbound
                     <span id="outboundReplyBadge" style="display:none;margin-left:auto;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;" title="Replies awaiting a callback"></span>
+                </button>
+                <button class="nav-item" data-page="instagram" onclick="switchPage('instagram')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor"/></svg>
+                    Instagram
+                </button>
+                <button class="nav-item" data-page="facebook" onclick="switchPage('facebook')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                    Facebook
                 </button>
                 <!-- Sales — single nav item that lands on Pipeline by default, with
                      a sub-tab strip rendered at the top of #page-pipeline /
@@ -2131,6 +2140,21 @@
                  Booked/Dead when a human says so. The Replied column is the
                  one that matters, so it carries a live countdown to the
                  callback SLA and sorts overdue-first. -->
+            <div class="page-content" id="page-instagram" style="display:none;">
+                <div class="stilo-page-header-row" style="gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:0.86rem;color:var(--text-muted);line-height:1.5;">Every rep's Instagram list and numbers. Pick a rep to see their rows; pick yourself to send from your own account.</div>
+                    <select id="igAdminRep" onchange="adminDmRep('instagram', this.value)" style="margin-left:auto;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;"><option value="">All reps</option></select>
+                </div>
+                <div id="igAdminPageHost"></div>
+            </div>
+            <div class="page-content" id="page-facebook" style="display:none;">
+                <div class="stilo-page-header-row" style="gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:0.86rem;color:var(--text-muted);line-height:1.5;">Every rep's Facebook pages list and numbers. Groups, posts and the DM copy live here too once the group list lands.</div>
+                    <select id="fbAdminRep" onchange="adminDmRep('facebook', this.value)" style="margin-left:auto;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.85rem;"><option value="">All reps</option></select>
+                </div>
+                <div id="fbGroupsAdminHost" style="margin-bottom:22px;"></div>
+                <div id="fbAdminPageHost"></div>
+            </div>
             <div class="page-content" id="page-outbound" style="display:none;">
                 <div id="obLockBanner" style="display:none;margin:0 0 16px;padding:12px 16px;border-radius:10px;font-size:0.86rem;line-height:1.5;"></div>
                 <!-- Shown when many targets share the same send-blocking provider
@@ -2598,17 +2622,18 @@
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/vsl-activity.js"></script>
-    <script src="/assets/hot-leads.js?v=20261007b"></script>
-    <script src="/assets/vsl-watchers.js?v=20261007a"></script>
+    <script src="/assets/hot-leads.js?v=20261008e"></script>
+    <script src="/assets/vsl-watchers.js?v=20261008e"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js?v=20261007b"></script>
     <script src="/assets/client-pipeline.js?v=20261007b"></script>
     <script src="/assets/dial-companion.js"></script>
-    <script src="/assets/pipeline-tab.js?v=20261008c"></script>
+    <script src="/assets/pipeline-tab.js?v=20261008e"></script>
     <script src="/assets/lead-tier.js?v=20261008d"></script>
     <script src="/assets/ig-dm.js?v=20261008b"></script>
     <script src="/assets/add-lead.js?v=20261008"></script>
+    <script>document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { if (window.PIPELINE_TAB && window.prospectFetchJSON) PIPELINE_TAB.startBadge(prospectFetchJSON); }, 2500); });</script>
     <script>
         /* ===========================================================
            Supabase Auth
@@ -2800,7 +2825,7 @@
         // Set of valid pages — used by switchPage() and by the hash-based
         // routing on initial load. Add new tabs here so the URL refresh
         // behavior picks them up automatically.
-        var VALID_PAGES = ['dashboard','clients','client-crm','prospecting','outbound','agents','review','revenue','team','pipeline','deals','activity','emails','support','settings','dialer'];
+        var VALID_PAGES = ['dashboard','clients','client-crm','prospecting','outbound','instagram','facebook','agents','review','revenue','team','pipeline','deals','activity','emails','support','settings','dialer'];
 
         function switchPage(page, opts) {
             opts = opts || {};
@@ -2885,6 +2910,8 @@
             else if (page === 'settings') loadSettings();
             else if (page === 'prospecting') { loadProspectingPage(); loadAbResults(); }
             else if (page === 'outbound') obInitPage();
+            else if (page === 'instagram') adminDmPage('instagram');
+            else if (page === 'facebook') adminDmPage('facebook');
             else if (page === 'client-crm') loadClientCrm();
 
             // Close sidebar on mobile after selection
@@ -8214,6 +8241,21 @@
                     : 'Queued messages will retry once the account issue is fixed.');
         }
 
+        // Master Instagram / Facebook pages: the shared DM asset in admin mode
+        // (all reps + per-rep counts), with a rep picker. Remy picks himself to
+        // work his own list from here.
+        var ADMIN_DM = { instagram: null, facebook: null };
+        async function adminDmPage(channel) {
+            var host = channel === 'instagram' ? 'igAdminPageHost' : 'fbAdminPageHost';
+            var sel = document.getElementById(channel === 'instagram' ? 'igAdminRep' : 'fbAdminRep');
+            if (sel && sel.options.length <= 1) {
+                try { var r = await prospectFetchJSON('/api/sdr/roster'); (r.sdrs || []).forEach(function (x) { var o = document.createElement('option'); o.value = x.email; o.textContent = x.display_name; sel.appendChild(o); }); } catch (e) {}
+            }
+            if (!window.IG_DM) return;
+            ADMIN_DM[channel] = IG_DM.instance({ host: host, fetchJson: prospectFetchJSON, admin: true, channel: channel, rep: sel ? sel.value : '', openLead: function (id) { openProspectDrawer(id); } });
+            if (channel === 'facebook' && window.FB_GROUPS) FB_GROUPS.mount({ host: 'fbGroupsAdminHost', fetchJson: prospectFetchJSON, admin: true });
+        }
+        function adminDmRep(channel, email) { if (ADMIN_DM[channel]) ADMIN_DM[channel].setRep(email); }
         async function obInitPage() {
             if (window.IG_DM) {
                 // Two independent mounts: the asset keeps one state object, so the

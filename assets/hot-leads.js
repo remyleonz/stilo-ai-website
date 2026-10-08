@@ -27,7 +27,7 @@
   var CSS = '.hl{margin:0 0 18px;padding:12px 14px;border:1px solid rgba(239,68,68,.45);border-left:3px solid #ef4444;border-radius:10px;background:rgba(239,68,68,.07);font-family:inherit}'
     + '.hl-h{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#ef4444;margin-bottom:8px}'
     + '.hl-h i{width:8px;height:8px;border-radius:50%;background:#ef4444;animation:hlBlink 1.6s ease-in-out infinite}@keyframes hlBlink{50%{opacity:.2}}'
-    + '.hl-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);flex-wrap:wrap}.hl-row:first-of-type{border-top:0}'
+    + '.hl-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);flex-wrap:wrap;cursor:pointer}.hl-row:hover{background:rgba(255,255,255,.03)}.hl-row:first-of-type{border-top:0}'
     + '.hl-ago{min-width:70px;font-size:11px;font-weight:700;color:#f87171}.hl-who{flex:1;min-width:200px;font-size:13px;color:var(--text-primary,#ecedf2)}.hl-who b{font-weight:700}.hl-why{display:block;font-size:12px;color:var(--text-secondary,#9a9ab0);margin-top:2px}'
     + '.hl-btn{border:0;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;background:#2563EB}.hl-btn.g{background:rgba(255,255,255,.1);color:var(--text-primary,#ecedf2)}.hl-btn.q{background:#ef4444}'
     + '.hl-tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:rgba(37,99,235,.15);color:#60a5fa;margin-left:6px}';
@@ -49,9 +49,12 @@
             + '</div>';
         }).join('') + '</div>';
       h.onclick = function (ev) {
-        var b = ev.target.closest('button[data-act]'); if (!b) return;
-        var row = b.closest('.hl-row'); var id = parseInt(row.getAttribute('data-id'), 10);
+        var b = ev.target.closest('button[data-act]');
+        var row = ev.target.closest('.hl-row'); if (!row) return;
+        var id = parseInt(row.getAttribute('data-id'), 10);
         var r = (lastRows || []).filter(function (x) { return x.id === id; })[0]; if (!r) return;
+        // Tapping anywhere on the row opens the lead; the buttons keep their jobs.
+        if (!b) { var o0 = opener(); if (o0) o0(id); return; }
         if (b.getAttribute('data-act') === 'call') callInQuo(r.phone);
         else if (b.getAttribute('data-act') === 'open') { var o = opener(); if (o) o(id); }
         else if (b.getAttribute('data-act') === 'done') clear(id);

@@ -46,9 +46,9 @@ module.exports = async function handler(req, res) {
             'What they did: ' + (l.hot_reason || 'a human reached out'),
             '',
             owner === 'nobody' ? 'Unassigned lead.' : owner + ', this one is yours.',
-            'Whoever is free, call now: ' + (l.owner_phone_e164 || l.owner_phone || l.phone || 'no phone'),
+            (function (p) { return p ? 'Whoever is free, tap to call in Quo (' + p + '):\n' + SITE + '/call/?to=' + encodeURIComponent(String(p).replace(/[^\d+]/g, '').replace(/^(\d{10})$/, '+1$1')) : 'No phone on file.'; })(l.owner_phone_e164 || l.owner_phone || l.phone),
             '',
-            SITE + '/sdr/#lead=' + l.id].join('\n');
+            'Lead panel: ' + SITE + '/sdr/#lead=' + l.id].join('\n');
         const r = await sendToTeam(text, to);
         out.push({ id: l.id, result: r.ok ? 'sent' : (r.error || 'failed'), sent: r.sent });
     }

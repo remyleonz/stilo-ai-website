@@ -77,12 +77,12 @@ function alertText(lead, lastCall) {
         lead.name + (cityOf(lead.address) ? ' (' + cityOf(lead.address) + ')' : ''),
         (lead.owner_name ? 'Owner: ' + lead.owner_name + '\n' : '') + 'What they did: ' + (lead.hot_reason || 'a human reached out'),
         '',
-        'Phone: ' + (phone || 'no phone on file'),
         'Rep: ' + owner,
         'Last dialed: ' + dialed,
         '',
-        'Call within 5 minutes:',
-        SITE + '/sdr/#lead=' + lead.id].join('\n');
+        (phone ? 'Tap to call in Quo (' + phone + '):\n' + SITE + '/call/?to=' + encodeURIComponent(phone.replace(/[^\d+]/g, '').replace(/^(\d{10})$/, '+1$1')) : 'No phone on file.'),
+        '',
+        'Lead panel: ' + SITE + '/sdr/#lead=' + lead.id].join('\n');
 }
 
 /**
