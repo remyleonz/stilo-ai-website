@@ -109,6 +109,7 @@ module.exports = async function handler(req, res) {
                     update.notes = body.notes;
                 }
                 const { error } = await client.from('lead_calls').update(update).eq('id', target.id);
+                if (!error && body.decision_maker === true) await require('./_hot').markWarm(id, 'reached the decision maker on a call', client);
                 callInsert = error
                     ? { error: error.message, merge_target: target.id }
                     : { ok: true, merged: true, call_id: target.id, prior_outcome: target.outcome, had_transcript: !!target.transcript };
@@ -122,6 +123,7 @@ module.exports = async function handler(req, res) {
                     logged_by: loggedBy,
                     decision_maker: typeof body.decision_maker === 'boolean' ? body.decision_maker : null
                 });
+                if (!error && body.decision_maker === true) await require('./_hot').markWarm(id, 'reached the decision maker on a call', client);
                 callInsert = error ? { error: error.message } : { ok: true, merged: false };
             }
         } catch (e) {

@@ -5,10 +5,10 @@
  * and where they stand: source (email / text / Instagram), views, play,
  * how far, quiz, contact, last seen, who it is assigned to, whether anyone
  * called after the first view, booked, next step. Bots and our own test
- * devices are filtered. Visible to every rep: the Blason pool is a shared
- * calling list (Remy, 2026-10-07: "so Ale can call all of them today").
+ * devices are filtered. Rep-scoped since 2026-10-08: an SDR sees the watchers
+ * among THEIR leads; admins see everyone or one rep with ?assigned_to=.
  */
-const { assertAdminOrSdr, methodNotAllowed } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed, resolveAssignedTo } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 
 const BLASON = '2efae6bf-69d8-4c4d-ac25-6a693db50f8b';
@@ -44,9 +44,12 @@ module.exports = async function handler(req, res) {
     const ids = Object.keys(agg).map(Number);
     if (!ids.length) return res.status(200).json({ ok: true, rows: [] });
 
-    const { data: leads } = await pro.from('leads')
-        .select('id,name,owner_name,phone,owner_phone,owner_phone_e164,address,primary_language,assigned_to,stage,next_step,next_step_due,meeting_booked_at,hot_at,hot_cleared_at,do_not_call,client_id')
+    let lq = pro.from('leads')
+        .select('id,name,owner_name,phone,owner_phone,owner_phone_e164,address,primary_language,assigned_to,stage,next_step,next_step_due,meeting_booked_at,hot_at,hot_cleared_at,do_not_call,client_id,engagement_tier')
         .in('id', ids).eq('client_id', BLASON);
+    if (!gate.isAdmin) lq = lq.eq('assigned_to', gate.email);
+    else if (req.query && req.query.assigned_to) { const a = await resolveAssignedTo(req.query.assigned_to); if (a) lq = lq.eq('assigned_to', a); }
+    const { data: leads } = await lq;
     const minFirst = ids.reduce(function (m, id) { return agg[id].first < m ? agg[id].first : m; }, agg[ids[0]].first);
     const { data: calls } = await pro.from('lead_calls').select('lead_id,called_at,duration_seconds,outcome,logged_by')
         .in('lead_id', ids).eq('direction', 'outbound').gte('called_at', minFirst).order('called_at', { ascending: false });
@@ -68,7 +71,7 @@ module.exports = async function handler(req, res) {
             first_view: a.first, last_seen: a.last, views: a.views, plays: a.plays, pct: a.pct, quiz: a.quiz, contact: a.contact,
             sources: Object.keys(a.sources).join(', '), mobile: a.mobile,
             status: status, called_at: calledAfter ? calledAfter.called_at : null, called_by: calledAfter ? calledAfter.logged_by : null,
-            next_step: l.next_step || '', next_step_due: l.next_step_due, hot: !!(l.hot_at && !l.hot_cleared_at),
+            next_step: l.next_step || '', next_step_due: l.next_step_due, hot: !!(l.hot_at && !l.hot_cleared_at), tier: l.engagement_tier || 'cold',
         };
     }).sort(function (x, y) { return (y.pct - x.pct) || (y.plays - x.plays) || (y.last_seen > x.last_seen ? 1 : -1); });
     return res.status(200).json({ ok: true, rows: rows, total: rows.length });

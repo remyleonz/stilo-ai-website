@@ -2103,7 +2103,8 @@
 
                 <!-- Six table containers, only one visible at a time. overflow-x:auto so wide tables scroll within the card instead of clipping at the page edge. -->
                 <div id="prospectTablePipeline" class="prospect-table-host" style="display:none;">
-                    <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">The pipeline will load when you open this tab.</div>
+                    <div id="adminPipelineTiers" style="margin-bottom:22px;"></div>
+                    <div id="adminClientPipelineHost"><div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">The pipeline will load when you open this tab.</div></div>
                 </div>
                 <div id="prospectTableCallable" class="prospect-table-host" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow-x:auto;">
                     <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading prospects...</div>
@@ -2155,7 +2156,7 @@
                 <!-- This board is SMS only by design; the drip email engine has
                      its own home. Keep this a pointer, not a second email UI. -->
                 <div style="margin:6px 0 14px;font-size:0.76rem;color:var(--text-muted);">
-                    SMS campaigns only. The email sequence lives on the
+                    SMS campaigns above, Instagram DMs below. The email sequence lives on the
                     <a href="#emails" onclick="switchPage('emails');return false;" style="color:#2563EB;text-decoration:none;">Sales tab</a>.
                 </div>
 
@@ -2170,6 +2171,18 @@
                 <div id="obBoard">
                     <div style="color:var(--text-muted);font-size:0.9rem;">Loading board...</div>
                 </div>
+
+                <!-- Instagram DM campaign: the per-rep worklist (assets/ig-dm.js),
+                     same table the reps see on their Instagram tab, with every rep
+                     and the pool hand-out. -->
+                <div style="margin:28px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div class="section-title" style="margin:0;">Instagram DMs</div>
+                        <div style="font-size:0.76rem;color:var(--text-muted);margin-top:4px;">One row per clinic. Reps send from their own accounts, 50 a day; a reply makes the lead warm. "+50 from the pool" hands unassigned rows to a rep.</div>
+                    </div>
+                    <button onclick="IG_DM.refresh()" style="padding:7px 14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;color:inherit;font-size:0.8rem;cursor:pointer;">Refresh</button>
+                </div>
+                <div id="igDmAdminHost"></div>
             </div>
 
             <!-- Conversation drawer. Opens from any card in any stage band and
@@ -2583,6 +2596,9 @@
     <script src="/assets/dialer-mode.js?v=20261007b"></script>
     <script src="/assets/client-pipeline.js?v=20261007b"></script>
     <script src="/assets/dial-companion.js"></script>
+    <script src="/assets/pipeline-tab.js?v=20261008"></script>
+    <script src="/assets/lead-tier.js?v=20261008"></script>
+    <script src="/assets/ig-dm.js?v=20261008"></script>
     <script>
         /* ===========================================================
            Supabase Auth
@@ -7966,9 +7982,10 @@
                 + '</div>';
         }
         function loadClientPipeline() {
+            if (window.PIPELINE_TAB) PIPELINE_TAB.mount({ host: 'adminPipelineTiers', fetchJson: prospectFetchJSON, openLead: function (id) { openProspectDrawer(id); }, onColdClick: function () { switchProspectTab('callable'); } });
             if (!window.CLIENT_PIPELINE) return;
             CLIENT_PIPELINE.mount({
-                host: 'prospectTablePipeline',
+                host: 'adminClientPipelineHost',
                 fetchJson: prospectFetchJSON,
                 escape: escapeAdminHtml,
                 openLead: function (id) { openProspectDrawer(id); },
@@ -8179,6 +8196,7 @@
         }
 
         async function obInitPage() {
+            if (window.IG_DM) IG_DM.mount({ host: 'igDmAdminHost', fetchJson: prospectFetchJSON, admin: true, openLead: function (id) { openProspectDrawer(id); } });
             var sel = document.getElementById('obCampaignSelect');
             try {
                 var d = await prospectFetchJSON('/api/prospects/outbound-campaign', { method: 'GET' });
@@ -10951,6 +10969,7 @@
                 + phoneCardHtml
                 + actionPillsHtml
                 + CONTACT_NAMES.render(d)
+                + (window.LEAD_TIER ? LEAD_TIER.render(d) : '')
                 + infoGridHtml
 
                 + '<form id="' + formId + '" onsubmit="event.preventDefault();' + submitFn + ';return false;" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
@@ -11074,6 +11093,7 @@
                 // Sales script — full text, below the pre-dial essentials (see
                 // note inside the form above). Long by design; nothing the rep
                 // needs before dialing sits under it anymore.
+                + ((mode !== 'emailable' && window.LEAD_TIER) ? LEAD_TIER.script(d) : '')
                 + ((mode !== 'emailable')
                     ? '<div id="prospectScriptCard" style="margin-top:16px;padding:12px 14px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.22);border-radius:8px;">'
                         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">'

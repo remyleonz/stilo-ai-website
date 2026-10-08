@@ -21,6 +21,9 @@
     <script src="/assets/dialer-mode.js?v=20261007b"></script>
     <script src="/assets/client-pipeline.js?v=20261007b"></script>
     <script src="/assets/dial-companion.js"></script>
+    <script src="/assets/pipeline-tab.js?v=20261008"></script>
+    <script src="/assets/lead-tier.js?v=20261008"></script>
+    <script src="/assets/ig-dm.js?v=20261008"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -639,9 +642,13 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Leads
             </button>
-            <button class="nav-item hidden" id="navPipeline" data-page="pipeline" onclick="switchPage('pipeline')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M6 12h12"/><path d="M10 18h4"/></svg>
-                Pipeline
+            <button class="nav-item" data-page="instagram" onclick="switchPage('instagram')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+                Instagram
+            </button>
+            <button class="nav-item" data-page="sales" onclick="switchPage('sales')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-6"/></svg>
+                Sales
             </button>
             <button class="nav-item" data-page="performance" onclick="switchPage('performance')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -803,8 +810,6 @@
         <!-- ============ LEADS ============ -->
         <section class="page-content hidden" id="page-leads">
             <div class="section-title">My Leads</div>
-            <div id="hotLeadsStrip" class="hotLeadsStrip"></div>
-            <div class="vslWatchersHost"></div>
 
             <!-- Awaiting-script notice: assigned leads hidden until David ships their script -->
             <div id="awaitingScriptBar" style="display:none;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.35);border-radius:10px;font-size:12px;color:var(--text-secondary);line-height:1.5;"></div>
@@ -831,7 +836,8 @@
 
             <!-- Sub-tabs -->
             <div style="display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);margin-bottom:14px;">
-                <button class="leads-subtab active" data-sub="callable" onclick="setLeadsSubtab('callable')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;">Cold Call</button>
+                <button class="leads-subtab active" data-sub="pipeline" onclick="setLeadsSubtab('pipeline')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;">Pipeline</button>
+                <button class="leads-subtab" data-sub="callable" onclick="setLeadsSubtab('callable')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Cold Call</button>
                 <button class="leads-subtab" data-sub="callbacks" onclick="setLeadsSubtab('callbacks')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Callbacks</button>
                 <button class="leads-subtab" data-sub="booked" onclick="setLeadsSubtab('booked')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Booked</button>
                 <button class="leads-subtab" data-sub="calls_today" onclick="setLeadsSubtab('calls_today')" style="padding:10px 16px;background:none;color:var(--text-primary);border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:600;cursor:pointer;opacity:0.55;">Today</button>
@@ -843,12 +849,6 @@
             <!-- Search + tier filter row -->
             <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
                 <input id="leadSearch" type="search" placeholder="Search business, owner name, or phone…" oninput="onLeadSearch()" autocomplete="off" style="flex:1;min-width:240px;padding:8px 14px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:999px;color:inherit;font-family:inherit;font-size:13px;">
-                <div id="leadsTierFilter" style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <button class="tier-chip active" data-tier="" onclick="setTierFilter('')" style="padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">All tiers</button>
-                    <button class="tier-chip" data-tier="hot" onclick="setTierFilter('hot')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Hot</button>
-                    <button class="tier-chip" data-tier="warm" onclick="setTierFilter('warm')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Warm</button>
-                    <button class="tier-chip" data-tier="cool" onclick="setTierFilter('cool')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Cool</button>
-                </div>
                 <select id="leadsCityFilter" onchange="setCityFilter(this.value)" title="Filter by city. South Florida groups the whole Miami metro, the showroom's home turf." style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-secondary);font-family:inherit;font-size:12px;font-weight:600;min-width:140px;cursor:pointer;">
                     <option value="">All cities</option>
                 </select>
@@ -1023,12 +1023,24 @@
         <!-- Phone handset tab: the shared companion (assets/dial-companion.js)
              mounted with the dashboard's own session — open this on your
              phone and every laptop SPACE lands here as one Call button. -->
-        <section class="page-content hidden" id="page-pipeline">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
-                <div style="font-size:13px;color:var(--text-secondary);">Everyone with a pulse on your account, in the order to call them.</div>
-                <button onclick="loadSdrPipeline()" style="border:1px solid var(--border-medium);background:transparent;color:var(--text-primary);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Refresh</button>
+        <section class="page-content hidden" id="page-instagram">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;">50 DMs a day from your own account. Copy, open the profile, paste, send, tap Sent. Click a row for the whole sequence and the objection answers. A reply makes the lead warm on your Pipeline.</div>
+                <button onclick="IG_DM.refresh()" style="border:1px solid var(--border-medium);background:transparent;color:var(--text-primary);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Refresh</button>
             </div>
-            <div id="sdrPipelineHost"></div>
+            <div id="igDmHost"></div>
+        </section>
+
+        <section class="page-content hidden" id="page-sales">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                <div style="font-size:13px;color:var(--text-secondary);">Everything that happened on your leads, by channel.</div>
+                <div id="salesRangeChips" style="display:flex;gap:6px;">
+                    <button class="tier-chip" data-range="today" onclick="loadSdrSales('today')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">Today</button>
+                    <button class="tier-chip active" data-range="7d" onclick="loadSdrSales('7d')" style="padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">7 days</button>
+                    <button class="tier-chip" data-range="30d" onclick="loadSdrSales('30d')" style="padding:5px 12px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;">30 days</button>
+                </div>
+            </div>
+            <div id="sdrSalesHost"><div class="empty-state">Loading…</div></div>
         </section>
 
         <section class="page-content hidden" id="page-dialer">
@@ -1150,7 +1162,7 @@
         // survives logging a call + advancing to the next lead. currentRows holds
         // the rows behind the standard lead table so advance can step through
         // them in the exact order the rep is looking at.
-        var STATE = { leadsSubtab: 'callable', historyRange: 'week', tierFilter: '', cityFilter: '', lastTouchDir: null, currentRows: [] };
+        var STATE = { leadsSubtab: 'pipeline', historyRange: 'week', tierFilter: '', cityFilter: '', lastTouchDir: null, currentRows: [] };
 
         /* ===== AUTH ===== */
         (async function init() {
@@ -1178,13 +1190,18 @@
                 window.location.href = '/app/';
                 return;
             } else if (isAdmin && !isSdr) {
-                // Admin sneaking in without impersonation: bounce to admin Team tab.
-                window.location.href = '/admin/#team';
+                // Admin sneaking in without impersonation: bounce to admin Team tab,
+                // or straight to the lead when the warm-lead text linked here.
+                var lm = (window.location.hash || '').match(/^#lead=(\d+)/);
+                window.location.href = lm ? '/admin/#lead=' + lm[1] : '/admin/#team';
                 return;
             }
 
             CURRENT.session = session;
             await loadProfile();
+            // /sdr/#lead=<id>: the warm-lead group text lands on the lead itself.
+            var leadHash = (window.location.hash || '').match(/^#lead=(\d+)/);
+            if (leadHash) { switchPage('leads'); setTimeout(function () { openLeadDrawer(parseInt(leadHash[1], 10)); }, 600); }
             // Prefetch the leads table now (it's the most-used tab and the
             // cold-call queue should be warm before the rep clicks "Leads").
             // Runs in the background while we paint the Overview, so switching
@@ -1316,9 +1333,6 @@
                     return;
                 }
                 CURRENT.sdr = sdr;
-                // Pipeline is the client-account CRM; STILO reps have no client pool.
-                var np = document.getElementById('navPipeline');
-                if (np) np.classList.toggle('hidden', sdr.sdr_type !== 'client_account');
                 renderSdrIdentity(sdr);
                 // Fill the impersonation banner with the SDR's real name once
                 // we've resolved them via /api/sdr/profile?sdr_id=<id>.
@@ -1399,7 +1413,7 @@
             document.getElementById('pageTitle').textContent = {
                 overview: 'Dashboard', leads: 'Leads', performance: 'Performance',
                 revenue: 'Revenue', messages: 'Messages', history: 'Call History',
-                dialer: 'Dialer', pipeline: 'Pipeline'
+                dialer: 'Dialer', sales: 'Sales', instagram: 'Instagram DMs'
             }[page] || 'Dashboard';
 
             // The handset only polls while its tab is open.
@@ -1410,7 +1424,8 @@
             else if (page === 'revenue') loadRevenue();
             else if (page === 'messages') loadMessages();
             else if (page === 'history') loadHistory();
-            else if (page === 'pipeline') loadSdrPipeline();
+            else if (page === 'sales') loadSdrSales(STATE.salesRange || '7d');
+            else if (page === 'instagram' && window.IG_DM) IG_DM.mount({ host: 'igDmHost', fetchJson: fetchJSON, openLead: function (id) { openLeadDrawer(id); } });
             else if (page === 'dialer' && window.DIAL_COMPANION) {
                 DIAL_COMPANION.mount({ host: 'dialerCompanionHost', fetchJson: fetchJSON });
             }
@@ -1554,12 +1569,11 @@
                 b.style.borderBottomColor = active ? 'var(--blue)' : 'transparent';
                 b.style.opacity = active ? 1 : 0.55;
             });
-            // Tier filter only makes sense on the Cold Call queue.
-            const tf = document.getElementById('leadsTierFilter');
-            if (tf) tf.style.display = (sub === 'callable') ? 'flex' : 'none';
-            // Same for the dialer: it consumes the Cold Call queue.
+            // The dialer consumes the Cold Call queue.
             const db = document.getElementById('dialerStartBtn');
             if (db) db.style.display = (sub === 'callable') ? 'inline-flex' : 'none';
+            // Pipeline has its own groups: the search + city row belongs to the lists.
+            const sr = document.getElementById('leadSearch'); if (sr && sr.parentElement) sr.parentElement.style.display = (sub === 'pipeline') ? 'none' : 'flex';
             loadLeadsTable();
             // Opening the Booked tab pulls any new self-booked meetings off the
             // calendar (throttled server-side) so they appear without a cron.
@@ -1678,6 +1692,13 @@
             // current table visible until the new rows are ready (no flash).
             if (!wrap.querySelector('table')) wrap.innerHTML = '<div class="empty-state">Loading…</div>';
             const sub = STATE.leadsSubtab;
+            // Pipeline: Hot / Warm / Cold groups from the shared asset. Rep-scoped
+            // server-side; the cold group is a count that opens the Cold Call tab.
+            if (sub === 'pipeline') {
+                wrap.innerHTML = '<div id="sdrPipelineTabHost"></div>';
+                if (window.PIPELINE_TAB) PIPELINE_TAB.mount({ host: 'sdrPipelineTabHost', fetchJson: fetchJSON, openLead: function (id) { openLeadDrawer(id); }, onColdClick: function () { setLeadsSubtab('callable'); } });
+                return;
+            }
             const tierQ = (sub === 'callable' && STATE.tierFilter) ? '&tier=' + encodeURIComponent(STATE.tierFilter) : '';
             const endpoint = {
                 callable: '/api/prospects/callable?limit=200' + tierQ,
@@ -2225,7 +2246,7 @@
             // Render in the rep's persisted last-touch order (no-op when unset).
             const display = applyLastTouchSortSdr(STATE.currentRows);
             const sortArrow = STATE.lastTouchDir === 'desc' ? ' ↓' : STATE.lastTouchDir === 'asc' ? ' ↑' : '';
-            let html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th><th>Tier</th>'
+            let html = '<table><thead><tr><th>Business</th><th>Owner</th><th>Phone</th><th>Niche</th>'
                 + '<th onclick="sortLeadsByLastTouch(this)" style="cursor:pointer;user-select:none;white-space:nowrap;" title="Sort by last touched">Last touch<span class="sort-arrow">' + sortArrow + '</span></th>'
                 + '</tr></thead><tbody>';
             display.slice(0, 200).forEach(function (r) {
@@ -2237,7 +2258,6 @@
                     + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
                     + '<td style="white-space:nowrap;">' + escapeHtml(leadPhone(r) || '—') + '</td>'
                     + '<td>' + escapeHtml(r.niche || '—') + '</td>'
-                    + '<td>' + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '—') + '</td>'
                     + '<td style="white-space:nowrap;">' + fmtET(lastRaw) + '</td>'
                     + '</tr>';
             });
@@ -3154,6 +3174,8 @@
                 + '</div>'
                 // ── Editable contact names (shared with /admin/) ──
                 + (window.CONTACT_NAMES ? CONTACT_NAMES.render(r) : '')
+                // ── Cold / Warm / Hot + who dialed them last (shared with /admin/) ──
+                + (window.LEAD_TIER ? LEAD_TIER.render(r) : '')
                 // ── Info grid ──
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-bottom:20px;">'
                 + '<div><div class="stat-label">Niche</div><div>' + escapeHtml(r.niche || r.category || '—') + '</div></div>'
@@ -3247,6 +3269,7 @@
                 + '</div>'
                 // ── Cold-call script (filled by loadColdCallScript) ──
                 + '<div style="margin-top:22px;">'
+                + (window.LEAD_TIER ? LEAD_TIER.script(r) : '')
                 + '<div class="section-title" style="font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Cold-call script <span id="sdrScriptMeta" style="font-size:11px;font-weight:500;color:var(--text-tertiary);"></span></div>'
                 + '<div id="sdrScriptBody" style="font-size:14px;line-height:1.6;color:var(--text-primary);background:var(--bg-input);border:1px solid var(--border-medium);border-radius:8px;padding:16px 18px;">Loading script…</div>'
                 + '</div>';
@@ -3398,6 +3421,39 @@
                 }
                 return '<div style="color:var(--red);">Could not load script: ' + escapeHtml(e.message || 'unknown') + '</div>';
             }
+        }
+        async function loadSdrSales(range) {
+            STATE.salesRange = range || '7d';
+            document.querySelectorAll('#salesRangeChips .tier-chip').forEach(function (b) {
+                var on = b.dataset.range === STATE.salesRange;
+                b.style.background = on ? 'var(--blue)' : 'var(--bg-card)'; b.style.color = on ? '#fff' : 'var(--text-secondary)'; b.style.border = on ? 'none' : '1px solid var(--border-subtle)';
+            });
+            var host = document.getElementById('sdrSalesHost');
+            if (!scopeReady()) { setTimeout(function () { loadSdrSales(range); }, 400); return; }
+            try {
+                var d = await fetchJSON('/api/sdr/sales?range=' + encodeURIComponent(STATE.salesRange));
+                var c = d.cards || {}, w = d.warm_response || {};
+                function card(label, value, sub, accent) {
+                    return '<div class="stat-card ' + (accent || '') + '"><div class="stat-label">' + label + '</div><div class="stat-value">' + value + '</div>' + (sub ? '<div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">' + sub + '</div>' : '') + '</div>';
+                }
+                function pct(a, b) { return b ? Math.round(100 * a / b) + '%' : '—'; }
+                host.innerHTML = '<div class="section-title" style="font-size:13px;margin-bottom:10px;">Pipeline</div>'
+                    + '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px;">'
+                    + card('Hot leads', c.hot || 0, 'set by hand', 'accent-orange') + card('Warm leads', c.warm || 0, 'replied, watched, answered a DM', 'accent-purple') + card('Cold leads', c.cold || 0, 'nobody heard back yet', 'accent-blue')
+                    + card('Warm leads called in 5 min', (w.within_5_min || 0) + ' / ' + (w.signals || 0), w.avg_minutes != null ? 'average ' + w.avg_minutes + ' min to the first dial' : 'no signals in this range', 'accent-green') + '</div>'
+                    + '<div class="section-title" style="font-size:13px;margin-bottom:10px;">Calls</div>'
+                    + '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px;">'
+                    + card('Cold calls', c.dials || 0, 'outbound dials you logged', 'accent-blue') + card('Connects', c.connects || 0, pct(c.connects, c.dials) + ' of dials, 20s or more') + card('Decision makers', c.decision_makers || 0, 'owner or doctor on the line') + card('Callbacks set', c.callbacks || 0, 'interested, call again') + '</div>'
+                    + '<div class="section-title" style="font-size:13px;margin-bottom:10px;">Email, SMS and Instagram</div>'
+                    + '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px;">'
+                    + card('Emails sent', c.emails_sent || 0, (c.email_bounced || 0) + ' bounced') + card('Email replies', c.email_replies || 0, pct(c.email_replies, c.emails_sent) + ' reply rate')
+                    + card('Texts sent', c.sms_sent || 0, 'from your line') + card('Text replies', c.sms_replies || 0, pct(c.sms_replies, c.sms_sent) + ' reply rate')
+                    + card('Instagram DMs sent', c.ig_sent || 0, (c.ig_queued || 0) + ' left in your list') + card('Instagram replies', c.ig_replies || 0, pct(c.ig_replies, c.ig_sent) + ' reply rate')
+                    + card('Video page opened', c.video_watchers || 0, 'leads of yours, bots excluded') + card('Pressed play', c.video_players || 0, pct(c.video_players, c.video_watchers) + ' of openers') + '</div>'
+                    + '<div class="section-title" style="font-size:13px;margin-bottom:10px;">Results</div>'
+                    + '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px;">'
+                    + card('Booked', c.booked || 0, 'calls with Manuel or showroom visits', 'accent-green') + card('Sales', c.sales || 0, c.sales_amount ? '$' + Math.round(c.sales_amount).toLocaleString() + ' sold' : 'none yet in this range', 'accent-green') + card('Commission earned', c.commission ? '$' + Math.round(c.commission).toLocaleString() : '$0', 'on sales in this range') + card('Instagram bookings', c.ig_booked || 0, 'closed in the DMs') + '</div>';
+            } catch (e) { host.innerHTML = '<div class="empty-state">Could not load: ' + escapeHtml(e.message || e) + '</div>'; }
         }
         function loadSdrPipeline() {
             if (!window.CLIENT_PIPELINE) return;

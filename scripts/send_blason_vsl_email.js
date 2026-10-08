@@ -196,7 +196,7 @@ async function main() {
 
     let q = sb.from('leads').select('id,name,owner_name,owner_name_verify_status,owner_email,email,email_verify_address,email_verify_status,email_confidence,'
         + 'primary_language,address,category,stage,last_called_outcome,bounced_at,unsubscribed_at,reply_received_at,'
-        + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,last_called_at,all_emails_json,email_search_status,pinned_at,next_step,do_not_call')
+        + 'email_1_sent_at,email_2_sent_at,email_3_sent_at,last_called_at,all_emails_json,email_search_status,pinned_at,next_step,do_not_call,assigned_to')
         .eq('client_id', CLIENT_ID).is('bounced_at', null).is('unsubscribed_at', null);
     if (MODE === 'followup') q = q.is('reply_received_at', null);
     else if (MODE === 're') q = q.not('email_1_sent_at', 'is', null).is('reply_received_at', null);
@@ -317,15 +317,26 @@ async function main() {
     Object.keys(skipWhy).forEach(function (k) { console.log('  skip ' + String(skipWhy[k]).padStart(5) + '  ' + k); });
     console.log('');
 
-    const sender = await kit.getSenderIdentity(process.env.STILO_SENDER_EMAIL);
+    // The email signs as the rep who OWNS the lead (Remy, 2026-10-08): the
+    // footer and the "I'm <name>" line carry leads.assigned_to, so a reply or
+    // a video watch lands on that rep's board and the rep's name is the one
+    // the clinic already heard on the phone. Unassigned leads sign as Remy.
+    // Reply-To stays the shared inbox: the reps have no mailbox.
+    const masterSender = await kit.getSenderIdentity(process.env.STILO_SENDER_EMAIL);
+    const senderCache = {};
+    async function senderFor(lead) {
+        const key = String(lead.assigned_to || '').toLowerCase();
+        if (!key || key === String(process.env.STILO_SENDER_EMAIL || '').toLowerCase()) return masterSender;
+        if (!senderCache[key]) senderCache[key] = await kit.getSenderIdentity(key);
+        return senderCache[key] && senderCache[key].name ? senderCache[key] : masterSender;
+    }
+    const sender = masterSender;
     // Two sending domains (Remy, 2026-10-06): never-emailed addresses go out
     // from the TEST domain (BLASON_TEST_SENDER_EMAIL) so their bounces land on
     // that domain's reputation; confirmed-delivered addresses (followup, re)
     // keep the main Blason sender. One bad list no longer drags the good one.
     const fromEmail = (MODE === 'cold' && process.env.BLASON_TEST_SENDER_EMAIL) ? process.env.BLASON_TEST_SENDER_EMAIL : (process.env.BLASON_SENDER_EMAIL || sender.fromEmail);
-    const fromName = '"' + sender.name.replace(/"/g, '') + ' · ' + clientName + '"';
-    const senderFirst = (sender.name || 'Remy').split(/\s+/)[0];
-    console.log('from ' + fromEmail);
+    console.log('from ' + fromEmail + ' · signed by the lead\'s rep (assigned_to), Remy when unassigned');
 
     // Bounce breaker per sending domain, trailing 72h. The old sequence refused
     // at 8%; this sender had none and pushed the main domain to 11.4% on 10/06.
@@ -350,6 +361,9 @@ async function main() {
         if (!ok.ok) { console.log('SKIP  ' + tag + '  guard: ' + ok.reason); stats.skipped++; continue; }
 
         const stepNo = MODE === 'followup' ? lead.__step : 1;
+        const leadSender = await senderFor(lead);
+        const fromName = '"' + leadSender.name.replace(/"/g, '') + ' · ' + clientName + '"';
+        const senderFirst = (leadSender.name || 'Remy').split(/\s+/)[0];
         const c = stepNo === 1 ? step1(lead, senderFirst) : followup(lead, stepNo);
         const fails = preSendCheck(c.subject, c.body);
         if (fails.length) { console.log('SKIP  ' + tag + '  copy: ' + fails.join('; ')); stats.skipped++; continue; }
@@ -362,13 +376,13 @@ async function main() {
         const dedupeKey = crypto.createHash('sha1').update(['blason_vsl', lead.id, stepNo].join('|')).digest('hex');
         const claim = await sb.from('lead_messages').insert({
             lead_id: lead.id, direction: 'outbound', channel: 'email', subject: c.subject, sent_at: new Date().toISOString(),
-            sent_by: process.env.STILO_SENDER_EMAIL || null, to_address: to, provider: 'resend', status: 'sending',
+            sent_by: (lead.assigned_to || process.env.STILO_SENDER_EMAIL || null), to_address: to, provider: 'resend', status: 'sending',
             dedupe_key: dedupeKey, variant: 'blason_vsl_' + stepNo + '_' + c.arm + (MODE === 'cold' ? '_lane' + (lead.__lane || LANE) : MODE === 're' ? '_re' : ''),
         }).select('id').single();
         if (claim.error) { if (String(claim.error.code) === '23505') { console.log('DUP   ' + tag); stats.dup++; } else { console.log('FAIL  ' + tag + ' claim: ' + claim.error.message); stats.failed++; } continue; }
 
-        const html = kit.buildClientEmailHtml({ bodyText: c.body, sender: sender, clientName: clientName, es: lead.primary_language === 'es', website: clientSite });
-        const plain = kit.sanitizeCopy(c.body) + '\n\n' + kit.clientFooterText(sender, clientName, lead.primary_language === 'es', clientSite);
+        const html = kit.buildClientEmailHtml({ bodyText: c.body, sender: leadSender, clientName: clientName, es: lead.primary_language === 'es', website: clientSite });
+        const plain = kit.sanitizeCopy(c.body) + '\n\n' + kit.clientFooterText(leadSender, clientName, lead.primary_language === 'es', clientSite);
         const ut = unsubToken(to);
         try {
             const r = await fetch('https://api.resend.com/emails', {
