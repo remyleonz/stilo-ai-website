@@ -43,20 +43,21 @@
    *   timerHtml({ alert_at, hot_at, cleared, firstCallAfter: {by, at} })
    */
   function minsBetween(a, b) { return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000)); }
+  function fmtMin(m) { if (m < 90) return m + ' min'; var h = Math.round(m / 60); if (h < 36) return h + 'h'; return Math.round(h / 24) + 'd'; }
   function timerHtml(o) {
     var at = o.alert_at || o.hot_at; if (!at || o.cleared) return '';
     if (Date.now() - new Date(at).getTime() > 72 * 3600 * 1000 && !o.firstCallAfter) return '';
     if (o.firstCallAfter) {
       var m = minsBetween(at, o.firstCallAfter.at);
-      return '<div class="lt-clock ok"><span class="lt-dot"></span><b>Called</b> by ' + esc(rep(o.firstCallAfter.by) || 'the team') + ' ' + (m < 1 ? 'under a minute' : m + ' min') + ' after the alert' + (o.firstCallAfter.outcome ? ' · ' + esc(String(o.firstCallAfter.outcome).replace(/_/g, ' ')) : '') + '</div>';
+      return '<div class="lt-clock ok"><span class="lt-dot"></span><b>Called</b> by ' + esc(rep(o.firstCallAfter.by) || 'the team') + ' ' + (m < 1 ? 'under a minute' : fmtMin(m)) + ' after the alert' + (o.firstCallAfter.outcome ? ' · ' + esc(String(o.firstCallAfter.outcome).replace(/_/g, ' ')) : '') + '</div>';
     }
     var m0 = minsBetween(at, Date.now());
-    return '<div class="lt-clock ' + (m0 >= 5 ? 'late' : 'wait') + '" data-since="' + esc(at) + '"><span class="lt-dot"></span><b class="lt-min">' + m0 + ' min</b> since the alert, nobody has called yet' + (o.escalated_at ? ' · second text sent' : '') + '</div>';
+    return '<div class="lt-clock ' + (m0 >= 5 ? 'late' : 'wait') + '" data-since="' + esc(at) + '"><span class="lt-dot"></span><b class="lt-min">' + fmtMin(m0) + '</b> since the alert, nobody has called yet' + (o.escalated_at ? ' · second text sent' : '') + '</div>';
   }
   function tick() {
     document.querySelectorAll('.lt-clock[data-since]').forEach(function (el) {
       var m = minsBetween(el.getAttribute('data-since'), Date.now());
-      var b = el.querySelector('.lt-min'); if (b) b.textContent = m + ' min';
+      var b = el.querySelector('.lt-min'); if (b) b.textContent = fmtMin(m);
       el.classList.toggle('late', m >= 5); el.classList.toggle('wait', m < 5);
     });
   }
