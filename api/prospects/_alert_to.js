@@ -6,12 +6,15 @@
  * built its own list and they drifted: watch alerts went to the work inbox only,
  * reply alerts to work + personal, bookings to work + David. Remy's rule
  * (2026-10-06): every alert from every rep and every source lands at
- * remyleon@stiloaipartners.com AND davidcoira@stiloaipartners.com.
+ * remyleon@stiloaipartners.com (David by group text since 2026-10-08).
  *
  * Extra addresses (the rep who owns the lead, an SDR who booked) are passed in
  * and deduped. ALERT_ALSO (comma list) adds more without a deploy.
  */
-const BASE = ['remyleon@stiloaipartners.com', 'davidcoira@stiloaipartners.com'];
+// David came off the email list on 2026-10-08 ("stop sending David so many
+// emails"): he gets the warm-lead GROUP TEXT instead (_hot.js sendTeamAlert),
+// which is the alert that matters. ALERT_ALSO puts him back without a deploy.
+const BASE = ['remyleon@stiloaipartners.com'];
 
 function alertTo() {
     const extra = Array.prototype.slice.call(arguments);
