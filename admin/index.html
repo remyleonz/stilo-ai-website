@@ -2633,6 +2633,7 @@
     <script src="/assets/lead-tier.js?v=20261008d"></script>
     <script src="/assets/ig-dm.js?v=20261008b"></script>
     <script src="/assets/add-lead.js?v=20261008"></script>
+    <script src="/assets/fb-groups.js?v=20261008"></script>
     <script>document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { if (window.PIPELINE_TAB && window.prospectFetchJSON) PIPELINE_TAB.startBadge(prospectFetchJSON); }, 2500); });</script>
     <script>
         /* ===========================================================
@@ -8253,9 +8254,9 @@
             }
             if (!window.IG_DM) return;
             ADMIN_DM[channel] = IG_DM.instance({ host: host, fetchJson: prospectFetchJSON, admin: true, channel: channel, rep: sel ? sel.value : '', openLead: function (id) { openProspectDrawer(id); } });
-            if (channel === 'facebook' && window.FB_GROUPS) FB_GROUPS.mount({ host: 'fbGroupsAdminHost', fetchJson: prospectFetchJSON, admin: true });
+            if (channel === 'facebook' && window.FB_GROUPS) FB_GROUPS.mount({ host: 'fbGroupsAdminHost', fetchJson: prospectFetchJSON, admin: true, rep: sel ? sel.value : '' });
         }
-        function adminDmRep(channel, email) { if (ADMIN_DM[channel]) ADMIN_DM[channel].setRep(email); }
+        function adminDmRep(channel, email) { if (ADMIN_DM[channel]) ADMIN_DM[channel].setRep(email); if (channel === 'facebook' && window.FB_GROUPS) FB_GROUPS.setRep(email); }
         async function obInitPage() {
             if (window.IG_DM) {
                 // Two independent mounts: the asset keeps one state object, so the

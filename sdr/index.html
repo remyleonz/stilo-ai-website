@@ -25,6 +25,7 @@
     <script src="/assets/lead-tier.js?v=20261008d"></script>
     <script src="/assets/ig-dm.js?v=20261008b"></script>
     <script src="/assets/add-lead.js?v=20261008"></script>
+    <script src="/assets/fb-groups.js?v=20261008"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -1046,6 +1047,9 @@
                 <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;">Facebook pages of your leads. Same routine as Instagram: Copy, open the page, Message, paste, send, tap Sent. A reply makes the lead warm on your Pipeline.</div>
                 <button onclick="IG_DM.refresh()" style="border:1px solid var(--border-medium);background:transparent;color:var(--text-primary);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Refresh</button>
             </div>
+            <div class="section-title" style="font-size:13px;margin:0 0 8px;">My groups</div>
+            <div id="fbGroupsHost" style="margin-bottom:26px;"></div>
+            <div class="section-title" style="font-size:13px;margin:0 0 8px;">Clinic pages to message</div>
             <div id="fbDmHost"></div>
         </section>
 
@@ -1450,7 +1454,7 @@
             else if (page === 'history') loadHistory();
             else if (page === 'sales') loadSdrSales(STATE.salesRange || '7d');
             else if (page === 'instagram' && window.IG_DM) IG_DM.mount({ host: 'igDmHost', fetchJson: fetchJSON, channel: 'instagram', openLead: function (id) { openLeadDrawer(id); } });
-            else if (page === 'facebook' && window.IG_DM) IG_DM.mount({ host: 'fbDmHost', fetchJson: fetchJSON, channel: 'facebook', openLead: function (id) { openLeadDrawer(id); } });
+            else if (page === 'facebook') { if (window.FB_GROUPS) FB_GROUPS.mount({ host: 'fbGroupsHost', fetchJson: fetchJSON }); if (window.IG_DM) IG_DM.mount({ host: 'fbDmHost', fetchJson: fetchJSON, channel: 'facebook', openLead: function (id) { openLeadDrawer(id); } }); }
             else if (page === 'dialer') openPowerDialer();
         }
 
