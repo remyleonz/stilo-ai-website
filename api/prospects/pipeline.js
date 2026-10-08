@@ -20,7 +20,7 @@ const { assertAdminOrSdr, methodNotAllowed, readJsonBody, resolveAssignedTo, res
 const { createClient } = require('@supabase/supabase-js');
 
 const TIERS = ['cold', 'warm', 'hot'];
-const COLS = 'id,name,owner_name,phone,owner_phone,owner_phone_e164,address,primary_language,assigned_to,client_id,stage,next_step,next_step_due,meeting_scheduled_at,hot_at,hot_reason,hot_cleared_at,engagement_tier,engagement_tier_at,engagement_tier_reason,engagement_tier_by,last_called_at,last_called_outcome,call_attempts,instagram_handle,do_not_call';
+const COLS = 'id,name,owner_name,phone,owner_phone,owner_phone_e164,address,primary_language,assigned_to,client_id,stage,next_step,next_step_due,meeting_scheduled_at,hot_at,hot_reason,hot_cleared_at,hot_alert_sent_at,hot_escalated_at,engagement_tier,engagement_tier_at,engagement_tier_reason,engagement_tier_by,last_called_at,last_called_outcome,call_attempts,instagram_handle,do_not_call';
 
 function sb() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } }); }
 function cityOf(addr) { const m = String(addr || '').match(/,\s*([^,]+),\s*FL\b/i); return m ? m[1].trim() : ''; }
@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
             id: r.id, business: r.name, owner: r.owner_name, phone: r.owner_phone_e164 || r.owner_phone || r.phone || '',
             city: cityOf(r.address), lang: r.primary_language || 'en', assigned_to: r.assigned_to, client_id: r.client_id,
             tier: r.engagement_tier, tier_at: r.engagement_tier_at, tier_reason: r.engagement_tier_reason || '', tier_by: r.engagement_tier_by || '',
-            call_now: live, hot_at: r.hot_at, hot_reason: r.hot_reason || '',
+            call_now: live, hot_at: r.hot_at, hot_reason: r.hot_reason || '', alert_at: r.hot_alert_sent_at || null, escalated_at: r.hot_escalated_at || null,
             last_call: lastCall[r.id] || null, call_attempts: r.call_attempts || 0,
             stage: r.stage, next_step: r.next_step || '', next_step_due: r.next_step_due, meeting_at: r.meeting_scheduled_at,
             instagram: r.instagram_handle || '',

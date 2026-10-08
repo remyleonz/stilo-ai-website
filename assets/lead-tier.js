@@ -24,6 +24,10 @@
   function fetcher() { return global.fetchJSON || global.prospectFetchJSON || null; }
   var CSS = '.lt{margin:0 0 18px;padding:12px 14px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.02)}.lt-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}'
     + '.lt-sw{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.06)}.lt-sw button{border:0;background:transparent;color:var(--text-secondary,#9a9ab0);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:6px 14px;border-radius:999px;cursor:pointer;font-family:inherit}.lt-sw button.on.hot{background:rgba(239,68,68,.25);color:#f87171}.lt-sw button.on.warm{background:rgba(251,191,36,.22);color:#fbbf24}.lt-sw button.on.cold{background:rgba(96,165,250,.2);color:#60a5fa}'
+    + '.lt-clock{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 12px;border-radius:8px;font-size:13px;color:var(--text-primary,#ecedf2)}.lt-clock b{font-weight:800}.lt-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}'
+    + '.lt-clock.wait{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4)}.lt-clock.wait .lt-dot{background:#fbbf24;animation:ltBlink 1.4s ease-in-out infinite}'
+    + '.lt-clock.late{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45)}.lt-clock.late .lt-dot{background:#ef4444;animation:ltBlink 1s ease-in-out infinite}'
+    + '.lt-clock.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.45)}.lt-clock.ok .lt-dot{background:#22c55e}@keyframes ltBlink{50%{opacity:.25}}'
     + '.lt-why{font-size:12px;color:var(--text-secondary,#9a9ab0);line-height:1.5}.lt-dial{font-size:12px;color:var(--text-primary,#ecedf2);margin-top:6px}.lt-dial b{color:#fbbf24}'
     + '.ws{margin:0 0 16px;padding:14px 16px;border:1px solid rgba(251,191,36,.4);border-left:3px solid #fbbf24;border-radius:10px;background:rgba(251,191,36,.06)}.ws-h{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px}.ws p{margin:0 0 8px;font-size:14px;line-height:1.6;color:var(--text-primary,#ecedf2)}.ws .say{display:block;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.05);margin:4px 0 10px}.ws .lbl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-secondary,#9a9ab0);display:block;margin-bottom:2px}';
   function ensureCss() { if (document.getElementById('leadTierCss')) return; var st = document.createElement('style'); st.id = 'leadTierCss'; st.textContent = CSS; document.head.appendChild(st); }
@@ -32,16 +36,48 @@
     calls.sort(function (a, b) { return String(b.called_at) > String(a.called_at) ? 1 : -1; });
     return calls[0] || null;
   }
+  /**
+   * The alert clock. Starts when the warm-lead text went out (hot_alert_sent_at,
+   * or hot_at when no text was needed), counts the minutes nobody has called,
+   * and turns green with who called and how long after. Ticks every 30s.
+   *   timerHtml({ alert_at, hot_at, cleared, firstCallAfter: {by, at} })
+   */
+  function minsBetween(a, b) { return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000)); }
+  function timerHtml(o) {
+    var at = o.alert_at || o.hot_at; if (!at || o.cleared) return '';
+    if (Date.now() - new Date(at).getTime() > 72 * 3600 * 1000 && !o.firstCallAfter) return '';
+    if (o.firstCallAfter) {
+      var m = minsBetween(at, o.firstCallAfter.at);
+      return '<div class="lt-clock ok"><span class="lt-dot"></span><b>Called</b> by ' + esc(rep(o.firstCallAfter.by) || 'the team') + ' ' + (m < 1 ? 'under a minute' : m + ' min') + ' after the alert' + (o.firstCallAfter.outcome ? ' · ' + esc(String(o.firstCallAfter.outcome).replace(/_/g, ' ')) : '') + '</div>';
+    }
+    var m0 = minsBetween(at, Date.now());
+    return '<div class="lt-clock ' + (m0 >= 5 ? 'late' : 'wait') + '" data-since="' + esc(at) + '"><span class="lt-dot"></span><b class="lt-min">' + m0 + ' min</b> since the alert, nobody has called yet' + (o.escalated_at ? ' · second text sent' : '') + '</div>';
+  }
+  function tick() {
+    document.querySelectorAll('.lt-clock[data-since]').forEach(function (el) {
+      var m = minsBetween(el.getAttribute('data-since'), Date.now());
+      var b = el.querySelector('.lt-min'); if (b) b.textContent = m + ' min';
+      el.classList.toggle('late', m >= 5); el.classList.toggle('wait', m < 5);
+    });
+  }
+  setInterval(tick, 30000);
+  function firstCallAfter(lead, at) {
+    var calls = (lead.call_history || []).filter(function (c) { return c.direction !== 'inbound' && c.called_at && at && c.called_at > at; });
+    calls.sort(function (a, b) { return String(a.called_at) > String(b.called_at) ? 1 : -1; });
+    return calls[0] ? { by: calls[0].logged_by, at: calls[0].called_at, outcome: calls[0].outcome } : null;
+  }
   function render(lead) {
     ensureCss();
     var tier = lead.engagement_tier || 'cold';
     var lc = lastCall(lead);
+    var alertAt = lead.hot_alert_sent_at || lead.hot_at;
+    var clock = timerHtml({ alert_at: lead.hot_alert_sent_at, hot_at: lead.hot_at, cleared: !!lead.hot_cleared_at, escalated_at: lead.hot_escalated_at, firstCallAfter: firstCallAfter(lead, alertAt) });
     var dial = lc ? '<b>' + esc(rep(lc.logged_by) || 'Someone on the team') + '</b> dialed this lead ' + esc(ago(lc.called_at)) + (lc.outcome ? ' · ' + esc(String(lc.outcome).replace(/_/g, ' ')) : '') + '. Read their notes before you call again.' : 'Nobody on the team has dialed this lead yet.';
     var why = tier !== 'cold' ? (lead.hot_reason && lead.hot_at && !lead.hot_cleared_at ? lead.hot_reason : (lead.engagement_tier_reason || '')) : '';
     return '<div class="lt" id="leadTierBox" data-id="' + lead.id + '"><div class="lt-row">'
       + '<span class="lt-sw">' + ['cold', 'warm', 'hot'].map(function (t) { return '<button type="button" data-tier="' + t + '" class="' + t + (tier === t ? ' on' : '') + '" onclick="LEAD_TIER.set(' + lead.id + ',\'' + t + '\')">' + t + '</button>'; }).join('') + '</span>'
       + '<span class="lt-why">' + (why ? esc(why) + (lead.engagement_tier_at ? ' · ' + esc(ago(lead.engagement_tier_at)) : '') : (tier === 'cold' ? 'Cold: nobody has heard back from them yet. Flip it the moment the conversation is real.' : '')) + '</span>'
-      + '</div><div class="lt-dial">' + dial + '</div></div>';
+      + '</div>' + clock + '<div class="lt-dial">' + dial + '</div></div>';
   }
   async function set(id, tier) {
     var f = fetcher(); if (!f) return;
@@ -110,5 +146,5 @@
       + '<span class="lbl">' + S.c + '</span><span class="say">' + esc(S.cs) + '</span>'
       + '<p class="lt-why">' + esc(S.sf) + '</p><p class="lt-why">' + esc(S.r) + '</p></div>';
   }
-  global.LEAD_TIER = { render: render, set: set, sync: sync, script: script, kind: kind };
+  global.LEAD_TIER = { render: render, set: set, sync: sync, script: script, kind: kind, timerHtml: timerHtml, tick: tick };
 })(window);
