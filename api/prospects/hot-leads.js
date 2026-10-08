@@ -12,7 +12,7 @@
  * "Called since" is computed from lead_calls, not stored, so a dial logged from
  * Quo clears the row without any extra write (see idempotency-stamps lessons).
  */
-const { assertAdminOrSdr, methodNotAllowed, readJsonBody } = require('./_shared');
+const { assertAdminOrSdr, methodNotAllowed, readJsonBody, resolveAssignedTo } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
 const { markHot } = require('./_hot');
 
@@ -56,10 +56,12 @@ module.exports = async function handler(req, res) {
         .select('id,name,owner_name,phone,owner_phone,owner_phone_e164,address,primary_language,assigned_to,client_id,hot_at,hot_reason,stage,next_step')
         .not('hot_at', 'is', null).is('hot_cleared_at', null).gte('hot_at', floor)
         .order('hot_at', { ascending: false }).limit(80);
-    // SDRs see their own leads PLUS the whole Blason pool: the client list is
-    // a shared calling list (Remy, 2026-10-07: Ale calls every video watcher
-    // today). STILO leads stay scoped to the rep who owns them.
-    if (!gate.isAdmin) q = q.or('assigned_to.eq.' + gate.email + ',client_id.eq.' + BLASON);
+    // Rep-scoped (Remy, 2026-10-08): Ale only sees signals from ALE's leads.
+    // The shared-pool view of 10/07 confused the reps (Ale had Remy's video
+    // watchers and callbacks on his board). Admins see everything, or one rep
+    // with ?assigned_to= (what the impersonation banner sends).
+    if (!gate.isAdmin) q = q.eq('assigned_to', gate.email);
+    else if (req.query && req.query.assigned_to) { const a = await resolveAssignedTo(req.query.assigned_to); if (a) q = q.eq('assigned_to', a); }
     const { data: rows, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
     if (!rows || !rows.length) return res.status(200).json({ ok: true, rows: [] });
@@ -71,6 +73,12 @@ module.exports = async function handler(req, res) {
         .in('lead_id', ids).eq('direction', 'outbound').gte('called_at', minHot);
     const calledAfter = {};
     (calls || []).forEach(function (c) { if (!calledAfter[c.lead_id] || c.called_at > calledAfter[c.lead_id]) calledAfter[c.lead_id] = c.called_at; });
+    // Who dialed them last, ever (any rep): the row says it so two reps never
+    // call the same warm lead five minutes apart.
+    const { data: anyCalls } = await db.from('lead_calls').select('lead_id,called_at,logged_by,outcome')
+        .in('lead_id', ids).eq('direction', 'outbound').order('called_at', { ascending: false }).limit(400);
+    const lastCall = {};
+    (anyCalls || []).forEach(function (c) { if (!lastCall[c.lead_id]) lastCall[c.lead_id] = { by: c.logged_by, at: c.called_at, outcome: c.outcome }; });
 
     const out = rows.filter(function (r) { return !(calledAfter[r.id] && calledAfter[r.id] > r.hot_at); })
         .map(function (r) {
@@ -80,6 +88,7 @@ module.exports = async function handler(req, res) {
                 city: cityOf(r.address), lang: r.primary_language || 'en',
                 assigned_to: r.assigned_to, client: r.client_id === BLASON ? 'Blason' : (r.client_id ? 'client' : 'STILO'),
                 hot_at: r.hot_at, reason: r.hot_reason || '', stage: r.stage, next_step: r.next_step || '',
+                last_call: lastCall[r.id] || null,
             };
         });
     return res.status(200).json({ ok: true, rows: out, window_hours: WINDOW_H });

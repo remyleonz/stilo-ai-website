@@ -153,6 +153,10 @@ async function callableFromSupabase(opts) {
     q = gateToCurrentOffer(q, opts.clientId);
 
     if (opts.assignedTo) q = q.eq('assigned_to', opts.assignedTo);
+    // Cold Call means cold (Remy, 2026-10-08): a lead that replied, watched the
+    // video, answered a DM or put a decision maker on the phone is warm and
+    // lives on the Pipeline tab, not in the dial-everything list.
+    q = q.eq('engagement_tier', 'cold');
     // Tier filter must match what the dashboard DISPLAYS: brief_tier first
     // (1=hot,2=warm,3=cool), falling back to the legacy prospect_tier when a
     // lead has no brief tier. Keeps the Hot/Warm/Cool chips consistent with the
