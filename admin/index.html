@@ -1382,6 +1382,7 @@
 </style>
 <style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
     <link rel="stylesheet" href="/assets/stilo-dashboard.css?v=2026-08-25b">
+    <link rel="stylesheet" href="/assets/stilo-mobile.css?v=20261008">
 </head>
 <body>
     <!-- ============================================================
@@ -2829,6 +2830,10 @@
         var VALID_PAGES = ['dashboard','clients','client-crm','prospecting','outbound','instagram','facebook','agents','review','revenue','team','pipeline','deals','activity','emails','support','settings','dialer'];
 
         function switchPage(page, opts) {
+            // Mobile: a page switch always closes the slide-in menu and gives the
+            // body its scroll back (a stuck overflow:hidden was the "page will not
+            // scroll" report, 2026-10-08).
+            try { var _sb = document.getElementById('sidebar'); if (_sb) _sb.classList.remove('open'); document.body.style.overflow = ''; var _ov = document.querySelector('.sidebar-overlay'); if (_ov) _ov.classList.remove('open'); } catch (_) {}
             opts = opts || {};
             // Update nav items. Pipeline / Deals / Activity all live under
             // the single "Sales" nav button — highlight it for any of those.
