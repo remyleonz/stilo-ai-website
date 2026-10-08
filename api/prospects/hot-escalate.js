@@ -11,7 +11,7 @@
  */
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
-const { repFirst, ago, sendToTeam } = require('./_hot');
+const { repFirst, ago, sendToTeam, claimTextSlot } = require('./_hot');
 
 const WAIT_MIN = 10, SITE = 'https://stiloaipartners.com';
 
@@ -38,11 +38,17 @@ module.exports = async function handler(req, res) {
         const claim = await db.from('leads').update({ hot_escalated_at: new Date().toISOString() }).eq('id', l.id).is('hot_escalated_at', null).select('id');
         if (!claim.data || !claim.data.length) continue;
         if (!to.length) { out.push({ id: l.id, result: 'no_numbers' }); continue; }
+        const slot = await claimTextSlot(db, l.id);
+        if (!slot.ok) { out.push({ id: l.id, result: 'skipped_' + slot.why }); continue; }
         const owner = l.assigned_to ? repFirst(l.assigned_to) : 'nobody';
-        const text = 'STILL NOT CALLED, ' + ago(l.hot_at) + ': ' + (l.name || 'lead ' + l.id) + (l.owner_name ? ' · ' + l.owner_name : '') + '\n'
-            + (l.hot_reason || 'a human reached out') + '\n'
-            + (owner === 'nobody' ? 'Unassigned lead. ' : owner + ', this one is yours. ') + 'Whoever is free, call now: ' + (l.owner_phone_e164 || l.owner_phone || l.phone || 'no phone') + '\n'
-            + SITE + '/sdr/#lead=' + l.id;
+        const text = ['STILL NOT CALLED (' + ago(l.hot_alert_sent_at || l.hot_at).replace(' ago', '') + ' since the alert)',
+            (l.name || 'lead ' + l.id) + (l.owner_name ? '\nOwner: ' + l.owner_name : ''),
+            'What they did: ' + (l.hot_reason || 'a human reached out'),
+            '',
+            owner === 'nobody' ? 'Unassigned lead.' : owner + ', this one is yours.',
+            'Whoever is free, call now: ' + (l.owner_phone_e164 || l.owner_phone || l.phone || 'no phone'),
+            '',
+            SITE + '/sdr/#lead=' + l.id].join('\n');
         const r = await sendToTeam(text, to);
         out.push({ id: l.id, result: r.ok ? 'sent' : (r.error || 'failed'), sent: r.sent });
     }
