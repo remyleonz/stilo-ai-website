@@ -11,7 +11,7 @@
  */
 const { assertAdminOrSdr } = require('./_shared');
 const { createClient } = require('@supabase/supabase-js');
-const { alertText, repFirst, ago } = require('./_hot');
+const { repFirst, ago, sendToTeam } = require('./_hot');
 
 const WAIT_MIN = 10, SITE = 'https://stiloaipartners.com';
 
@@ -43,12 +43,8 @@ module.exports = async function handler(req, res) {
             + (l.hot_reason || 'a human reached out') + '\n'
             + (owner === 'nobody' ? 'Unassigned lead. ' : owner + ', this one is yours. ') + 'Whoever is free, call now: ' + (l.owner_phone_e164 || l.owner_phone || l.phone || 'no phone') + '\n'
             + SITE + '/sdr/#lead=' + l.id;
-        try {
-            const { openphoneFetch } = require('../openphone/_shared');
-            const { REMY_LINE } = require('./_sms');
-            const r = await openphoneFetch({ path: '/messages', method: 'POST', body: { from: process.env.TEAM_ALERT_FROM || REMY_LINE, to: to, content: text } });
-            out.push({ id: l.id, result: r.status });
-        } catch (e) { out.push({ id: l.id, result: 'error', detail: String(e && e.message || e) }); }
+        const r = await sendToTeam(text, to);
+        out.push({ id: l.id, result: r.ok ? 'sent' : (r.error || 'failed'), sent: r.sent });
     }
     return res.status(200).json({ ok: true, checked: (rows || []).length, escalated: out });
 };

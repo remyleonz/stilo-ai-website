@@ -94,11 +94,30 @@ async function sendTeamAlert(client, leadId) {
     const { data: calls } = await client.from('lead_calls').select('logged_by,called_at,outcome')
         .eq('lead_id', leadId).eq('direction', 'outbound').order('called_at', { ascending: false }).limit(1);
     const text = alertText(lead, calls && calls[0]);
+    return sendToTeam(text, to);
+}
+
+/**
+ * One text per person, not a group MMS (2026-10-08): the five-recipient
+ * group message was "delivered" per Quo and reached the reps, but Remy's
+ * iPhone never showed it. Individual SMS always lands. TEAM_ALERT_MODE=group
+ * brings the single group thread back.
+ */
+async function sendToTeam(text, to) {
     try {
         const { openphoneFetch } = require('../openphone/_shared');
         const { REMY_LINE } = require('./_sms');
-        const r = await openphoneFetch({ path: '/messages', method: 'POST', body: { from: process.env.TEAM_ALERT_FROM || REMY_LINE, to: to, content: text } });
-        return { ok: r.status >= 200 && r.status < 300, status: r.status, detail: r.json && r.json.message };
+        const from = process.env.TEAM_ALERT_FROM || REMY_LINE;
+        if (String(process.env.TEAM_ALERT_MODE || 'each').toLowerCase() === 'group') {
+            const r = await openphoneFetch({ path: '/messages', method: 'POST', body: { from: from, to: to, content: text } });
+            return { ok: r.status >= 200 && r.status < 300, status: r.status, detail: r.json && r.json.message };
+        }
+        const results = [];
+        for (const n of to) {
+            const r = await openphoneFetch({ path: '/messages', method: 'POST', body: { from: from, to: [n], content: text } });
+            results.push({ to: n, status: r.status, detail: r.json && r.json.message });
+        }
+        return { ok: results.every(function (x) { return x.status >= 200 && x.status < 300; }), sent: results.length, results: results };
     } catch (e) { return { error: String(e && e.message || e) }; }
 }
 
@@ -141,4 +160,4 @@ async function markWarm(leadId, reason, sb) {
     } catch (e) { return { error: String(e && e.message || e) }; }
 }
 
-module.exports = { markHot, markWarm, sendTeamAlert, alertText, repFirst, ago };
+module.exports = { markHot, markWarm, sendTeamAlert, sendToTeam, alertText, repFirst, ago };
