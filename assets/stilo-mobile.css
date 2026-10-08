@@ -1,0 +1,57 @@
+/* assets/stilo-mobile.css
+   One mobile sheet for BOTH dashboards (/sdr/ and /admin/), loaded after the
+   page's own CSS so it wins. Remy, 2026-10-08: "everything is super together,
+   the page is unresponsive to scroll sometimes, very confusing". Rules:
+   phones get two-column stats, horizontally scrollable tables and tab rows,
+   full-width drawers, wrapped button rows, and the page can always scroll. */
+html, body { overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+body { touch-action: pan-y pinch-zoom; }
+@media (max-width: 768px) {
+  .page-content, .main-content > .page-content { padding: 14px 14px 90px !important; }
+  .main-content, .main { margin-left: 0 !important; width: 100% !important; min-width: 0 !important; }
+  .section-title { font-size: 15px !important; letter-spacing: .06em !important; }
+  /* stat grids: two columns, no inline 4-column overrides */
+  .stat-grid, .summary-strip, [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+  .stat-card { padding: 12px 12px !important; min-width: 0 !important; }
+  .stat-value { font-size: 22px !important; }
+  .stat-label { font-size: 9.5px !important; }
+  /* tables scroll inside their card instead of squeezing */
+  .table-wrap, .prospect-table-host, .vw, .ig-reps, .fg-reps, .crm-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .table-wrap table, .prospect-table-host table, .vw table { min-width: 640px; }
+  td, th { padding: 8px 8px !important; font-size: 12px !important; }
+  /* sub-tab rows and chip rows scroll sideways on one line */
+  .leads-subtab { padding: 9px 12px !important; font-size: 12px !important; white-space: nowrap; }
+  .leads-subtab:first-child { margin-left: 0; }
+  div[style*="border-bottom:1px solid var(--border-subtle)"][style*="display:flex;gap:4px"] { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap !important; }
+  #chatPicker, #salesRangeChips, .ig-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap !important; }
+  .ig-tabs button { white-space: nowrap; }
+  /* search + filter rows wrap */
+  #leadSearch { min-width: 0 !important; width: 100%; flex-basis: 100% !important; }
+  #leadsCityFilter, #dialerStartBtn { flex: 1 1 45%; }
+  /* pipeline, call-now, DM and group rows: text on top, buttons on their own line */
+  .pt-row, .hl-row, .ig-main, .fg-main { gap: 8px !important; padding: 10px !important; }
+  .pt-who, .hl-who, .ig-who, .fg-who { flex-basis: 100% !important; min-width: 0 !important; }
+  .pt-ago, .hl-ago, .ig-n { min-width: 0 !important; }
+  .pt-btn, .hl-btn, .ig-btn, .fg-btn { flex: 1 1 30%; text-align: center; padding: 9px 8px !important; font-size: 12px !important; }
+  .pt-tier { order: 5; flex-basis: 100%; justify-content: center; }
+  .lt-row { gap: 8px !important; }
+  .lt-sw button { padding: 6px 10px !important; }
+  /* the lead drawer takes the whole screen */
+  .drawer, .lead-drawer, #leadDrawer, #prospectDrawer, .prospect-drawer, [id$="Drawer"] > .drawer-panel { width: 100vw !important; max-width: 100vw !important; left: 0 !important; right: 0 !important; }
+  .drawer-body, .drawer-content { padding: 14px !important; }
+  /* dialer full screen cards */
+  .dm-wrap, .dialer-mode { font-size: 14px; }
+  /* messages */
+  .chat-wrap { height: calc(100vh - 260px) !important; min-height: 320px; }
+  .chat-form textarea { font-size: 16px; }   /* stops iOS zoom on focus */
+  input, select, textarea { font-size: 16px !important; }
+  /* admin header row with filters */
+  .stilo-page-header-row { flex-wrap: wrap !important; gap: 8px !important; }
+  .stilo-page-header-row select, .stilo-page-header-row button { flex: 1 1 45%; min-width: 0 !important; }
+  /* never let a fixed strip steal the scroll */
+  .hotLeadsStrip, #hotLeadsStrip, .vslWatchersHost { position: static !important; }
+}
+@media (max-width: 420px) {
+  .stat-grid, .summary-strip, [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: 1fr 1fr !important; }
+  .pt-btn, .hl-btn, .ig-btn, .fg-btn { flex-basis: 45%; }
+}
