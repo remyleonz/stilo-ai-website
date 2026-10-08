@@ -66,17 +66,20 @@ function copyFor(r, arm) {
     const remy = repEmails.find(function (e) { return /^remyleon/.test(e); }) || 'remyleon@stiloaipartners.com';
     const batch = path.basename(CSV).replace(/\.csv$/, '');
 
-    const out = []; let queuedIdx = 0; const seen = new Set();
+    const out = []; let queuedIdx = 0; const seen = new Set(); const perRep = {};
     rows.forEach(function (r, i) {
         const handle = hk(r.handle); if (!handle || handle === '@' || seen.has(handle)) return; seen.add(handle);
         const lidM = String(r.vsl_link || '').match(/[?&]lid=(\d+)/);
         const lead = lidM ? { id: Number(lidM[1]) } : byName[norm(r.business)];
         const sent = i < SENT_THROUGH;
-        const arm = sent ? 'B' : (queuedIdx++ % 2 === 0 ? 'A' : 'B');
-        const c = copyFor(r, arm);
         let assigned = null;
         if (sent) assigned = remy;
-        else if (queuedIdx - 1 < PER_REP * repEmails.length) assigned = repEmails[(queuedIdx - 1) % repEmails.length];
+        else { assigned = (queuedIdx < PER_REP * repEmails.length) ? repEmails[queuedIdx % repEmails.length] : null; queuedIdx++; }
+        // Arms alternate WITHIN each rep's list, so no rep ends up all-A and
+        // the A/B read is not confounded with who sent it.
+        const k = assigned || 'pool'; perRep[k] = (perRep[k] || 0) + 1;
+        const arm = sent ? 'B' : (perRep[k] % 2 === 1 ? 'A' : 'B');
+        const c = copyFor(r, arm);
         out.push({
             client_id: BLASON, lead_id: lead ? lead.id : null, handle: handle, instagram_url: r.instagram_url || ('https://www.instagram.com/' + handle.slice(1) + '/'),
             business: r.business || null, first_name: r.first_name || null, city: r.city || null, lang: r.lang === 'es' ? 'es' : 'en', arm: arm,
