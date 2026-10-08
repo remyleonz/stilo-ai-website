@@ -4167,7 +4167,8 @@
                         : '';
                     const notesBlock = (r.notes ? '<div style="color:var(--text-tertiary);font-size:12px;">' + escapeHtml(r.notes) + '</div>' : '')
                         + summary + (rec ? '<div style="margin-top:5px;">' + rec + '</div>' : '') + trans;
-                    return '<tr' + (r.lead_id ? ' onclick="if(!event.target.closest(\'a,details,summary\'))openLeadDrawer(' + Number(r.lead_id) + ')" style="cursor:pointer;" title="Open the lead"' : '') + '>'
+                    const leadId = r.lead_id || r.id;  // my-history rows ARE lead rows (id = lead id) stamped with the latest call
+                    return '<tr' + (leadId ? ' onclick="if(!event.target.closest(\'a,details,summary\'))openLeadDrawer(' + Number(leadId) + ')" style="cursor:pointer;" title="Open the lead"' : '') + '>'
                         + '<td style="white-space:nowrap;">' + fmtET(when) + dur + '</td>'
                         + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
                         + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
