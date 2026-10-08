@@ -113,3 +113,8 @@ alter table public.support_messages add column if not exists sender_email text;
 
 -- 2026-10-08 cap of 3 team texts per lead between calls
 alter table prospecting.leads add column if not exists hot_alert_count smallint not null default 0, add column if not exists hot_alert_count_since timestamptz;
+
+-- 2026-10-08 Facebook groups per rep + post log (see api/prospects/fb-groups.js)
+create table if not exists prospecting.fb_groups (id bigserial primary key, name text not null, url text not null, members integer, privacy text, rules text, language text not null default 'en', geo text, audience text not null default 'blason', assigned_to text, status text not null default 'to_join', joined_at timestamptz, notes text, source text, created_by text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), constraint fb_groups_audience_chk check (audience in ('blason','stilo')), constraint fb_groups_status_chk check (status in ('to_join','pending','joined','left','rejected')));
+create unique index if not exists fb_groups_url_uq on prospecting.fb_groups (url);  -- the API lowercases urls
+create table if not exists prospecting.fb_group_posts (id bigserial primary key, group_id bigint references prospecting.fb_groups(id) on delete cascade, posted_by text not null, posted_at timestamptz not null default now(), copy text, reactions integer not null default 0, comments integer not null default 0, dms_sent integer not null default 0, note text);
