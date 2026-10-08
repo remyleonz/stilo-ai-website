@@ -110,3 +110,6 @@ alter table prospecting.leads add column if not exists facebook_url text, add co
 alter table public.support_threads add column if not exists peer_key text;
 create unique index if not exists support_threads_peer_key_uq on public.support_threads (peer_key) where peer_key is not null;
 alter table public.support_messages add column if not exists sender_email text;
+
+-- 2026-10-08 cap of 3 team texts per lead between calls
+alter table prospecting.leads add column if not exists hot_alert_count smallint not null default 0, add column if not exists hot_alert_count_since timestamptz;

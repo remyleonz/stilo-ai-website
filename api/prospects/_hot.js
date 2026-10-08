@@ -27,6 +27,7 @@
  * TEAM_ALERTS=off to silence the text without touching the stamps.
  */
 const DEBOUNCE_MIN = 20;
+const MAX_TEXTS_PER_LEAD = 3;   // alert + escalations, between two real calls (Remy, 2026-10-08)
 const SITE = 'https://stiloaipartners.com';
 
 function sbLeads() {
@@ -64,17 +65,45 @@ function teamNumbers() {
     try { return Object.values(require('./_team_numbers').PERSONAL).slice(0, 10); } catch (_) { return []; }
 }
 
-/** The one line everybody reads before they dial. */
+/** The text everybody reads before they dial. Blank lines between the parts:
+ *  a group thread shows it as one bubble, so the spacing is the formatting. */
 function alertText(lead, lastCall) {
-    const who = [lead.name, lead.owner_name, cityOf(lead.address)].filter(Boolean).join(' · ');
     const phone = lead.owner_phone_e164 || lead.owner_phone || lead.phone || '';
     const dialed = lastCall
-        ? 'Last dialed by ' + (repFirst(lastCall.logged_by) || 'us') + ' ' + ago(lastCall.called_at) + (lastCall.outcome ? ' (' + String(lastCall.outcome).replace(/_/g, ' ') + ')' : '')
-        : 'Nobody has dialed them yet';
+        ? (repFirst(lastCall.logged_by) || 'us') + ', ' + ago(lastCall.called_at) + (lastCall.outcome ? ' (' + String(lastCall.outcome).replace(/_/g, ' ') + ')' : '')
+        : 'nobody yet';
     const owner = lead.assigned_to ? repFirst(lead.assigned_to) + "'s lead" : 'unassigned';
-    return ['WARM LEAD · ' + (lead.hot_reason || 'a human reached out'),
-        who, (phone ? phone + ' · ' : '') + owner, dialed + '. Call within 5 minutes.',
+    return ['WARM LEAD',
+        lead.name + (cityOf(lead.address) ? ' (' + cityOf(lead.address) + ')' : ''),
+        (lead.owner_name ? 'Owner: ' + lead.owner_name + '\n' : '') + 'What they did: ' + (lead.hot_reason || 'a human reached out'),
+        '',
+        'Phone: ' + (phone || 'no phone on file'),
+        'Rep: ' + owner,
+        'Last dialed: ' + dialed,
+        '',
+        'Call within 5 minutes:',
         SITE + '/sdr/#lead=' + lead.id].join('\n');
+}
+
+/**
+ * Cap: at most MAX_TEXTS_PER_LEAD team texts for one lead between two real
+ * calls. The counter restarts when an outbound call lands after it started,
+ * so a lead that got called and went warm again gets a fresh three.
+ * Claims the slot (increments) before the send: idempotent sends.
+ */
+async function claimTextSlot(client, leadId) {
+    const { data: lead } = await client.from('leads').select('id,hot_alert_count,hot_alert_count_since').eq('id', leadId).maybeSingle();
+    if (!lead) return { ok: false, why: 'no_lead' };
+    let count = lead.hot_alert_count || 0, since = lead.hot_alert_count_since;
+    if (since) {
+        const { data: calls } = await client.from('lead_calls').select('id').eq('lead_id', leadId).eq('direction', 'outbound').gt('called_at', since).limit(1);
+        if (calls && calls.length) { count = 0; since = null; }
+    }
+    if (count >= MAX_TEXTS_PER_LEAD) return { ok: false, why: 'cap', count: count };
+    const upd = { hot_alert_count: count + 1, hot_alert_count_since: since || new Date().toISOString() };
+    const { error } = await client.from('leads').update(upd).eq('id', leadId);
+    if (error) return { ok: false, why: error.message };
+    return { ok: true, count: count + 1 };
 }
 
 async function sendTeamAlert(client, leadId) {
@@ -91,6 +120,8 @@ async function sendTeamAlert(client, leadId) {
     const claim = await client.from('leads').update({ hot_alert_sent_at: new Date().toISOString() })
         .eq('id', leadId).or('hot_alert_sent_at.is.null,hot_alert_sent_at.lt.' + floor).select('id');
     if (claim.error || !claim.data || !claim.data.length) return { skipped: 'debounced' };
+    const slot = await claimTextSlot(client, leadId);
+    if (!slot.ok) return { skipped: slot.why, count: slot.count };
     const { data: calls } = await client.from('lead_calls').select('logged_by,called_at,outcome')
         .eq('lead_id', leadId).eq('direction', 'outbound').order('called_at', { ascending: false }).limit(1);
     const text = alertText(lead, calls && calls[0]);
@@ -108,7 +139,9 @@ async function sendToTeam(text, to) {
         const { openphoneFetch } = require('../openphone/_shared');
         const { REMY_LINE } = require('./_sms');
         const from = process.env.TEAM_ALERT_FROM || REMY_LINE;
-        if (String(process.env.TEAM_ALERT_MODE || 'each').toLowerCase() === 'group') {
+        // Group thread by default again (2026-10-08 evening): the group MMS did
+        // reach Remy, late. The team saves the Quo line as STILO ALERTS.
+        if (String(process.env.TEAM_ALERT_MODE || 'group').toLowerCase() === 'group') {
             const r = await openphoneFetch({ path: '/messages', method: 'POST', body: { from: from, to: to, content: text } });
             return { ok: r.status >= 200 && r.status < 300, status: r.status, detail: r.json && r.json.message };
         }
@@ -160,4 +193,4 @@ async function markWarm(leadId, reason, sb) {
     } catch (e) { return { error: String(e && e.message || e) }; }
 }
 
-module.exports = { markHot, markWarm, sendTeamAlert, sendToTeam, alertText, repFirst, ago };
+module.exports = { markHot, markWarm, sendTeamAlert, sendToTeam, alertText, repFirst, ago, claimTextSlot, MAX_TEXTS_PER_LEAD };
