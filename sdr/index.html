@@ -23,7 +23,8 @@
     <script src="/assets/dial-companion.js"></script>
     <script src="/assets/pipeline-tab.js?v=20261008"></script>
     <script src="/assets/lead-tier.js?v=20261008"></script>
-    <script src="/assets/ig-dm.js?v=20261008"></script>
+    <script src="/assets/ig-dm.js?v=20261008b"></script>
+    <script src="/assets/add-lead.js?v=20261008"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -646,6 +647,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
                 Instagram
             </button>
+            <button class="nav-item" data-page="facebook" onclick="switchPage('facebook')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                Facebook
+            </button>
             <button class="nav-item" data-page="sales" onclick="switchPage('sales')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-6"/></svg>
                 Sales
@@ -809,7 +814,10 @@
 
         <!-- ============ LEADS ============ -->
         <section class="page-content hidden" id="page-leads">
-            <div class="section-title">My Leads</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
+                <div class="section-title" style="margin:0;">My Leads</div>
+                <button onclick="ADD_LEAD.open({ onCreated: function () { if (STATE.leadsSubtab === 'pipeline') loadLeadsTable(); loadLeadsStats(); } })" style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:var(--bg-input);border:1px solid var(--border-medium);border-radius:999px;color:var(--text-primary);font-size:12px;font-weight:700;cursor:pointer;">+ Add lead</button>
+            </div>
 
             <!-- Awaiting-script notice: assigned leads hidden until David ships their script -->
             <div id="awaitingScriptBar" style="display:none;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.35);border-radius:10px;font-size:12px;color:var(--text-secondary);line-height:1.5;"></div>
@@ -1004,8 +1012,9 @@
 
         <!-- ============ MESSAGES ============ -->
         <section class="page-content hidden" id="page-messages">
-            <div class="section-title">Messages with Remy</div>
-            <div class="section-subtitle">Direct line to your manager. Updates, scripts, coaching.</div>
+            <div class="section-title">Messages</div>
+            <div class="section-subtitle">Remy, the whole team, or one teammate. Updates, scripts, coaching, "who is taking this warm lead".</div>
+            <div id="chatPicker" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
 
             <div class="chat-wrap" style="display:flex;flex-direction:column;">
                 <div class="chat-header" id="chatHeader">Direct messages</div>
@@ -1031,6 +1040,14 @@
             <div id="igDmHost"></div>
         </section>
 
+        <section class="page-content hidden" id="page-facebook">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;">Facebook pages of your leads. Same routine as Instagram: Copy, open the page, Message, paste, send, tap Sent. A reply makes the lead warm on your Pipeline.</div>
+                <button onclick="IG_DM.refresh()" style="border:1px solid var(--border-medium);background:transparent;color:var(--text-primary);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Refresh</button>
+            </div>
+            <div id="fbDmHost"></div>
+        </section>
+
         <section class="page-content hidden" id="page-sales">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
                 <div style="font-size:13px;color:var(--text-secondary);">Everything that happened on your leads, by channel.</div>
@@ -1044,7 +1061,12 @@
         </section>
 
         <section class="page-content hidden" id="page-dialer">
-            <div id="dialerCompanionHost" style="min-height:calc(100vh - 140px);display:flex;flex-direction:column;"></div>
+            <div style="max-width:620px;margin:40px auto;text-align:center;">
+                <div class="section-title" style="font-size:16px;margin-bottom:8px;">Power dialer</div>
+                <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:18px;">Full-screen session on your Cold Call queue: Space calls the next lead in Quo, number keys log the outcome, D marks a decision maker, it advances on its own. Warm and hot leads are on the Pipeline tab; call those first.</div>
+                <button onclick="openPowerDialer()" style="padding:14px 28px;background:var(--blue);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,0.35);">▶ Start the power dialer</button>
+                <div style="margin-top:16px;font-size:12px;color:var(--text-tertiary);">On your phone? The handset view with the one big Call button lives at <a href="/dial/" style="color:var(--blue);">stiloaipartners.com/dial</a>.</div>
+            </div>
         </section>
 
         <section class="page-content hidden" id="page-history">
@@ -1413,7 +1435,7 @@
             document.getElementById('pageTitle').textContent = {
                 overview: 'Dashboard', leads: 'Leads', performance: 'Performance',
                 revenue: 'Revenue', messages: 'Messages', history: 'Call History',
-                dialer: 'Dialer', sales: 'Sales', instagram: 'Instagram DMs'
+                dialer: 'Dialer', sales: 'Sales', instagram: 'Instagram DMs', facebook: 'Facebook DMs'
             }[page] || 'Dashboard';
 
             // The handset only polls while its tab is open.
@@ -1425,10 +1447,9 @@
             else if (page === 'messages') loadMessages();
             else if (page === 'history') loadHistory();
             else if (page === 'sales') loadSdrSales(STATE.salesRange || '7d');
-            else if (page === 'instagram' && window.IG_DM) IG_DM.mount({ host: 'igDmHost', fetchJson: fetchJSON, openLead: function (id) { openLeadDrawer(id); } });
-            else if (page === 'dialer' && window.DIAL_COMPANION) {
-                DIAL_COMPANION.mount({ host: 'dialerCompanionHost', fetchJson: fetchJSON });
-            }
+            else if (page === 'instagram' && window.IG_DM) IG_DM.mount({ host: 'igDmHost', fetchJson: fetchJSON, channel: 'instagram', openLead: function (id) { openLeadDrawer(id); } });
+            else if (page === 'facebook' && window.IG_DM) IG_DM.mount({ host: 'fbDmHost', fetchJson: fetchJSON, channel: 'facebook', openLead: function (id) { openLeadDrawer(id); } });
+            else if (page === 'dialer') openPowerDialer();
         }
 
         /* ===== PROFILE POPOVER =====
@@ -3469,6 +3490,18 @@
                 dial: function (rows) { startDialerMode(rows); }
             });
         }
+        // The Dialer tab: pull the rep's Cold Call queue and open the full-screen
+        // dialing session on it (same session the Leads page's "Start Dialer" opens).
+        async function openPowerDialer() {
+            if (!window.DIALER_MODE) return;
+            if (!scopeReady()) { setTimeout(openPowerDialer, 400); return; }
+            try {
+                const d = await fetchJSON('/api/prospects/callable?limit=200');
+                const rows = (d && (d.results || d.leads)) || [];
+                if (!rows.length) { alert('Your Cold Call queue is empty. Warm and hot leads are on the Pipeline tab.'); return; }
+                startDialerMode(rows);
+            } catch (e) { alert('Could not load the queue: ' + (e.message || e)); }
+        }
         function startDialerMode(listRows, source) {
             if (!window.DIALER_MODE) return;
             var isList = Array.isArray(listRows);
@@ -3949,34 +3982,54 @@
         }
 
         /* ===== MESSAGES ===== */
+        // Which thread is open: 'remy' (the manager DM), 'team' (everybody) or a
+        // teammate's sdr_users id. Unread counts come from ?summary=1.
+        STATE.chatWith = 'remy'; STATE.chatRoster = []; STATE.chatUnread = {};
         async function loadMessagesPreview() {
             try {
-                const data = await fetchJSON('/api/sdr/messages');
-                const unread = (data.messages || []).filter(m => m.sender_type === 'admin' && !m.read_at).length;
+                const data = await fetchJSON('/api/sdr/messages?summary=1');
+                STATE.chatRoster = data.roster || []; STATE.chatUnread = data.unread || {};
+                const u = data.unread || {};
+                const unread = (u.remy || 0) + (u.team || 0) + Object.values(u.peers || {}).reduce((a, b) => a + b, 0);
                 const badge = document.getElementById('msgBadge');
-                if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
+                if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
+                renderChatPicker();
             } catch (e) { /* ignore */ }
         }
+        function renderChatPicker() {
+            const host = document.getElementById('chatPicker'); if (!host) return;
+            const u = STATE.chatUnread || {};
+            const chip = (key, label, n) => '<button onclick="setChatWith(\'' + key + '\')" style="padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--border-subtle);'
+                + (STATE.chatWith === key ? 'background:var(--blue);color:#fff;border-color:var(--blue);' : 'background:var(--bg-card);color:var(--text-secondary);') + '">' + escapeHtml(label) + (n ? ' <span style="background:#ef4444;color:#fff;border-radius:999px;padding:0 6px;font-size:10px;">' + n + '</span>' : '') + '</button>';
+            host.innerHTML = chip('remy', 'Remy', u.remy) + chip('team', 'Whole team', u.team)
+                + (STATE.chatRoster || []).filter(p => !/^remyleon/.test(String(p.email).toLowerCase())).map(p => chip(p.id, (p.display_name || p.email).split(' ')[0], (u.peers || {})[p.id])).join('');
+        }
+        function setChatWith(key) { STATE.chatWith = key; renderChatPicker(); loadMessages(); }
         async function loadMessages() {
             try {
-                const data = await fetchJSON('/api/sdr/messages');
-                document.getElementById('chatHeader').textContent = 'DM with Remy';
+                const withQ = STATE.chatWith && STATE.chatWith !== 'remy' ? '?with=' + encodeURIComponent(STATE.chatWith) : '';
+                const data = await fetchJSON('/api/sdr/messages' + withQ);
+                const who = STATE.chatWith === 'remy' ? 'DM with Remy' : STATE.chatWith === 'team' ? 'Whole team' : (((STATE.chatRoster || []).find(p => p.id === STATE.chatWith) || {}).display_name || 'Teammate');
+                document.getElementById('chatHeader').textContent = who;
+                if (!document.getElementById('chatPicker').innerHTML) renderChatPicker();
                 const list = document.getElementById('chatMessages');
                 const msgs = data.messages || [];
                 if (!msgs.length) {
                     list.innerHTML = '<div style="margin:auto;color:var(--text-tertiary);font-size:13px;">No messages yet. Say hi.</div>';
                 } else {
                     list.innerHTML = msgs.map(m => {
-                        const side = m.sender_type === 'sdr' ? 'from-sdr' : 'from-admin';
+                        const mine = (m.mine != null) ? m.mine : (m.sender_type === 'sdr');
+                        const side = mine ? 'from-sdr' : 'from-admin';
+                        const who2 = (!mine && STATE.chatWith !== 'remy' && m.sender_name) ? '<div style="font-size:10px;font-weight:700;color:var(--text-tertiary);margin-bottom:2px;">' + escapeHtml(m.sender_name) + '</div>' : '';
                         const when = new Date(m.created_at).toLocaleString();
-                        return '<div class="msg ' + side + '">'
+                        return '<div class="msg ' + side + '">' + who2
                             + escapeHtml(m.body).replace(/\n/g, '<br>')
                             + '<div class="msg-meta">' + when + '</div>'
                             + '</div>';
                     }).join('');
                     list.scrollTop = list.scrollHeight;
                 }
-                document.getElementById('msgBadge').classList.add('hidden');
+                loadMessagesPreview();
             } catch (e) {
                 document.getElementById('chatMessages').innerHTML = '<div style="color:var(--red);margin:auto;">Failed: ' + escapeHtml(e.message) + '</div>';
             }
@@ -3988,7 +4041,7 @@
             if (!text) return false;
             input.value = '';
             try {
-                await fetchJSON('/api/sdr/messages', { method: 'POST', body: JSON.stringify({ body: text }) });
+                await fetchJSON('/api/sdr/messages', { method: 'POST', body: JSON.stringify({ body: text, with: STATE.chatWith === 'remy' ? undefined : STATE.chatWith }) });
                 loadMessages();
             } catch (err) {
                 alert('Send failed: ' + err.message);
@@ -4114,9 +4167,9 @@
                         : '';
                     const notesBlock = (r.notes ? '<div style="color:var(--text-tertiary);font-size:12px;">' + escapeHtml(r.notes) + '</div>' : '')
                         + summary + (rec ? '<div style="margin-top:5px;">' + rec + '</div>' : '') + trans;
-                    return '<tr>'
+                    return '<tr' + (r.lead_id ? ' onclick="if(!event.target.closest(\'a,details,summary\'))openLeadDrawer(' + Number(r.lead_id) + ')" style="cursor:pointer;" title="Open the lead"' : '') + '>'
                         + '<td style="white-space:nowrap;">' + fmtET(when) + dur + '</td>'
-                        + '<td>' + escapeHtml(r.business_name || r.name || '—') + '</td>'
+                        + '<td><strong>' + escapeHtml(r.business_name || r.name || '—') + '</strong></td>'
                         + '<td>' + escapeHtml(r.owner_name || '—') + '</td>'
                         + '<td>' + escapeHtml(outcome) + '</td>'
                         + '<td>' + (notesBlock || '<span style="color:var(--text-tertiary);">—</span>') + '</td>'

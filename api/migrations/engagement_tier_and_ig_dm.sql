@@ -99,3 +99,14 @@ update prospecting.leads
    and last_called_outcome in ('callback_requested','interested_followup','booked_meeting');
 -- 2026-10-08 debounce stamp for the warm-lead group text (see _hot.js)
 alter table prospecting.leads add column if not exists hot_alert_sent_at timestamptz;
+
+-- 2026-10-08 (afternoon) Facebook channel on the DM queue, escalation stamp, team chat
+alter table prospecting.ig_dm_queue add column if not exists channel text not null default 'instagram';
+alter table prospecting.ig_dm_queue drop constraint if exists ig_dm_queue_channel_chk;
+alter table prospecting.ig_dm_queue add constraint ig_dm_queue_channel_chk check (channel in ('instagram','facebook'));
+drop index if exists prospecting.ig_dm_queue_handle_client_uq;
+create unique index if not exists ig_dm_queue_handle_client_uq on prospecting.ig_dm_queue (channel, handle, client_id);
+alter table prospecting.leads add column if not exists facebook_url text, add column if not exists hot_escalated_at timestamptz;
+alter table public.support_threads add column if not exists peer_key text;
+create unique index if not exists support_threads_peer_key_uq on public.support_threads (peer_key) where peer_key is not null;
+alter table public.support_messages add column if not exists sender_email text;

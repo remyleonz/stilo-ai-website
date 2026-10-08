@@ -61,6 +61,7 @@ module.exports = async function handler(req, res) {
     // they ask for one with ?client_id=.
     let clientId = email ? await resolveClientScope(email) : null;
     if (!clientId && gate.isAdmin && req.query && req.query.client_id) clientId = String(req.query.client_id);
+    const stiloOnly = gate.isAdmin && !clientId && req.query && req.query.pool === 'stilo';
     let q = db.from('leads').select(COLS).in('engagement_tier', ['warm', 'hot'])
         .or('do_not_call.is.null,do_not_call.eq.false')
         .order('engagement_tier_at', { ascending: false, nullsFirst: false }).limit(400);
@@ -68,6 +69,7 @@ module.exports = async function handler(req, res) {
     // Inbound unknown callers are stubbed with client_id null even when they
     // rang a Blason rep's line, so a live call-now stamp always qualifies.
     if (clientId) q = q.or('client_id.eq.' + clientId + ',hot_at.not.is.null');
+    if (stiloOnly) q = q.is('client_id', null);
     const { data: rows, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
 
@@ -75,6 +77,7 @@ module.exports = async function handler(req, res) {
         .or('do_not_call.is.null,do_not_call.eq.false').not('stage', 'in', '(CLOSED_LOST,CLOSED_WON)');
     if (email) cq = cq.eq('assigned_to', email);
     if (clientId) cq = cq.eq('client_id', clientId);
+    if (stiloOnly) cq = cq.is('client_id', null);
     const { count: coldCount } = await cq;
 
     const ids = (rows || []).map(function (r) { return r.id; });

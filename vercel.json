@@ -213,6 +213,10 @@
     {
       "path": "/api/prospects/funnel-followups",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/prospects/hot-escalate",
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": []
