@@ -41,12 +41,13 @@ module.exports = async function handler(req, res) {
     // Client-account reps are scoped to their client's pool, same as the board.
     let clientId = null;
     try { clientId = await require('../prospects/_shared').resolveClientScope(email); } catch (_) {}
-    let bq = db.from('leads').select('id,engagement_tier,hot_at,hot_cleared_at,meeting_scheduled_at,last_called_outcome').eq('assigned_to', email).limit(5000);
+    let bq = db.from('leads').select('id,engagement_tier,hot_at,hot_cleared_at,meeting_scheduled_at,last_called_outcome,do_not_call,stage').eq('assigned_to', email).limit(5000);
     if (clientId) bq = bq.eq('client_id', clientId);
     const { data: book } = await bq;
     const ids = (book || []).map(function (l) { return l.id; });
+    // Same population the Pipeline tab shows: no do-not-call, no closed.
     const tiers = { cold: 0, warm: 0, hot: 0 };
-    (book || []).forEach(function (l) { tiers[l.engagement_tier || 'cold'] = (tiers[l.engagement_tier || 'cold'] || 0) + 1; });
+    (book || []).forEach(function (l) { if (l.do_not_call || ['CLOSED_LOST', 'CLOSED_WON'].indexOf(l.stage) >= 0) return; tiers[l.engagement_tier || 'cold'] = (tiers[l.engagement_tier || 'cold'] || 0) + 1; });
     const inIds = function (q) { return ids.length ? q.in('lead_id', ids) : q.eq('lead_id', -1); };
 
     const [calls, msgs, inbound, ig, funnel, sales] = await Promise.all([

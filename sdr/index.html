@@ -1695,6 +1695,10 @@
             // Pipeline: Hot / Warm / Cold groups from the shared asset. Rep-scoped
             // server-side; the cold group is a count that opens the Cold Call tab.
             if (sub === 'pipeline') {
+                // First paint lands here without setLeadsSubtab, so hide the
+                // search row + dialer button for the groups view ourselves.
+                var _sr = document.getElementById('leadSearch'); if (_sr && _sr.parentElement) _sr.parentElement.style.display = 'none';
+                var _db = document.getElementById('dialerStartBtn'); if (_db) _db.style.display = 'none';
                 wrap.innerHTML = '<div id="sdrPipelineTabHost"></div>';
                 if (window.PIPELINE_TAB) PIPELINE_TAB.mount({ host: 'sdrPipelineTabHost', fetchJson: fetchJSON, openLead: function (id) { openLeadDrawer(id); }, onColdClick: function () { setLeadsSubtab('callable'); } });
                 return;
