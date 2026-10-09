@@ -118,11 +118,13 @@ module.exports = async function handler(req, res) {
     if (!cronOk) { const gate = await assertAdminOrSdr(req, res); if (!gate.ok) return; }
 
     const dry = String((req.query && req.query.dry) || '') === '1';
-    const cap = Math.min(Number((req.query && req.query.cap) || 40), 150);
+    let cap = Math.min(Number((req.query && req.query.cap) || 40), 150);
 
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false }, db: { schema: 'prospecting' },
     });
+    // Shared 100/day campaign budget across all senders (_email_budget.js).
+    if (!dry) cap = Math.min(cap, (await require('./_email_budget').campaignEmailsLeftToday(sb)).left);
     const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
         auth: { persistSession: false },
     });

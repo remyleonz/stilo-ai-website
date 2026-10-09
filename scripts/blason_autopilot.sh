@@ -47,7 +47,8 @@ else
   # then re-engage, then new addresses from the test domain fill the rest.
   # Never fewer than MIN_COLD new addresses, so the test lane keeps proving
   # supply even on a heavy follow-up day.
-  TARGET=150; MIN_COLD=60   # Remy 10/08: "we need more people to get the VSL"
+  TARGET=100; MIN_COLD=20   # Remy 10/09: 100 automated emails a day max, so manual sends always have room.
+  # The real ceiling is enforced inside send_blason_vsl_email.js (shared budget).
   sent_of() { grep -o '"sent":[0-9]*' | tail -1 | cut -d: -f2; }
   OUT=$(node "$VSL" --mode followup --limit $TARGET --send 2>&1); echo "$OUT" | tail -2
   F=$(echo "$OUT" | sent_of); F=${F:-0}

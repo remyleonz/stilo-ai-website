@@ -224,12 +224,14 @@ module.exports = async function handler(req, res) {
 
     const dry = String((req.query && req.query.dry) || '') === '1';
     const audience = String((req.query && req.query.audience) || 'warm').toLowerCase() === 'cold' ? 'cold' : 'warm';
-    const cap = Math.min(
+    let cap = Math.min(
         Number((req.query && req.query.cap) || process.env.VSL_CAMPAIGN_DAILY_CAP || 100),
         250 // hard ceiling: a bug in the cap must never become a 561-email blast
     );
 
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false }, db: { schema: 'prospecting' } });
+    // Shared 100/day campaign budget across all senders (_email_budget.js).
+    if (!dry) cap = Math.min(cap, (await require('./_email_budget').campaignEmailsLeftToday(sb)).left);
     const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 
     // ---- audience -----------------------------------------------------------
