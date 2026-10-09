@@ -126,7 +126,9 @@
     var _timers = {};
 
     function _key(ev, input) {
-        if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+        // Enter saves directly (not only through blur): if the drawer re-renders
+        // between keydown and blur, the blur never reaches this input.
+        if (ev.key === 'Enter') { ev.preventDefault(); _save(input, String(input.id || '').replace(/^cnInput_/, '')); input.blur(); }
         else if (ev.key === 'Escape') {
             ev.preventDefault();
             if (_timers[input.id]) { clearTimeout(_timers[input.id]); _timers[input.id] = null; }
