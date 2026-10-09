@@ -41,10 +41,27 @@
         for (var k in (opts || {})) if (Object.prototype.hasOwnProperty.call(opts, k)) A[k] = opts[k];
     }
 
+    // Phone + email added 2026-10-08: a rep who gets the owner's cell in an
+    // Instagram DM had nowhere to type it. They save on blur / Enter only
+    // (a half-typed number is not a number), and a saved phone re-opens the
+    // panel so Call in Quo appears.
     var FIELDS = [
         { key: 'owner_name', label: 'Owner / Office Manager', placeholder: 'No name yet · ask on the call' },
-        { key: 'front_desk_name', label: 'Front desk', placeholder: 'No name yet · ask on the call' }
+        { key: 'front_desk_name', label: 'Front desk', placeholder: 'No name yet · ask on the call' },
+        { key: 'owner_phone', label: 'Owner cell / direct line', placeholder: '(305) 555-0199', type: 'tel', onBlurOnly: true },
+        { key: 'owner_email', label: 'Owner email', placeholder: 'name@clinic.com', type: 'email', onBlurOnly: true }
     ];
+    function fmtPhone(e164) { var m = String(e164 || '').match(/^\+1(\d{3})(\d{3})(\d{4})$/); return m ? '(' + m[1] + ') ' + m[2] + '-' + m[3] : (e164 || ''); }
+    function valueOf(d, key) {
+        if (key === 'owner_phone') {
+            // The SDR feed copies the business line into owner_phone when the
+            // owner's is empty; only show a number we know is the owner's.
+            if (d.owner_phone_e164) return fmtPhone(d.owner_phone_e164);
+            return (d.owner_phone && d.owner_phone !== d.phone) ? d.owner_phone : '';
+        }
+        if (key === 'owner_email') return d.owner_email || '';
+        return d[key] || '';
+    }
 
     function ownerPillHtml(d) {
         var status = d.owner_name_verify_status || '';
@@ -68,14 +85,14 @@
     }
 
     function fieldHtml(d, f) {
-        var val = d[f.key] || '';
+        var val = valueOf(d, f.key);
         var pill = f.key === 'owner_name' ? ownerPillHtml(d) : '';
         return '<div style="min-width:0;">'
             + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;min-height:15px;">'
               + '<span style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);white-space:nowrap;">' + f.label + '</span>'
               + '<span id="cnStatus_' + f.key + '" style="font-size:10.5px;color:var(--text-muted);white-space:nowrap;"></span>'
             + '</div>'
-            + '<input id="cnInput_' + f.key + '" type="text" autocomplete="off" spellcheck="false" maxlength="120"'
+            + '<input id="cnInput_' + f.key + '" type="' + (f.type || 'text') + '"' + (f.type === 'tel' ? ' inputmode="tel"' : '') + ' autocomplete="off" spellcheck="false" maxlength="120"'
               + ' value="' + A.escape(val) + '" data-saved="' + A.escape(val) + '" placeholder="' + A.escape(f.placeholder) + '"'
               + ' onkeydown="CONTACT_NAMES._key(event, this)"'
               + ' oninput="CONTACT_NAMES._input(this, \'' + f.key + '\')"'
@@ -120,6 +137,11 @@
 
     function _input(input, field) {
         if (_timers[input.id]) clearTimeout(_timers[input.id]);
+        if (field === 'owner_phone' || field === 'owner_email') {
+            var st0 = document.getElementById('cnStatus_' + field);
+            if (st0) { st0.style.color = 'var(--text-muted)'; st0.textContent = input.value.trim() !== (input.getAttribute('data-saved') || '') ? 'Enter to save' : ''; }
+            return;
+        }
         var status = document.getElementById('cnStatus_' + field);
         if (status && input.value.trim() !== (input.getAttribute('data-saved') || '')) {
             status.style.color = 'var(--text-muted)'; status.textContent = 'Saving…';
@@ -169,8 +191,19 @@
                 setTimeout(function () { if (status.textContent === 'Saved ✓') status.textContent = ''; }, 2500);
             }
             if (typeof A.onSaved === 'function') { try { A.onSaved(id, field, val || null); } catch (_) {} }
-        }).catch(function () {
-            if (status) { status.style.color = 'var(--red,#ef4444)'; status.textContent = 'Save failed · retry'; }
+            if (field === 'owner_phone') {
+                // Server stores (305) 555-0199 + E.164. Re-open the panel so the
+                // phone card and Call in Quo pick up the new number.
+                var dg = val.replace(/\D/g, ''); var ten = dg.length === 11 && dg.charAt(0) === '1' ? dg.slice(1) : dg;
+                lead.owner_phone_e164 = val ? '+1' + ten : null;
+                lead.owner_phone = val ? fmtPhone(lead.owner_phone_e164) : null;
+                input.value = lead.owner_phone || ''; input.setAttribute('data-saved', input.value);
+                var reopen = global.openLeadDrawer || global.openProspectDrawer;
+                if (reopen && id != null) setTimeout(function () { try { reopen(id); } catch (_) {} }, 600);
+            }
+        }).catch(function (e) {
+            var msg = String((e && e.message) || '');
+            if (status) { status.style.color = 'var(--red,#ef4444)'; status.textContent = /bad_phone/.test(msg) ? '10 digits please' : /bad_email/.test(msg) ? 'Not an email' : 'Save failed · retry'; }
         });
     }
 
