@@ -35,6 +35,10 @@ const SITE = 'blason';
 const CLIENT_ID = F.SITES.blason.client_id;
 const DELAY_MIN = 10;
 const SCANNER_WINDOW_SEC = 60;
+// Same rule as vsl-watch-alerts: desktop view, no play, within 15 minutes of
+// our email = corporate mail scanner (10 of 10 email "opens" on 10/07-10/09).
+const DESKTOP_VIEW_SCANNER_SEC = 15 * 60;
+const DESKTOP_UA = /Windows NT|Macintosh|X11|CrOS/i;
 const LOOKBACK_HOURS = 48;
 const MAX_PER_RUN = 40;
 
@@ -135,6 +139,8 @@ module.exports = async function handler(req, res) {
         const { data: leads } = await pros.from('leads').select(leadCols).in('id', viewIds);
         const { data: sends } = await pros.from('lead_messages').select('lead_id,sent_at').in('lead_id', viewIds).eq('direction', 'outbound').not('sent_at', 'is', null);
         const { data: later } = await pub.from('funnel_events').select('lead_id,event').in('lead_id', viewIds).in('event', ['contact_submitted', 'booking_confirmed']);
+        const { data: plays } = await pub.from('funnel_events').select('lead_id').in('lead_id', viewIds).in('event', ['video_play', 'video_progress', 'video_complete', 'cta_click', 'quiz_start']);
+        const humanActed = new Set((plays || []).map(function (e) { return e.lead_id; }));
         const converted = new Set((later || []).map(function (e) { return e.lead_id; }));
         const { data: calls } = await pros.from('lead_calls').select('lead_id').in('lead_id', viewIds).gte('duration_seconds', 20);
         const connected = new Set((calls || []).map(function (c) { return c.lead_id; }));
@@ -149,6 +155,7 @@ module.exports = async function handler(req, res) {
             const at = new Date(v.created_at).getTime();
             const scanner = (sends || []).some(function (m) { if (m.lead_id !== lead.id) return false; const d = at - new Date(m.sent_at).getTime(); return d >= 0 && d <= SCANNER_WINDOW_SEC * 1000; });
             if (scanner) { skip('view_scanner_window'); continue; }
+            if (!humanActed.has(lead.id) && DESKTOP_UA.test(v.ua || '') && (sends || []).some(function (m) { if (m.lead_id !== lead.id) return false; const d = at - new Date(m.sent_at).getTime(); return d >= 0 && d <= DESKTOP_VIEW_SCANNER_SEC * 1000; })) { skip('view_desktop_scanner_15m'); continue; }
             const es = lead.primary_language === 'es';
             const c = viewCopy(lead, es);
             if (!copyOk(c.sms) || !copyOk(c.body)) { skip('view_copy_rule'); continue; }
