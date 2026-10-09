@@ -71,6 +71,15 @@ const SCANNER_WINDOW_SEC = 60;
 // agent inside this many seconds is the same burst.
 const SCANNER_BURST_SEC = 600;
 
+// Corporate mail security (Microsoft 365, Mimecast, Proofpoint) at derm and
+// plastic-surgery offices opens every link 1 to 3 minutes after delivery, from
+// a desktop Windows or Mac browser, and never presses play. Every "opened the
+// video page, from our email" alert of 2026-10-07 to 10-09 (10 of 10) was that.
+// So: a VIEW with no PLAY, from a desktop agent, within this window after one
+// of our EMAILS, is a scanner. A play always counts; phones always count.
+const DESKTOP_VIEW_SCANNER_SEC = 15 * 60;
+const DESKTOP_UA = /Windows NT|Macintosh|X11|CrOS/i;
+
 // A scanner fetches the page twice back to back (prefetch then render, or two
 // nodes sharing a queue). A human physically cannot.
 //
@@ -676,6 +685,23 @@ module.exports = async function handler(req, res) {
                           + ' at ' + burst.created_at + ', one machine working a send batch',
                 });
                 qualifying.splice(i, 1);
+            }
+        }
+
+        if (!qualifying.some(function (e) { return e.event === 'play'; })) {
+            for (let i = qualifying.length - 1; i >= 0; i--) {
+                const ev = qualifying[i];
+                if (!DESKTOP_UA.test(ev.ua || '')) continue;
+                const at = new Date(ev.created_at).getTime();
+                const nearEmail = leadSends.find(function (m) {
+                    if (m.channel !== 'email') return false;
+                    const d = at - new Date(m.sent_at).getTime();
+                    return d >= 0 && d <= DESKTOP_VIEW_SCANNER_SEC * 1000;
+                });
+                if (nearEmail) {
+                    rejected.push({ event_id: ev.id, event: ev.event, at: ev.created_at, reason: 'desktop view, no play, ' + Math.round((at - new Date(nearEmail.sent_at).getTime()) / 1000) + 's after our email: mail security scanner' });
+                    qualifying.splice(i, 1);
+                }
             }
         }
 
