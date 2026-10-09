@@ -95,6 +95,7 @@
       + '<div class="ig-form"><input data-f="reply" placeholder="' + (r.lang === 'es' ? 'qué respondieron (una línea)' : 'what they replied (one line)') + '">'
       + '<select data-f="kind"><option value="named_laser">named their laser</option><option value="wants_info">wants info / email</option><option value="wants_call">wants a call</option><option value="wants_visit">wants to visit</option><option value="bot_or_desk">bot or front desk</option><option value="not_interested">not interested</option><option value="other" selected>other</option></select>'
       + '<button class="ig-btn w" data-act="replied">Replied</button><button class="ig-btn ok" data-act="booked">Booked</button><button class="ig-btn g" data-act="bot">Bot / desk</button><button class="ig-btn r" data-act="not_interested">Not interested (2 hard no\'s)</button>'
+      + '<button class="ig-btn g" data-act="bad_account" title="The profile does not exist, or it is not this business">' + (isFb() ? 'No page / wrong page' : 'No account / wrong account') + '</button>'
       + (r.status !== 'queued' ? '<button class="ig-btn g" data-act="requeue">Back to queue</button>' : '<button class="ig-btn g" data-act="skip">Skip</button>')
       + (r.lead_id && S.openLead ? '<button class="ig-btn g" data-act="openlead">Open lead</button>' : '') + '</div>';
     return html + '</div>';
@@ -155,6 +156,21 @@
     var a = b.getAttribute('data-act');
     if (a === 'toggle') { S.open = (S.open === id) ? null : id; render(); return; }
     if (a === 'openlead') { if (S.openLead && r.lead_id) S.openLead(r.lead_id); return; }
+    if (a === 'bad_account') {
+      ev.stopPropagation();
+      var fixed = prompt((isFb() ? 'Wrong page? Paste the right Facebook page link.' : 'Wrong account? Paste the right Instagram handle or profile link.') + '\nLeave it empty if they have no account.', '');
+      if (fixed === null) return;
+      b.disabled = true;
+      try {
+        if (String(fixed).trim()) await S.fetchJson('/api/prospects/ig-dm', { method: 'POST', body: JSON.stringify({ id: id, action: 'fix_handle', handle: fixed }) });
+        else await S.fetchJson('/api/prospects/ig-dm', { method: 'POST', body: JSON.stringify({ id: id, action: 'no_account' }) });
+      } catch (e2) {
+        var m2 = String((e2 && e2.message) || e2);
+        alert(/handle_already_in_list/.test(m2) ? 'That account is already on the list (another row). This one stays as it is.' : /bad_handle/.test(m2) ? 'That does not look like an Instagram handle.' : 'Could not save: ' + m2);
+        b.disabled = false; return;
+      }
+      S.open = null; refresh(); return;
+    }
     ev.stopPropagation();
     var body = { id: id, action: a };
     if (a === 'replied' || a === 'booked' || a === 'bot' || a === 'not_interested') {
