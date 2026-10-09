@@ -116,9 +116,26 @@
       + '<span class="ig-sub">' + esc(r.status === 'replied' || r.status === 'booked' ? (r.reply_text || '') : next) + '</span></span>'
       + btns + '</div>' + (isOpen ? detail(r) : '') + '</div>';
   }
+  // The search box lives OUTSIDE the re-rendered body so typing keeps focus.
+  function shell() {
+    var root = document.getElementById(S.host); if (!root) return null;
+    var body = root.querySelector(':scope > .ig-body');
+    if (!body) {
+      root.innerHTML = '<div class="ig-search" style="display:flex;gap:8px;align-items:center;margin:0 0 12px">'
+        + '<input type="search" class="ig-q" placeholder="Search ' + (isFb() ? 'Facebook' : 'Instagram') + ' leads: business, @handle, owner, city" autocomplete="off" style="flex:1;min-width:0;padding:10px 14px;background:var(--bg-input,#0f1117);border:1px solid rgba(255,255,255,.15);border-radius:999px;color:inherit;font:inherit;font-size:14px">'
+        + '<span class="ig-q-hint" style="font-size:12px;color:var(--text-secondary,#9a9ab0);white-space:nowrap"></span></div><div class="ig-body"></div>';
+      body = root.querySelector(':scope > .ig-body');
+      var inp = root.querySelector('.ig-q'); var tmr = null;
+      inp.value = S.q || '';
+      inp.addEventListener('input', function () { clearTimeout(tmr); tmr = setTimeout(function () { S.q = inp.value.trim(); S.open = null; refresh(); }, 300); });
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Escape') { inp.value = ''; S.q = ''; refresh(); } });
+    }
+    var hint = root.querySelector('.ig-q-hint'); if (hint) hint.textContent = S.q ? 'searching every status' : '';
+    return body;
+  }
   function render() {
     ensureCss();
-    var h = document.getElementById(S.host); if (!h) return;
+    var h = shell(); if (!h) return;
     var d = S.data;
     if (!d) { h.innerHTML = '<div class="ig-empty">Loading the Instagram list…</div>'; return; }
     var c = d.counts || {};
@@ -134,7 +151,7 @@
         + '</tbody></table></div>';
     }
     html += '<div class="ig-tabs">' + [['queued', 'To send'], ['sent', 'Sent, waiting'], ['replied', 'Replied'], ['done', 'Done']].map(function (t) { return '<button data-tab="' + t[0] + '" class="' + (S.tab === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
-    html += d.rows.length ? d.rows.map(row).join('') : '<div class="ig-empty">' + (S.tab === 'queued' ? 'Nothing left to send. Tell Remy and the list refills.' : 'Nothing here yet.') + '</div>';
+    html += d.rows.length ? d.rows.map(row).join('') : '<div class="ig-empty">' + (S.q ? 'No ' + (isFb() ? 'Facebook' : 'Instagram') + ' lead matches "' + esc(S.q) + '".' : S.tab === 'queued' ? 'Nothing left to send. Tell Remy and the list refills.' : 'Nothing here yet.') + '</div>';
     h.innerHTML = html;
     h.onclick = onClick;
   }
@@ -190,10 +207,10 @@
   }
   async function refresh() {
     if (!S.fetchJson || !document.getElementById(S.host)) return;
-    try { S.data = await S.fetchJson('/api/prospects/ig-dm?status=' + S.tab + '&channel=' + S.channel + '&limit=200' + (S.rep ? '&assigned_to=' + encodeURIComponent(S.rep) : '')); render(); }
+    try { S.data = await S.fetchJson('/api/prospects/ig-dm?status=' + S.tab + '&channel=' + S.channel + '&limit=200' + (S.rep ? '&assigned_to=' + encodeURIComponent(S.rep) : '') + (S.q ? '&q=' + encodeURIComponent(S.q) : '')); render(); }
     catch (e) { var h = document.getElementById(S.host); if (h) h.innerHTML = '<div class="ig-empty">Could not load: ' + esc(e.message || e) + '</div>'; }
   }
-  function mount(o) { S.host = o.host; S.fetchJson = o.fetchJson; S.openLead = o.openLead || null; S.admin = !!o.admin; S.rep = o.rep || ''; S.channel = o.channel === 'facebook' ? 'facebook' : 'instagram'; S.tab = 'queued'; S.open = null; S.data = null; render(); refresh(); }
+  function mount(o) { S.host = o.host; S.fetchJson = o.fetchJson; S.openLead = o.openLead || null; S.admin = !!o.admin; S.rep = o.rep || ''; S.channel = o.channel === 'facebook' ? 'facebook' : 'instagram'; S.tab = 'queued'; S.open = null; S.data = null; S.q = ''; var hh = document.getElementById(S.host); if (hh) hh.innerHTML = ''; render(); refresh(); }
     return { mount: mount, refresh: refresh, setRep: function (e) { S.rep = e || ''; refresh(); }, state: S };
   }
   global.IG_DM = create();

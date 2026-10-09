@@ -5,7 +5,8 @@
  * Table: prospecting.ig_dm_queue (one row per handle; lead_id when the clinic
  * is in the CRM; assigned_to = the rep whose own account sends it).
  *
- * GET  [?status=queued|sent|replied|done|all] [&channel=instagram|facebook] [&limit=] [&assigned_to=] (admin)
+ * GET  [?status=queued|sent|replied|done|all] [&channel=instagram|facebook] [&q=search] [&limit=] [&assigned_to=] (admin)
+ *      q searches business, handle, first name and city across EVERY status (the tab is ignored)
  *      -> { rows, counts: {queued, sent_today, sent_total, replied, booked},
  *           reps: [{email, queued, sent_today, replied, booked}] (admin) }
  * POST { id, action, ... }
@@ -137,7 +138,12 @@ module.exports = async function handler(req, res) {
 
     let q = db.from('ig_dm_queue').select('id,lead_id,handle,instagram_url,business,first_name,city,lang,arm,message_1,message_2,vsl_link,assigned_to,status,step,sent_at,last_step_at,replied_at,reply_text,reply_kind,booked_at,notes,batch,channel,client_id').eq('channel', channel);
     if (email) q = q.eq('assigned_to', email);
-    if (status === 'queued') q = q.eq('status', 'queued').order('id', { ascending: true });
+    const search = String(req.query && req.query.q || '').trim().replace(/[%,()*]/g, ' ').slice(0, 60);
+    if (search) {
+        const t = '%' + search.replace(/^@/, '') + '%';
+        q = q.or('business.ilike.' + t + ',handle.ilike.' + t + ',first_name.ilike.' + t + ',city.ilike.' + t).order('updated_at', { ascending: false });
+    }
+    else if (status === 'queued') q = q.eq('status', 'queued').order('id', { ascending: true });
     else if (status === 'sent') q = q.eq('status', 'sent').order('last_step_at', { ascending: false });
     else if (status === 'replied') q = q.in('status', ['replied', 'booked']).order('replied_at', { ascending: false });
     else if (status === 'done') q = q.in('status', DONE).order('updated_at', { ascending: false });
