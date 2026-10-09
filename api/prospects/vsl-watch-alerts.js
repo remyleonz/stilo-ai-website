@@ -325,7 +325,7 @@ async function sourceFor(pub, leadId) {
         const { data } = await pub.from('funnel_events').select('utm_source,utm_campaign,referrer,created_at')
             .eq('lead_id', leadId).eq('event', 'page_view').order('created_at', { ascending: false }).limit(1);
         const e = data && data[0]; if (!e) return '';
-        const map = { email: 'our email', sms: 'our text', followup: 'the 10-minute follow-up', instagram: 'the Instagram DM', ig: 'the Instagram DM' };
+        const map = { email: 'our email', sms: 'our text', followup: 'the 10-minute follow-up', instagram: 'the Instagram DM', ig: 'the Instagram DM', facebook: 'Facebook', fb: 'Facebook' };
         if (e.utm_source) return map[e.utm_source] || e.utm_source;
         if (e.referrer) { try { return 'a link on ' + new URL(e.referrer).host; } catch (_) { return e.referrer.slice(0, 60); } }
         return 'typed the address or an untagged link';

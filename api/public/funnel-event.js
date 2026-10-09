@@ -79,7 +79,7 @@ module.exports = async function handler(req, res) {
             else if (event === 'video_complete') hot = 'watched the whole video';
             else if (event === 'quiz_complete') hot = 'finished the quiz on the video page';
             else if (event === 'contact_submitted') hot = 'left contact details on the video page';
-            if (hot) await markHot(leadId, hot + (row.utm_source ? ', from ' + ({ email: 'our email', sms: 'our text', instagram: 'the Instagram DM', followup: 'the follow-up' }[row.utm_source] || row.utm_source) : ''));
+            if (hot) await markHot(leadId, hot + (row.utm_source ? ', from ' + ({ email: 'our email', sms: 'our text', instagram: 'the Instagram DM', followup: 'the follow-up', facebook: 'Facebook' }[row.utm_source] || row.utm_source) : ''));
         }
 
         // Known lead finished the quiz but has not submitted contact yet.
