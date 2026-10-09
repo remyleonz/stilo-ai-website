@@ -227,7 +227,9 @@ async function main() {
     const vslNextStep = function (lead) {
         const st = vslState[lead.id]; if (!st || st.step >= MAX_STEP) return null;
         const n = st.step + 1;
-        return ((Date.now() - new Date(st.last).getTime()) / 86400000 >= STEP_GAP_DAYS[n]) ? n : null;
+        // Half-day tolerance: the 10:31 leg must catch a step that was sent at
+        // 12:30 three days ago, not push it to tomorrow (10/08: 129 due, 0 sent).
+        return ((Date.now() - new Date(st.last).getTime()) / 86400000 >= STEP_GAP_DAYS[n] - 0.5) ? n : null;
     };
 
     // Bounced domains, declines in any channel, closed stages, SMS queue.
@@ -275,7 +277,9 @@ async function main() {
         if (l.email_verify_status === 'role_inbox') return '2';
         return null;
     };
-    const LANE2_MAX_PER_RUN = 10;
+    // Finder role inboxes crawl at 10/run on the main domain. From the test domain
+// (BLASON_TEST_SENDER_EMAIL) the 25% breaker is the guard, so let them flow.
+const LANE2_MAX_PER_RUN = process.env.BLASON_TEST_SENDER_EMAIL ? 60 : 10;
     const skipWhy = {};
     const skip = function (w) { skipWhy[w] = (skipWhy[w] || 0) + 1; return false; };
     const seenAddr = new Set();
