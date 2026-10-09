@@ -1383,6 +1383,39 @@
 <style id="ec-focus-ring">#emailComposerModal input:focus,#emailComposerModal select:focus,#emailComposerModal textarea:focus{border-color:rgba(37,99,235,.65)!important;box-shadow:0 0 0 3px rgba(37,99,235,.18)!important}#emailComposerModal select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px!important}</style>
     <link rel="stylesheet" href="/assets/stilo-dashboard.css?v=2026-08-25b">
     <link rel="stylesheet" href="/assets/stilo-mobile.css?v=20261008">
+<style id="leads-design-2026-10-08">
+/* Leads tab design pass (Remy, 2026-10-08: "outdated, hurts to look at"). Scoped to the page. */
+#page-prospecting #prospectStatsBar { gap: 14px !important; margin-bottom: 22px !important; }
+#page-prospecting .prospect-workflow-card { border: 1px solid rgba(255,255,255,.07) !important; border-left-width: 1px !important; border-radius: 14px !important; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)) !important; padding: 18px 20px !important; transition: border-color .15s, transform .15s; position: relative; overflow: hidden; }
+#page-prospecting .prospect-workflow-card::before { content: ""; position: absolute; left: 20px; right: 20px; top: 0; height: 2px; border-radius: 2px; background: rgba(37,99,235,.55); opacity: .0; transition: opacity .15s; }
+#page-prospecting .prospect-workflow-card:hover, #page-prospecting .prospect-workflow-card.active { border-color: rgba(37,99,235,.45) !important; transform: translateY(-1px); }
+#page-prospecting .prospect-workflow-card.active::before, #page-prospecting .prospect-workflow-card:hover::before { opacity: 1; }
+#page-prospecting .prospect-workflow-card > div:first-child { font-size: 10.5px !important; letter-spacing: .14em !important; color: var(--text-tertiary, #8a8aa0) !important; font-weight: 700; }
+#page-prospecting .prospect-workflow-card > div:last-child { font-size: 2rem !important; letter-spacing: -.02em; margin-top: 2px; }
+#page-prospecting #prospectSubtabs { gap: 2px !important; padding: 4px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.06) !important; border-bottom: 1px solid rgba(255,255,255,.06) !important; border-radius: 12px; margin-bottom: 18px !important; width: max-content; max-width: 100%; overflow-x: auto; }
+#page-prospecting .prospect-subtab { border: 0 !important; border-bottom: 0 !important; border-radius: 9px !important; padding: 9px 14px !important; font-size: 12.5px !important; opacity: .7 !important; color: var(--text-secondary) !important; white-space: nowrap; }
+#page-prospecting .prospect-subtab:hover { opacity: 1 !important; color: var(--text-primary) !important; background: rgba(255,255,255,.04) !important; }
+#page-prospecting .prospect-subtab.active { opacity: 1 !important; color: #fff !important; background: #2563EB !important; box-shadow: 0 4px 14px rgba(37,99,235,.35); }
+#page-prospecting .prospect-subtab.active span { background: rgba(255,255,255,.22) !important; color: #fff !important; }
+#page-prospecting #prospectFilterBar { gap: 8px !important; margin-bottom: 16px !important; padding: 10px 12px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; }
+#page-prospecting #prospectFilterBar input, #page-prospecting #prospectFilterBar select { background: rgba(0,0,0,.35) !important; border: 1px solid rgba(255,255,255,.1) !important; border-radius: 999px !important; padding: 8px 14px !important; font-size: 12.5px !important; color: var(--text-primary) !important; }
+#page-prospecting #prospectFilterBar input:focus, #page-prospecting #prospectFilterBar select:focus { outline: none; border-color: rgba(37,99,235,.6) !important; }
+#page-prospecting #prospectFilterBar button { border-radius: 999px !important; padding: 8px 16px !important; font-size: 12.5px !important; }
+#page-prospecting #prospectFilterBar button:not(#dialerStartBtn) { background: rgba(255,255,255,.06) !important; border: 1px solid rgba(255,255,255,.1) !important; }
+#page-prospecting .prospect-table-host { border: 1px solid rgba(255,255,255,.07); border-radius: 14px; background: rgba(255,255,255,.015); overflow: hidden; }
+#page-prospecting .prospect-table-host table { border-collapse: separate !important; border-spacing: 0; }
+#page-prospecting .prospect-table-host th { font-size: 10.5px !important; letter-spacing: .12em !important; text-transform: uppercase; color: var(--text-tertiary, #8a8aa0) !important; padding: 12px 16px !important; background: rgba(255,255,255,.03) !important; border-bottom: 1px solid rgba(255,255,255,.07) !important; font-weight: 700; }
+#page-prospecting .prospect-table-host td { padding: 13px 16px !important; border-bottom: 1px solid rgba(255,255,255,.05) !important; font-size: 13px !important; vertical-align: middle; }
+#page-prospecting .prospect-table-host tbody tr { transition: background .12s; }
+#page-prospecting .prospect-table-host tbody tr:hover td { background: rgba(37,99,235,.06) !important; }
+#page-prospecting .prospect-table-host tbody tr:last-child td { border-bottom: 0 !important; }
+#page-prospecting .badge { border-radius: 6px !important; font-size: 10px !important; letter-spacing: .08em; padding: 3px 8px !important; font-weight: 800 !important; }
+#page-prospecting .badge.hot { background: rgba(239,68,68,.14) !important; color: #f87171 !important; border: 1px solid rgba(239,68,68,.25) !important; }
+#page-prospecting .badge.warm { background: rgba(251,191,36,.12) !important; color: #fbbf24 !important; border: 1px solid rgba(251,191,36,.25) !important; }
+#page-prospecting .badge.cool { background: rgba(96,165,250,.12) !important; color: #60a5fa !important; border: 1px solid rgba(96,165,250,.25) !important; }
+#page-prospecting #findLeadsBar, #page-prospecting #awaitingScriptBar { border-radius: 14px !important; }
+</style>
+
 </head>
 <body>
     <!-- ============================================================
@@ -2434,9 +2467,6 @@
 
             <!-- Pipeline tab — part of the unified Sales section. -->
             <div class="page-content" id="page-pipeline" style="display:none;">
-                <!-- Call now + Video watchers live on Pipeline, not Leads (Remy, 2026-10-07) -->
-                <div class="hotLeadsStrip"></div>
-                <div class="vslWatchersHost"></div>
                 <div class="stilo-page-header-row">
                     <span class="stilo-page-meta">Pipeline · Deals · Activity · Emails</span>
                 </div>
@@ -2460,6 +2490,12 @@
                     <div id="salesPanel" style="margin-top:16px;"></div>
                     <div id="salesLeaderboard" style="margin-top:26px;"></div>
                 </section>
+                <!-- Call now + Video watchers: under the sales components, scoped to the campaign picked above (Remy, 2026-10-08) -->
+                <div style="margin-top:28px;">
+                    <div class="stilo-section-header" style="margin-bottom:10px;"><h3 class="stilo-section-title">WARM SIGNALS FOR THIS CAMPAIGN</h3><span class="stilo-section-count" id="salesSignalsScope"></span></div>
+                    <div class="hotLeadsStrip"></div>
+                    <div class="vslWatchersHost"></div>
+                </div>
             </div>
 
             <!-- Deals tab — part of the unified Sales section. -->
@@ -2623,8 +2659,8 @@
     <script src="/assets/contact-names.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/vsl-activity.js"></script>
-    <script src="/assets/hot-leads.js?v=20261008e"></script>
-    <script src="/assets/vsl-watchers.js?v=20261008e"></script>
+    <script src="/assets/hot-leads.js?v=20261008f"></script>
+    <script src="/assets/vsl-watchers.js?v=20261008f"></script>
     <script src="/assets/confirmation-preview.js"></script>
     <script src="/assets/vsl-agents.js"></script>
     <script src="/assets/dialer-mode.js?v=20261007b"></script>
@@ -10081,6 +10117,7 @@
                 prospectState.cache.callbacks = null;
                 prospectState.cache.booked = null;
                 loadProspectStats();
+                if (typeof pipelineTabActive === 'function' && pipelineTabActive()) loadClientPipeline();
             }
             // hasEmail filter removed from UI; keep flag false for back-compat.
             f.hasEmail = false;
@@ -12552,11 +12589,22 @@
         // a client uuid (that client's account), or 'all'. STILO and client
         // numbers were mixed into one view until 2026-09-06.
         var SALES_SCOPE = (function () { try { return localStorage.getItem('salesAccountScope') || 'stilo'; } catch (_) { return 'stilo'; } })();
+        // The call-now strip and the watchers table on the Sales tab follow the
+        // campaign selector: 'stilo' = STILO's own book, 'all' = everything, a
+        // uuid = that client's pool.
+        function salesSignalsQuery() { return SALES_SCOPE === 'all' ? '' : '?client_id=' + encodeURIComponent(SALES_SCOPE || 'stilo'); }
+        function applySalesSignalsScope() {
+            var lab = document.getElementById('salesSignalsScope');
+            if (lab) lab.textContent = SALES_SCOPE === 'all' ? 'every campaign' : (SALES_SCOPE === 'stilo' || !SALES_SCOPE) ? 'STILO new clients' : 'client campaign';
+            if (window.HOT_LEADS && HOT_LEADS.setQuery) HOT_LEADS.setQuery(salesSignalsQuery());
+            if (window.VSL_WATCHERS && VSL_WATCHERS.setQuery) VSL_WATCHERS.setQuery(salesSignalsQuery());
+        }
         function onSalesAccountChange(v) {
             SALES_SCOPE = v;
             try { localStorage.setItem('salesAccountScope', v); } catch (_) {}
             SALES_OPEN = null; renderSalesPanel(null);
             loadSalesOverview();
+            applySalesSignalsScope();
         }
         function fmtMoneyCents(c) { return '$' + Math.round((c || 0) / 100).toLocaleString('en-US'); }
 
@@ -13441,6 +13489,7 @@
             // The Pipeline sub-tab now shows the Sales Overview (6 cards + panels
             // + leaderboard). The old stage-column funnel is retired.
             loadSalesOverview();
+            applySalesSignalsScope();
             var grid = document.getElementById('pipelineGrid');
             if (!grid) return;
             grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-secondary);padding:18px;">Loading pipeline…</div>';

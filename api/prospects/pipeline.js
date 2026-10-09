@@ -68,7 +68,9 @@ module.exports = async function handler(req, res) {
     if (email) q = q.eq('assigned_to', email);
     // Inbound unknown callers are stubbed with client_id null even when they
     // rang a Blason rep's line, so a live call-now stamp always qualifies.
-    if (clientId) q = q.or('client_id.eq.' + clientId + ',hot_at.not.is.null');
+    // Client-account REPS also see live call-now stamps on stubbed unknown
+    // callers (client_id null). Admins asking for a client get that client only.
+    if (clientId) q = gate.isAdmin ? q.eq('client_id', clientId) : q.or('client_id.eq.' + clientId + ',hot_at.not.is.null');
     if (stiloOnly) q = q.is('client_id', null);
     const { data: rows, error } = await q;
     if (error) return res.status(500).json({ error: error.message });

@@ -61,7 +61,12 @@ module.exports = async function handler(req, res) {
     // watchers and callbacks on his board). Admins see everything, or one rep
     // with ?assigned_to= (what the impersonation banner sends).
     if (!gate.isAdmin) q = q.eq('assigned_to', gate.email);
-    else if (req.query && req.query.assigned_to) { const a = await resolveAssignedTo(req.query.assigned_to); if (a) q = q.eq('assigned_to', a); }
+    else {
+        if (req.query && req.query.assigned_to) { const a = await resolveAssignedTo(req.query.assigned_to); if (a) q = q.eq('assigned_to', a); }
+        // Campaign scope (admin Sales tab): 'stilo' = STILO's own book, a uuid = that client's pool.
+        const cs = req.query && req.query.client_id;
+        if (cs === 'stilo') q = q.is('client_id', null); else if (cs && /^[0-9a-f-]{36}$/i.test(cs)) q = q.eq('client_id', cs);
+    }
     const { data: rows, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
     if (!rows || !rows.length) return res.status(200).json({ ok: true, rows: [] });

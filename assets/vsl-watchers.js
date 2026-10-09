@@ -9,7 +9,7 @@
  */
 (function (global) {
   'use strict';
-  var rows = null, timer = null;
+  var rows = null, timer = null, QUERY = '';
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function when(iso) { try { return new Date(iso).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } }
   function fetcher() { return global.fetchJSON || global.prospectFetchJSON || null; }
@@ -62,9 +62,9 @@
   }
   async function refresh() {
     var f = fetcher(); if (!f || !hosts().length) return;
-    try { var j = await f('/api/prospects/vsl-watchers'); rows = (j && j.rows) || []; render(); } catch (e) {}
+    try { var j = await f('/api/prospects/vsl-watchers' + QUERY); rows = (j && j.rows) || []; render(); } catch (e) {}
   }
   function start() { if (timer) return; refresh(); timer = setInterval(refresh, 120000); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(start, 1800); }); else setTimeout(start, 1800);
-  global.VSL_WATCHERS = { refresh: refresh, toggle: function () { setCollapsed(!collapsed()); } };
+  global.VSL_WATCHERS = { refresh: refresh, toggle: function () { setCollapsed(!collapsed()); }, setQuery: function (q) { QUERY = q || ''; refresh(); } };
 })(window);
