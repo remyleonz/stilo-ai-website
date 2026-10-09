@@ -24,6 +24,17 @@ function sinceFor(range) {
     return new Date(et.getTime() + off);
 }
 const BOT_UA = /claude|bot|headless|crawler|spider|preview|facebookexternalhit|slackbot/i;
+// PostgREST returns at most 1,000 rows per request; read every page.
+async function pageAll(make) {
+    let out = [];
+    for (let off = 0; off < 100000; off += 1000) {
+        const { data, error } = await make().range(off, off + 999);
+        if (error) return { data: out, error: error };
+        out = out.concat(data || []);
+        if (!data || data.length < 1000) break;
+    }
+    return { data: out };
+}
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
@@ -41,22 +52,34 @@ module.exports = async function handler(req, res) {
     // Client-account reps are scoped to their client's pool, same as the board.
     let clientId = null;
     try { clientId = await require('../prospects/_shared').resolveClientScope(email); } catch (_) {}
-    let bq = db.from('leads').select('id,engagement_tier,hot_at,hot_cleared_at,meeting_scheduled_at,last_called_outcome,do_not_call,stage').eq('assigned_to', email).limit(5000);
-    if (clientId) bq = bq.eq('client_id', clientId);
-    const { data: book } = await bq;
+    const { data: book } = await pageAll(function () {
+        let bq = db.from('leads').select('id,engagement_tier,hot_at,hot_cleared_at,meeting_scheduled_at,last_called_outcome,do_not_call,stage').eq('assigned_to', email).order('id');
+        if (clientId) bq = bq.eq('client_id', clientId);
+        return bq;
+    });
     const ids = (book || []).map(function (l) { return l.id; });
     // Same population the Pipeline tab shows: no do-not-call, no closed.
     const tiers = { cold: 0, warm: 0, hot: 0 };
     (book || []).forEach(function (l) { if (l.do_not_call || ['CLOSED_LOST', 'CLOSED_WON'].indexOf(l.stage) >= 0) return; tiers[l.engagement_tier || 'cold'] = (tiers[l.engagement_tier || 'cold'] || 0) + 1; });
-    const inIds = function (q) { return ids.length ? q.in('lead_id', ids) : q.eq('lead_id', -1); };
+    // Long id lists go in chunks of 300 (URL length), each chunk paged.
+    async function byIds(make) {
+        if (!ids.length) return { data: [] };
+        let out = [];
+        for (let i = 0; i < ids.length; i += 300) {
+            const chunk = ids.slice(i, i + 300);
+            const r = await pageAll(function () { return make().in('lead_id', chunk); });
+            out = out.concat(r.data || []);
+        }
+        return { data: out };
+    }
 
     const [calls, msgs, inbound, ig, funnel, sales] = await Promise.all([
-        db.from('lead_calls').select('lead_id,called_at,duration_seconds,outcome,decision_maker,direction').eq('logged_by', email).gte('called_at', since).limit(5000),
-        inIds(db.from('lead_messages').select('lead_id,channel,direction,sent_by,sent_at,replied_at,opened_at,bounced_at').eq('direction', 'outbound').gte('sent_at', since).limit(10000)),
-        inIds(db.from('lead_messages').select('lead_id,channel,sent_at').eq('direction', 'inbound').gte('sent_at', since).limit(5000)),
-        db.from('ig_dm_queue').select('id,lead_id,status,sent_at,replied_at,booked_at,sent_by,assigned_to').or('sent_by.eq.' + email + ',assigned_to.eq.' + email).limit(5000),
-        inIds(pb.from('funnel_events').select('lead_id,event,ua,created_at').eq('site', 'blason').gte('created_at', since).limit(10000)),
-        inIds(db.from('client_sales').select('lead_id,sale_amount,commission_amount,sold_at').gte('sold_at', since.slice(0, 10)).limit(500)),
+        pageAll(function () { return db.from('lead_calls').select('lead_id,called_at,duration_seconds,outcome,decision_maker,direction').eq('logged_by', email).gte('called_at', since).order('id'); }),
+        byIds(function () { return db.from('lead_messages').select('lead_id,channel,direction,sent_by,sent_at,replied_at,opened_at,bounced_at').eq('direction', 'outbound').gte('sent_at', since).order('id'); }),
+        byIds(function () { return db.from('lead_messages').select('lead_id,channel,sent_at').eq('direction', 'inbound').gte('sent_at', since).order('id'); }),
+        pageAll(function () { return db.from('ig_dm_queue').select('id,lead_id,status,sent_at,replied_at,booked_at,sent_by,assigned_to,channel').or('sent_by.eq.' + email + ',assigned_to.eq.' + email).order('id'); }),
+        byIds(function () { return pb.from('funnel_events').select('lead_id,event,ua,created_at').eq('site', 'blason').gte('created_at', since).order('id'); }),
+        byIds(function () { return db.from('client_sales').select('lead_id,sale_amount,commission_amount,sold_at').gte('sold_at', since.slice(0, 10)).order('id'); }),
     ]);
 
     const c = (calls.data || []).filter(function (x) { return x.direction !== 'inbound'; });
@@ -68,7 +91,7 @@ module.exports = async function handler(req, res) {
     const sm = (msgs.data || []).filter(function (m) { return m.channel === 'sms'; });
     const emailReplies = em.filter(function (m) { return m.replied_at; }).length;
     const smsReplies = (inbound.data || []).filter(function (m) { return m.channel === 'sms'; }).length;
-    const igRows = (ig.data || []);
+    const igRows = (ig.data || []).filter(function (r) { return (r.channel || 'instagram') === 'instagram'; });
     const igSent = igRows.filter(function (r) { return r.sent_at && r.sent_at >= since; }).length;
     const igReplied = igRows.filter(function (r) { return r.replied_at && r.replied_at >= since && ['replied', 'booked'].indexOf(r.status) >= 0; }).length;
     const igBooked = igRows.filter(function (r) { return r.booked_at && r.booked_at >= since; }).length;
@@ -85,7 +108,8 @@ module.exports = async function handler(req, res) {
     const hotLeads = (book || []).filter(function (l) { return l.hot_at && l.hot_at >= since; });
     let answered = 0, within5 = 0, totalMin = 0;
     if (hotLeads.length) {
-        const { data: after } = await db.from('lead_calls').select('lead_id,called_at').in('lead_id', hotLeads.map(function (l) { return l.id; })).eq('direction', 'outbound').gte('called_at', since).order('called_at', { ascending: true }).limit(5000);
+        const hotIds = hotLeads.map(function (l) { return l.id; }).slice(0, 300);
+        const { data: after } = await pageAll(function () { return db.from('lead_calls').select('lead_id,called_at').in('lead_id', hotIds).eq('direction', 'outbound').gte('called_at', since).order('called_at', { ascending: true }); });
         hotLeads.forEach(function (l) {
             const first = (after || []).find(function (x) { return x.lead_id === l.id && x.called_at > l.hot_at; });
             if (first) { answered++; const min = (new Date(first.called_at) - new Date(l.hot_at)) / 60000; totalMin += min; if (min <= 5) within5++; }

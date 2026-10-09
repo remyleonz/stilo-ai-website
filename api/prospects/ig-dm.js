@@ -152,9 +152,18 @@ module.exports = async function handler(req, res) {
     if (error) return res.status(500).json({ error: error.message });
 
     // Counts for the header. One grouped read: ~1k rows at most.
-    let cq = db.from('ig_dm_queue').select('assigned_to,status,sent_at,replied_at,booked_at').eq('channel', channel).limit(8000);
-    if (email) cq = cq.eq('assigned_to', email);
-    const { data: all } = await cq;
+    // PostgREST hands back at most 1,000 rows per request whatever .limit()
+    // says, so the counts page through the table (they undercounted from
+    // ~1,000 queue rows on: Remy showed 116 to send with 395 queued).
+    let all = [];
+    for (let off = 0; off < 50000; off += 1000) {
+        let cq = db.from('ig_dm_queue').select('assigned_to,status,sent_at,replied_at,booked_at').eq('channel', channel).order('id').range(off, off + 999);
+        if (email) cq = cq.eq('assigned_to', email);
+        const { data: page, error: cerr } = await cq;
+        if (cerr) return res.status(500).json({ error: cerr.message });
+        all = all.concat(page || []);
+        if (!page || page.length < 1000) break;
+    }
     const day = dayStartET();
     const agg = function (rs) {
         const c = { queued: 0, sent_today: 0, sent_total: 0, replied: 0, booked: 0, replied_today: 0 };
