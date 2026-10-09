@@ -12,7 +12,7 @@
  */
 (function (global) {
   'use strict';
-  var POLL_MS = 45000, timer = null, lastRows = null;
+  var POLL_MS = 45000, timer = null, lastRows = null, QUERY = '';
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function ago(iso) { var m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); if (m < 1) return 'just now'; if (m < 60) return m + ' min ago'; var h = Math.round(m / 60); if (h < 36) return h + 'h ago'; return Math.round(h / 24) + 'd ago'; }
   function fetcher() { return global.fetchJSON || global.prospectFetchJSON || null; }
@@ -63,7 +63,7 @@
   }
   async function refresh() {
     var f = fetcher(); if (!f || !hosts().length) return;
-    try { var j = await f('/api/prospects/hot-leads'); lastRows = (j && j.rows) || []; render(lastRows); } catch (e) { /* quiet: strip just stays as it was */ }
+    try { var j = await f('/api/prospects/hot-leads' + QUERY); lastRows = (j && j.rows) || []; render(lastRows); } catch (e) { /* quiet: strip just stays as it was */ }
   }
   async function clear(id) {
     var f = fetcher(); if (!f) return;
@@ -91,5 +91,7 @@
   }
   function start() { if (timer) return; refresh(); timer = setInterval(refresh, POLL_MS); document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(start, 1500); }); else setTimeout(start, 1500);
-  global.HOT_LEADS = { refresh: refresh, banner: banner, mark: mark, clear: clear, callInQuo: callInQuo };
+  // setQuery('?client_id=stilo' | '?client_id=<uuid>' | ''): the admin Sales tab scopes the strip to one campaign.
+  function setQuery(q) { QUERY = q || ''; refresh(); }
+  global.HOT_LEADS = { refresh: refresh, banner: banner, mark: mark, clear: clear, callInQuo: callInQuo, setQuery: setQuery };
 })(window);

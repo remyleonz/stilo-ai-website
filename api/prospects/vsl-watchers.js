@@ -48,7 +48,13 @@ module.exports = async function handler(req, res) {
         .select('id,name,owner_name,phone,owner_phone,owner_phone_e164,address,primary_language,assigned_to,stage,next_step,next_step_due,meeting_booked_at,hot_at,hot_cleared_at,do_not_call,client_id,engagement_tier')
         .in('id', ids).eq('client_id', BLASON);
     if (!gate.isAdmin) lq = lq.eq('assigned_to', gate.email);
-    else if (req.query && req.query.assigned_to) { const a = await resolveAssignedTo(req.query.assigned_to); if (a) lq = lq.eq('assigned_to', a); }
+    else {
+        if (req.query && req.query.assigned_to) { const a = await resolveAssignedTo(req.query.assigned_to); if (a) lq = lq.eq('assigned_to', a); }
+        // The video page is Blason's: a STILO-only scope has no watchers by definition.
+        const cs = req.query && req.query.client_id;
+        if (cs === 'stilo') return res.status(200).json({ ok: true, rows: [], total: 0, scope: 'stilo' });
+        if (cs && /^[0-9a-f-]{36}$/i.test(cs) && cs !== BLASON) return res.status(200).json({ ok: true, rows: [], total: 0, scope: cs });
+    }
     const { data: leads } = await lq;
     const minFirst = ids.reduce(function (m, id) { return agg[id].first < m ? agg[id].first : m; }, agg[ids[0]].first);
     const { data: calls } = await pro.from('lead_calls').select('lead_id,called_at,duration_seconds,outcome,logged_by')
