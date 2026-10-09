@@ -207,7 +207,16 @@ async function main() {
     else q = q.is('email_1_sent_at', null).eq('email_verify_status', LANE === '3' ? 'site_published' : 'deliverable');
     if (MODE === 'cold' && LANE === '1') q = q.eq('email_confidence', 'medium');
     if (MODE === 're') q = q.is('unsubscribed_at', null).is('bounced_at', null);
-    const { data: leads, error } = await q.limit(3000);
+    // PostgREST caps a single response at 1,000 rows no matter what .limit()
+    // asks for. With 2,787 Blason leads the pool was silently truncated to the
+    // first 1,000 (every run printed "pool 1000"). Page through it.
+    let leads = [], error = null;
+    for (let from = 0; ; from += 1000) {
+        const r = await q.range(from, from + 999);
+        if (r.error) { error = r.error; break; }
+        leads = leads.concat(r.data || []);
+        if (!r.data || r.data.length < 1000) break;
+    }
     if (error) { console.error(error); process.exit(1); }
 
     // VSL step state lives in lead_messages.variant ('blason_vsl_<n>_<arm>'), not
