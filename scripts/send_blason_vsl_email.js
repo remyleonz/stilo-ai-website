@@ -366,7 +366,14 @@ const LANE2_MAX_PER_RUN = process.env.BLASON_TEST_SENDER_EMAIL ? 60 : 10;
     }
     const stats = { sent: 0, skipped: 0, failed: 0, dup: 0 };
 
+    // Shared daily campaign budget (api/prospects/_email_budget.js, 100/day
+    // across every campaign sender) so the composer always has room.
+    const budget = await require('../api/prospects/_email_budget').campaignEmailsLeftToday(sb);
+    console.log('campaign email budget: ' + budget.sent + ' of ' + budget.cap + ' used today, ' + budget.left + ' left');
+    if (SEND && budget.left <= 0) { console.log(JSON.stringify(stats)); console.log('STOP  daily campaign email cap reached'); return; }
+
     for (const lead of batch) {
+        if (SEND && stats.sent >= budget.left) { console.log('STOP  daily campaign email cap reached (' + budget.cap + ')'); break; }
         const to = lead.__to, tag = '#' + lead.id + ' ' + String(lead.name).slice(0, 40);
         const { data: sup } = await pub.from('lcr_suppressions').select('email').ilike('email', to).limit(1);
         if (sup && sup.length) { console.log('SKIP  ' + tag + '  suppressed'); stats.skipped++; continue; }

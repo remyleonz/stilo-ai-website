@@ -476,7 +476,9 @@ module.exports = async function handler(req, res) {
         .select('id', { count: 'exact', head: true })
         .like('variant', 'seq_%')
         .gte('sent_at', midnightEtIso);
-    const dailyRemaining = Math.max(0, cap - (sentToday || 0));
+    // Shared 100/day campaign budget across all senders (_email_budget.js).
+    const shared = await require('./_email_budget').campaignEmailsLeftToday(sb);
+    const dailyRemaining = Math.min(Math.max(0, cap - (sentToday || 0)), shared.left);
     const budget = Math.min(dailyRemaining, MAX_PER_RUN);
 
     // Shared-inbox ownership, decided across the WHOLE audience before any
