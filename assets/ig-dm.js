@@ -92,9 +92,9 @@
       + q.obj.map(function (o, i) { return '<div><b>' + esc(o[0]) + '</b><br>' + esc(o[1]) + ' <button class="ig-btn g" style="padding:3px 8px;font-size:11px" data-copy="obj' + i + '">Copy</button></div>'; }).join('') + '</div>';
     if (r.reply_text) html += '<div class="lbl">' + (r.lang === 'es' ? 'Lo que respondieron' : 'What they said') + '</div><div class="ig-obj">' + esc(r.reply_text) + (r.reply_kind ? ' <span class="ig-pill r">' + esc(r.reply_kind.replace(/_/g, ' ')) + '</span>' : '') + '</div>';
     html += '<div class="lbl">' + (r.lang === 'es' ? 'Registrar' : 'Log it') + '</div>'
-      + '<div class="ig-form"><input data-f="reply" placeholder="' + (r.lang === 'es' ? 'qué respondieron (una línea)' : 'what they replied (one line)') + '">'
+      + '<div class="ig-form"><input data-f="reply" placeholder="' + (r.lang === 'es' ? 'qué respondieron, o una nota' : 'what they replied, or a note') + '">'
       + '<select data-f="kind"><option value="named_laser">named their laser</option><option value="wants_info">wants info / email</option><option value="wants_call">wants a call</option><option value="wants_visit">wants to visit</option><option value="bot_or_desk">bot or front desk</option><option value="not_interested">not interested</option><option value="other" selected>other</option></select>'
-      + '<button class="ig-btn w" data-act="replied">Replied</button><button class="ig-btn ok" data-act="booked">Booked</button><button class="ig-btn g" data-act="bot">Bot / desk</button><button class="ig-btn r" data-act="not_interested">Not interested (2 hard no\'s)</button>'
+      + '<button class="ig-btn g" data-act="note" title="Saves to this lead\'s notes without changing the status">Save note</button><button class="ig-btn w" data-act="replied">Replied</button><button class="ig-btn ok" data-act="booked">Booked</button><button class="ig-btn g" data-act="bot">Bot / desk</button><button class="ig-btn r" data-act="not_interested">Not interested (2 hard no\'s)</button>'
       + '<button class="ig-btn g" data-act="bad_account" title="The profile does not exist, or it is not this business">' + (isFb() ? 'No page / wrong page' : 'No account / wrong account') + '</button>'
       + (r.status !== 'queued' ? '<button class="ig-btn g" data-act="requeue">Back to queue</button>' : '<button class="ig-btn g" data-act="skip">Skip</button>')
       + (r.lead_id && S.openLead ? '<button class="ig-btn g" data-act="openlead">Open lead</button>' : '') + '</div>';
@@ -190,6 +190,14 @@
     }
     ev.stopPropagation();
     var body = { id: id, action: a };
+    if (a === 'note') {
+      var detN = rowEl.querySelector('.ig-det');
+      var nt = detN ? String((detN.querySelector('[data-f=reply]') || {}).value || '').trim() : '';
+      if (!nt) { nt = String(prompt('Note for this lead. It goes into the lead\'s notes.') || '').trim(); if (!nt) return; }
+      b.disabled = true;
+      await act({ id: id, action: 'note', notes: nt });
+      S.open = null; refresh(); return;
+    }
     if (a === 'replied' || a === 'booked' || a === 'bot' || a === 'not_interested') {
       var det = rowEl.querySelector('.ig-det');
       var txt = det ? (det.querySelector('[data-f=reply]') || {}).value : '';

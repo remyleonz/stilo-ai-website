@@ -23,9 +23,10 @@
     <script src="/assets/dial-companion.js"></script>
     <script src="/assets/pipeline-tab.js?v=20261008e"></script>
     <script src="/assets/lead-tier.js?v=20261008d"></script>
-    <script src="/assets/ig-dm.js?v=20261008d"></script>
+    <script src="/assets/ig-dm.js?v=20261009n"></script>
     <script src="/assets/add-lead.js?v=20261008"></script>
     <script src="/assets/fb-groups.js?v=20261008"></script>
+    <script src="/assets/lead-socials.js?v=20261009"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -3175,7 +3176,7 @@
                 + (tier ? '<span class="badge ' + tier + '">' + tier.toUpperCase() + '</span>' : '')
                 + (r.prospect_score != null ? '<span style="font-size:11px;color:var(--text-tertiary);">Score ' + r.prospect_score + '</span>' : '')
                 + (r.call_attempts ? '<span style="font-size:11px;color:var(--text-tertiary);">· ' + r.call_attempts + ' dial' + (r.call_attempts === 1 ? '' : 's') + '</span>' : '')
-                + (r.website ? '<a href="' + escapeHtml(r.website) + '" target="_blank" style="font-size:12px;color:var(--blue);margin-left:auto;">Website ↗</a>' : '')
+                + (window.LEAD_SOCIALS ? LEAD_SOCIALS.render(r) : (r.website ? '<a href="' + escapeHtml(r.website) + '" target="_blank" style="font-size:12px;color:var(--blue);margin-left:auto;">Website ↗</a>' : ''))
                 + '</div>'
                 + '</div>'
                 + sdrMeetingCard
