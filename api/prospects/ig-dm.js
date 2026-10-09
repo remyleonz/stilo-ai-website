@@ -84,7 +84,11 @@ module.exports = async function handler(req, res) {
         else if (action === 'bot') { upd.status = 'bot'; upd.reply_kind = 'bot_or_desk'; upd.replied_at = now; if (body.reply_text) upd.reply_text = String(body.reply_text).slice(0, 1000); leadNote = 'Instagram: auto-reply or front desk answered, call the main line for the decision maker'; }
         else if (action === 'skip') { upd.status = 'skipped'; }
         else if (action === 'requeue') { upd.status = 'queued'; upd.step = 0; upd.sent_at = null; }
-        else if (action === 'note') { upd.notes = String(body.notes || '').slice(0, 500); }
+        else if (action === 'note') {
+            const nt = String(body.notes || '').trim().slice(0, 500);
+            if (!nt) return res.status(400).json({ error: 'note_required' });
+            upd.notes = ((row.notes ? row.notes + '\n' : '') + '[' + now.slice(0, 10) + '] ' + nt + ' (' + me + ')').slice(-1000);
+        }
         else if (action === 'no_account') {
             upd.status = 'bad_account'; upd.reply_kind = 'no_account';
             upd.notes = ((row.notes ? row.notes + '\n' : '') + '[' + now.slice(0, 10) + '] no account / wrong account: ' + row.handle + ' (' + me + ')').slice(0, 1000);
@@ -122,6 +126,16 @@ module.exports = async function handler(req, res) {
 
         const { error } = await db.from('ig_dm_queue').update(upd).eq('id', id);
         if (error) return res.status(500).json({ error: error.message });
+        // Whatever the rep typed on this row also lands in the lead's own notes
+        // (leads.rep_notes, the notes box in the lead panel), dated and signed,
+        // newest on top. One place to read everything about the lead.
+        if (row.lead_id) {
+            const typed = String((action === 'note' || action === 'booked' ? body.notes : body.reply_text) || '').trim();
+            const label = { replied: 'replied', booked: 'booked', bot: 'bot / front desk', not_interested: 'not interested', note: 'note' }[action];
+            if (label && (typed || action !== 'note')) {
+                await appendLeadNote(db, row.lead_id, '[' + noteDate(now) + '] ' + (row.channel === 'facebook' ? 'Facebook' : 'Instagram') + ' ' + label + ', ' + (await repName(me)) + (typed ? ': ' + typed.slice(0, 500) : ''));
+            }
+        }
         if (row.lead_id && leadNote) {
             if (hot) await markHot(row.lead_id, leadNote, db, { tier: tier });
             else await markWarm(row.lead_id, leadNote, db);
@@ -184,3 +198,28 @@ module.exports = async function handler(req, res) {
     }
     return res.status(200).json({ ok: true, rows: rows || [], counts: counts, reps: reps, scope: email || 'all', channel: channel });
 };
+
+// Prepend one dated line to prospecting.leads.rep_notes (the lead panel notes
+// box). rep_notes was save-notes-only; this is the second writer, and it only
+// ever adds a line on top, never rewrites what the rep typed in the panel.
+async function appendLeadNote(db, leadId, line) {
+    try {
+        const { data } = await db.from('leads').select('rep_notes, call_notes').eq('id', leadId).maybeSingle();
+        const cur = data ? (data.rep_notes != null ? data.rep_notes : (data.call_notes || '')) : '';
+        const next = (line + (cur ? '\n' + cur : '')).slice(0, 20000);
+        await db.from('leads').update({ rep_notes: next, updated_at: new Date().toISOString() }).eq('id', leadId);
+    } catch (e) { console.error('[ig-dm] appendLeadNote failed', leadId, e && e.message); }
+}
+function noteDate(iso) {
+    return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
+}
+async function repName(email) {
+    // display_name from public.sdr_users ("Remy Leon" -> "Remy"); email fallback.
+    try {
+        const pub = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+        const { data } = await pub.from('sdr_users').select('display_name').eq('email', email).maybeSingle();
+        if (data && data.display_name) return String(data.display_name).split(' ')[0];
+    } catch (_) { /* cosmetic only */ }
+    const local = String(email || '').split('@')[0].replace(/[._-]+/g, ' ').replace(/\d+/g, '').trim();
+    return local ? local.split(' ')[0].replace(/^./, function (c) { return c.toUpperCase(); }) : 'rep';
+}

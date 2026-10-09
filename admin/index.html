@@ -2668,9 +2668,10 @@
     <script src="/assets/dial-companion.js"></script>
     <script src="/assets/pipeline-tab.js?v=20261008e"></script>
     <script src="/assets/lead-tier.js?v=20261008d"></script>
-    <script src="/assets/ig-dm.js?v=20261008d"></script>
+    <script src="/assets/ig-dm.js?v=20261009n"></script>
     <script src="/assets/add-lead.js?v=20261008"></script>
     <script src="/assets/fb-groups.js?v=20261008"></script>
+    <script src="/assets/lead-socials.js?v=20261009"></script>
     <script>document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { if (window.PIPELINE_TAB && window.prospectFetchJSON) PIPELINE_TAB.startBadge(prospectFetchJSON); }, 2500); });</script>
     <script>
         /* ===========================================================
@@ -11065,7 +11066,7 @@
                       + tierBadge(d.prospect_tier) + stageBadge(d.stage)
                       + '<span style="font-size:11px;color:var(--text-muted);">Score ' + escapeAdminHtml(score) + '</span>'
                       + (d.call_attempts ? '<span style="font-size:11px;color:var(--text-muted);">· ' + d.call_attempts + ' dial' + (d.call_attempts === 1 ? '' : 's') + '</span>' : '')
-                      + (d.website ? '<a href="' + escapeAdminHtml(d.website) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;margin-left:auto;">Website ↗</a>' : '')
+                      + (window.LEAD_SOCIALS ? LEAD_SOCIALS.render(d) : (d.website ? '<a href="' + escapeAdminHtml(d.website) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;margin-left:auto;">Website ↗</a>' : ''))
                     + '</div>'
                     + lastOutcomePill
                   + '</div>'
