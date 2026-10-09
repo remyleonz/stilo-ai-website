@@ -16,6 +16,8 @@
  *      not_interested  -> two hard no's; stays logged, lead stays as is
  *      bot             -> auto-reply / front desk; lead warm, call the main line
  *      skip | requeue
+ *      no_account      -> no account / wrong account and no better one: status bad_account, the handle is cleared off the lead
+ *      fix_handle      -> { handle } the right handle or profile/page link: row re-pointed, lead updated, back to the queue
  *      lang            -> { lang: 'en'|'es' } rewrite message_1/2 in the other language (same arm)
  * POST { action: 'assign', assigned_to, n }   (admin) hand n queued rows to a rep
  *
@@ -35,7 +37,7 @@ function dayStartET() {
     et.setHours(0, 0, 0, 0);
     return new Date(et.getTime() + off).toISOString();
 }
-const DONE = ['booked', 'not_interested', 'bot', 'skipped'];
+const DONE = ['booked', 'not_interested', 'bot', 'skipped', 'bad_account'];
 
 module.exports = async function handler(req, res) {
     const gate = await assertAdminOrSdr(req, res);
@@ -62,7 +64,7 @@ module.exports = async function handler(req, res) {
 
         const id = parseInt(body.id, 10);
         if (!id) return res.status(400).json({ error: 'id_required' });
-        let rq = db.from('ig_dm_queue').select('id,lead_id,business,handle,assigned_to,status,step,reply_text,arm,lang,first_name,vsl_link,channel,client_id').eq('id', id);
+        let rq = db.from('ig_dm_queue').select('id,lead_id,business,handle,assigned_to,status,step,reply_text,arm,lang,first_name,vsl_link,channel,client_id,notes').eq('id', id);
         if (!gate.isAdmin) rq = rq.eq('assigned_to', me);
         const { data: row } = await rq.maybeSingle();
         if (!row) return res.status(403).json({ error: 'not_your_row' });
@@ -82,6 +84,32 @@ module.exports = async function handler(req, res) {
         else if (action === 'skip') { upd.status = 'skipped'; }
         else if (action === 'requeue') { upd.status = 'queued'; upd.step = 0; upd.sent_at = null; }
         else if (action === 'note') { upd.notes = String(body.notes || '').slice(0, 500); }
+        else if (action === 'no_account') {
+            upd.status = 'bad_account'; upd.reply_kind = 'no_account';
+            upd.notes = ((row.notes ? row.notes + '\n' : '') + '[' + now.slice(0, 10) + '] no account / wrong account: ' + row.handle + ' (' + me + ')').slice(0, 1000);
+            if (row.lead_id) {
+                const clear = row.channel === 'facebook' ? { facebook_url: null } : { instagram_handle: null, instagram_url: null };
+                await db.from('leads').update(clear).eq('id', row.lead_id);
+            }
+        }
+        else if (action === 'fix_handle') {
+            const raw = String(body.handle || '').trim();
+            if (!raw) return res.status(400).json({ error: 'handle_required' });
+            let handle, url;
+            if (row.channel === 'facebook') {
+                url = (/^https?:\/\//i.test(raw) ? raw : 'https://www.facebook.com/' + raw.replace(/^@/, '')).replace(/[?#].*$/, '').replace(/\/+$/, '').replace(/^https?:\/\/(m|web)\.facebook\.com/i, 'https://www.facebook.com');
+                handle = url.toLowerCase();
+            } else {
+                const h = raw.toLowerCase().replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/[?#].*$/, '').replace(/\/.*$/, '').replace(/^@/, '');
+                if (!/^[a-z0-9._]{2,30}$/.test(h)) return res.status(400).json({ error: 'bad_handle' });
+                handle = '@' + h; url = 'https://www.instagram.com/' + h + '/';
+            }
+            const { data: dupe } = await db.from('ig_dm_queue').select('id,assigned_to,status').eq('channel', row.channel || 'instagram').eq('handle', handle).neq('id', id).limit(1);
+            if (dupe && dupe.length) return res.status(409).json({ error: 'handle_already_in_list', other_id: dupe[0].id, other_rep: dupe[0].assigned_to });
+            upd.handle = handle; upd.instagram_url = url; upd.status = row.status === 'bad_account' ? 'queued' : row.status;
+            upd.notes = ((row.notes ? row.notes + '\n' : '') + '[' + now.slice(0, 10) + '] handle corrected from ' + row.handle + ' to ' + handle + ' (' + me + ')').slice(0, 1000);
+            if (row.lead_id) await db.from('leads').update(row.channel === 'facebook' ? { facebook_url: url } : { instagram_handle: handle, instagram_url: url }).eq('id', row.lead_id);
+        }
         else if (action === 'lang') {
             const lang = body.lang === 'es' ? 'es' : 'en';
             const c = (row.client_id ? dmCopy : stiloDmCopy)(row, row.arm || 'A', lang);
